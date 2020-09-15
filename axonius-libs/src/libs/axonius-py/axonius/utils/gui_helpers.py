@@ -1374,7 +1374,7 @@ def entity_fields(entity_type: EntityType):
             'enum': []
         },
         'sort': True,
-        'unique': True
+        'unique': True,
     }
 
     unique_adapters_json = {
@@ -1480,6 +1480,9 @@ def entity_fields(entity_type: EntityType):
     generic_in_fields = [adapters_json, unique_adapters_json, axon_id_json] \
         + flatten_fields(generic_fields, 'specific_data.data', ['scanner']) \
         + [tags_json] + preferred_json + correlation_reasons_json + has_notes_json
+
+    generic_in_fields = [set_field_filterable(field) for field in generic_in_fields]
+
     fields = {
         'schema': {
             'generic': generic_fields,
@@ -1543,6 +1546,7 @@ def entity_fields(entity_type: EntityType):
                 'required': plugin_fields_record['schema'].get('required', []),
                 'items': items
             }
+            specific_items = [set_field_filterable(field) for field in specific_items]
             fields['specific'][plugin_name] = specific_items
 
     return fields
@@ -1635,6 +1639,20 @@ def _get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType
         cell_joiner=cell_joiner,
         max_rows=max_rows,
     )
+
+
+def set_field_filterable(field):
+    """
+    Sets indication in the field if it can be filtered or not in the GUI
+    :param field:
+    :return:
+    """
+    if field.get('format') in ('image', 'discrete', 'date-time'):
+        field['filterable'] = False
+    else:
+        field['filterable'] = True
+
+    return field
 
 
 # pylint: disable=too-many-return-statements

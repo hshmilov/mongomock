@@ -108,7 +108,8 @@ export default {
       return this.isArrayOfStrings || this.isObjectWithString || this.isArrayOfObjectsWithString;
     },
     filterableType() {
-      return this.isString || (this.field.type === 'array' && this.isArrayWithString);
+      return (this.isString || (this.field.type === 'array' && this.isArrayWithString))
+        && this.field.filterable;
     },
     filterDisabled() {
       return !this.filterableType || !this.filterable || this.filter === undefined;
