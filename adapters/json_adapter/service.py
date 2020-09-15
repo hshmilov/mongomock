@@ -225,15 +225,16 @@ class JsonAdapter(AdapterBase):
                 device.os.kernel_version = gen_values.get('kernel')
             except Exception:
                 pass
-
-            ips = (gen_values.get('ip') or '').split(',')
-            ips = [ip.strip() for ip in ips if ip.strip()]
+            try:
+                ips = (gen_values.get('ip') or '').split(',')
+                ips = [ip.strip() for ip in ips if ip.strip()]
+            except Exception:
+                ips = []
             if gen_values.get('ip') == 'unknown':
                 ips = []
 
             if gen_values.get('username'):
                 device.last_used_users = [gen_values.get('username')]
-
             device.add_ips_and_macs(macs, ips)
 
             try:

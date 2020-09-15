@@ -2,7 +2,7 @@ import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from ivanti_sm_adapter.consts import MAX_NUMBER_OF_PAGES, DEVICE_PER_PAGE
+from axonius.clients.ivanti_sm.consts import MAX_NUMBER_OF_PAGES, DEVICE_PER_PAGE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -50,3 +50,23 @@ class IvantiSmConnection(RESTConnection):
 
     def get_device_list(self):
         yield from self._get_business_object('CI__computers')
+
+    def create_ivanti_sm_computer(self, connection_dict):
+        logger.info(f'Creating computer')
+        try:
+            device_raw = self._post(f'odata/businessobject/CI__computers', body_params=connection_dict)
+            return True, device_raw
+        except Exception:
+            logger.exception(f'Exception while creating computer with connection dict {connection_dict}')
+            return False, None
+
+    def uptade_ivanti_sm_computer(self, connection_dict):
+        rec_id = connection_dict['RecId']
+        logger.info(f'Updating computer')
+        try:
+            device_raw = self._put(f'odata/businessobject/CI__computers(‘{rec_id}‘)',
+                                   body_params=connection_dict)
+            return True, device_raw
+        except Exception:
+            logger.exception(f'Exception while creating incident with connection dict {connection_dict}')
+            return False, None

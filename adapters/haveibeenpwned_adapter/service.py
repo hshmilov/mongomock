@@ -26,7 +26,6 @@ class BreachData(SmartJsonClass):
     added_date = Field(datetime.datetime, 'Added Date')
     modified_date = Field(datetime.datetime, 'Modified Date')
     pwn_count = Field(int, 'Pwn Count')
-    description = Field(str, 'Description')
     logo_path = Field(str, 'Logo Path')
     data_classes = ListField(str, 'Data Classes')
     is_verified = Field(bool, 'Is Verified')
@@ -162,7 +161,6 @@ class HaveibeenpwnedAdapter(HaveibeenpwnedExecutionMixIn, AdapterBase):
                                              added_date=parse_date(breach_data.get('AddedDate')),
                                              modified_date=parse_date(breach_data.get('ModifiedDate')),
                                              pwn_count=pwn_count,
-                                             description=breach_data.get('Description'),
                                              logo_path=breach_data.get('LogoPath'),
                                              data_classes=data_classes,
                                              is_verified=bool(breach_data.get('IsVerified')),

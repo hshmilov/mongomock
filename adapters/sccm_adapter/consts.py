@@ -73,3 +73,5 @@ SVC_QUERY = 'select DisplayName0, PathName0, ServiceType0, StartMode0, ResourceI
 MEM_QUERY = 'select TotalPhysicalMemory0, ResourceID from v_GS_X86_PC_MEMORY'
 ONLINE_QUERY = 'select CNIsOnline, MachineID, CNLastOnlineTime, CNLastOfflineTime, CNIsOnInternet, CNAccessMP from v_CollectionMemberClientBaselineStatus'
 GUARD_COMPLIANCE_QUERY = 'select ComplianceState, ResourceID from vdcmdeploymentsystemdetails'
+CURRENT_COMPLIANCE_STATUS_QUERY = 'select CI_ID, ComplianceState, ResourceID from v_CICurrentComplianceStatus'
+LOCALIZED_CI_PROPERTIES_QUERY = 'select CI_ID, DisplayName from v_LocalizedCIProperties'

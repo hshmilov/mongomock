@@ -42,6 +42,7 @@ class RedcanaryAdapter(AdapterBase):
         is_isolated = Field(bool, 'Is Isolated')
         monitoring_status = Field(str, 'Monitoring Status')
         detection_data = ListField(DetectionData, 'Detections Data')
+        endpoint_status = Field(str, 'Endpoint Status')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -137,6 +138,7 @@ class RedcanaryAdapter(AdapterBase):
             device_attributes = device_raw['attributes']
             device.id = str(device_id) + '_' + (device_attributes.get('hostname') or '')
             hostname = device_attributes.get('hostname')
+            device.endpoint_status = device_attributes.get('endpoint_status')
             detections_list = detections_dict.get(str(device_id))
             if not isinstance(detections_list, list):
                 detections_list = []

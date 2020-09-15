@@ -452,9 +452,20 @@ def ips_do_not_contradict_or_mac_intersection_or_asset_only_adapter(adapter_devi
         or is_only_asset_nams_adapter(adapter_device1) or is_only_asset_nams_adapter(adapter_device2)
 
 
+def not_mobile(adapter_device):
+    os_type = get_os_type(adapter_device)
+    if not os_type:
+        return True
+    return os_type.lower() not in ['android', 'ios']
+
+
+def is_azure_ad_adapter_not_mobile(adapter_device):
+    return is_azure_ad_adapter(adapter_device) and not_mobile(adapter_device)
+
+
 def ips_do_not_contradict_or_mac_intersection_or_asset_only_adapter_and_azure_ad(adapter_device1, adapter_device2):
     return ips_do_not_contradict_or_mac_intersection_or_asset_only_adapter(adapter_device1, adapter_device2) \
-        or is_azure_ad_adapter(adapter_device1) or is_azure_ad_adapter(adapter_device2)
+        or is_azure_ad_adapter_not_mobile(adapter_device1) or is_azure_ad_adapter_not_mobile(adapter_device2)
 # pylint: enable=invalid-name
 
 

@@ -365,6 +365,13 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
                 device.set_raw(device_raw)
                 if str(device_state).upper() in ['RESERVED', 'DHCP_FREE', 'FREE', 'DHCP_RESERVED']:
                     continue
+                last_seen_test = None
+                try:
+                    last_seen_test = device.last_seen
+                except Exception:
+                    pass
+                if self.__exclude_no_last_seen_devices and not last_seen_test:
+                    continue
                 yield device
             except Exception:
                 logger.exception(f'Problem with fetching Bluecat Device for {device_raw}')
@@ -396,9 +403,15 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
                     'name': 'device_per_page',
                     'title': 'Entities per page',
                     'type': 'integer'
+                },
+                {
+                    'name': 'exclude_no_last_seen_devices',
+                    'title': 'Exclude no \'Last Seen\' devices',
+                    'type': 'bool'
                 }
             ],
-            'required': ['get_extra_host_data', 'drop_static_or_gateway_if_not_expirytime'],
+            'required': ['get_extra_host_data', 'drop_static_or_gateway_if_not_expirytime',
+                         'exclude_no_last_seen_devices'],
             'pretty_name': 'BlueCat Configuration',
             'type': 'array'
         }
@@ -408,6 +421,7 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
         return {
             'sleep_between_requests_in_sec': 0,
             'get_extra_host_data': True,
+            'exclude_no_last_seen_devices': False,
             'drop_static_or_gateway_if_not_expirytime': True,
             'device_per_page': DEVICE_PER_PAGE
         }
@@ -418,3 +432,4 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
         self.__drop_static_or_gateway_if_not_expirytime = config.get(
             'drop_static_or_gateway_if_not_expirytime')
         self.__device_per_page = config.get('device_per_page')
+        self.__exclude_no_last_seen_devices = config['exclude_no_last_seen_devices']

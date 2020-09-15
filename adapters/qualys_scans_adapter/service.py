@@ -388,7 +388,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 return None
             device.id = device_id
             device.uuid = device_raw.get('hostUUID')
-            device.hostname = device_raw.get('netbiosName') or device_raw.get('dnsName') or device_raw.get('assetName')
+            hostname = device_raw.get('netbiosName') or device_raw.get('dnsName') or device_raw.get('assetName')
+            device.hostname = hostname
             device.name = device_raw.get('assetName')
             device.time_zone = device_raw.get('timeZone')
             device.total_physical_memory = device_raw.get('totalMemory')
@@ -433,7 +434,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                                                          port_id=open_port.get('port'),
                                                          service_name=open_port.get('detectedService')))
                 device.open_ports = open_ports
-
+            got_mac = False
             nics_data = device_raw.get('networkInterfaceListData')
             if isinstance(nics_data, dict) and isinstance(nics_data.get('networkInterface'), list):
                 for network_interface in nics_data.get('networkInterface'):
@@ -444,6 +445,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                         ips = [ips]
                     if isinstance(network_interface.get('addresses'), str) and network_interface.get('addresses'):
                         ips.extend(network_interface.get('addresses').split(','))
+                    if network_interface.get('macAddress'):
+                        got_mac = True
                     device.add_nic(mac=network_interface.get('macAddress'),
                                    ips=ips,
                                    name=network_interface.get('interfaceName'),
@@ -474,6 +477,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             self._fill_inventory_asset_instance(device_raw, device)
 
             device.set_raw(device_raw)
+            if self.__drop_only_ip_devices and not hostname and not got_mac:
+                return None
             return device
 
         except Exception:
@@ -536,6 +541,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             device = self._new_device_adapter()
+            got_hostname = False
+            got_mac = False
             device.qualys_id = device_id
             device.id = str(device_id) + '_' + (device_raw.get('name') or '')
             hostname = (device_raw.get('netbiosName') or device_raw.get('dnsHostName')) or device_raw.get('name')
@@ -544,6 +551,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     device_raw.get('netbiosName').split('.')[0].lower():
                 hostname = device_raw.get('dnsHostName')
             if hostname != device_raw.get('address'):
+                if hostname:
+                    got_hostname = True
                 device.hostname = hostname
                 try:
                     if hostname and device_raw.get('fqdn') \
@@ -580,10 +589,14 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 for asset_interface in (device_raw.get('networkInterface') or {}).get('list') or []:
                     try:
                         if self.__use_dns_host_as_hostname:
-                            device.hostname = (asset_interface.get('HostAssetInterface') or {}).get('hostname')
+                            if (asset_interface.get('HostAssetInterface') or {}).get('hostname'):
+                                got_hostname = True
+                                device.hostname = (asset_interface.get('HostAssetInterface') or {}).get('hostname')
                         mac = (asset_interface.get('HostAssetInterface') or {}).get('macAddress')
                         if not mac:
                             mac = None
+                        else:
+                            got_mac = True
                         ip = (asset_interface.get('HostAssetInterface') or {}).get('address')
                         if not ip:
                             ips = None
@@ -904,6 +917,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             device.set_raw(device_raw)
             if not tags_ok:
                 return None
+            if self.__drop_only_ip_devices and not got_mac and not got_hostname:
+                return None
             return device
         except Exception:
             logger.exception(f'Problem with device {device_raw}')
@@ -974,11 +989,15 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     'title': 'Fetch Asset Groups'
                 },
                 {
+                    'name': 'drop_only_ip_devices',
+                    'title': 'Do not fetch devices with no MAC address and no hostname',
+                    'type': 'bool'
+                },
+                {
                     'name': 'fetch_pci_flag',
                     'type': 'bool',
                     'title': 'Fetch PCI Flag'
                 }
-
             ],
             'required': [
                 'request_timeout',
@@ -986,6 +1005,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 'fetch_vulnerabilities_data',
                 'max_retries',
                 'retry_sleep_time',
+                'drop_only_ip_devices',
                 'devices_per_page',
                 'fetch_from_inventory', 'use_dns_host_as_hostname',
                 'fetch_report',
@@ -1012,6 +1032,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'fetch_unscanned_ips': False,
             'fetch_report': False,
             'fetch_tickets': False,
+            'drop_only_ip_devices': False,
             'fetch_asset_groups': False,
             'fetch_pci_flag': False
         }
@@ -1050,6 +1071,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         self.__fetch_tickets = config.get('fetch_tickets', False)
         self.__fetch_unscanned_ips = config.get('fetch_unscanned_ips', False)
         self.__fetch_asset_groups = parse_bool_from_raw(config.get('fetch_asset_groups')) or False
+        self.__drop_only_ip_devices = parse_bool_from_raw(config.get('drop_only_ip_devices')) or False
         self.__fetch_pci_flag = parse_bool_from_raw(config.get('fetch_pci_flag')) or False
 
     @classmethod

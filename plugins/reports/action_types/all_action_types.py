@@ -12,6 +12,8 @@ from reports.action_types.alert.send_https_log import SendHttpsLogAction
 from reports.action_types.alert.send_to_webhook import SendWebhookAction
 from reports.action_types.alert.send_slack_message import SlackSendMessageAction
 from reports.action_types.alert.send_syslog import NotifySyslogAction
+from reports.action_types.base.create_ivanti_sm_computer import IvantiSmComputerAction
+from reports.action_types.base.update_ivanti_sm_computer import UpdateIvantiSmComputerAction
 from reports.action_types.base.aws_ec2_add_tags import AwsEc2AddTagsAction
 from reports.action_types.base.aws_ec2_delete_tags import AwsEc2DeleteTagsAction
 from reports.action_types.base.azure_add_tags import AzureAddTagsAction
@@ -59,6 +61,7 @@ from reports.action_types.base.qualys_create_asset import QualysCreateAsset
 from reports.action_types.base.aws_ec2_start_instance import AwsEc2StartInstanceAction
 from reports.action_types.base.tenable_io_ips_scans import TenableIoAddIPsToScan
 from reports.action_types.base.aws_ec2_stop_instance import AwsEc2StopInstanceAction
+from reports.action_types.base.desktop_central_do_som_action import DesktopCentralSomAction
 from reports.action_types.base.qualys_add_tag import QualysAddTag
 from reports.action_types.base.qualys_remove_tag import QualysRemoveTag
 from reports.action_types.base.create_cherwell_computer import CherwellCreateComputerAction
@@ -74,6 +77,7 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'create_service_now_computer': ServiceNowComputerAction,
     'tag': TagAllEntitiesAction,
     'tenable_io_ips_scans': TenableIoAddIPsToScan,
+    'desktop_central_do_som_action': DesktopCentralSomAction,
     'create_cherwell_incident': CherwellIncidentAction,
     'add_custom_data': AddCustomDataAction,
     'carbonblack_isolate': CarbonblackIsolateAction,
@@ -90,6 +94,8 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'create_jira_incident': JiraIncidentAction,
     'enable_entities': EnableEntities,
     'disable_entities': DisableEntities,
+    'create_ivanti_sm_computer': IvantiSmComputerAction,
+    'update_ivanti_sm_computer': UpdateIvantiSmComputerAction,
     'create_sysaid_incident': SysaidIncidentAction,
     'slack_send_message': SlackSendMessageAction,
     'carbonblack_defense_change_policy': CarbonblackDefenseChangePolicyAction,

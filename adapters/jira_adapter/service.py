@@ -174,8 +174,8 @@ class JiraAdapter(AdapterBase):
             if not (orig_id and orig_appkey):
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('label') or '')
-            device.name = device_raw.get('label')
+            device.id = device_id + '_' + str(device_raw.get('label') or '')
+            device.name = (device_raw.get('label') or {}).get('value')
             device.appkey = orig_appkey
             # asset type
             try:

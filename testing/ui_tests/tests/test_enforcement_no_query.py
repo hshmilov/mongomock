@@ -242,4 +242,5 @@ class TestEnforcementNoQuery(TestBase):
             Action.cybereason_unisolate.value,
             Action.cybereason_tag.value,
             Action.carbonblack_defense_quarantine.value,
-            Action.carbonblack_defense_unquarantine.value]
+            Action.carbonblack_defense_unquarantine.value,
+            Action.desktop_central_do_som_action.value]

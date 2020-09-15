@@ -105,6 +105,7 @@ class JuniperAdapter(AdapterBase, Configurable):
         try:
             return client_data.get_all_devices(fetch_space_only=self.__fetch_space_only,
                                                fetch_only_client_info=self.__fetch_only_client_info,
+                                               fetch_interfaces_data=self.__fetch_interfaces_data,
                                                do_async=self.__do_async)
         except Exception:
             logger.exception(f'Failed to get all the devices from the client: {client_data[consts.JUNIPER_HOST]}')
@@ -149,12 +150,18 @@ class JuniperAdapter(AdapterBase, Configurable):
                     'name': 'fetch_only_client_info',
                     'type': 'bool',
                     'title': 'Fetch only Juniper clients information'
+                },
+                {
+                    'name': 'fetch_interfaces_data',
+                    'type': 'bool',
+                    'title': 'Fetch Vlans and interfaces information'
                 }
             ],
             'required': [
                 'do_async',
                 'fetch_only_client_info',
-                'fetch_space_only'
+                'fetch_space_only',
+                'fetch_interfaces_data'
             ],
             'pretty_name': 'Junos Space Configuration',
             'type': 'array'
@@ -165,10 +172,12 @@ class JuniperAdapter(AdapterBase, Configurable):
         return {
             'do_async': True,
             'fetch_space_only': False,
-            'fetch_only_client_info': False
+            'fetch_only_client_info': False,
+            'fetch_interfaces_data': True,
         }
 
     def _on_config_update(self, config):
         self.__do_async = config['do_async']
         self.__fetch_space_only = config['fetch_space_only']
         self.__fetch_only_client_info = config.get('fetch_only_client_info') or False
+        self.__fetch_interfaces_data = config['fetch_interfaces_data'] if 'fetch_interfaces_data' in config else True

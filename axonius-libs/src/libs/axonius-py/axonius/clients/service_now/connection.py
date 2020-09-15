@@ -202,6 +202,7 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
         category = service_now_dict.get('category')
         subcategory = service_now_dict.get('subcategory')
         csv_string = service_now_dict.get('csv_string')
+        table_name = service_now_dict.get('table_name') or 'incident'
 
         logger.info(f'Creating servicenow incident: impact={impact}, '
                     f'short_description={short_description}, description={description}')
@@ -250,7 +251,7 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
             except Exception:
                 logger.exception(f'Problem with webhook')
             if csv_string and (incident_value.get('result') or {}).get('sys_id'):
-                self._upload_csv_to_table(table_name='incident', table_sys_id=incident_value['result']['sys_id'],
+                self._upload_csv_to_table(table_name=table_name, table_sys_id=incident_value['result']['sys_id'],
                                           csv_string=csv_string)
             return True
         except Exception:

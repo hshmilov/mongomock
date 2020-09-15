@@ -83,6 +83,9 @@ export const actionsMeta = {
   tenable_io_add_ips_to_target_group: {
     title: 'Add IPs to Tenable.io Target Group',
   },
+  desktop_central_do_som_action: {
+    title: 'Manage Computer in ManageEngine Desktop Central SoM'
+  },
   rapid7_ips_to_site: {
         title: 'Add IPs to Rapid7 InsightVM Site'
     },tenable_io_create_asset: {
@@ -111,6 +114,12 @@ export const actionsMeta = {
   },
   update_cherwell_computer: {
     title: 'Update Cherwell Computer',
+  },
+  create_ivanti_sm_computer: {
+    title: 'Create Ivanti Service Manager Computer',
+  },
+  update_ivanti_sm_computer: {
+    title: 'Update Ivanti Service Manager Computer',
   },
   create_cherwell_computer: {
     title: 'Create Cherwell Computer',
@@ -222,7 +231,7 @@ export const actionsMeta = {
   },
   isolate_edr: {
     title: 'Execute Endpoint Security Agent Action',
-    items: ['carbonblack_isolate', 'carbonblack_unisolate', 'cybereason_isolate', 'cybereason_unisolate', 'cybereason_tag', 'carbonblack_defense_change_policy', 'carbonblack_defense_quarantine', 'carbonblack_defense_unquarantine', 'sentinelone_initiate_scan_action', 'automox_install_update'],
+    items: ['carbonblack_isolate', 'carbonblack_unisolate', 'cybereason_isolate', 'cybereason_unisolate', 'cybereason_tag', 'carbonblack_defense_change_policy', 'carbonblack_defense_quarantine', 'carbonblack_defense_unquarantine', 'sentinelone_initiate_scan_action', 'automox_install_update', 'desktop_central_do_som_action'],
   },
   scan_va: {
     title: 'Update VA Coverage',
@@ -238,7 +247,7 @@ export const actionsMeta = {
   },
   create_cmdb_computer: {
     title: 'Manage CMDB Computer',
-    items: ['create_service_now_computer', 'update_service_now_computer', 'create_cherwell_computer', 'update_cherwell_computer', 'jira_create_asset'],
+    items: ['create_service_now_computer', 'update_service_now_computer', 'create_cherwell_computer', 'update_cherwell_computer', 'jira_create_asset', 'create_ivanti_sm_computer', 'update_ivanti_sm_computer'],
   },
   manage_directory: {
     title: 'Manage Microsoft Active Directory (AD) Services',

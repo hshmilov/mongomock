@@ -444,6 +444,7 @@ class Action(Enum):
     carbonblack_defense_change_policy = 'Change VMware Carbon Black Cloud Policy'
     carbonblack_defense_quarantine = 'Isolate VMware Carbon Black Cloud Device'
     carbonblack_defense_unquarantine = 'Unisolate VMware Carbon Black Cloud Device'
+    desktop_central_do_som_action = 'Manage Computer in ManageEngine Desktop Central SoM'
     tenable_sc_add_ips_to_asset = 'Add IPs to Tenable.sc Asset'
     tenable_io_add_ips_to_target_group = 'Add IPs to Tenable.io Target Group'
     create_jira_incident = 'Create Jira Issue'

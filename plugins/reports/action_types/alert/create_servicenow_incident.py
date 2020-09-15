@@ -138,6 +138,12 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                     'title': 'Webhook content',
                     'type': 'string',
                     'default': '{"text": "Created incident link is:' + LINK_TEMPLATE + '"}'
+                },
+                {
+                    'name': 'table_name',
+                    'title': 'Table Name',
+                    'type': 'string',
+                    'default': 'incident'
                 }
             ],
             'required': [
@@ -176,6 +182,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
             'category': None,
             'add_link_to_title': False,
             'subcategory': None,
+            'table_name': None,
             'send_csv_as_attachment': False,
             'created_incident_webhook_url': None,
             'created_incident_webhook_content': None
@@ -199,6 +206,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                             'subcategory': subcategory,
                             'extra_fields': extra_fields,
                             'csv_string': csv_string,
+                            'table_name': self._config.get('table_name'),
                             'created_incident_webhook_url': self._config.get('created_incident_webhook_url'),
                             'created_incident_webhook_content': self._config.get('created_incident_webhook_content')
                             }

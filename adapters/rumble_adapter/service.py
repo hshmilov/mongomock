@@ -64,6 +64,8 @@ class RumbleAdapter(AdapterBase):
         rumble_credentials = ListField(RumbleKeyValue, 'Rumble Credentials')
         rumble_services = ListField(RumbleService, 'Rumble Services')
         rumble_attributes = ListField(RumbleKeyValue, 'Rumble Attributes')
+        arp_mac_vendor = Field(str, 'ARP MAC Vendor')
+        nbns_mac_vendor = Field(str, 'NBNS MAC Vendor')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -315,6 +317,10 @@ class RumbleAdapter(AdapterBase):
             try:
                 rumble_services = (device_raw.get('services') or {})
                 for rumble_service in rumble_services.values():
+                    if rumble_service.get('source') == 'arp':
+                        device.arp_mac_vendor = rumble_service.get('arp.macVendor')
+                    if rumble_service.get('protocol') == 'netbios':
+                        device.nbns_mac_vendor = rumble_service.get('netbios.macVendor')
                     service_address = rumble_service.get('service.address')
                     try:
                         service_port = int(rumble_service.get('service.port'))

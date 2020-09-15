@@ -59,6 +59,7 @@ class SendEmailToEntities(ActionTypeBase):
             'adapters.data.aws_account_alias': 1,
             'tags.data.mail': 1,
             'tags.data.email': 1,
+            'tags.data.custom_email': 1,
             'tags.data.last_used_users_mail_association': 1,
             'internal_axon_id': 1
         })
@@ -85,6 +86,8 @@ class SendEmailToEntities(ActionTypeBase):
                         continue
                     if adapter_data.get('mail'):
                         mail_list.add(adapter_data.get('mail'))
+                    if adapter_data.get('custom_email'):
+                        mail_list.add(adapter_data.get('custom_email'))
                     if adapter_data.get('email'):
                         mail_list.add(adapter_data.get('email'))
                     if adapter_data.get('last_used_users_mail_association'):

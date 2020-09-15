@@ -6,6 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
+from axonius.plugin_base import EntityType, add_rule, return_error
 from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
 from axonius.smart_json_class import SmartJsonClass
@@ -30,6 +31,7 @@ class BitlockerData(SmartJsonClass):
 class DesktopCentralAdapter(AdapterBase):
 
     class MyDeviceAdapter(DeviceAdapter):
+        resource_id = Field(str, 'Resource ID')
         installation_status = Field(str, 'Installation Status')
         device_type = Field(str, 'Device Type')
         warranty_expiry_date = Field(datetime.datetime, 'Warranty Expiry Date')
@@ -38,6 +40,23 @@ class DesktopCentralAdapter(AdapterBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
+
+    @add_rule('do_som_action', methods=['POST'])
+    def do_som_action(self):
+        try:
+            if self.get_method() != 'POST':
+                return return_error('Method not supported', 405)
+            desktop_central_response_dict = self.get_request_data_as_object()
+            resource_id = desktop_central_response_dict.get('resource_id')
+            action = desktop_central_response_dict.get('action')
+            client_id = desktop_central_response_dict.get('client_id')
+            desktop_central_obj = self.get_connection(self._get_client_config_by_client_id(client_id))
+            with desktop_central_obj:
+                desktop_central_obj.do_som_action(action=action, resource_id=resource_id)
+        except Exception as e:
+            logger.exception(f'Problem during som action')
+            return return_error(str(e), non_prod_error=True, http_status=500)
+        return '', 200
 
     def _get_client_id(self, client_config):
         return client_config['domain']
@@ -48,19 +67,23 @@ class DesktopCentralAdapter(AdapterBase):
                                                 https_proxy=client_config.get('https_proxy'),
                                                 http_proxy=client_config.get('http_proxy'))
 
+    @staticmethod
+    def get_connection(client_config):
+        connection = DesktopCentralConnection(domain=client_config['domain'],
+                                              verify_ssl=client_config['verify_ssl'],
+                                              username=client_config['username'],
+                                              password=client_config['password'],
+                                              https_proxy=client_config.get('https_proxy'),
+                                              http_proxy=client_config.get('http_proxy'),
+                                              port=client_config.get('port', consts.DEFAULT_PORT),
+                                              username_domain=client_config.get('username_domain'))
+        with connection:
+            pass
+        return connection
+
     def _connect_client(self, client_config):
         try:
-            connection = DesktopCentralConnection(domain=client_config['domain'],
-                                                  verify_ssl=client_config['verify_ssl'],
-                                                  username=client_config['username'],
-                                                  password=client_config['password'],
-                                                  https_proxy=client_config.get('https_proxy'),
-                                                  http_proxy=client_config.get('http_proxy'),
-                                                  port=client_config.get('port', consts.DEFAULT_PORT),
-                                                  username_domain=client_config.get('username_domain'))
-            with connection:
-                pass  # check that the connection credentials are valid
-            return connection
+            return self.get_connection(client_config)
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config['domain'], str(e))
@@ -160,7 +183,9 @@ class DesktopCentralAdapter(AdapterBase):
                 if 'resource_id' not in device_raw:
                     logger.info(f'No Desktop Central device Id for {str(device_raw)}')
                     continue
-                device.id = str(device_raw.get('resource_id'))
+                device_name = (device_raw.get('fqdn_name', device_raw.get('full_name')) or '')
+                device.id = str(device_raw.get('resource_id')) + '_' + device_name
+                device.resource_id = device_raw.get('resource_id')
                 try:
                     sw_raw = device_raw.get('sw_raw')
                     if not isinstance(sw_raw, list):

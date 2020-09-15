@@ -181,7 +181,8 @@ class JuniperClient:
             logger.info(f'Fetching next {DEVICE_PER_PAGE} devices after {dict_params["start"]}')
             devices = self.space_rest_client.device_management.devices.get(paging=dict_params)
 
-    def get_all_devices(self, fetch_space_only, do_async, fetch_only_client_info=False):
+    def get_all_devices(self, fetch_space_only, do_async, fetch_only_client_info=False,
+                        fetch_interfaces_data=True):
         space_devices = self._paginated_get_all_devices()
         for current_device in space_devices:
             yield ('Juniper Space Device', current_device)
@@ -197,14 +198,16 @@ class JuniperClient:
                              ('ARP Device', '<get-arp-table-information/>'),
                              ('FDB Device', '<get-ethernet-switching-table-information/>')]
         client_actions = [
-            ('interface list', '<get-interface-information/>'),
             ('hardware', '<get-chassis-inventory/>'),
             ('version', '<get-software-information/>'),
             ('license', '<get-license-summary-information/>'),
-            ('vlans', '<get-ethernet-switching-interface-information>'
-                      '<detail/>'
-                      '</get-ethernet-switching-interface-information>'),
             ('base-mac', '<get-chassis-mac-addresses/>'),
         ]
+        if fetch_interfaces_data:
+            client_actions.extend([('interface list', '<get-interface-information/>'),
+                                   ('vlans', '<get-ethernet-switching-interface-information>'
+                                             '<detail/>'
+                                             '</get-ethernet-switching-interface-information>'),
+                                   ])
         actions = extra_actions + client_actions
         yield from self._do_junus_space_command(up_devices, 'get_info_q', actions, do_async)

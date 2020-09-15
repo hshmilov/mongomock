@@ -20,8 +20,12 @@ class AbsoluteConnection(RESTConnection):
         self._client_secret = client_secret
         self._data_center = data_center.lower()
 
+    def _create_authorization_header_for_get_devices(self, skip):
+        self._create_authorization_header(url='/v2/reporting/devices',
+                                          url_params=f'%24skip={skip}&%24top={DEVICE_PER_PAGE}')
+
     # pylint: disable=R0914
-    def _create_authorization_header(self, skip):
+    def _create_authorization_header(self, url, url_params):
         k_secret = ('ABS1' + self._client_secret).encode('utf-8')
         host = parse_url(self._domain).host
         now = datetime.datetime.utcnow()
@@ -45,8 +49,8 @@ class AbsoluteConnection(RESTConnection):
         x_abs_date = year + month + day + 'T' + hours + minute + seconds + 'Z'
         k_date = hmac.new(k_secret, msg=date_str, digestmod=hashlib.sha256).digest()
         k_signing = hmac.new(k_date, msg='abs1_request'.encode('utf-8'), digestmod=hashlib.sha256).digest()
-        canonical_request = 'GET' + '\n' + '/v2/reporting/devices' + '\n' + \
-                            f'%24skip={skip}&%24top={DEVICE_PER_PAGE}' + '\n' \
+        canonical_request = 'GET' + '\n' + url + '\n' + \
+                            url_params + '\n' \
                             + f'host:{host}' + '\n' + 'content-type:application/json' + '\n' +\
                             f'x-abs-date:{x_abs_date}' + '\n' + \
                             'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
@@ -65,17 +69,31 @@ class AbsoluteConnection(RESTConnection):
             f'x-abs-date, Signature={signature}'
 
     def _connect(self):
-        self._create_authorization_header(0)
+        self._create_authorization_header_for_get_devices(0)
         self._get('v2/reporting/devices', url_params={'$skip': 0, '$top': DEVICE_PER_PAGE})
 
-    def get_device_list(self):
+    # pylint: disable=too-many-locals, too-many-nested-blocks, too-many-branches, arguments-differ
+    def get_device_list(self, fetch_cdf=False):
         skip = 0
         while skip < MAX_NUMBER_OF_DEVICES:
             try:
-                self._create_authorization_header(skip)
+                self._create_authorization_header_for_get_devices(skip)
                 devices = self._get('v2/reporting/devices', url_params={'$skip': skip, '$top': DEVICE_PER_PAGE})
                 if devices:
-                    yield from devices
+                    for i, device_raw in enumerate(devices):
+                        try:
+                            logger.debug(f'Got to index {i}')
+                            device_id = device_raw.get('id')
+                            if not device_id:
+                                logger.warning(f'Bad device with no ID {device_raw}')
+                                continue
+                            if fetch_cdf:
+                                self._create_authorization_header(url=f'/v2/reporting/devices/{device_id}/cfd',
+                                                                  url_params='')
+                                device_raw['cfd_fields'] = self._get(f'v2/reporting/devices/{device_id}/cfd')
+                        except Exception:
+                            logger.debug(f'Problem getting fields', exc_info=True)
+                        yield device_raw
                 else:
                     break
                 skip += DEVICE_PER_PAGE

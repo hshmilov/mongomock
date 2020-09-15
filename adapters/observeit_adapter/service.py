@@ -144,9 +144,15 @@ class ObserveitAdapter(AdapterBase, Configurable):
                         device.add_nic(None, ip_list.split(','))
                 except Exception:
                     logger.exception(f'Problem adding nic to {device_raw}')
+                device_status = None
+                if device_raw.get('SrvMonitorStatus'):
+                    if str(device_raw.get('SrvMonitorStatus')) == '4':
+                        device_status = 'Installed'
+                    if str(device_raw.get('SrvMonitorStatus')) == '-1':
+                        device_status = 'Uninstalled'
                 device.add_agent_version(agent=AGENT_NAMES.observeit,
                                          version=device_raw.get('SrvVersion'),
-                                         status=device_raw.get('SrvMonitorStatus'))
+                                         status=device_status)
                 try:
                     last_seen = parse_date(str(device_raw.get('ScreenshotLastActivityDate')))
                     if last_seen:

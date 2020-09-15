@@ -958,6 +958,11 @@
     "link": "https://docs.axonius.com/docs/dropbox",
     "description": "Dropbox is a file hosting service that offers cloud storage, file synchronization, personal cloud, and client software."
   },
+  "awake_adapter": {
+    "title": "Awake Security",
+    "link": "https://docs.axonius.com/docs/awake-security",
+    "description": "Awake Security is a network traffic analysis solution that's capable of detecting and visualizing behavioral, mal-intent and compliance incidents."
+  },
   "azure_ad_adapter": {
     "title": "Microsoft Azure Active Directory (Azure AD) and Microsoft Intune",
     "link": "https://docs.axonius.com/docs/microsoft-azure-and-azure-active-directory-ad",
@@ -992,6 +997,11 @@
     "title": "Ping Identity",
     "link": "",
     "description": "Ping Identity is a standards-based platform that connects customers, employees and partners to their cloud, mobile, SaaS and on-premises applications and APIs."
+  },
+  "pingone_adapter": {
+    "title": "PingOne Directory",
+    "link": "https://docs.axonius.com/docs/pingone-directory",
+    "description": "PingOne Directory provides a hosted directory service that developers can use to store user authentication and profile data."
   },
   "sophos_adapter": {
     "title": "Sophos Endpoint Protection",

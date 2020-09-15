@@ -25,7 +25,7 @@ class DesktopCentralConnection(RESTConnection):
                 connection_dict['auth_type'] = consts.DOMAIN_AUTHENTICATION
                 connection_dict['domainName'] = self._username_domain
 
-            response = self._post('api/1.0//desktop/authentication', body_params=connection_dict)
+            response = self._post('api/1.3//desktop/authentication', body_params=connection_dict)
             if (('message_response' not in response or 'status' not in response or 'message_version' not in response or
                  'message_version' not in response) or (response['status'] != 'success')):
                 raise RESTException(f'Unknown connection error in authentication {str(response)}')
@@ -33,6 +33,9 @@ class DesktopCentralConnection(RESTConnection):
                 'auth_token']
         else:
             raise RESTException('No username or password')
+
+    def do_som_action(self, action, resource_id):
+        self._post(f'api/1.3/som/computers/{action}', body_params={'resourceids': [resource_id]})
 
     def _get_extra_data_for_page(self, devices, inner_url, raw_name, inner_object_attribute, paged=True):
         def _get_extra_request():
@@ -75,14 +78,14 @@ class DesktopCentralConnection(RESTConnection):
 
     def get_device_list(self):
         def _get_devices_from_page():
-            response = self._get('api/1.0/som/computers', url_params={'page': page,
+            response = self._get('api/1.3/som/computers', url_params={'page': page,
                                                                       'pagelimit': consts.DEVICES_PER_PAGE})
             devices = response['message_response']['computers']
             self._get_extra_dc_for_page(devices, 'dcapi/inventory/computers/{res_id}/bitlocker', 'bitlocker')
-            self._get_extra_data_for_page(devices, 'api/1.0/inventory/installedsoftware',
+            self._get_extra_data_for_page(devices, 'api/1.3/inventory/installedsoftware',
                                           'sw_raw', 'installedsoftware')
-            self._get_extra_data_for_page(devices, 'api/1.0/patch/systemreport', 'pa_raw', 'systemreport')
-            self._get_extra_data_for_page(devices, 'api/1.0/inventory/compdetailssummary', 'sum_raw',
+            self._get_extra_data_for_page(devices, 'api/1.3/patch/systemreport', 'pa_raw', 'systemreport')
+            self._get_extra_data_for_page(devices, 'api/1.3/inventory/compdetailssummary', 'sum_raw',
                                           'compdetailssummary',
                                           paged=False)
             total_pages = response['message_response']['total']

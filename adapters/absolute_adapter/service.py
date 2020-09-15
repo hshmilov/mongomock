@@ -9,13 +9,14 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import is_domain_valid
 from axonius.fields import Field, ListField
+from axonius.mixins.configurable import Configurable
 from absolute_adapter.connection import AbsoluteConnection
 from absolute_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class AbsoluteAdapter(AdapterBase):
+class AbsoluteAdapter(AdapterBase, Configurable):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
         is_stes_active = Field(bool, 'Is STES Active')
@@ -60,8 +61,7 @@ class AbsoluteAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -71,7 +71,7 @@ class AbsoluteAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(fetch_cdf=self.__fetch_cdf)
 
     @staticmethod
     def _clients_schema():
@@ -131,6 +131,18 @@ class AbsoluteAdapter(AdapterBase):
                 device.id = device_id + '_' + (device_raw.get('fullSystemName') or '') + '_' + \
                     (device_raw.get('systemName') or '')
                 hostname = device_raw.get('systemName')
+                cfd_fields = device_raw.get('cfd_fields')
+                if not isinstance(cfd_fields, dict):
+                    cfd_fields = {}
+                cdf_fields_values = cfd_fields.get('cdfValues')
+                if not isinstance(cdf_fields_values, list):
+                    cdf_fields_values = []
+                for cdf_field in cdf_fields_values:
+                    if not isinstance(cdf_field, dict) or not cdf_field.get('fieldName') \
+                            or not cdf_field.get('fieldValue'):
+                        continue
+                    device.add_key_value_tag(key=cdf_field.get('fieldName'), value=cdf_field.get('fieldValue'))
+
                 device.full_hostname = device_raw.get('fullSystemName')
                 if hostname and hostname.lower().endswith('.local'):
                     hostname = hostname[:-len('.local')]
@@ -265,4 +277,30 @@ class AbsoluteAdapter(AdapterBase):
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Agent]
+        return [AdapterProperty.Agent, AdapterProperty.Endpoint_Protection_Platform]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_cdf',
+                    'title': 'Fetch custom device fields data',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'fetch_cdf',
+            ],
+            'pretty_name': 'Absolute Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_cdf': False
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_cdf = config['fetch_cdf']

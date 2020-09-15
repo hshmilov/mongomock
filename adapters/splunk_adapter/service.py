@@ -309,7 +309,6 @@ class SplunkAdapter(AdapterBase, Configurable):
                         logger.debug(f'can not get device id for {device_raw}, continuing')
                         continue
 
-                    device.id = device_type + '_' + device_id
                     device.device_serial = vals.get('serial')
                     device.name = vals.get('name')
                     hostname = vals.get('hostname')
@@ -322,6 +321,12 @@ class SplunkAdapter(AdapterBase, Configurable):
                     device.hostname = hostname
                     if not hostname:
                         device.hostname = vals.get('name')
+                    finalhostname = ''
+                    try:
+                        finalhostname = device.hostname
+                    except Exception:
+                        pass
+                    device.id = device_type + '_' + device_id + '_' + finalhostname
                     device.device_model = vals.get('model')
                     device.domain = vals.get('domain') or hostname_domain
                     device.last_seen = parse_date(vals.get('last_seen'))

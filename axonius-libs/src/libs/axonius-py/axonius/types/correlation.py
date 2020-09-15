@@ -14,6 +14,7 @@ class CorrelationReason(Enum):
     StaticAnalysis = auto()
     UserManualLink = auto()
     ServiceNowCreation = auto()
+    IvantiCreation = auto()
     CherwellCreation = auto()
     LinuxSSHScan = auto()
     ShodanEnrichment = auto()

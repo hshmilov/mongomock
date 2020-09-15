@@ -89,7 +89,7 @@ class Tasks:
         tasks = self.enforcement_tasks_runs_collection.find(self._tasks_query(mongo_filter, search_value=search))
         if TRIGGER_RESULT_VIEW_NAME_FIELD in mongo_sort:
             beautiful_tasks = [self.beautify_task_entry(task) for task in tasks]
-            sorted_tasks = sorted(beautiful_tasks, key=lambda e: e[TRIGGER_RESULT_VIEW_NAME_FIELD],
+            sorted_tasks = sorted(beautiful_tasks, key=lambda e: e.get(TRIGGER_RESULT_VIEW_NAME_FIELD) or '',
                                   reverse=mongo_sort[TRIGGER_RESULT_VIEW_NAME_FIELD] == pymongo.DESCENDING)
             return jsonify(sorted_tasks[skip: (skip + limit)])
         sort = [(STARTED_AT_FIELD, pymongo.DESCENDING)] if not mongo_sort else list(mongo_sort.items())

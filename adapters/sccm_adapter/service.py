@@ -48,6 +48,10 @@ CHASIS_VALUE_FULL_DICT = {
     '23': 'Rack Mount Unit',
     '24': 'Sealed-Case PC',
 }
+COMPLIANCE_STATUS_DICT = {'0': 'Detection Status Unknown',
+                          '1': 'Not Applicable',
+                          '2': 'Required/Missing',
+                          '3': 'Already Installed /Compliant'}
 
 
 class DriverData(SmartJsonClass):
@@ -367,7 +371,10 @@ class SccmAdapter(AdapterBase, Configurable):
                 try:
                     if isinstance(device_raw['compliance_data'], dict):
                         compliance_data = device_raw['compliance_data']
-                        device.compliance_status = compliance_data.get('Status')
+                        compliance_status = compliance_data.get('Status')
+                        if compliance_status is not None and compliance_status is not '':
+                            compliance_status = str(compliance_status)
+                            device.compliance_status = COMPLIANCE_STATUS_DICT.get(compliance_status)
                 except Exception:
                     logger.exception(f'Problem getting bios data dor {device_raw}')
                 device.sccm_type = computer_data.get('SystemType0')
