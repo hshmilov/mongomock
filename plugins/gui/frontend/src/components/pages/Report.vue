@@ -69,7 +69,7 @@
             v-model="report.include_saved_views"
             value="IncludeSavedViews"
             :read-only="cannotEditReport"
-            label="Include Saved Queries data"
+            label="Include saved queries data"
             class="item"
             @change="validateSavedQueries"
           />
@@ -359,7 +359,7 @@ export default {
       }
       if (this.report.include_saved_views) {
         if (!this.queryValidity) {
-          return 'Configuration for “include Saved Queries data” is invalid';
+          return 'Configuration for “include saved queries data” is invalid';
         }
       }
       if (this.report.add_scheduling) {

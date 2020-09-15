@@ -247,7 +247,7 @@ class EnforcementsPage(EntitiesPage):
             self.DROPDOWN_TAGS_CSS, self.DROPDOWN_TEXT_BOX_CSS, selected_option_css_selector, tag
         )
         should_delete_unqueried_checkbox = self.find_checkbox_by_label(
-            'Remove this tag from entities not found in the Saved Query results')
+            'Remove this tag from entities not found in the saved query results')
         self.click_toggle_button(should_delete_unqueried_checkbox, make_yes=should_delete_unqueried)
         if save:
             self.click_save_button()

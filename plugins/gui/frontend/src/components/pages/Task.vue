@@ -131,7 +131,7 @@ export default {
         }, {
           name: 'finished', title: 'Completed', type: 'string', format: 'data-time',
         }, {
-          name: 'enforcement', title: 'Enforcement Set Name', type: 'string',
+          name: 'enforcement', title: 'Enforcement set name', type: 'string',
         }, {
           name: 'view', title: 'Triggered Query Name', type: 'string',
         }, {

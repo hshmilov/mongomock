@@ -9,7 +9,7 @@
     >
       <div class="enforce-modal-body">
         <div class="mb-8">
-          There are {{ selectionCount }} {{ module }} selected. Select the Enforcement Set:
+          There are {{ selectionCount }} {{ module }} selected. Select the enforcement set:
         </div>
         <XSelect
           v-model="selectedEnforcement"

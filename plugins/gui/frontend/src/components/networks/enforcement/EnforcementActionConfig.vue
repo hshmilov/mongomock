@@ -9,13 +9,13 @@
     >
       <AFormItem :colon="false">
         <span slot="label">
-          Enforcement Set name
+          Enforcement set name
         </span>
         <AInput
           id="enforcement_name"
           ref="enforcementNameInput"
           v-model="enforcementNameValue"
-          placeholder="Enter Enforcement Set name"
+          placeholder="Enter enforcement set name"
           @focusout.stop="enforcementNameFocusedOut = true"
         />
       </AFormItem>

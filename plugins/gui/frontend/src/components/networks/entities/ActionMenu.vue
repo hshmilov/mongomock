@@ -262,7 +262,7 @@ export default {
     },
     disabledRunEnforcementTooltip() {
       return this.runExistingEnforcementRestricted ? 'You don\'t have permission to run enforcements'
-        : 'No Enforcement Sets are configured';
+        : 'No enforcement sets are configured';
     },
   },
   created() {

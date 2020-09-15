@@ -3,7 +3,7 @@
     <h4 class="main-trigger-title">
       Saved Query
     </h4>
-    <div>Select the Saved Query for the Enforcement Set to act on:</div>
+    <div>Select the Saved Query for the enforcement set to act on:</div>
     <div class="config">
       <div class="config-base">
         <div class="base-query">

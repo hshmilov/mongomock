@@ -172,7 +172,7 @@ export default {
       return this.$route.params.id;
     },
     name() {
-      if (!this.enforcementData || !this.enforcementData.name) return 'New Enforcement Set';
+      if (!this.enforcementData || !this.enforcementData.name) return 'New enforcement set';
 
       return this.enforcementData.name;
     },

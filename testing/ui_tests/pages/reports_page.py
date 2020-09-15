@@ -38,7 +38,7 @@ class ReportsPage(EntitiesPage):
     QUERY_ADD_CLASS = '.query-add'
     QUERY_REMOVE_CLASS = '.query-remove'
     ADD_SCHEDULING_CHECKBOX = 'Email Configuration'
-    INCLUDE_QUERIES_CHECKBOX = 'Include Saved Queries data'
+    INCLUDE_QUERIES_CHECKBOX = 'Include saved queries data'
     INCLUDE_DASHBOARD_CHECKBOX = 'Include dashboard charts'
     EMAIL_BOX_CSS = 'input.md-input__inner.md-chips-input__inner'
     EMAIL_BOX_RECIPIENTS = 'Recipients'
