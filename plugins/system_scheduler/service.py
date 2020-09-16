@@ -981,8 +981,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         elif run_repeat_every_day:
             if not last_discovery:
                 return True
-            if (datetime.today().toordinal() - last_discovery.toordinal()) ==\
-                    discovery_type_config.get(DISCOVERY_REPEAT_EVERY, 1):
+            days_since_last_discovery = datetime.today().toordinal() - last_discovery.toordinal()
+            if days_since_last_discovery >= discovery_type_config.get(DISCOVERY_REPEAT_EVERY, 1):
                 return True
         return False
 
@@ -1336,7 +1336,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         if trigger.period == TriggerPeriod.daily:
             # check if X days have passed since last run
             return (not trigger.last_triggered or
-                    days_diff(current_date, trigger.last_triggered) == trigger.period_recurrence)
+                    days_diff(current_date, trigger.last_triggered) >= trigger.period_recurrence)
 
         if trigger.period == TriggerPeriod.weekly:
             # check if weekdays match
