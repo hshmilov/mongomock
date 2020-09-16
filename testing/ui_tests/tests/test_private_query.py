@@ -103,11 +103,13 @@ class TestPrivateQuery(TestBase):
             self.PRIVATE_QUERY_SAVE_NAME.format(user_name=''),
             self.devices_queries_page.SELECT_QUERY_NAME_CSS)
         self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_be_responsive()
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_field(self.devices_page.FIELD_SAVED_QUERY)
         with pytest.raises(NoSuchElementException):
             self.devices_page.select_query_value(self.PRIVATE_QUERY_SAVE_NAME.format(user_name=''))
         self.devices_page.key_down_escape()  # so that search button will be clickable
+        self.devices_page.clear_query_wizard()
         self.devices_page.click_search()
         self.devices_page.wait_for_table_to_be_responsive()
         self.dashboard_page.switch_to_page()
@@ -120,6 +122,7 @@ class TestPrivateQuery(TestBase):
 
     def _test_private_query_appearing(self, private_viewer_adder_query_name):
         self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_be_responsive()
         self.devices_page.check_search_list_for_names([private_viewer_adder_query_name])
         self.dashboard_page.switch_to_page()
         self.dashboard_page.find_space_header(2).click()
@@ -151,6 +154,7 @@ class TestPrivateQuery(TestBase):
         access = self.devices_queries_page.get_row_cell_text(1, access_cell_index)
         assert access == 'Public'
         self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_be_responsive()
         self.devices_page.reset_query()
 
     def _create_and_login_user(self, user_name, permissions):

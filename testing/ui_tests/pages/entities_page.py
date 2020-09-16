@@ -472,6 +472,9 @@ class EntitiesPage(Page):
     def click_search(self):
         self.click_button('Search', call_space=False)
 
+    def get_search_button(self):
+        return self.get_button('Search')
+
     def find_first_id(self):
         return self.driver.find_element_by_css_selector(self.TABLE_FIRST_ROW_CSS).get_attribute('id')
 

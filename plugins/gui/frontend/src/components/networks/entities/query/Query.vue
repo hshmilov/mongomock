@@ -6,7 +6,7 @@
       :read-only="readOnly"
       :user-fields-groups="userFieldsGroups"
       @done="$emit('done')"
-      @reset-search="$refs.searchInput.resetSearchInput()"
+      @reset-search="onResetQueryState"
     />
     <div class="filter">
       <XQuerySearchInput
@@ -186,17 +186,22 @@ export default {
 
       let filter;
       let selectedView;
-      // Check if the calculation is forced
-      // (using the search button) or the autoQuery value is chosen
+
+      // We need to recompile the query in any case (even if not auto query)
+      // In order to check if there is an error
       let resultFilters = {};
+      let recompiledFilter;
+      resultFilters = this.compileFilter(query, recompiledFilter, queryMeta);
+
+      // Check if we actually want to update the view with the modified recompiled query
+      // (using the search button) or the autoQuery value is chosen
       if (filterShouldRecompile) {
-        let recompiledFilter;
-        resultFilters = this.compileFilter(query, recompiledFilter, queryMeta);
         recompiledFilter = resultFilters.resultFilter;
 
         // Only if the user selected a predefined query
         // It can be either from the devices/users queries or from the saved queries page
-        if (this.selectedView && this.isPredefined && (!queryMeta.filterOutExpression || !queryMeta.filterOutExpression.value)) {
+        if (this.selectedView && this.isPredefined
+              && (!queryMeta.filterOutExpression || !queryMeta.filterOutExpression.value)) {
           // If this is the first time recompiling this query, and a pre-existing filter was chosen,
           // We set the newly recompiled filter as our original one.
           // Otherwise we take the existing one
@@ -268,6 +273,10 @@ export default {
         selectedView: null,
       });
       this.$emit('done');
+    },
+    onResetQueryState() {
+      this.$refs.searchInput.resetSearchInput();
+      this.error = null;
     },
   },
 };

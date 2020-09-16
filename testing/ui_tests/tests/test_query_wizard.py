@@ -77,3 +77,27 @@ class TestQueryWizard(TestBase):
         self.devices_page.wait_for_table_to_be_responsive()
         query_search_value = self.devices_page.find_search_value()
         assert query_search_value == '(specific_data.data.hostname == regex("test\+special\-characters", "i"))'
+
+    def test_query_wizard_search_disabled(self):
+        """
+        Checks that the search button in the query wizard gets disabled in case of error.
+        Also check that clicking "clear" in the wizard resets the error.
+        """
+        self._check_query_wizard_search_disabled()
+        self.settings_page.disable_auto_querying()
+        # we check the same thing but this time with auto querying disabled
+        self._check_query_wizard_search_disabled()
+
+    def _check_query_wizard_search_disabled(self):
+        self.devices_page.switch_to_page()
+        self.devices_page.click_query_wizard()
+        self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE)
+        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS)
+        assert not self.devices_page.is_element_clickable(self.devices_page.get_search_button())
+        self.devices_page.fill_query_string_value('random meaningless value')
+        assert self.devices_page.is_element_clickable(self.devices_page.get_search_button())
+        self.devices_page.fill_query_string_value('')
+        assert not self.devices_page.is_element_clickable(self.devices_page.get_search_button())
+        self.devices_page.clear_query_wizard()
+        assert self.devices_page.is_element_clickable(self.devices_page.get_search_button())
+        self.devices_page.click_search()

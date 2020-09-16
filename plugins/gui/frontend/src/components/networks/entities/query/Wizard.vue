@@ -49,6 +49,7 @@
         >Clear</XButton>
         <XButton
           type="primary"
+          :disabled="searchDisabled"
           @click="compileFilter"
           @keyup.enter.native="compileFilter"
         >Search</XButton>
@@ -60,6 +61,7 @@
 <script>
 import { mapState } from 'vuex';
 import _debounce from 'lodash/debounce';
+import _isEmpty from 'lodash/isEmpty';
 
 import XDropdown from '../../../axons/popover/Dropdown.vue';
 import XButton from '../../../axons/inputs/Button.vue';
@@ -115,6 +117,9 @@ export default {
     },
     filterOutIdCount() {
       return this.value.meta && this.value.meta.filterOutExpression ? this.value.meta.filterOutExpression.value.split(',').length : 0;
+    },
+    searchDisabled() {
+      return !_isEmpty(this.error);
     },
   },
   methods: {

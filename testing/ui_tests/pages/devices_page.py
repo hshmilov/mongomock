@@ -408,6 +408,7 @@ class DevicesPage(EntitiesPage):
                 expressions[0])
         # require in order to change focus to main page
         self.close_dropdown()
+        self.clear_query_wizard()
         self.click_search()
 
     def get_host_name_aggregated_value(self):

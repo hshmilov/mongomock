@@ -483,6 +483,7 @@ class TestDevicesQueryAdvancedCases(TestBase):
             self.base_page.run_discovery()
             # Wait for WMI info
             self.devices_page.switch_to_page()
+            self.devices_page.wait_for_table_to_be_responsive()
             self.devices_page.fill_filter(self.devices_page.AD_WMI_ADAPTER_FILTER)
             self.devices_page.enter_search()
             self.devices_page.wait_for_table_to_be_responsive()
@@ -730,6 +731,7 @@ class TestDevicesQueryAdvancedCases(TestBase):
         assert len(self.devices_page.get_all_data()) == results_count
         assert self.devices_page.find_search_value() == query_filter
         assert self.devices_page.is_query_error(self.devices_page.MSG_ERROR_QUERY_WIZARD)
+        self.devices_page.clear_query_wizard()
         self.devices_page.click_search()
 
         self.adapters_page.remove_server(ad_client=aws_json_file_mock_devices, adapter_name=JSON_ADAPTER_NAME,
