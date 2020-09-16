@@ -485,6 +485,8 @@ class NexposeV3Client(NexposeClient):
         device.hostname = device_raw.get('hostName')
         device.nexpose_type = device_raw.get('type')
         scans_raw = device_raw.get('scans_raw')
+        if not isinstance(scans_raw, list):
+            scans_raw = []
         for scan_raw in scans_raw:
             try:
                 device.scans_data.append(ScanData(engine_name=scan_raw.get('engineName'),

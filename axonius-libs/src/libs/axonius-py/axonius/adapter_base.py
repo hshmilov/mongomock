@@ -1780,6 +1780,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         # pylint: disable=assignment-from-no-return
         parsed_device = self._refetch_device(client_id, client_data, device_id)
         # pylint: enable=assignment-from-no-return
+        if parsed_device is None:
+            raise Exception('Error in refetching device')
         parsed_device.generate_direct_connected_devices()
         parsed_device.fetch_time = datetime.now()
         try:
