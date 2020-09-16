@@ -840,7 +840,7 @@ def _query_chart_abstract_results(field: dict, entity: EntityType, view_from_db,
         }
     else:
         logger.info(f'Chart defined with unsupported field {field["name"]}')
-        return None
+        return None, None
 
     adapter_field_name = 'adapters.' + processed_field_name
     tags_field_name = 'tags.' + processed_field_name
