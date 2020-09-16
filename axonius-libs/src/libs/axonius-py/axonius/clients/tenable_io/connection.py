@@ -206,6 +206,8 @@ class TenableIoConnection(RESTConnection):
                             if export_status.upper() in ['QUEUED', 'PROCESSING']:
                                 try:
                                     self._post(f'{export_type}/export/{export_uuid}/cancel')
+                                    logger.info(f'Successfully canceled export type {export_type!r} uuid '
+                                                f'{export_uuid!r} that had status {export_status!r}')
                                 except Exception as e:
                                     logger.warning(f'Failed canceling export type {export_type} - '
                                                    f'{export_uuid}: {str(e)}')

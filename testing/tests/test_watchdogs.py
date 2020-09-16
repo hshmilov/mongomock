@@ -17,7 +17,7 @@ def test_watchdog_logs():
     wait_until(gui_alive_tester.is_str_in_log,
                str_in_log=ERROR_MSG,
                tolerated_exceptions_list=[Exception],
-               total_timeout=SLEEP_SECONDS * 3)
+               total_timeout=SLEEP_SECONDS * 10)
 
     system_metric_tester = LogTester(WATCHDOG_LOGS_DIR / 'systemmetricstask.watchdog.log')
     wait_until(lambda: system_metric_tester.is_metric_in_log(SystemMetric.NETIFACES_COUNT, r'\d+'))
