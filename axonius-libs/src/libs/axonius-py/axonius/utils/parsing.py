@@ -74,7 +74,7 @@ DEFAULT_VERSION_EXTENSION = '00000000'
 DEFAULT_LINUX_VERSION_EPOCH = '0'
 BAD_SERIALS = ['INVALID', 'NON-UNIQUES/N', '0', 'SYSTEMSERIALNUMBER', 'TOBEFILLEDBYO.E.M.', 'VIRTUAL',
                'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN', '-', '0123456789', 'NA-VIRTUAL',
-               '0123456789ABCDEF']
+               '0123456789ABCDEF', 'NONE']
 
 
 # This number stands for the default number of days needed for us to say a device is old,
