@@ -1034,27 +1034,10 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
             for adapter in entity_datas['adapters_data']:
                 if not adapter.endswith('_adapter'):
                     continue
-                _adapter = entity_datas['adapters_data'][adapter][0]
-
-                # IP addresses we take from cloud providers no matter what (AX-7875)
-                if specific_property == 'network_interfaces' and sub_property == 'ips' and \
-                        'adapter_properties' in _adapter and 'Cloud_Provider' in _adapter['adapter_properties']:
-                    try:
-                        sub_property_val = _adapter[specific_property][sub_property] if \
-                            isinstance(_adapter[specific_property], dict) else \
-                            [x[sub_property] for x in _adapter[specific_property] if sub_property in x]
-                    # Field not in result
-                    except Exception:
-                        sub_property_val = None
-                if sub_property_val:
-                    val = sub_property_val
-                    last_seen = datetime.now()
-
-                # First priority is the latest seen Agent adapter
-                if 'adapter_properties' in _adapter and 'Agent' in _adapter['adapter_properties'] and 'last_seen' \
-                        in _adapter and isinstance(_adapter['last_seen'], datetime) \
-                        and _adapter['last_seen'] > last_seen:
-                    if sub_property is not None and specific_property in _adapter:
+                for _adapter in entity_datas['adapters_data'][adapter]:
+                    # IP addresses we take from cloud providers no matter what (AX-7875)
+                    if specific_property == 'network_interfaces' and sub_property == 'ips' and \
+                            'adapter_properties' in _adapter and 'Cloud_Provider' in _adapter['adapter_properties']:
                         try:
                             sub_property_val = _adapter[specific_property][sub_property] if \
                                 isinstance(_adapter[specific_property], dict) else \
@@ -1062,63 +1045,15 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                         # Field not in result
                         except Exception:
                             sub_property_val = None
-                    if specific_property in _adapter and (sub_property_val != [] and sub_property_val is not None):
+                    if sub_property_val:
                         val = sub_property_val
-                        last_seen = _adapter['last_seen']
-                    elif specific_property in _adapter and not isinstance(sub_property, str):
-                        val = _adapter[specific_property]
-                        last_seen = _adapter['last_seen']
+                        last_seen = datetime.now()
 
-                # Second priority is active-directory data
-                # pylint: disable=too-many-boolean-expressions
-                if (val != '' and last_seen is not None and isinstance(last_seen, datetime) and
-                        (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
-                        (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
-                    val_changed_by_ad = False
-                    try:
-                        for tmp_val, tmp_last_seen in find_entity_field(entity_datas,
-                                                                        specific_property,
-                                                                        specific_adapter='active_directory_adapter'):
-                            if tmp_val is None and tmp_last_seen is None:
-                                break
-                            if tmp_last_seen < last_seen:
-                                continue
-                            if tmp_val is not None and sub_property is not None:
-                                try:
-                                    sub_property_val = tmp_val[sub_property] if isinstance(tmp_val, dict) else \
-                                        [x[sub_property] for x in tmp_val if sub_property in x]
-                                # Field not in result
-                                except Exception:
-                                    sub_property_val = None
-                            if tmp_val is not None and isinstance(sub_property, str) and \
-                                    (sub_property_val is not None and sub_property_val != []):
-                                val = sub_property_val
-                                last_seen = tmp_last_seen
-                                val_changed_by_ad = True
-                            elif tmp_val is not None and sub_property is None:
-                                val = tmp_val
-                                last_seen = tmp_last_seen
-                                val_changed_by_ad = True
-                            if val == '':
-                                last_seen = datetime(1970, 1, 1, 0, 0, 0)
-                    except TypeError:
-                        val_changed_by_ad = False
-                    finally:
-                        # AD overrides them all
-                        if val_changed_by_ad:
-                            last_seen = datetime.now()
-                            if preferred_field == 'specific_data.data.hostname_preferred' and val:
-                                # This is happening regardless of remove_domain_from_preferred_hostname. we remove
-                                # the domain in case of AD always.
-                                val = val.upper().split('.')[0]
-
-                # Third priority is the latest seen Assets adapter
-                if (val != '' and last_seen != datetime(1970, 1, 1, 0, 0, 0) and isinstance(last_seen, datetime) and
-                        (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
-                        (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
-                    if last_seen is None:
-                        last_seen = datetime(1970, 1, 1, 0, 0, 0)
-                    if 'adapter_properties' in _adapter and 'Assets' in _adapter['adapter_properties']:
+                    # First priority is the latest seen Agent adapter
+                    # pylint: disable=too-many-boolean-expressions
+                    if 'adapter_properties' in _adapter and 'Agent' in _adapter['adapter_properties'] and 'last_seen' \
+                            in _adapter and isinstance(_adapter['last_seen'], datetime) \
+                            and _adapter['last_seen'] > last_seen and val != '':
                         if sub_property is not None and specific_property in _adapter:
                             try:
                                 sub_property_val = _adapter[specific_property][sub_property] if \
@@ -1127,35 +1062,107 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                             # Field not in result
                             except Exception:
                                 sub_property_val = None
-                        if specific_property in _adapter and (sub_property_val != [] and sub_property_val is not None):
+                        elif specific_property in _adapter and \
+                                (sub_property_val != [] and sub_property_val is not None):
                             val = sub_property_val
-                            last_seen = _adapter['last_seen'] if 'last_seen' in _adapter else datetime.now()
+                            last_seen = _adapter['last_seen']
                         elif specific_property in _adapter and not isinstance(sub_property, str):
                             val = _adapter[specific_property]
-                            last_seen = _adapter['last_seen'] if 'last_seen' in _adapter else datetime.now()
+                            last_seen = _adapter['last_seen']
+
+                    # Second priority is active-directory data
+                    # pylint: disable=too-many-boolean-expressions
+                    if (val != '' and last_seen is not None and isinstance(last_seen, datetime) and
+                            (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
+                            (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
+                        val_changed_by_ad = False
+                        try:
+                            for tmp_val, tmp_last_seen in \
+                                    find_entity_field(entity_datas,
+                                                      specific_property,
+                                                      specific_adapter='active_directory_adapter'):
+                                if tmp_val is None and tmp_last_seen is None:
+                                    break
+                                if tmp_last_seen < last_seen:
+                                    continue
+                                if tmp_val is not None and sub_property is not None:
+                                    try:
+                                        sub_property_val = tmp_val[sub_property] if isinstance(tmp_val, dict) else \
+                                            [x[sub_property] for x in tmp_val if sub_property in x]
+                                    # Field not in result
+                                    except Exception:
+                                        sub_property_val = None
+                                if tmp_val is not None and isinstance(sub_property, str) and \
+                                        (sub_property_val is not None and sub_property_val != []):
+                                    val = sub_property_val
+                                    last_seen = tmp_last_seen
+                                    val_changed_by_ad = True
+                                elif tmp_val is not None and sub_property is None:
+                                    val = tmp_val
+                                    last_seen = tmp_last_seen
+                                    val_changed_by_ad = True
+                                if val == '':
+                                    last_seen = datetime(1970, 1, 1, 0, 0, 0)
+                        except TypeError:
+                            val_changed_by_ad = False
+                        finally:
+                            # AD overrides them all
+                            if val_changed_by_ad:
+                                last_seen = datetime.now()
+                                if preferred_field == 'specific_data.data.hostname_preferred' and val:
+                                    # This is happening regardless of remove_domain_from_preferred_hostname. we remove
+                                    # the domain in case of AD always.
+                                    val = val.upper().split('.')[0]
+
+                    # Third priority is the latest seen Assets adapter
+                    if (val != '' and last_seen != datetime(1970, 1, 1, 0, 0, 0) and isinstance(last_seen, datetime) and
+                            (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
+                            (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
+                        if last_seen is None:
+                            last_seen = datetime(1970, 1, 1, 0, 0, 0)
+                        if 'adapter_properties' in _adapter and 'Assets' in _adapter['adapter_properties']:
+                            if sub_property is not None and specific_property in _adapter:
+                                try:
+                                    sub_property_val = _adapter[specific_property][sub_property] if \
+                                        isinstance(_adapter[specific_property], dict) else \
+                                        [x[sub_property] for x in _adapter[specific_property] if sub_property in x]
+                                # Field not in result
+                                except Exception:
+                                    sub_property_val = None
+                            if specific_property in _adapter and \
+                                    (sub_property_val != [] and sub_property_val is not None):
+                                val = sub_property_val
+                                last_seen = _adapter['last_seen'] if 'last_seen' in _adapter else datetime.now()
+                            elif specific_property in _adapter and not isinstance(sub_property, str):
+                                val = _adapter[specific_property]
+                                last_seen = _adapter['last_seen'] if 'last_seen' in _adapter else datetime.now()
 
             # Forth priority is first adapter that has the value
             if last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == '':
                 for adapter in entity_datas['adapters_data']:
                     if not adapter.endswith('_adapter'):
                         continue
-                    _adapter = entity_datas['adapters_data'][adapter][0]
-                    if sub_property is not None and specific_property in _adapter:
-                        try:
-                            sub_property_val = _adapter[specific_property][sub_property] if \
-                                isinstance(_adapter[specific_property], dict) else \
-                                [x[sub_property] for x in _adapter[specific_property] if sub_property in x]
-                        # Field not in result
-                        except Exception:
-                            sub_property_val = None
-                    if specific_property in _adapter and (sub_property_val != [] and sub_property_val is not None):
-                        val = sub_property_val
-                        break
-                    elif specific_property in _adapter and not isinstance(sub_property, str):
-                        val = _adapter[specific_property]
-                        break
-                    else:
-                        val = ''
+                    for _adapter in entity_datas['adapters_data'][adapter]:
+                        if last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == '' and \
+                                sub_property is not None and specific_property in _adapter:
+                            try:
+                                sub_property_val = _adapter[specific_property][sub_property] if \
+                                    isinstance(_adapter[specific_property], dict) else \
+                                    [x[sub_property] for x in _adapter[specific_property] if sub_property in x]
+                            # Field not in result
+                            except Exception:
+                                sub_property_val = None
+                        if val != '':
+                            break
+                        elif specific_property in _adapter and \
+                                (sub_property_val != [] and sub_property_val is not None):
+                            val = sub_property_val
+                            break
+                        elif specific_property in _adapter and not isinstance(sub_property, str):
+                            val = _adapter[specific_property]
+                            break
+                        else:
+                            val = ''
 
             if isinstance(val, list) and isinstance(val[0], list):
                 val = val[0]
