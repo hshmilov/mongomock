@@ -25,7 +25,7 @@ class DesktopCentralSomAction(ActionTypeBase):
             'items': [
                 {
                     'name': 'action_name',
-                    'title': 'Action Name',
+                    'title': 'Action type',
                     'type': 'string',
                     'enum': list(SOM_ACTIONS.keys())
                 }

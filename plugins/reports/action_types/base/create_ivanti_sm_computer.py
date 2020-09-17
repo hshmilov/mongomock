@@ -23,7 +23,7 @@ class IvantiSmComputerAction(ActionTypeBase):
             'items': [
                 {
                     'name': 'use_adapter',
-                    'title': 'Use stored credentials from the Ivant Service Manager adapter',
+                    'title': 'Use stored credentials from the Ivanti Service Manager adapter',
                     'type': 'bool'
                 },
                 {
@@ -55,7 +55,7 @@ class IvantiSmComputerAction(ActionTypeBase):
                 {
                     'name': 'ax_ivanti_fields_map',
                     'type': 'string',
-                    'title': 'Axonius to ServiceNow field mapping'
+                    'title': 'Axonius to Ivanti Service Manager field mapping'
                 }
             ],
             'required': [

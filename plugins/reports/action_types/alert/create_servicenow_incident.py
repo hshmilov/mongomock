@@ -141,7 +141,7 @@ class ServiceNowIncidentAction(ActionTypeAlert):
                 },
                 {
                     'name': 'table_name',
-                    'title': 'Table Name',
+                    'title': 'Table name',
                     'type': 'string',
                     'default': 'incident'
                 }
