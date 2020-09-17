@@ -1188,6 +1188,11 @@
     "link": "https://docs.axonius.com/docs/tenable-nessus-csv-file",
     "description": "Tenable Nessus CSV File Adapter imports device information from vulnerability scan data."
   },
+  "itop_adapter": {
+    "title": "iTop - BETA",
+    "link": "https://docs.axonius.com/docs/itop",
+    "description": "iTop is an open source ITSM solution allows management of configuration items and their relationships in a flexible CMDB."
+  },
   "gigamon_fm_adapter": {
     "title": "Gigamon GigaVUE-FM (Fabric Manager) - BETA",
     "link": "https://docs.axonius.com/docs/gigamon",

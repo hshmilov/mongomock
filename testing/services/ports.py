@@ -303,6 +303,7 @@ DOCKER_PORTS = {
     'edfs-csv-adapter':                 10005,
     'logmein-adapter':                  10006,
     'kolide-adapter':                   10007,
+    'itop-adapter':                     10008,
     'cisco-ucsm-adapter':               10010,
     'openvas-adapter':                  10014,
     'centrify-adapter':                 10015,

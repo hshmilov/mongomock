@@ -1,0 +1,11 @@
+OBJECTS_PER_PAGE = 200
+MAX_NUMBER_OF_OBJECTS = 20000000
+
+API_URL_BASE_PREFIX = 'webservices'
+API_URL_SUFFIX = 'rest.php'
+
+DEVICE_OBJECT = 'Device'
+DEVICE_CLASS = 'NetworkDevice'
+
+USER_OBJECT = 'User'
+USER_CLASS = 'Person'
