@@ -363,6 +363,11 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                 last_seen = parse_date(vulnerability.get('lastSeen'))
                 last_mitigated = parse_date(vulnerability.get('lastMitigated'))
                 has_been_mitigated = parse_bool_from_raw(vulnerability.get('hasBeenMitigated'))
+
+                xref = vulnerability.get('xref') or []
+                if isinstance(xref, str) and xref:
+                    xref = xref.split(',')
+
                 nessus_instance = None
                 if plugin_text and 'Nessus version' in plugin_text:
                     nessus_instance = self._get_nessus_instance(vulnerability.get('pluginText'))
@@ -396,7 +401,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                                         first_seen=first_seen,
                                         last_seen=last_seen,
                                         last_mitigated=last_mitigated,
-                                        has_been_mitigated=has_been_mitigated)
+                                        has_been_mitigated=has_been_mitigated,
+                                        xref=xref)
             except Exception:
                 logger.exception(f'Problem adding tenable vuln')
 
