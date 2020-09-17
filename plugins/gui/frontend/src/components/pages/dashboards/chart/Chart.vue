@@ -66,7 +66,7 @@
         :trend-disabled="isTrendChartDisabled"
         :expanded="Boolean(expanded)"
         :format-count-label="formatCountLabel"
-        :show-less="isChartEmpty || chartData.error"
+        :show-less="hideChartFooter"
         class="main__footer"
         @on-page-changed="onPageChanged"
         @open-drawer="onOpenDrawer"
@@ -209,6 +209,7 @@ export default {
       expanded: false,
       moveOrCopyVisible: false,
       currentPage: 1,
+      hideFooterOnBootstrap: true,
       chartFilters: { search: undefined, history: undefined },
       chartSort: {
         type: defaultSortType,
@@ -283,6 +284,9 @@ export default {
         this.$permissionConsts.actions.Update)
       || this.isPersonalSpace;
     },
+    hideChartFooter() {
+      return this.isChartEmpty || this.chartData.error || this.hideFooterOnBootstrap;
+    },
   },
   watch: {
     chart(newChart, prevChart) {
@@ -290,6 +294,7 @@ export default {
       const { config: prevConfig } = prevChart;
 
       if (!_isEqual(config, prevConfig)) {
+        this.hideFooterOnBootstrap = true;
         this.resetChartState();
       }
     },
@@ -388,6 +393,7 @@ export default {
           };
         }
         this.chartData = chartData;
+        this.hideFooterOnBootstrap = false;
       } catch (err) {
         this.setContentError();
       }
