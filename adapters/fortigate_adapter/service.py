@@ -30,12 +30,15 @@ class FortigateAdapter(AdapterBase, Configurable):
     """
     Connects axonius to Fortigate devices
     """
-
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         interface = Field(str, 'Interface')
         fortigate_name = Field(str, 'Fortigate Name')
         status = Field(str, 'Status')
         vpn_client = Field(FortigateVPNClient, 'VPN Client')
+        platform_str = Field(str, 'Platform Name')
+        mgt_vdom = Field(str, 'Management VDOM')
+        mgmt_if = Field(str, 'Management Interface')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -199,6 +202,9 @@ class FortigateAdapter(AdapterBase, Configurable):
             device.id = hostname or name
             device.name = name
             device.hostname = hostname
+            device.platform_str = device_raw.get('platform_str')
+            device.mgt_vdom = device_raw.get('mgt_vdom')
+            device.mgmt_if = device_raw.get('mgmt_if')
             try:
                 if device_raw.get('last_checked'):
                     device.last_seen = datetime.datetime.fromtimestamp(device_raw.get('last_checked'))
@@ -211,7 +217,7 @@ class FortigateAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem adding NIC to {device_raw}')
             device.adapter_properties = [AdapterProperty.Manager.name, AdapterProperty.Network.name]
-            device.set_raw({})
+            device.set_raw(device_raw)
             return device
         except Exception:
             logger.exception(f'Problem with device raw {device_raw}')

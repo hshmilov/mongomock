@@ -6,6 +6,7 @@ from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.utils.network.sockets import test_reachability_tcp
 from axonius.utils.parsing import is_domain_valid
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.utils.datetime import parse_date
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string
@@ -108,6 +109,7 @@ class Symantec12Adapter(AdapterBase, Configurable):
                     continue
                 device.id = str(device_id) + '_' + device_raw.get('COMPUTER_NAME')
                 device.hostname = device_raw.get('COMPUTER_NAME')
+                device.last_seen = parse_date(device_raw.get('last_seen'))
                 domain = device_raw.get('COMPUTER_DOMAIN_NAME')
                 if is_domain_valid(domain):
                     device.domain = domain
