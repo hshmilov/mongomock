@@ -1,8 +1,9 @@
 import logging
 
-from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection, RESTException
+from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_bool_from_raw, int_or_none
@@ -17,7 +18,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 # pylint: disable=logging-format-interpolation
 
 
-class PhpIpamAdapter(AdapterBase):
+class PhpIpamAdapter(ScannerAdapterBase):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(PhpIpamDeviceInstance):
         pass
@@ -283,7 +284,7 @@ class PhpIpamAdapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id
+            device.id = device_id + '_' + (device_raw.get('hostname') or '')
 
             device.hostname = device_raw.get('hostname')
             device.physical_location = device_raw.get('location')

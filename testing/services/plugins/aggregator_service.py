@@ -1743,6 +1743,162 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             },
             new_id_func)
 
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_51(self):
+        print('Update to schema 51 - Convert phpIPAM device.id to a new format')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            php_ipam_hostname = data.get('hostname') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{php_ipam_hostname}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{php_ipam_hostname}'
+
+        self._migrate_entity_id_generic(
+            EntityType.Devices,
+            'php_ipam_adapter',
+            {
+                'adapters.data.hostname': 1
+            },
+            new_id_func)
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_52(self):
+        print('Update to schema 52 - Convert Vectra device.id to a new format')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            vectra_hostname = data.get('hostname') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{vectra_hostname}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{vectra_hostname}'
+
+        self._migrate_entity_id_generic(
+            EntityType.Devices,
+            'vectra_adapter',
+            {
+                'adapters.data.hostname': 1
+            },
+            new_id_func)
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_53(self):
+        print('Update to schema 53 - Convert Pure Storage device.id to a new format')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            pure_storage_name = data.get('name') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{pure_storage_name}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{pure_storage_name}'
+
+        self._migrate_entity_id_generic(
+            EntityType.Devices,
+            'pure_storage_adapter',
+            {
+                'adapters.data.name': 1
+            },
+            new_id_func)
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_54(self):
+        print('Update to schema 54 - Convert ExtraHop device.id to a new format')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            extra_hop_name = data.get('name') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{extra_hop_name}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{extra_hop_name}'
+
+        self._migrate_entity_id_generic(
+            EntityType.Devices,
+            'extra_hop_adapter',
+            {
+                'adapters.data.name': 1
+            },
+            new_id_func)
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_55(self):
+        print('Update to schema 55 - Convert Redhat Satellite device.id to a new format')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            redhat_satellite_name = data.get('name') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{redhat_satellite_name}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{redhat_satellite_name}'
+
+        self._migrate_entity_id_generic(
+            EntityType.Devices,
+            'redhat_satellite_adapter',
+            {
+                'adapters.data.name': 1
+            },
+            new_id_func)
+
+        @db_migration(raise_on_failure=False)
+        def _update_schema_version_56(self):
+            print('Update to schema 56 - Convert Firemon device.id to a new format')
+
+            def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+                data = entity.get('data')
+                if not data:
+                    return False
+
+                firemon_name = data.get('name') or ''
+
+                # Check if not migrated already
+                if current_id.endswith(f'_{firemon_name}'):
+                    return False
+
+                # return new id
+                return f'{current_id}_{firemon_name}'
+
+            self._migrate_entity_id_generic(
+                EntityType.Devices,
+                'firemon_adapter',
+                {
+                    'adapters.data.name': 1
+                },
+                new_id_func)
+
     def _migrate_entity_id_generic(
             self,
             entity_type: EntityType,

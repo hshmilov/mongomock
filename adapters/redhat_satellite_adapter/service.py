@@ -126,7 +126,7 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id
+            device.id = device_id + '_' + (device_raw.get('name') or '')
 
             # generic fields
             device.hostname = device.name = device_raw.get('name')
