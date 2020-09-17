@@ -228,6 +228,12 @@ class SnowDeviceAdapter(DeviceAdapter):
     ci_comm_type = Field(str, 'Type')
     u_it_owner_organization = Field(str, 'IT Owner Organization')
     u_managed_by_vendor = Field(str, 'Managed By Vendor')
+    u_division = Field(str, 'Division')
+    u_level1_mgmt_org_code = Field(str, 'Level 1 Management Org. Code')
+    u_level2_mgmt_org_code = Field(str, 'Level 2 Management Org. Code')
+    u_level3_mgmt_org_code = Field(str, 'Level 3 Management Org. Code')
+    u_pg_email_address = Field(str, 'PG Email Address')
+    u_last_inventory = Field(datetime.datetime, 'Last Inventory')
     compliance_exceptions = ListField(SnowComplianceException, 'Compliance Exceptions')
     # you should keep these last
     upstream = ListField(RelativeInformationNode1, 'Upstream')

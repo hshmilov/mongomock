@@ -10,7 +10,7 @@ from axonius.clients.service_now import consts
 from axonius.clients.service_now.service.structures import RelativeInformationNode1, RelativeInformationLeaf, \
     MaintenanceSchedule, CiIpData, SnowComplianceException
 from axonius.utils.datetime import parse_date
-from axonius.utils.parsing import make_dict_from_csv, float_or_none
+from axonius.utils.parsing import make_dict_from_csv, float_or_none, parse_bool_from_raw
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -273,7 +273,7 @@ class ServiceNowAdapterBase(AdapterBase):
         if snow_compliance_exception_data_dict is None:
             snow_compliance_exception_data_dict = dict()
         try:
-            if self._use_exclusion_field and (device_raw.get('u_exclude_from_discovery') is not None):
+            if self._use_exclusion_field and parse_bool_from_raw(device_raw.get('u_exclude_from_discovery')):
                 logger.debug(f'ignoring excluded device {device_raw.get("sys_id")}')
                 return None
         except Exception:
@@ -575,56 +575,57 @@ class ServiceNowAdapterBase(AdapterBase):
                                                                                     snow_location_table_dict, 'name')
                     except Exception:
                         logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
-                    try:
-                        device.u_business_segment = self._parse_optional_reference_value(
-                            device_raw, 'u_business_segment', snow_department_table_dict, 'name')
-                    except Exception:
-                        logger.warning(f'Problem adding u_business_segment to {device_raw}', exc_info=True)
+                    device.u_last_inventory = parse_date(snow_asset.get('u_last_inventory'))
+                try:
+                    device.u_business_segment = self._parse_optional_reference_value(
+                        device_raw, 'u_business_segment', snow_department_table_dict, 'name')
+                except Exception:
+                    logger.warning(f'Problem adding u_business_segment to {device_raw}', exc_info=True)
 
-                    try:
-                        snow_nics = snow_nics_table_dict.get(device_raw.get('sys_id'))
-                        if isinstance(snow_nics, list):
-                            for snow_nic in snow_nics:
+                try:
+                    snow_nics = snow_nics_table_dict.get(device_raw.get('sys_id'))
+                    if isinstance(snow_nics, list):
+                        for snow_nic in snow_nics:
+                            try:
+                                device.add_nic(mac=snow_nic.get('mac_address'), ips=[snow_nic.get('ip_address')])
                                 try:
-                                    device.add_nic(mac=snow_nic.get('mac_address'), ips=[snow_nic.get('ip_address')])
-                                    try:
-                                        ci_ip_data = ci_ips_table_dict.get(snow_nic.get('correlation_id'))
-                                        if not isinstance(ci_ip_data, list):
-                                            ci_ip_data = []
+                                    ci_ip_data = ci_ips_table_dict.get(snow_nic.get('correlation_id'))
+                                    if not isinstance(ci_ip_data, list):
+                                        ci_ip_data = []
 
-                                        for ci_ip in ci_ip_data:
-                                            u_authorative_dns_name = ci_ip.get('u_authorative_dns_name')
-                                            u_ip_version = ci_ip.get('u_ip_version')
-                                            u_ip_address = ci_ip.get('u_ip_address')
-                                            u_lease_contract = ci_ip.get('u_lease_contract')
-                                            u_netmask = ci_ip.get('u_netmask')
-                                            u_network_address = ci_ip.get('u_network_address')
-                                            u_subnet = ci_ip.get('u_subnet')
-                                            u_zone = ci_ip.get('u_zone')
-                                            u_ip_address_property = ci_ip.get('u_ip_address_property')
-                                            u_ip_network_class = ci_ip.get('u_ip_network_class')
-                                            u_last_discovered = parse_date(ci_ip.get('u_last_discovered'))
-                                            u_install_status = ci_ip.get('u_install_status')
-                                            ci_ip_data = CiIpData(u_authorative_dns_name=u_authorative_dns_name,
-                                                                  u_ip_version=u_ip_version,
-                                                                  u_ip_address=u_ip_address,
-                                                                  u_lease_contract=u_lease_contract,
-                                                                  u_netmask=u_netmask,
-                                                                  u_network_address=u_network_address,
-                                                                  u_subnet=u_subnet,
-                                                                  u_zone=u_zone,
-                                                                  u_ip_address_property=u_ip_address_property,
-                                                                  u_ip_network_class=u_ip_network_class,
-                                                                  u_last_discovered=u_last_discovered,
-                                                                  u_install_status=u_install_status
-                                                                  )
-                                            device.ci_ips.append(ci_ip_data)
-                                    except Exception:
-                                        logger.exception(f'Problem getting ci ips table')
+                                    for ci_ip in ci_ip_data:
+                                        u_authorative_dns_name = ci_ip.get('u_authorative_dns_name')
+                                        u_ip_version = ci_ip.get('u_ip_version')
+                                        u_ip_address = ci_ip.get('u_ip_address')
+                                        u_lease_contract = ci_ip.get('u_lease_contract')
+                                        u_netmask = ci_ip.get('u_netmask')
+                                        u_network_address = ci_ip.get('u_network_address')
+                                        u_subnet = ci_ip.get('u_subnet')
+                                        u_zone = ci_ip.get('u_zone')
+                                        u_ip_address_property = ci_ip.get('u_ip_address_property')
+                                        u_ip_network_class = ci_ip.get('u_ip_network_class')
+                                        u_last_discovered = parse_date(ci_ip.get('u_last_discovered'))
+                                        u_install_status = ci_ip.get('u_install_status')
+                                        ci_ip_data = CiIpData(u_authorative_dns_name=u_authorative_dns_name,
+                                                              u_ip_version=u_ip_version,
+                                                              u_ip_address=u_ip_address,
+                                                              u_lease_contract=u_lease_contract,
+                                                              u_netmask=u_netmask,
+                                                              u_network_address=u_network_address,
+                                                              u_subnet=u_subnet,
+                                                              u_zone=u_zone,
+                                                              u_ip_address_property=u_ip_address_property,
+                                                              u_ip_network_class=u_ip_network_class,
+                                                              u_last_discovered=u_last_discovered,
+                                                              u_install_status=u_install_status
+                                                              )
+                                        device.ci_ips.append(ci_ip_data)
                                 except Exception:
-                                    logger.exception(f'Problem with snow nic {snow_nic}')
-                    except Exception:
-                        logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
+                                    logger.exception(f'Problem getting ci ips table')
+                            except Exception:
+                                logger.exception(f'Problem with snow nic {snow_nic}')
+                except Exception:
+                    logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
                 try:
                     snow_ips = ips_table_dict.get(device_raw.get('sys_id'))
                     if isinstance(snow_ips, list):
@@ -883,6 +884,14 @@ class ServiceNowAdapterBase(AdapterBase):
                     device_raw, 'u_managed_by_vendor', companies_table_dict, 'name')
             except Exception:
                 logger.exception(f'failed parsing it_owner_org / managed_by_vendor')
+            try:
+                device.u_division = device_raw.get('u_division')
+                device.u_level1_mgmt_org_code = device_raw.get('u_level1_mgmt_org_code')
+                device.u_level2_mgmt_org_code = device_raw.get('u_level2_mgmt_org_code')
+                device.u_level3_mgmt_org_code = device_raw.get('u_level3_mgmt_org_code')
+                device.u_pg_email_address = device_raw.get('u_pg_email_address')
+            except Exception:
+                logger.exception(f'failed parsing levelx_mgmt fields')
             device.domain = device_raw.get('dns_domain') or device_raw.get('os_domain')
             device.used_for = device_raw.get('used_for')
             device.tenable_asset_group = device_raw.get('u_tenable_asset_group')
@@ -1020,7 +1029,12 @@ class ServiceNowAdapterBase(AdapterBase):
                 subtables = user_raw.pop(consts.SUBTABLES_KEY, {})
                 snow_department_table_dict = subtables.get(consts.DEPARTMENT_TABLE_KEY) or {}
                 companies_table_dict = subtables.get(consts.COMPANY_TABLE) or {}
-
+                try:
+                    if self._use_exclusion_field and parse_bool_from_raw(user_raw.get('u_exclude_from_discovery')):
+                        logger.debug(f'ignoring excluded user {user_raw.get("sys_id")}')
+                        continue
+                except Exception:
+                    logger.warning(f'Failed handling exclusion of user')
                 user = self._new_user_adapter()
                 sys_id = user_raw.get('sys_id')
                 if not sys_id:
