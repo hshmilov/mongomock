@@ -197,8 +197,8 @@ def validate_old_state():
 
 def set_special_permissions():
     # Adding write permissions on .axonius_settings so node_maker can touch a new node.marker
-    os.makedirs(AXONIUS_SETTINGS_PATH, exist_ok=True)
-    cmd = f'chmod -R o+w {AXONIUS_SETTINGS_PATH}'
+    os.makedirs(AXONIUS_DEPLOYMENT_PATH, exist_ok=True)
+    cmd = f'chmod -R o-w {AXONIUS_DEPLOYMENT_PATH}'
     run_cmd(cmd.split())
 
     # Adding write and execute permissions on all the scripts node_maker uses.

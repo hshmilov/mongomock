@@ -1,10 +1,10 @@
-import os
 import random
 import string
 import subprocess
 import shlex
+from pathlib import Path
 
-from axonius.consts.system_consts import NODE_MARKER_PATH, DB_KEY_PATH, DOCKERHUB_URL
+from axonius.consts.system_consts import NODE_MARKER_PATH, DB_KEY_PATH
 from conf_tools import get_customer_conf_json
 from scripts.instances.instances_consts import (MASTER_ADDR_HOST_PATH,
                                                 ENCRYPTION_KEY_HOST_PATH,
@@ -61,14 +61,19 @@ def get_weave_subnet_ip_range():
     return weave_subnet
 
 
+def write_to_file(data: str, marker_path: Path):
+    command = f'sudo /sbin/runuser -l ubuntu -c "echo \"{data}\" > {marker_path.absolute().as_posix()}"'
+    subprocess.check_call(shlex.split(command))
+
+
 def update_weave_connection_params(weave_encryption_key, master_ip):
-    ENCRYPTION_KEY_HOST_PATH.write_text(weave_encryption_key)
-    MASTER_ADDR_HOST_PATH.write_text(master_ip)
+    write_to_file(weave_encryption_key, ENCRYPTION_KEY_HOST_PATH)
+    write_to_file(master_ip, MASTER_ADDR_HOST_PATH)
     print('Done update weave connection params')
 
 
 def update_db_enc_key(db_encryption_key):
-    DB_KEY_PATH.write_text(db_encryption_key)
+    write_to_file(db_encryption_key, DB_KEY_PATH)
     print('Done update DB encryption key')
 
 
@@ -121,15 +126,15 @@ def connect_to_master(master_ip, weave_pass):
 def get_encryption_key():
     if ENCRYPTION_KEY_HOST_PATH.is_file():
         return ENCRYPTION_KEY_HOST_PATH.read_text()
-    else:
-        # Creating a new one if it doesn't exist yet.
-        encryption_key = ''.join(random.SystemRandom().choices(string.ascii_uppercase +
-                                                               string.ascii_lowercase + string.digits, k=32))
 
-        AXONIUS_SETTINGS_HOST_PATH.mkdir(exist_ok=True)
-        ENCRYPTION_KEY_HOST_PATH.write_text(encryption_key)
-        ENCRYPTION_KEY_HOST_PATH.chmod(0o646)
-        return encryption_key
+    # Creating a new one if it doesn't exist yet.
+    encryption_key = ''.join(random.SystemRandom().choices(string.ascii_uppercase +
+                                                           string.ascii_lowercase + string.digits, k=32))
+
+    AXONIUS_SETTINGS_HOST_PATH.mkdir(exist_ok=True)
+    ENCRYPTION_KEY_HOST_PATH.write_text(encryption_key)
+    ENCRYPTION_KEY_HOST_PATH.chmod(0o646)
+    return encryption_key
 
 
 def restore_master_connection():

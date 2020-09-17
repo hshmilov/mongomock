@@ -171,9 +171,9 @@ def setup_instances_user():
             sudoers_group_name = 'wheel' if any([word in distro.linux_distribution(
                 full_distribution_name=False) for word in ['centos', 'rhel']]) else 'sudo'
 
-            subprocess.check_call(['/usr/sbin/useradd', '-s',
-                                   INSTANCES_SETUP_SCRIPT_PATH, '-G', f'docker,{sudoers_group_name}',
-                                   INSTANCE_CONNECT_USER_NAME])
+            subprocess.check_call(
+                ['/usr/sbin/useradd', '-s', INSTANCES_SETUP_SCRIPT_PATH, '-d', AXONIUS_DEPLOYMENT_PATH, '-G',
+                 f'docker,{sudoers_group_name}', INSTANCE_CONNECT_USER_NAME])
             subprocess.check_call(
                 f'usermod --password $(openssl passwd -1 {INSTANCE_CONNECT_USER_PASSWORD}) node_maker',
                 shell=True)

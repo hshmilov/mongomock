@@ -2,25 +2,28 @@ import os
 import shlex
 import subprocess
 import sys
+from pathlib import Path
 import time
 
 from axonius.utils.debug import redprint
 from axonius.utils.networking import check_if_tcp_port_is_open
-from scripts.instances.instances_modes import InstancesModes, get_instance_mode
-from scripts.instances.network_utils import connect_to_master, update_weave_connection_params, update_db_enc_key
+from axonius.consts.system_consts import (DOCKERHUB_URL, NODE_MARKER_PATH,
+                                          USING_WEAVE_PATH)
 from scripts.instances.instances_consts import (ADAPTER_RESTART_COMMAND,
-                                                PASSWORD_GET_URL,
-                                                DB_PASSWORD_GET_URL,
                                                 BOOTED_FOR_PRODUCTION_MARKER_PATH,
-                                                CORTEX_PATH)
+                                                CORTEX_PATH,
+                                                DB_PASSWORD_GET_URL,
+                                                PASSWORD_GET_URL, STOP_SYSTEM_COMMAND)
+from scripts.instances.instances_modes import InstancesModes, get_instance_mode
+from scripts.instances.network_utils import (connect_to_master,
+                                             update_db_enc_key,
+                                             update_weave_connection_params)
 from services.axonius_service import get_service
-from axonius.consts.system_consts import NODE_MARKER_PATH, DOCKERHUB_URL, USING_WEAVE_PATH
 from services.plugins.instance_control_service import InstanceControlService
 
 
 def shut_down_system():
-    command = 'sudo /sbin/runuser -l ubuntu -c "cd /home/ubuntu/cortex && ./axonius.sh system down --all"'
-    subprocess.check_call(shlex.split(command))
+    subprocess.check_call(shlex.split(STOP_SYSTEM_COMMAND))
     print('Done shut down system')
 
 
@@ -34,6 +37,7 @@ def restart_all_adapters(init_name):
 def change_instance_setup_user_pass():
     axonius_service = get_service()
     node_id = ''
+    new_password = ''
     all_plugins = axonius_service.get_all_plugins()
     # add instance control plugin for nodes running mongo only
     all_plugins.append((axonius_service.instance_control.plugin_name, InstanceControlService))
@@ -51,7 +55,7 @@ def change_instance_setup_user_pass():
 
     if not node_id:
         print(f'failed to read node_id from all of the running adapters')
-        raise Exception('node_id not found')
+        raise FileNotFoundError('node_id not found')
 
     print(f'Password len is {len(new_password)}, "{new_password[:4]}..."')
     subprocess.check_call(f'sudo /usr/sbin/usermod --password $(openssl passwd -1 {new_password}) node_maker',
@@ -77,6 +81,11 @@ def get_db_pass_from_core() -> str:
         print('Exception while getting db pass')
 
 
+def create_marker(marker_path: Path):
+    command = f'sudo /sbin/runuser -l ubuntu -c "touch {marker_path.absolute().as_posix()}"'
+    subprocess.check_call(shlex.split(command))
+
+
 def setup_node(connection_string):
     master_ip, weave_pass, init_name = connection_string
     master_ip = master_ip.strip()
@@ -92,9 +101,9 @@ def setup_node(connection_string):
 
     shut_down_system()
     update_weave_connection_params(weave_pass, master_ip)
-    USING_WEAVE_PATH.touch()
+    create_marker(USING_WEAVE_PATH)
     connect_to_master(master_ip, weave_pass)
-    NODE_MARKER_PATH.touch()
+    create_marker(NODE_MARKER_PATH)
     # on a node with only mongo, we don't need the db pass,
     # which is used today only as an env-variable for plugins that need to interact with mongo.
     if get_instance_mode() != InstancesModes.mongo_only.value:
