@@ -4,7 +4,7 @@ from ncclient.operations.rpc import RPCError
 from jnpr.junos.exception import RpcError
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
-from axonius.utils.files import get_local_config_file
+from axonius.utils.files import get_local_config_file, create_temp_file
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.juniper import rpc
 from axonius.clients.juniper.device import create_device, JuniperDeviceAdapter, update_connected
@@ -29,6 +29,15 @@ class JunosAdapter(AdapterBase):
                                                 port=client_config.get('port'))
 
     def _connect_client(self, client_config):
+        try:
+            ssh_config_file = client_config.get('ssh_config_file')
+            if ssh_config_file:
+                ssh_config_file_contents = self._grab_file_contents(ssh_config_file)
+                ssh_config_file = create_temp_file(ssh_config_file_contents)
+                client_config['ssh_config_file'] = ssh_config_file.name
+        except Exception as error:
+            logger.warning(f'Failed to handle custom ssh config file: {error}')
+
         try:
             with JunOSClient(**client_config) as client:
                 return client
@@ -79,6 +88,12 @@ class JunosAdapter(AdapterBase):
                     'type': 'integer',
                     'description': 'SSH Port (Default: 22)'
                 },
+                {
+                    'name': 'ssh_config_file',
+                    'title': 'SSH Configurations File',
+                    'description': 'Configurations file for SSH client',
+                    'type': 'file'
+                }
             ],
             'required': [
                 'username',

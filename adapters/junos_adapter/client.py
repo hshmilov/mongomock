@@ -12,17 +12,24 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class JunOSClient:
     """ client to fetch data from junos devices """
 
-    def __init__(self, host, username, password, port):
+    def __init__(self, host, username, password, port, ssh_config_file=None):
         self._host = host
         self._username = username
         self._password = password
         self._port = port
+        self._ssh_config_file_path = ssh_config_file
 
         self._dev = None
 
     def __enter__(self):
         """ entry that connect to the juniper device. """
-        self._dev = Device(host=self._host, user=self._username, password=self._password, port=self._port)
+        self._dev = Device(
+            host=self._host,
+            user=self._username,
+            password=self._password,
+            port=self._port,
+            ssh_config=self._ssh_config_file_path
+        )
         self._dev.open()
         return self
 
