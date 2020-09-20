@@ -111,7 +111,7 @@ class PureStorageFlashArrayConnection(RESTConnection):
             url_params = {
                 'limit': DEVICE_PER_PAGE
             }
-            response = self._get('arrays', url_params=url_params)
+            response = self._get(API_PREFIX + 'arrays', url_params=url_params)
             if not (isinstance(response, dict) and isinstance(response.get('items'), list)):
                 logger.warning(f'Received invalid response for arrays. {response}')
                 return
@@ -123,7 +123,7 @@ class PureStorageFlashArrayConnection(RESTConnection):
 
             while response.get('continuation_token'):
                 url_params['continuation_token'] = response.get('continuation_token')
-                response = self._get('arrays', url_params=url_params)
+                response = self._get(API_PREFIX + 'arrays', url_params=url_params)
                 if not (isinstance(response, dict) and isinstance(response.get('items'), list)):
                     logger.warning(f'Received invalid response for arrays. {response}')
                     break
@@ -143,7 +143,7 @@ class PureStorageFlashArrayConnection(RESTConnection):
             url_params = {
                 'limit': DEVICE_PER_PAGE,
             }
-            response = self._get('network-interfaces', url_params=url_params)
+            response = self._get(API_PREFIX + 'network-interfaces', url_params=url_params)
             if not (isinstance(response, dict) and isinstance(response.get('items'), list)):
                 logger.warning(f'Received invalid response for network interfaces. {response}')
                 return {}
@@ -157,7 +157,7 @@ class PureStorageFlashArrayConnection(RESTConnection):
 
             while response.get('continuation_token') and response.get('continuation_token') != NULL_STR:
                 url_params['continuation_token'] = response.get('continuation_token')
-                response = self._get('network-interfaces', url_params=url_params)
+                response = self._get(API_PREFIX + 'network-interfaces', url_params=url_params)
                 if not (isinstance(response, dict) and isinstance(response.get('items'), list)):
                     logger.warning(f'Received invalid response for network interfaces. {response}')
                     break

@@ -470,6 +470,7 @@ class IgarAdapter(AdapterBase):
                     continue
                 device.id = str(server_id) + '_' + (device_raw.get('ServerName') or '')
                 device.igar_server_id = str(server_id)
+                device.device_serial = device_raw.get('SerialNumber')
                 device.has_ip_duplication = False
                 device.name = device_raw.get('ServerName')
                 if device_raw.get('ServerFQDN') and str(device_raw.get('ServerFQDN')).strip().upper() != 'N/A':

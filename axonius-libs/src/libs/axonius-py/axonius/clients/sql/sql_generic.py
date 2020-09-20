@@ -1,10 +1,12 @@
 import logging
+import json
 
 from axonius.fields import Field
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_var_name
 from axonius.utils.sql import SQLTypes
 from axonius.adapter_exceptions import GetDevicesError
+from axonius.utils.json_encoders import IgnoreErrorJSONEncoder
 from axonius.consts.csv_consts import get_csv_field_names
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -102,8 +104,14 @@ def _sql_parse_raw_data(create_adapter_func, devices_raw_data):
                     device[normalized_column_name] = column_value
                 except Exception:
                     logger.warning(f'Could not parse column {column_name} with value {column_value}', exc_info=True)
-
-            device.set_raw(device_raw)
+            try:
+                # some fields might not be basic types (Decimal, datetime)
+                # by using IgnoreErrorJSONEncoder with JSON encode we verify that this
+                # will pass a JSON encode later by mongo
+                device.set_raw(json.loads(json.dumps(
+                    device_raw, cls=IgnoreErrorJSONEncoder)))
+            except Exception:
+                logger.exception(f'Can\'t set raw for {device_raw}')
             yield device
         except Exception:
             logger.exception(f'Problem with fetching {sql_type} Device for {device_raw}')

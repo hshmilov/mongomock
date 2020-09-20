@@ -74,7 +74,7 @@ DEFAULT_VERSION_EXTENSION = '00000000'
 DEFAULT_LINUX_VERSION_EPOCH = '0'
 BAD_SERIALS = ['INVALID', 'NON-UNIQUES/N', '0', 'SYSTEMSERIALNUMBER', 'TOBEFILLEDBYO.E.M.', 'VIRTUAL',
                'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN', '-', '0123456789', 'NA-VIRTUAL',
-               '0123456789ABCDEF', 'NONE']
+               '0123456789ABCDEF', 'NONE', 'VMWARE', '(VM)', 'SUN', 'NO INFORMATION', 'VIRTUAL SERVER']
 
 
 # This number stands for the default number of days needed for us to say a device is old,
@@ -1542,13 +1542,13 @@ def serials_do_not_contradict(adapter_device1, adapter_device2):
     return serial1 == serial2
 
 
-def is_freshservice_adapter(adapter_device):
-    return adapter_device.get('plugin_name') == 'fresh_service_adapter'
+def is_hostname_condradict_ok_adapter(adapter_device):
+    return adapter_device.get('plugin_name') in ['fresh_service_adapter', 'snipeit_adapter']
 
 
 def hostnames_do_not_contradict(adapter_device1, adapter_device2):
     if not get_hostname(adapter_device1) or not get_hostname(adapter_device2) \
-            or is_freshservice_adapter(adapter_device1) or is_freshservice_adapter(adapter_device2):
+            or is_hostname_condradict_ok_adapter(adapter_device1) or is_hostname_condradict_ok_adapter(adapter_device2):
         return True
     return compare_device_normalized_hostname(adapter_device1, adapter_device2)
 

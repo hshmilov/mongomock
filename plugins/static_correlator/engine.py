@@ -801,6 +801,14 @@ def compare_v_dash_name(adapter_device1, adapter_device2):
     return False
 
 
+def igar_with_no_serial(adapter_device):
+    if not adapter_device.get('plugin_name') in ['igar_adapter']:
+        return True
+    if not get_serial(adapter_device):
+        return True
+    return False
+
+
 def get_host_asset_azure_ad(adapter_device):
     asset = get_asset_or_host_full(adapter_device)
     if asset:
@@ -834,6 +842,58 @@ def compare_alias_name(adapter_device1, adapter_device2):
     asset1 = get_alias_name(adapter_device1)
     asset2 = get_alias_name(adapter_device2)
     if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
+
+
+def get_cp_esx_csv(adapter_device):
+    if adapter_device.get('plugin_name') not in ['csv_adapter', 'esx_adapter']:
+        return None
+    asset = get_asset_name(adapter_device)
+    if not asset:
+        return None
+    asset = asset.upper()
+    if adapter_device.get('plugin_name') == 'esx_adapter':
+        if '-' not in asset:
+            return None
+        last_dash = asset.split('-')[-1]
+        if last_dash in ['QQQ', '2000']:
+            asset = '-'.join(asset.split('-')[:-1])
+        last_dash = asset.split('-')[-1]
+        try:
+            float(last_dash)
+        except Exception:
+            return asset
+        if len(asset.split('-')) < 2:
+            return None
+        if asset.split('-')[-2] not in ['QQQ', '2000']:
+            return '-'.join(asset.split('-')[:-1])
+        if len(asset.split('-')) < 3:
+            return None
+        return '-'.join(asset.split('-')[:-2])
+    if adapter_device.get('plugin_name') == 'csv_adapter':
+        if adapter_device['data'].get('file_name') != 'profiles_db':
+            return None
+        if get_asset_name(adapter_device) != get_hostname(adapter_device):
+            return None
+        if get_serial(adapter_device) or adapter_device.get(NORMALIZED_MACS):
+            return None
+        return asset
+    return None
+
+
+def compare_cp_esx_csv(adapter_device1, adapter_device2):
+    asset1 = get_cp_esx_csv(adapter_device1)
+    asset2 = get_cp_esx_csv(adapter_device2)
+    if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
+
+
+def esx_and_csv(adapter_device1, adapter_device2):
+    if adapter_device1.get('plugin_name') == 'csv_adapter' and adapter_device2.get('plugin_name') == 'esx_adapter':
+        return True
+    if adapter_device2.get('plugin_name') == 'csv_adapter' and adapter_device1.get('plugin_name') == 'esx_adapter':
         return True
     return False
 
@@ -912,6 +972,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [is_snow_adapter],
                                       [one_is_not_snow],
                                       {'Reason': 'They have the same host without v dash'},
+                                      CorrelationReason.StaticAnalysis)
+
+    def _correlate_cp_esx_csv(self, adapters_to_correlate):
+        logger.info('Starting to cp esx csv')
+        filtered_adapters_list = filter(get_cp_esx_csv, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_cp_esx_csv],
+                                      [compare_cp_esx_csv],
+                                      [],
+                                      [esx_and_csv],
+                                      {'Reason': 'They have the cp esx csv'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_alias_hostname(self, adapters_to_correlate):
@@ -1059,6 +1130,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         logger.info('Starting to correlate on Hostname_FQDN-IP')
         filtered_adapters_list = filter(get_fqdn_or_hostname,
                                         filter(get_normalized_ip, adapters_to_correlate))
+        filtered_adapters_list = filter(igar_with_no_serial, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_fqdn_or_hostname],
                                       [compare_fqdn_or_hostname],
@@ -1073,6 +1145,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         logger.info('Starting to correlate on Hostname-IP')
         filtered_adapters_list = filter(get_normalized_hostname_str,
                                         filter(get_normalized_ip, adapters_to_correlate))
+        filtered_adapters_list = filter(igar_with_no_serial, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
@@ -1380,7 +1453,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         """
         logger.info('Starting to correlate on Asset-Host')
         filtered_adapters_list = filter(get_asset_or_host, adapters_to_correlate)
-
+        filtered_adapters_list = filter(igar_with_no_serial, filtered_adapters_list)
         inner_rules = [not_wifi_adapters, macs_do_not_contradict,
                        asset_hostnames_do_not_contradict_and_no_chef,
                        serials_do_not_contradict]
@@ -1404,6 +1477,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         """
         logger.info('Starting to correlate on Asset-Host Email')
         filtered_adapters_list = filter(get_asset_or_host, adapters_to_correlate)
+        filtered_adapters_list = filter(igar_with_no_serial, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_asset_or_host],
                                       [compare_asset_hosts],
@@ -1423,6 +1497,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         """
         logger.info('Starting to correlate on snowAsset-Host')
         filtered_adapters_list = filter(get_asset_snow_or_host, filter(get_normalized_ip, adapters_to_correlate))
+        filtered_adapters_list = filter(igar_with_no_serial, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_asset_snow_or_host],
                                       [compare_snow_asset_hosts],
@@ -1535,6 +1610,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         if correlate_snow_no_dash:
             yield from self._correlate_v_dash_name(adapters_to_correlate)
             yield from self._correlate_alias_hostname(adapters_to_correlate)
+        yield from self._correlate_cp_esx_csv(adapters_to_correlate)
         # let's find devices by, hostname, and ip:
         yield from self._correlate_hostname_ip(adapters_to_correlate)
         yield from self._correlate_hostname_fqdn_ip(adapters_to_correlate)

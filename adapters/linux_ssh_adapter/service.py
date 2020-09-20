@@ -115,6 +115,17 @@ class LinuxSshAdapter(LinuxSshExecutionMixIn, AdapterBase, Configurable):
 
         for client_name, command in devices_raw_data:
             command.to_axonius(client_name, device)
+        try:
+            os = device.os
+            type_dis = os.type + ' ' + os.distribution
+            try:
+                type_dis += ' ' + str(os.major)
+            except Exception:
+                pass
+            if type_dis:
+                os.type_distribution = type_dis
+        except Exception:
+            pass
         yield device
 
     @classmethod
