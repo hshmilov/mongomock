@@ -76,7 +76,12 @@ class SccmGroupData(SmartJsonClass):
     group_name = Field(str, 'Group Name')
     groups = ListField(str, 'Groups')
     local_users = ListField(str, 'Local Users')
-    doomain_users = ListField(str, 'Domain Users')
+    domain_users = ListField(str, 'Domain Users')
+
+
+class CurrentComplianceStatus(SmartJsonClass):
+    display_name = Field(str, 'Display Name')
+    compliance_state = Field(str, 'Compliance Status')
 
 
 class SccmAdapter(AdapterBase, Configurable):
@@ -114,6 +119,7 @@ class SccmAdapter(AdapterBase, Configurable):
         last_offline_time = Field(datetime.datetime, 'Last Offline Time')
         access_mp = Field(str, 'Access MP')
         guard_compliance_state = Field(str, 'Credential Guard Compliance State')
+        current_compliance_status = ListField(CurrentComplianceStatus, 'Current Compliance Status')
 
         def add_sccm_vm(self, **kwargs):
             try:
@@ -538,7 +544,7 @@ class SccmAdapter(AdapterBase, Configurable):
                                 group_groups.append(account_name)
                         device.sccm_groups_data.append(SccmGroupData(groups=group_groups,
                                                                      local_users=group_local_users,
-                                                                     doomain_users=group_domain_users,
+                                                                     domain_users=group_domain_users,
                                                                      group_name=group_name))
                 except Exception:
                     logger.exception(f'Problem getting groups data')
@@ -738,7 +744,17 @@ class SccmAdapter(AdapterBase, Configurable):
                                 logger.exception(f'Problem adding asset {asset_data}')
                 except Exception:
                     logger.exception(f'Problem adding program to {device_raw}')
-
+                try:
+                    if isinstance(device_raw['current_compliance_full_data'], list):
+                        for display_name, compliance_state in device_raw['current_compliance_full_data']:
+                            try:
+                                comp_obj = CurrentComplianceStatus(display_name=display_name,
+                                                                   compliance_state=compliance_state)
+                                device.current_compliance_status.append(comp_obj)
+                            except Exception:
+                                logger.exception(f'Problem adding patch {patch_data}')
+                except Exception:
+                    logger.exception(f'Problem current_compliance_full_data to {device_raw}')
                 try:
                     if isinstance(device_raw['patch_data'], list):
                         for patch_data in device_raw['patch_data']:

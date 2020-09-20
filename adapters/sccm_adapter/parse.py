@@ -31,6 +31,29 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
     client_data = _create_sccm_client_connection(client_config, devices_fetched_at_a_time)
     client_data.set_devices_paging(devices_fetched_at_a_time)
     with client_data:
+        current_compliance_status_dict = dict()
+        try:
+            if not device_id:
+                for current_compliance_data in client_data.query(consts.CURRENT_COMPLIANCE_STATUS_QUERY):
+                    asset_id = current_compliance_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in current_compliance_status_dict:
+                        current_compliance_status_dict[asset_id] = []
+                    current_compliance_status_dict[asset_id].append(current_compliance_data)
+        except Exception:
+            logger.warning(f'Problem with current conpliance', exc_info=True)
+        localized_ci_properties_dict = dict()
+        try:
+            if not device_id:
+                for localized_prop_data in client_data.query(consts.LOCALIZED_CI_PROPERTIES_QUERY):
+                    ci_id = localized_prop_data.get('CI_ID')
+                    if not ci_id:
+                        continue
+                    localized_ci_properties_dict[ci_id] = localized_prop_data
+        except Exception:
+            logger.warning(f'Problem with localized prop', exc_info=True)
+
         guard_compliance_dict = dict()
         try:
             if not device_id:
@@ -40,7 +63,7 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
                         continue
                     guard_compliance_dict[machine_id] = guard_data
         except Exception:
-            logger.exception(f'Problem with online dict')
+            logger.warning(f'Problem with online dict', exc_info=True)
 
         online_dict = dict()
         try:
@@ -51,7 +74,7 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
                         continue
                     online_dict[machine_id] = online_data
         except Exception:
-            logger.exception(f'Problem with online dict')
+            logger.warning(f'Problem with online dict', exc_info=True)
 
         product_files_dict = dict()
         try:
@@ -62,7 +85,7 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
                         continue
                     product_files_dict[product_id] = file_data
         except Exception:
-            logger.exception(f'Problem with product file dict')
+            logger.warning(f'Problem with product file dict', exc_info=True)
 
         svc_dict = dict()
         try:
@@ -469,6 +492,32 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
             device_raw['os_data'] = os_dict.get(device_raw.get('ResourceID'))
             device_raw['computer_data'] = computer_dict.get(device_raw.get('ResourceID'))
             device_raw['users_raw'] = asset_users_dict.get(device_raw.get('ResourceID'))
+            current_compliance_status_data = current_compliance_status_dict.get(device_raw.get('ResourceID'))
+            device_raw['current_compliance_status_data'] = current_compliance_status_data
+            device_raw['current_compliance_full_data'] = []
+            try:
+                if not isinstance(current_compliance_status_data, list):
+                    current_compliance_status_data = []
+                for current_compliance_raw in current_compliance_status_data:
+                    try:
+                        compliance_state = current_compliance_raw.get('ComplianceState')
+                        ci_id = current_compliance_raw.get('CI_ID')
+                        if not ci_id or not compliance_state:
+                            continue
+                        localized_data = localized_ci_properties_dict.get(ci_id)
+                        if not isinstance(localized_data, dict) or not localized_data.get('DisplayName'):
+                            continue
+                        display_name = localized_data.get('DisplayName')
+                        if isinstance(compliance_state, int):
+                            compliance_state = str(compliance_state)
+                        compliance_state_final = consts.CURRENT_COMPLIANCE_STATE_DICT.get(compliance_state)
+                        if not compliance_state_final:
+                            continue
+                        device_raw['current_compliance_full_data'].append((display_name, compliance_state_final))
+                    except Exception:
+                        logger.exception(f'Problem with current compliance {current_compliance_raw}')
+            except Exception:
+                logger.exception(f'Problem parsing compliance data')
             device_raw['collections_data'] = collections_dict.get(device_raw.get('ResourceID'))
             device_raw['collections_list'] = []
             device_raw['applications_list'] = []

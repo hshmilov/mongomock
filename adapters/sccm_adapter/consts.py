@@ -75,3 +75,7 @@ ONLINE_QUERY = 'select CNIsOnline, MachineID, CNLastOnlineTime, CNLastOfflineTim
 GUARD_COMPLIANCE_QUERY = 'select ComplianceState, ResourceID from vdcmdeploymentsystemdetails'
 CURRENT_COMPLIANCE_STATUS_QUERY = 'select CI_ID, ComplianceState, ResourceID from v_CICurrentComplianceStatus'
 LOCALIZED_CI_PROPERTIES_QUERY = 'select CI_ID, DisplayName from v_LocalizedCIProperties'
+CURRENT_COMPLIANCE_STATE_DICT = {'0': 'Compliance State Unknown',
+                                 '1': 'Compliant',
+                                 '2': 'Non-Compliant',
+                                 '4': 'Error'}
