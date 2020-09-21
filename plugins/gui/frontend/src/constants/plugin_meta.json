@@ -1492,6 +1492,11 @@
     "link": "https://docs.axonius.com/docs/digital-shadows-searchlight",
     "description": "Digital Shadows SearchLight is a digital risk protection solution that protects organizations against external risk exposure."
   },
+  "thycotic_adapter": {
+    "title": "Thycotic Secret Server",
+    "link": "https://docs.axonius.com/docs/thycotic-secret-server",
+    "description": "Thycotic Secret Server is a Privileged Access Management (PAM) solution for protecting your priviledged accounts, available both on premise or in the cloud."
+  },
   "hyper_v_adapter": {
     "title": "Microsoft Hyper-V",
     "link": "https://docs.axonius.com/docs/microsoft-hyper-v",

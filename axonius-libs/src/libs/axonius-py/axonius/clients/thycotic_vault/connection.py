@@ -1,11 +1,13 @@
+import datetime
 import logging
 from enum import Enum
-import datetime
 
 from axonius.clients.abstract.abstract_vault_connection import (AbstractVaultConnection,
                                                                 VaultException,
                                                                 VaultProvider)
 from axonius.clients.rest.exception import RESTException, RESTRequestException
+from axonius.clients.thycotic_vault.consts import MAX_NUMBER_OF_USERS, USERS_URL, USER_PER_PAGE
+from axonius.utils.parsing import int_or_none, parse_bool_from_raw
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -175,6 +177,15 @@ class ThycoticVaultConnection(AbstractVaultConnection):
         """
         return next((item.get('itemValue') for item in attributes if item.get('fieldName') == attribute_name), None)
 
+    def _get(self, *args, **kwargs):
+        # Due to a bug in the authentication of Thycotic we need to refresh the token each time we use _get.
+        if self._refresh_token:
+            self.refresh_token()
+        else:
+            self._auth_token()
+
+        return super()._get(*args, **kwargs)
+
     def query_password(self, adapter_field_name, vault_data) -> str:
         """
         :param adapter_field_name: adapter gui filed name
@@ -207,3 +218,84 @@ class ThycoticVaultConnection(AbstractVaultConnection):
             raise ThycoticVaultException(adapter_field_name,
                                          f'Secret not found. Secret ID: {secret_id}. Field Name: {vault_field}')
         return password
+
+    def get_user_list(self):
+        try:
+            yield from self._get_users()
+        except RESTException as err:
+            logger.exception(str(err))
+            raise
+
+    def test_adapter_permissions(self):
+        """
+        This function is created in order to check if the connection is valid.
+        it is separated from _connect because this class is used also for vault and not only for adapter.
+
+        """
+        url_params = {
+            'take': 1,
+            'filter.includeInactive': True
+        }
+
+        try:
+            self._get(USERS_URL, url_params=url_params)
+        except Exception as e:
+            message = f'Error: Invalid response from server, please check domain or credentials. {str(e)}'
+            logger.exception(message)
+            raise RESTException(message)
+
+    def _get_users(self):
+        try:
+            number_of_users = 0
+            url_params = {
+                'take': USER_PER_PAGE,
+                'filter.includeInactive': True
+            }
+
+            response = self._get(USERS_URL, url_params=url_params)
+            if not isinstance(response, dict):
+                raise RESTException(f'Response not in the correct format: {response}')
+
+            total_results = int_or_none(response.get('total'))
+            if not total_results:
+                raise RESTException(f'Response does not contain total: {response}')
+
+            logger.info(
+                f'Expecting {total_results} users, out of a maximum of {MAX_NUMBER_OF_USERS}. '
+                f'Overflow will be cut-off.')
+            total_results = min(total_results, MAX_NUMBER_OF_USERS)
+
+            while number_of_users <= total_results:
+                users = response.get('records')
+                if not isinstance(users, list):
+                    logger.error(f'Users not in the correct format: {users}')
+                    break
+
+                for user in users:
+                    if not isinstance(user, dict):
+                        logger.warning(f'User not in the correct format: {user}')
+                        continue
+                    yield user
+                    number_of_users += 1
+
+                if not parse_bool_from_raw(response.get('hasNext')):
+                    logger.info(f'Finished fetching users, collected {number_of_users} users')
+                    break
+
+                next_skip = int_or_none(response.get('nextSkip'))
+                if not isinstance(next_skip, int):
+                    logger.warning(f'Response does not contain nextSkip in correct format: {response}')
+                    break
+                url_params = {
+                    'skip': next_skip,
+                    'take': USER_PER_PAGE,
+                    'filter.includeInactive': True
+                }
+                response = self._get(USERS_URL, url_params=url_params)
+                if not isinstance(response, dict):
+                    logger.warning(f'Response not in the correct format: {response}')
+                    break
+
+        except Exception as err:
+            logger.exception(f'Invalid request made while paginating users {str(err)}')
+            raise
