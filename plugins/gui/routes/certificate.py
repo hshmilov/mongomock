@@ -137,6 +137,7 @@ class Certificate:
             return Response(csr_file, headers=headers)
 
         # Means its a POST request with CSR creation details
+        csr_request = None
         try:
             csr_request = request.get_json()
             if csr_request:
@@ -229,6 +230,7 @@ class Certificate:
                 return jsonify(True)
             return return_error('CSR schema not as requested', 400)
         except Exception:
+            logger.error(f'Error occurred while generating CSR: {csr_request}', exc_info=True)
             return return_error('Error occurred while generating CSR', 400)
 
     def _reset_csr(self):
