@@ -98,7 +98,7 @@ export default {
   },
   methods: {
     validate() {
-      this.$emit('validate', !this.selectedViews.filter((view) => view.name === '').length
+      this.$emit('validate', !this.selectedViews.filter((view) => view.id === '').length
           && this.$refs.timeframe.isValid);
     },
     updateIntersection(intersection) {
