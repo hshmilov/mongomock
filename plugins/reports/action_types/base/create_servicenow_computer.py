@@ -176,7 +176,7 @@ class ServiceNowComputerAction(ActionTypeBase):
             'adapters.data.device_serial': 1,
             'adapters.data.device_manufacturer': 1,
             'adapters.data.network_interfaces.mac': 1,
-            'adapters.data.network_interfaces.ips': 1
+            'adapters.data.network_interfaces.ips_v4': 1
         }
         for ax_field in ax_snow_fields_map_dict.keys():
             ax_field_projection = ax_field.split(':')[-1]
@@ -213,9 +213,9 @@ class ServiceNowComputerAction(ActionTypeBase):
                     nics = data_from_adapter.get('network_interfaces')
                     if nics and isinstance(nics, list):
                         for nic in nics:
-                            ips = nic.get('ips')
+                            ips = nic.get('ips_v4')
                             if ips and isinstance(ips, list):
-                                ip_address_raw.union(ips)
+                                ip_address_raw = ip_address_raw.union(ips)
                             mac = nic.get('mac')
                             if mac_address_raw is None and mac and isinstance(mac, str):
                                 mac_address_raw = mac
@@ -244,8 +244,11 @@ class ServiceNowComputerAction(ActionTypeBase):
                 if not ip_address_raw:
                     ip_address_raw = None
                 else:
-                    ip_address_raw = list(ip_address_raw)
-                    ip_address_raw = '/'.join(ip_address_raw)
+                    ip_address_raw_list = []
+                    for ip in ip_address_raw:
+                        if ip not in ['127.0.0.1']:
+                            ip_address_raw_list.append(ip)
+                    ip_address_raw = '/'.join(ip_address_raw_list)
                 if name_raw is None and asset_name_raw is None:
                     results.append(EntityResult(entry['internal_axon_id'], False, 'Device With No Name'))
                     continue

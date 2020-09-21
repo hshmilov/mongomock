@@ -244,7 +244,7 @@ class BigfixAdapter(AdapterBase, Configurable):
                     logger.exception(f'Failure parsing last seen date: {last_report_time}')
                 device.bigfix_device_type = device_raw.get('Device Type')
                 device.bigfix_computer_type = device_raw.get('Computer Type')
-                device.device_serial = device_raw.get('Serial')
+                device.device_serial = device_raw.get('Serial') or device_raw.get('WIN - Serial Number')
                 try:
                     for key_name in device_raw:
                         try:
