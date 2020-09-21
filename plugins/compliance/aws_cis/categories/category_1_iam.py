@@ -84,7 +84,7 @@ class CISAWSCategory1:
         self.report = report
         self.account_name = account_dict.get('name') or ''
         self.region_name = AWS_CIS_DEFAULT_REGION if account_dict.get('get_all_regions') \
-            else account_dict.get('region_name')
+            else account_dict.get('region_name', AWS_CIS_DEFAULT_REGION)
         self.https_proxy = account_dict.get('https_proxy')
         self.iam_client = get_boto3_client_by_session('iam', session, self.region_name, self.https_proxy)
         self.credential_report = get_credential_report(self.iam_client)

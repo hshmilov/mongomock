@@ -61,7 +61,8 @@ def generate_report_for_aws_account(account_dict: dict) -> Tuple[str, str, dict]
         sts_client = get_boto3_client_by_session(
             'sts',
             session,
-            AWS_CIS_DEFAULT_REGION if account_dict.get('get_all_regions') else account_dict.get('region_name'),
+            AWS_CIS_DEFAULT_REGION if account_dict.get('get_all_regions') else account_dict.get('region_name',
+                                                                                                AWS_CIS_DEFAULT_REGION),
             account_dict.get('https_proxy')
         )
 
