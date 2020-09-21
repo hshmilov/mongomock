@@ -40,7 +40,7 @@ from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           ADAPTER_DISCOVERY, DISCOVERY_REPEAT_ON_WEEKDAYS,
                                           DISCOVERY_REPEAT_EVERY_DAY, HISTORY_REPEAT_ON, HISTORY_REPEAT_TYPE,
                                           HISTORY_REPEAT_EVERY, HISTORY_REPEAT_WEEKDAYS, HISTORY_REPEAT_RECURRENCE,
-                                          HISTORY_REPEAT_EVERY_LIFECYCLE, WEEKDAYS)
+                                          HISTORY_REPEAT_EVERY_LIFECYCLE, WEEKDAYS, CLIENT_ACTIVE)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import (SchedulerState, Phases, ResearchPhases,
                                              CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL, TUNNEL_STATUS_CHECK_INTERVAL,
@@ -1020,8 +1020,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             # remove adapter that has clients with custom discovery, so we won't trigger twice.
             if _adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled:
                 all_plugins_with_custom_discovery_enabled.remove(_adapter[PLUGIN_NAME])
-            _clients = self.get_adapter_clients(_adapter[PLUGIN_UNIQUE_NAME])
-
+            _clients = self.get_adapter_active_clients(_adapter[PLUGIN_UNIQUE_NAME])
             adapter_discovery_enabled = adapter_config.get(ENABLE_CUSTOM_DISCOVERY, False)
             custom_discovery_clients_to_trigger = []
             adapter_discovery_clients_to_trigger = []
@@ -1064,7 +1063,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     num_of_clients_to_trigger = 0
                     if adapter[PLUGIN_NAME] in all_plugins_with_custom_connection_discovery_enabled:
                         try:
-                            num_of_clients_to_trigger = self.get_adapter_clients_config_with_custom_discovery_count(
+                            num_of_clients_to_trigger = self.get_adapter_clients_filtered_count(
                                 adapter[PLUGIN_UNIQUE_NAME])
                             if num_of_clients_to_trigger > 0:
                                 yield from _handle_connection_discovery(adapter,
@@ -1095,22 +1094,26 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         """
         return self._get_db_connection()[adapter_unique_name][CLIENTS_COLLECTION].count_documents({})
 
-    def get_adapter_clients_config_with_custom_discovery_count(self, adapter_unique_name: str) -> List[Dict]:
+    def get_adapter_clients_filtered_count(self, adapter_unique_name: str) -> List[Dict]:
         """
+        Gets all active clients (connections) without custom discovery count from adapter
         :param adapter_unique_name: Adapter unique name
         :return: Returns the amount of clients in adapter
         """
         return self._get_db_connection()[adapter_unique_name][CLIENTS_COLLECTION].count_documents({
+            CLIENT_ACTIVE: True,
             f'{CONNECTION_DISCOVERY}.{ENABLE_CUSTOM_DISCOVERY}': True
         })
 
-    def get_adapter_clients(self, adapter_unique_name: str) -> List[Dict]:
+    def get_adapter_active_clients(self, adapter_unique_name: str) -> List[Dict]:
         """
+        Gets all active clients (connections)
         :param adapter_unique_name: Adapter unique name
-        :return: Returns the amount of clients in adapter
+        :return: Returns the active clients in adapter
         """
         return self._get_db_connection()[adapter_unique_name][CLIENTS_COLLECTION]\
-            .find({}, projection={CONNECTION_DISCOVERY: 1, CLIENT_ID: 1, LAST_FETCH_TIME: 1, '_id': 1})
+            .find({CLIENT_ACTIVE: True},
+                  projection={CONNECTION_DISCOVERY: 1, CLIENT_ID: 1, LAST_FETCH_TIME: 1, '_id': 1})
 
     def __check_adapter_clients_status(self):
         """

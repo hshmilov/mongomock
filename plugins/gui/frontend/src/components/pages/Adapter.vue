@@ -165,18 +165,25 @@
             </div>
 
             <div class="modal-footer__bottom">
-              <XButton
-                id="save"
-                type="link"
-                :disabled="connectionButtonsDisabled"
-                @click="saveServer()"
-              >Save</XButton>
-              <XButton
-                id="save_server"
-                type="primary"
-                :disabled="connectionButtonsDisabled"
-                @click="saveServer(true)"
-              >Save and Fetch</XButton>
+              <XSwitch
+                :checked="serverModal.active"
+                label="Active connection"
+                @change="setActiveSwitch"
+              />
+              <div class="modal-footer__bottom_left">
+                <XButton
+                  id="save"
+                  type="link"
+                  :disabled="connectionButtonsDisabledIgnoreActive"
+                  @click="saveServer()"
+                >Save</XButton>
+                <XButton
+                  id="save_server"
+                  type="primary"
+                  :disabled="connectionButtonsDisabled"
+                  @click="saveServer(true)"
+                >Save and Fetch</XButton>
+              </div>
             </div>
           </template>
         </XModal>
@@ -220,6 +227,7 @@ import XTableWrapper from '@axons/tables/TableWrapper.vue';
 import XTable from '@axons/tables/Table.vue';
 import XModal from '@axons/popover/Modal/index.vue';
 import XButton from '@axons/inputs/Button.vue';
+import XSwitch from '@axons/inputs/Switch.vue';
 import XTitle from '@axons/layout/Title.vue';
 import XToast from '@axons/popover/Toast.vue';
 import XAdapterTunnelConnectionMessage from '@neurons/alerts/AdapterTunnelConnectionMessage.vue';
@@ -241,8 +249,8 @@ import { Icon, Tabs as ATabs } from 'ant-design-vue';
 
 import { tunnelConnectionStatuses } from '@constants/settings';
 import XAdapterClientConnection from '@networks/adapters/adapter-client-connection.vue';
-import { GET_CONNECTION_LABEL, REQUIRE_CONNECTION_LABEL } from '../../store/getters';
-import { SAVE_PLUGIN_CONFIG } from '../../store/modules/settings';
+import { GET_CONNECTION_LABEL, REQUIRE_CONNECTION_LABEL } from '@store/getters';
+import { SAVE_PLUGIN_CONFIG } from '@store/modules/settings';
 
 export default {
   name: 'XAdapter',
@@ -262,6 +270,7 @@ export default {
     ATabs,
     TabPane: ATabs.TabPane,
     XAdapterClientConnection,
+    XSwitch,
   },
   data() {
     return {
@@ -274,6 +283,7 @@ export default {
         serverName: 'New Server',
         uuid: null,
         valid: false,
+        active: true,
       },
       loading: true,
       connectionLabelError: '',
@@ -368,6 +378,7 @@ export default {
           connection_label: client.connectionLabel || this.getConnectionLabel(client.client_id, {
             plugin_name: this.adapterId, node_id,
           }),
+          status: client.active ? client.status : 'inactive',
         };
       });
     },
@@ -394,6 +405,21 @@ export default {
           title: '',
           type: 'string',
           format: 'icon',
+          useCustomIcons: false,
+          iconsProperties: {
+            theme: 'filled',
+            textToIcon: {
+              success: 'check-circle',
+              error: 'close-circle',
+              inactive: 'pause-circle',
+              processing: 'warning',
+            },
+            iconTooltip: {
+              success: 'Active and connected',
+              error: 'Active with error',
+              inactive: 'Inactive',
+            },
+          },
         },
         {
           name: 'node_name',
@@ -408,13 +434,14 @@ export default {
         ...this.adapterSchema.items.filter((field) => (field.type !== 'file' && field.format !== 'password')),
       ];
     },
+    connectionButtonsDisabled() {
+      return this.isConnectionButtonsDisabled(true);
+    },
+    connectionButtonsDisabledIgnoreActive() {
+      return this.isConnectionButtonsDisabled(false);
+    },
     isSpecificConnectionDiscoverySet() {
       return _get(this.serverModal, 'serverData.connection_discovery.enabled', null);
-    },
-    connectionButtonsDisabled() {
-      return !this.serverModal.valid
-       || !this.serverModal.connectionValid
-        || !this.connectionLabelValid;
     },
   },
   watch: {
@@ -482,6 +509,7 @@ export default {
           },
           serverName: 'New Server',
           uuid: clientId,
+          active: true,
           error: '',
           valid: false,
         };
@@ -503,6 +531,7 @@ export default {
           serverName: client.client_id,
           connectionLabel: client.connection_label,
           uuid: client.uuid,
+          active: client.active,
           error: client.error,
           valid: true,
         };
@@ -563,6 +592,7 @@ export default {
         instanceId: this.serverModal.instanceId,
         instanceIdPrev: this.serverModal.instanceIdPrev,
         uuid: this.serverModal.uuid,
+        active: this.serverModal.active,
         fetchData,
       }).then((updateRes) => {
         if (this.selectedServers.includes('')) {
@@ -641,6 +671,15 @@ export default {
     },
     setDefaultInstance() {
       this.serverModal.instanceId = this.instanceDefaultName;
+    },
+    isConnectionButtonsDisabled(withActive) {
+      return !this.serverModal.valid
+          || !this.serverModal.connectionValid
+          || !this.connectionLabelValid
+          || (withActive && !this.serverModal.active);
+    },
+    setActiveSwitch(value) {
+      this.serverModal.active = value;
     },
   },
 };
@@ -770,7 +809,9 @@ export default {
             }
           }
           &__bottom {
-            display: block;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             padding-top: 5px;
             border-top: 1px solid rgb(222, 222, 222);
           }

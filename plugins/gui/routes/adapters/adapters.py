@@ -146,17 +146,51 @@ class Adapters(Connections):
             node_name = '' if instance_metadata is None else instance_metadata.get(NODE_NAME)
 
             # get all adapter instance clients
-            adapter_clients_success = current_adapter_db['clients'].count_documents({'status': 'success'})
-            adapter_clients_count = current_adapter_db['clients'].count_documents({})
-
+            counter = list(current_adapter_db['clients'].aggregate([
+                {
+                    '$group': {
+                        '_id': None,
+                        'success_count': {
+                            '$sum': {
+                                '$cond': [
+                                    {'$and': [
+                                        {'$eq': ['$active', True]},
+                                        {'$eq': ['$status', 'success']}
+                                    ]}, 1, 0]
+                            }
+                        },
+                        'error_count': {
+                            '$sum': {
+                                '$cond': [
+                                    {'$and': [
+                                        {'$eq': ['$active', True]},
+                                        {'$eq': ['$status', 'error']}
+                                    ]}, 1, 0]
+                            }
+                        },
+                        'inactive_count': {
+                            '$sum': {
+                                '$cond': [
+                                    {'$eq': ['$active', False]}, 1, 0]
+                            }
+                        },
+                        'total_count': {
+                            '$sum': 1
+                        }
+                    }
+                }
+            ]))
+            if len(counter):
+                counter[0].pop('_id')
+            else:
+                counter.append({})
             # add the adapter into the response dict
             adapters_result[adapter_name].append({
                 'plugin_name': adapter['plugin_name'],
                 'unique_plugin_name': adapter_unique_name,
                 'status': adapter.get('status', ''),
                 'supported_features': adapter['supported_features'],
-                'clients_count': adapter_clients_count,
-                'success_clients': adapter_clients_success,
+                'clients_count': counter[0],
                 NODE_NAME: node_name,
                 NODE_ID: adapter[NODE_ID]
             })

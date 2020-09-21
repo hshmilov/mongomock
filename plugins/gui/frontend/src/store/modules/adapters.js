@@ -77,20 +77,29 @@ export const adapters = {
 
           const adapterInstancesIds = currentAdapter.map((adapterInstance) => adapterInstance.node_id);
           const adaptersClients = currentAdapter.reduce((clientsStat, adapterData) => ({
-            count: clientsStat.count + adapterData.clients_count,
-            success: clientsStat.success + adapterData.success_clients,
-          }), { count: 0, success: 0 });
+            count: clientsStat.count + adapterData.clients_count.total_count,
+            success: clientsStat.success + adapterData.clients_count.success_count,
+            error: clientsStat.success + adapterData.clients_count.error_count,
+            inactive: clientsStat.inactive + adapterData.clients_count.inactive_count,
+          }), {
+            count: 0, success: 0, error: 0, inactive: 0,
+          });
 
           let adapterStatus;
-          if (adaptersClients.count) {
-            adapterStatus = adaptersClients.count === adaptersClients.success ? 'success' : 'warning';
+          if (adaptersClients.error) {
+            adapterStatus = 'error';
+          } else if (adaptersClients.success) {
+            adapterStatus = 'success';
+          } else if (adaptersClients.inactive) {
+            adapterStatus = 'processing';
           }
 
           // Itterate through Instances
           // eslint-disable-next-line no-loop-func
           currentAdapter.forEach((a) => {
             const {
-              config, node_id: instanceId, node_name: instanceName, schema, supported_features, unique_plugin_name
+              config, node_id: instanceId, node_name: instanceName, schema,
+              supported_features, unique_plugin_name
             } = a;
             adapter = {
               id: name,
@@ -103,7 +112,8 @@ export const adapters = {
               supported_features,
               instances: adapterInstancesIds,
               successClients: adaptersClients.success,
-              errorClients: adaptersClients.count - adaptersClients.success,
+              errorClients: adaptersClients.error,
+              inactiveClients: adaptersClients.inactive,
               clientsCount: adaptersClients.count,
               pluginUniqueName: unique_plugin_name,
             };
@@ -281,7 +291,8 @@ export const adapters = {
         connection_discovery: serverData.connection_discovery,
         connectionLabel: payload.connectionLabel,
         uuid: isNewClient ? uniqueTmpId : payload.uuid,
-        status: 'warning',
+        active: payload.active,
+        status: 'processing',
         node_id: newAssociatedInstance.node_id,
         error: null,
       };
@@ -304,6 +315,7 @@ export const adapters = {
                 ? oldAssociatedInstance.node_name : undefined,
               is_instances_mode: isInstanceMode,
               save_and_fetch: payload.fetchData,
+              active: payload.active,
             },
           });
 
@@ -314,6 +326,7 @@ export const adapters = {
             connection_discovery: serverData.connection_discovery,
             uuidToSwap: isNewClient ? uniqueTmpId : payload.uuid,
             uuid: response.data.id,
+            active: response.data.active,
             status: response.data.status,
             node_id: newAssociatedInstance.node_id,
             node_name: newAssociatedInstance.node_name,

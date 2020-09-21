@@ -55,7 +55,7 @@ class AdaptersPage(EntitiesPage):
     SUCCESS_ICON_CLASS = '.x-table-row:nth-child({position}) .x-icon.icon-success'
     ADAPTERS_SUCCESS_ICON_CLASS = '.adapters-table .table-row:nth-child({position}) .x-icon.icon-success'
     TYPE_ICON_CSS = '.x-icon.icon-{status_type}'
-    WARNING_MARKER_CSS = '.marker.indicator-bg-warning'
+    RED_MARKER_CSS = '.marker.indicator-bg-error'
     NEW_CONNECTION_BUTTON_ID = 'new_connection'
     SAVE_CONNECTION_TOASTER = 'Connecting to Server...'
     DATA_COLLECTION_TOASTER = 'Connection established. Data collection initiated...'
@@ -91,6 +91,9 @@ class AdaptersPage(EntitiesPage):
     SAVE_AND_FETCH_BUTTON = 'Save and Fetch'
     CLOSE_ADAPTER_MODAL_CSS = '.config-server__close-icon-container'
     HELP_ICON_ADAPTER_MODAL_CSS = '.config-server .help-link'
+
+    CONNECTION_SUCCESS_ICON_CSS = '.x-table-row .icon-success'
+    CONNECTION_INACTIVE_ICON_CSS = '.x-table-row .icon-inactive'
 
     @property
     def url(self):
@@ -176,6 +179,9 @@ class AdaptersPage(EntitiesPage):
     def click_edit_server_by_name(self, name):
         self.click_specific_row_by_field_value('Name', name)
 
+    def toggle_active_connection(self, toggle=True):
+        self.toggle_switch_button(label='Active connection', make_yes=toggle)
+
     def click_advanced_settings(self):
         self.get_button(self.ADVANCED_SETTINGS_BUTTON_TEXT).click()
         time.sleep(1.5)
@@ -207,6 +213,12 @@ class AdaptersPage(EntitiesPage):
     def check_rt_adapter(self):
         self.driver.find_element_by_css_selector(self.RT_CHECKBOX_CSS).click()
 
+    def count_green_connections(self):
+        return len(self.find_elements_by_css(self.CONNECTION_SUCCESS_ICON_CSS))
+
+    def count_inactive_connections(self):
+        return len(self.find_elements_by_css(self.CONNECTION_INACTIVE_ICON_CSS))
+
     def select_all_servers(self):
         self.driver.find_element_by_css_selector(self.CHECKBOX_CSS).click()
 
@@ -221,9 +233,9 @@ class AdaptersPage(EntitiesPage):
     def wait_for_server_red(self, retries=RETRY_WAIT_FOR_ELEMENT):
         self.wait_for_element_present_by_css(self.ERROR_ICON_CLASS, retries=retries)
 
-    def wait_for_adapter_warning(self):
+    def wait_for_adapter_red(self):
         self.wait_for_element_present_by_css(self.ERROR_ICON_CLASS)
-        self.wait_for_element_present_by_css(self.WARNING_MARKER_CSS)
+        self.wait_for_element_present_by_css(self.RED_MARKER_CSS)
 
     def wait_for_connect_valid(self):
         self.wait_for_element_present_by_text(self.TEST_CONNECTIVITY_CONNECTION_IS_VALID)
@@ -487,10 +499,13 @@ class AdaptersPage(EntitiesPage):
         self.fill_creds(connectionLabel=connection_label)
         self.click_save_and_fetch()
 
-    def upload_csv(self, csv_file_name, csv_data, is_user_file=False, wait_for_toaster=False):
+    def upload_csv(self, csv_file_name, csv_data, is_user_file=False, wait_for_toaster=False, save_and_fetch=True):
         self.open_add_edit_server(CSV_NAME)
         self.fill_upload_csv_form_with_csv(csv_file_name, csv_data, is_user_file)
-        self.click_save_and_fetch()
+        if save_and_fetch:
+            self.click_save_and_fetch()
+        else:
+            self.click_save_without_fetch()
         if wait_for_toaster:
             self.wait_for_data_collection_toaster_start()
             self.wait_for_data_collection_toaster_absent()
@@ -611,7 +626,8 @@ class AdaptersPage(EntitiesPage):
                                              scheduling_wrapping_class=scheduling_wrapping_class,
                                              scheduling_repeat_selector=self.REPEAT_DAYS)
 
-    def toggle_adapters_discovery_configurations(self, adapter_name, mode=None, value=None, toggle_connection=False):
+    def toggle_adapters_discovery_configurations(self, adapter_name, mode=None, value=None, toggle_connection=False,
+                                                 weekdays=[]):
         self.switch_to_page()
         self.wait_for_spinner_to_end()
         self.click_adapter(adapter_name)
@@ -623,7 +639,7 @@ class AdaptersPage(EntitiesPage):
         if toggle_connection:
             self.check_custom_connection_discovery_schedule()
         if mode:
-            self._set_discovery_schedule_settings(mode, value,
+            self._set_discovery_schedule_settings(mode, value, weekdays=weekdays,
                                                   scheduling_wrapping_class=self.ADAPTER_DISCOVERY_SCHEDULE_PREFIX)
         self.save_advanced_settings()
 

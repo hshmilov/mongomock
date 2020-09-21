@@ -77,6 +77,7 @@ PAGE_BODY = '.x-page > .body'
 TAB_BODY = '.x-tabs > .body'
 TOGGLE_CHECKED_CLASSES = ['x-checkbox', 'checked']
 TOGGLE_CHECKED_CLASS = 'x-checkbox checked'
+SWITCH_ACTIVE_CLASS = 'ant-switch-checked'
 TOASTER_BY_TEXT_XPATH = '//div[@class=\'x-toast\']//div[@class=\'content\' and text()=\'{toast_text}\']'
 TABLE_SPINNER_NOT_DISPLAYED_XPATH = '//div[@class=\'v-spinner\' and @style=\'display: none;\']'
 RETRY_WAIT_FOR_ELEMENT = 150
@@ -238,6 +239,8 @@ class Page:
     DATA_COLLECTION_TOASTER = 'Connection established. Data collection initiated...'
     DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS = '.time-picker-text input'
     DISCOVERY_SCHEDULE_INTERVAL_INPUT_CSS = '#system_research_rate'
+
+    BUTTON_SWITCH_CSS = '.x-switch button[label=\'{switch_label}\']'
 
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
@@ -685,6 +688,10 @@ class Page:
     def is_toggle_selected(toggle):
         return TOGGLE_CHECKED_CLASS in toggle.get_attribute('class')
 
+    @staticmethod
+    def is_toggle_active(toggle):
+        return SWITCH_ACTIVE_CLASS in toggle.get_attribute('class')
+
     def click_toggle_button(self,
                             toggle,
                             make_yes=True,
@@ -705,6 +712,16 @@ class Page:
 
         assert self.is_toggle_selected(toggle) == make_yes
         return False
+
+    def toggle_switch_button(self, label, make_yes=True):
+        button = self.driver.find_element_by_css_selector(self.BUTTON_SWITCH_CSS.format(switch_label=label))
+        is_active = self.is_toggle_active(button)
+
+        if (make_yes and not is_active) or (not make_yes and is_active):
+            button.click()
+        # wait for animation to over
+        time.sleep(0.3)
+        assert self.is_toggle_active(button) == make_yes
 
     def select_option(self,
                       dropdown_css_selector,

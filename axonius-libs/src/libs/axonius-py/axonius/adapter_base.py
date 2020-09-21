@@ -45,7 +45,7 @@ from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CORE_U
     DISCOVERY_REPEAT_ON, DISCOVERY_REPEAT_EVERY, DISCOVERY_REPEAT_RATE, DISCOVERY_RESEARCH_DATE_TIME,\
     INSTANCE_CONTROL_PLUGIN_NAME, GUI_PLUGIN_NAME, PARALLEL_ADAPTERS, THREAD_SAFE_ADAPTERS, DEVICE_LOCATION_MAPPING, \
     CSV_IP_LOCATION_FILE, CONNECTION_DISCOVERY, CONNECTION_DISCOVERY_SCHEMA_NAME, WEEKDAYS, \
-    ADAPTER_DISCOVERY, DISCOVERY_REPEAT_EVERY_DAY, DISCOVERY_REPEAT_ON_WEEKDAYS, NODE_NAME
+    ADAPTER_DISCOVERY, DISCOVERY_REPEAT_EVERY_DAY, DISCOVERY_REPEAT_ON_WEEKDAYS, NODE_NAME, CLIENT_ACTIVE
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import LAST_SEEN_FIELD, DeviceAdapter, AdapterProperty, LAST_SEEN_FIELDS
 from axonius.mixins.configurable import Configurable
@@ -268,8 +268,10 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 try:
                     for client in configured_clients:
                         # client id from DB not sent to verify it is updated
-                        self._add_client(client['client_config'], client.get(CONNECTION_DISCOVERY),
-                                         client.get(LAST_FETCH_TIME), client['_id'])
+                        self._add_client(client_config=client['client_config'],
+                                         client_connection_discovery=client.get(CONNECTION_DISCOVERY),
+                                         last_fetch_time=client.get(LAST_FETCH_TIME),
+                                         object_id=client['_id'], active=client.get(CLIENT_ACTIVE, True))
                 except Exception:
                     logger.exception('Error while loading clients from config')
                     if blocking:
@@ -430,7 +432,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                         connection_custom_discovery=connection_custom_discovery)]
             elif client_name is None:
                 # Probably realtime adapter with system_scheduler trigger
-                for client in self._clients:
+                for client in self._get_all_active_clients():
                     data[client] = [x['raw'] for x in self.insert_data_to_db(
                         client, check_fetch_time=check_fetch_time,
                         parse_after_fetch=True,
@@ -496,7 +498,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                              connection_custom_discovery=connection_custom_discovery)] = client
                 elif client_name is None:
                     # Probably realtime adapter with system_scheduler trigger
-                    for client in self._clients:
+                    for client in self._get_all_active_clients():
                         data[executor.submit(self.insert_data_to_db, client, check_fetch_time=check_fetch_time,
                                              parse_after_fetch=True, thread_safe=True, log_fetch=log_fetch)] = client
                 else:
@@ -701,12 +703,14 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 logger.error(f'Couldn\'t initiate connection to client: '
                              f'{client_config["client_id"]}, keep it in error status')
                 continue
-            try:
-                post_data = {'check_fetch_time': False, 'client_name': client_config['client_id']}
-                self._trigger_remote_plugin_no_blocking(self.plugin_unique_name, 'insert_to_db', data=post_data)
-            except Exception as e:
-                logger.debug(f'An error happened while trying to insert data to db {str(e)}')
-                continue
+            # since client can be inactive, we dont want to fetch their data
+            if client_config[CLIENT_ACTIVE]:
+                try:
+                    post_data = {'check_fetch_time': False, 'client_name': client_config['client_id']}
+                    self._trigger_remote_plugin_no_blocking(self.plugin_unique_name, 'insert_to_db', data=post_data)
+                except Exception as e:
+                    logger.debug(f'An error happened while trying to insert data to db {str(e)}')
+                    continue
         return jsonify(f'Adapter {self.plugin_unique_name} finished updating clients status')
 
     def _parse_users_raw_data_hook(self, raw_users):
@@ -1037,6 +1041,9 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 client_config = request_data['connection']
                 client_connection_discovery = request_data.get(CONNECTION_DISCOVERY)
                 last_fetch_time = request_data.get(LAST_FETCH_TIME)
+                client_active = request_data.get(CLIENT_ACTIVE, None)
+                if client_active is None:
+                    client_active = True
                 if not client_config:
                     log_metric(logger, metric_name=Adapters.CREDENTIALS_CHANGE_ERROR, metric_value='invalid client')
                     return return_error('Invalid client')
@@ -1049,7 +1056,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     logger.warning(f'{err_msg}', exc_info=True)
                     return return_error(err_msg)
                 add_client_result = self._add_client(client_config, client_connection_discovery, last_fetch_time,
-                                                     connection_label=request_data.get(CONNECTION_LABEL))
+                                                     connection_label=request_data.get(CONNECTION_LABEL),
+                                                     active=client_active)
                 if not add_client_result:
                     log_metric(logger, metric_name=Adapters.CREDENTIALS_CHANGE_ERROR,
                                metric_value=f'_add_client failed for {client_id}')
@@ -1103,7 +1111,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             return '', 200
 
     def _write_client_to_db(self, client_id, client_config, client_connection_discovery, last_fetch_time,
-                            status, error_msg, upsert=True):
+                            status, error_msg, active=True, upsert=True):
         if client_id is not None:
             logger.info(f'Updating new client status in db - {status}. client id: {client_id}')
             return self._clients_collection.replace_one({'client_id': client_id},
@@ -1111,13 +1119,14 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                                          'client_config': client_config,
                                                          CONNECTION_DISCOVERY: client_connection_discovery,
                                                          LAST_FETCH_TIME: last_fetch_time,
+                                                         CLIENT_ACTIVE: active,
                                                          'status': status,
                                                          'error': error_msg},
                                                         upsert=upsert)
         return None
 
-    def _add_client(self, client_config: dict, client_connection_discovery: dict=None, last_fetch_time=None,
-                    object_id=None, new_client=True, connection_label=None):
+    def _add_client(self, client_config: dict, client_connection_discovery: dict = None, last_fetch_time=None,
+                    object_id=None, new_client=True, connection_label=None, active=True):
         """
         Execute connection to client, according to given credentials, that follow adapter's client schema.
         Add created connection to adapter's clients dict, under generated key.
@@ -1142,7 +1151,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             client_id = self._get_client_id(client_config)
             # Writing initial client to db
             res = self._write_client_to_db(client_id, encrypted_client_config, client_connection_discovery,
-                                           last_fetch_time, status, error_msg, upsert=new_client)
+                                           last_fetch_time, status, error_msg, active, upsert=new_client)
             if res.matched_count == 0 and not new_client:
                 logger.warning(f'Client {client_id} : {client_config} was deleted under our feet!')
                 return None
@@ -1165,7 +1174,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                          f'possibly compliance problem with schema.')
 
         result = self._write_client_to_db(client_id, encrypted_client_config, client_connection_discovery,
-                                          last_fetch_time, status, error_msg, upsert=False)
+                                          last_fetch_time, status, error_msg, active, upsert=False)
         if result is None and object_id is not None:
             # Client id was not found due to some problem in given config data
             # If id of an existing document is given, update its status accordingly
@@ -1182,7 +1191,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         # Verifying update succeeded and returning the matched id and final status
         if result.modified_count:
             object_id = self._clients_collection.find_one({'client_id': client_id}, projection={'_id': 1})['_id']
-            return {'id': str(object_id), 'client_id': client_id, 'status': status, 'error': error_msg}
+            return {'id': str(object_id), 'client_id': client_id, 'status': status, 'error': error_msg,
+                    CLIENT_ACTIVE: active}
 
         return None
 
@@ -1803,7 +1813,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         Synchronously returns all available data types (devices/users) from all clients.
         """
         with self._clients_lock:
-            clients = self._clients.copy()
+            clients = self._get_all_active_clients()
             if len(clients) == 0:
                 logger.info(f'{self.plugin_unique_name}: Trying to fetch devices but no clients found')
                 return
@@ -1893,10 +1903,12 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
     # pylint: enable=R0201
 
-    def _get_clients_config(self):
+    def _get_clients_config(self, query_filter=None):
         """Returning the data inside 'clients' Collection on <plugin_unique_name> db.
         """
-        clients = list(self._clients_collection.find())
+        if query_filter is None:
+            query_filter = {}
+        clients = list(self._clients_collection.find(query_filter))
         with concurrent.futures.ThreadPoolExecutor(15) as executor:
             futures = []
             for client in clients:
@@ -1909,6 +1921,13 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     logger.debug(f'Decrypted {i} / {len(futures)} clients')
                 future.result()  # propagate error up
         yield from clients
+
+    def _get_all_active_clients(self) -> List:
+        """
+        Gets all the adapter active clients
+        :return: List with all of the active client ids
+        """
+        return [x['client_id'] for x in self._get_clients_config({CLIENT_ACTIVE: True})]
 
     def _get_client_config_by_client_id(self, client_id: str):
         """Returning the data inside 'clients' Collection on <plugin_unique_name> db.

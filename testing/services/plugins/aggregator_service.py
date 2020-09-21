@@ -11,7 +11,7 @@ import pymongo
 from axonius.consts.gui_consts import HAS_NOTES, USERS_COLLECTION
 from axonius.consts.plugin_consts import (
     ADAPTERS_LIST_LENGTH, CONFIGURABLE_CONFIGS_LEGACY_COLLECTION,
-    GUI_PLUGIN_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME)
+    GUI_PLUGIN_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME, CLIENT_ACTIVE)
 from axonius.db_migrations import db_migration
 from axonius.devices.device_adapter import LAST_SEEN_FIELD
 from axonius.entities import EntityType
@@ -1898,6 +1898,23 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
                 'adapters.data.name': 1
             },
             new_id_func)
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_57(self):
+        print('Update to schema 57 - add active/inactive state to adapters clients')
+        all_adapters = [x[PLUGIN_UNIQUE_NAME] for x in
+                        self.core_configs_collection.find({'plugin_type': 'Adapter'},
+                                                          projection={PLUGIN_UNIQUE_NAME: 1})]
+        for plugin_unique_name in all_adapters:
+            self.db.client[plugin_unique_name]['clients'].update_many(
+                {},
+                {
+                    '$set':
+                        {
+                            CLIENT_ACTIVE: True
+                        }
+                }
+            )
 
     def _migrate_entity_id_generic(
             self,

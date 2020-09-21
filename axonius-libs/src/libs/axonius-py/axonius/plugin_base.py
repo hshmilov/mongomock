@@ -106,7 +106,8 @@ from axonius.consts.plugin_consts import (
     TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW, TUNNEL_PROXY_SETTINGS, DISCOVERY_CONFIG_NAME, ADAPTER_DISCOVERY,
     ENABLE_CUSTOM_DISCOVERY, CONNECTION_DISCOVERY, NOTES_DATA_TAG, PASSWORD_EXPIRATION_SETTINGS,
     REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME, PASSWORD_EXPIRATION_DAYS, CLIENTS_COLLECTION, PASSWORD_MANGER_AWS_SM_VAULT,
-    AWS_SM_ACCESS_KEY_ID, AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION)
+    AWS_SM_ACCESS_KEY_ID, AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION, CLIENT_ACTIVE)
+
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE, DEFAULT_SSL_CIPHERS, NO_RSA_SSL_CIPHERS, \
     SSL_CIPHERS_HIGHER_SECURITY
@@ -1322,9 +1323,9 @@ class PluginBase(Configurable, Feature, ABC):
                         yield adapter, None
                 else:
                     if adapter[PLUGIN_NAME] in all_plugins_with_custom_connection_discovery_enabled:
-                        # Get all adapters connections, without custom discovery set up.
-                        clients = self.get_adapter_clients_without_custom_discovery(adapter[PLUGIN_UNIQUE_NAME])
-                        if clients.count() > 0 and \
+                        # Get all adapters active connections, without custom discovery set up.
+                        clients = self.get_adapter_clients_filtered(adapter[PLUGIN_UNIQUE_NAME])
+                        if clients.count() > 0 and\
                                 not adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled:
                             yield adapter, [client[CLIENT_ID] for client in clients]
                         elif not adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled:
@@ -1343,12 +1344,15 @@ class PluginBase(Configurable, Feature, ABC):
             f'{CONNECTION_DISCOVERY}.{ENABLE_CUSTOM_DISCOVERY}': False
         })
 
-    def get_adapter_clients_without_custom_discovery(self, adapter_unique_name: str) -> List[Dict]:
+    def get_adapter_clients_filtered(self, adapter_unique_name: str) -> List[Dict]:
         """
+        Gets all active clients (connections) without custom discovery from adapter
+
         :param adapter_unique_name: Adapter unique name
-        :return: Returns the amount of clients in adapter
+        :return: Returns the list of clients in adapter
         """
         return self._get_db_connection()[adapter_unique_name][CLIENTS_COLLECTION].find({
+            CLIENT_ACTIVE: True,
             f'{CONNECTION_DISCOVERY}.{ENABLE_CUSTOM_DISCOVERY}': False
         }, projection={CLIENT_ID: 1})
 

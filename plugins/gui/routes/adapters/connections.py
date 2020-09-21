@@ -10,7 +10,7 @@ from bson import ObjectId
 
 from axonius.consts.adapter_consts import LAST_FETCH_TIME, CLIENT_ID, CONNECTION_LABEL
 from axonius.consts.gui_consts import (FeatureFlagsNames, IS_INSTANCES_MODE, INSTANCE_NAME, INSTANCE_PREV_NAME)
-from axonius.consts.plugin_consts import (PLUGIN_NAME, PLUGIN_UNIQUE_NAME, NODE_ID, CONNECTION_DISCOVERY)
+from axonius.consts.plugin_consts import (PLUGIN_NAME, PLUGIN_UNIQUE_NAME, NODE_ID, CONNECTION_DISCOVERY, CLIENT_ACTIVE)
 from axonius.logging.audit_helper import AuditCategory
 from axonius.plugin_base import return_error, EntityType
 from axonius.utils.gui_helpers import (entity_fields)
@@ -183,11 +183,12 @@ class Connections:
             def get_discovery_details(discovery: dict) -> dict:
                 return discovery if discovery['enabled'] is True else {'enabled': False}
 
-            def get_client_info(connection, label, discovery, instance):
+            def get_client_info(connection, label, discovery, active, instance):
                 return {
                     'Connection': self._audit_remove_password_fields(adapter_schema, connection),
                     CONNECTION_LABEL: label or '',
                     'Discovery': get_discovery_details(discovery),
+                    'Active': active,
                     'Instance_id': instance
                 }
 
@@ -195,11 +196,13 @@ class Connections:
             current_client_info = get_client_info(client_config,
                                                   client_label.get(CONNECTION_LABEL) if client_label else None,
                                                   connection_from_db[CONNECTION_DISCOVERY],
+                                                  connection_from_db[CLIENT_ACTIVE],
                                                   prev_instance_id or instance_id)
             # object post updated
             updated_client_info = get_client_info(connection_data['connection'],
                                                   connection_data[CONNECTION_LABEL],
                                                   connection_data[CONNECTION_DISCOVERY],
+                                                  connection_data[CLIENT_ACTIVE],
                                                   instance_id)
 
             self.log_activity_user_default(AuditCategory.AdaptersConnections.value, 'post', {

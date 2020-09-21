@@ -18,6 +18,7 @@
       >
         <div
           slot="tooltipActivator"
+          class="adapter-list"
           :class="{fullHeight}"
         >
           <div
@@ -25,6 +26,7 @@
             :key="adapter.title"
             class="adapter"
           >
+            <!-- adapter logo -->
             <div
               @mouseover="hoveredItem = { header: adapter.title, body: '' }"
               @mouseout="hoveredItem = null"
@@ -38,37 +40,45 @@
                 >
               </RouterLink>
             </div>
-
-
+            <!-- error count -->
             <div
               v-if="adapter.errorClients"
-              @mouseover="hoveredItem = { header: 'Number of connections with errors', body: adapter.errorClients }"
+              @mouseover="hoveredItem = { header: 'Number of adapter connections with errors', body: adapter.errorClients }"
               @mouseout="hoveredItem = null"
             >
               <XIcon
-                family="symbol"
-                type="error"
+                type="close-circle"
                 theme="filled"
                 class="icon-error"
               />
               <span class="quantity">{{ adapter.errorClients }}</span>
             </div>
-
+            <!-- success count -->
             <div
               v-if="adapter.successClients"
               @mouseover="hoveredItem = { header: 'Number of adapter connections successfully connected', body: adapter.successClients }"
               @mouseout="hoveredItem = null"
             >
               <XIcon
-                family="symbol"
-                type="success"
+                type="check-circle"
                 theme="filled"
                 class="icon-success"
               />
               <span class="quantity">{{ adapter.successClients }}</span>
             </div>
-
-
+            <!-- inactive count -->
+            <div
+              v-if="adapter.inactiveClients"
+              @mouseover="hoveredItem = { header: 'Number of inactive adapter connections', body: adapter.inactiveClients }"
+              @mouseout="hoveredItem = null"
+            >
+              <XIcon
+                type="pause-circle"
+                theme="filled"
+                class="icon-inactive"
+              />
+              <span class="quantity">{{ adapter.inactiveClients }}</span>
+            </div>
           </div>
         </div>
       </XChartTooltip>
@@ -154,14 +164,22 @@ export default {
     },
     sortedAdapters() {
       const adapters = this.getConfiguredAdapters.map((adapter) => {
-        let connectionOrder = 2;
+        let connectionOrder = 3;
+        if (adapter.inactiveClients && !adapter.errorClients && !adapter.successClients) {
+          return { ...adapter, connectionOrder };
+        }
+        connectionOrder = 2;
         if (adapter.errorClients) {
           connectionOrder = 0;
           if (adapter.successClients) connectionOrder = 1;
         }
         return { ...adapter, connectionOrder };
       });
-
+      // we need the adapter array to be sorted like:
+      // 1. all the adapters with only errors ( and inactive )
+      // 2. all the adapters with errors and good connections ( and inactive )
+      // 3. all the adapters with good connection and no errors ( and inactive )
+      // 4. all the adapters with only inactive connections
       return _orderBy(adapters, ['connectionOrder', 'errorClients', 'title'], ['asc', 'desc', 'asc']);
     },
     pageData() {
@@ -212,31 +230,50 @@ export default {
 
 <style lang="scss">
   .adapter-connections-status {
-    --adapter-row-height: 30px;
-    --adapter-row-margin-bottom: 20px;
+    --adapter-row-height: 50px;
     grid-row: 1;
     &.double {
       grid-row: 1 / span 2;
     }
     .fullHeight {
-      height: calc((var(--adapter-row-height) + var(--adapter-row-margin-bottom)) * 10);
+      height: calc(var(--adapter-row-height) * 10);
     }
     .adapter {
       display: flex;
-      margin-bottom: var(--adapter-row-margin-bottom);
       height: var(--adapter-row-height);
+      padding-bottom: 10px;
+      padding-top: 10px;
+      &:not(:last-child) {
+        border-bottom: 1px solid #D3D7DA;
+      }
       > div {
-        width: 30%;
+        width: 25%;
         display: flex;
         align-items: center;
         .x-icon {
           margin: 0px 6px 0px 0px;
           font-size: 20px;
           margin-right: 8px;
+          &.icon-success {
+            &, &:hover {
+              color: $indicator-success;
+            }
+          }
+          &.icon-error {
+            &, &:hover {
+              color: $indicator-error;
+            }
+          }
+          &.icon-inactive {
+            &, &:hover {
+              color: $indicator-inactive;
+            }
+          }
         }
         .quantity {
-          font-weight: 400;
-          font-size: 16px;
+          color: rgba(0, 0, 0, 0.65);
+          font-weight: normal;
+          font-size: 18px;
         }
       }
     }

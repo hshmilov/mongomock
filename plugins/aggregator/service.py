@@ -22,7 +22,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PARALLEL_ADAPTERS,
                                           PLUGIN_NAME,
                                           ADAPTERS_LIST_LENGTH,
-                                          ACTIVE_DIRECTORY_PLUGIN_NAME)
+                                          CLIENT_ACTIVE)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import EntityType, PluginBase
@@ -138,10 +138,14 @@ class AggregatorService(Triggerable, PluginBase):
         """
         def get_adapter_clients(_adapter_unique_name):
             if not adapters_clients.get(_adapter_unique_name):
-                return self._get_db_connection()[_adapter_unique_name]['clients'].find(projection={
-                    'client_id': True,
-                    '_id': False
-                })
+                return self._get_db_connection()[_adapter_unique_name]['clients'].find(
+                    filter={
+                        CLIENT_ACTIVE: True
+                    },
+                    projection={
+                        'client_id': True,
+                        '_id': False
+                    })
             return adapters_clients.get(_adapter_unique_name)
 
         clients = {
@@ -188,7 +192,11 @@ class AggregatorService(Triggerable, PluginBase):
         """
         def get_adapter_clients():
             return [x['client_id'] for x
-                    in self._get_db_connection()[adapter]['clients'].find(projection={
+                    in self._get_db_connection()[adapter]['clients'].find(
+                    filter={
+                        CLIENT_ACTIVE: True
+                    },
+                    projection={
                         'client_id': True,
                         '_id': False
                     })]

@@ -74,7 +74,6 @@ class EnforcementsPage(EntitiesPage):
     SELECT_VIEW_NAME_CSS = '.base-query .query-name .x-select-trigger'
     SELECT_SAVED_VIEW_TEXT_CSS = 'div.trigger-text'
     ENFORCEMENTS_CHECKBOX = '.x-checkbox .checkbox-container'
-    SECTION_SWITCH_CSS = '.x-switch button[label=\'{switch_label}\']'
     ABOVE_INPUT_CSS = '.config .config-item .above'
     BELOW_INPUT_CSS = '.config .config-item .below'
     EDIT_ENFORCEMENT_XPATH = '//div[text()=\'{enforcement_name}\']'
@@ -380,7 +379,7 @@ class EnforcementsPage(EntitiesPage):
         self.find_element_by_text(text).click()
 
     def check_config_section(self, switch_label):
-        self.driver.find_element_by_css_selector(self.SECTION_SWITCH_CSS.format(switch_label=switch_label)).click()
+        self.driver.find_element_by_css_selector(self.BUTTON_SWITCH_CSS.format(switch_label=switch_label)).click()
 
     def check_scheduling(self):
         self.check_config_section('Enable custom scheduling')

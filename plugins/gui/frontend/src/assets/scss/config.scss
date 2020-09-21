@@ -23,6 +23,8 @@ $indicator-info: #3498DB;
 $indicator-success: #2ECC71;
 $indicator-dangerous: #FA6400;
 $indicator-verydangerous: #D0021C;
+$indicator-inactive: rgba(50, 67, 83, 0.4);
+$indicator-processing: rgba(50, 67, 83 , 0.6);
 $indicator-colours: $indicator-error, $indicator-warning, $indicator-info, $indicator-success;
 
 
@@ -159,7 +161,7 @@ $colors: (
 }
 
 @mixin y-scrollbar () {
-  
+
   &::-webkit-scrollbar {
     -webkit-appearance: none;
   }

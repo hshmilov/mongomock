@@ -18,8 +18,10 @@
   >
   <XIcon
     v-else-if="schema.format && schema.format === 'icon'"
-    family="symbol"
-    :type="value"
+    :family="xIconFamily"
+    :theme="xIconTheme"
+    :type="xIconType"
+    :title="xIconTitle"
     :class="`icon-${value}`"
   />
   <div
@@ -43,8 +45,10 @@
 <script>
 import { mapGetters } from 'vuex';
 import XIcon from '@axons/icons/Icon';
-import { formatDate } from '../../../../../constants/utils';
-import { DATE_FORMAT } from '../../../../../store/getters';
+import { formatDate } from '@constants/utils';
+import { DATE_FORMAT } from '@store/getters';
+import _get from 'lodash/get';
+import _isNil from 'lodash/isNil';
 
 export default {
   name: 'XStringView',
@@ -67,6 +71,18 @@ export default {
     ...mapGetters({
       dateFormat: DATE_FORMAT,
     }),
+    xIconFamily() {
+      return _isNil(this.schema.useCustomIcons) ? 'symbol' : null;
+    },
+    xIconTheme() {
+      return _get(this.schema, 'iconsProperties.theme', null);
+    },
+    xIconType() {
+      return _get(this.schema, `iconsProperties.textToIcon.${this.value}`, this.value);
+    },
+    xIconTitle() {
+      return _get(this.schema, `iconsProperties.iconTooltip.${this.value}`, null);
+    },
   },
   methods: {
     formatUsername(value) {
@@ -125,5 +141,25 @@ export default {
     height: 16px;
     width: auto;
     display: flex;
+    &.icon-success {
+      &, &:hover {
+        color: $indicator-success;
+      }
+    }
+    &.icon-error {
+      &, &:hover {
+        color: $indicator-error;
+      }
+    }
+    &.icon-processing {
+      &, &:hover {
+        color: $indicator-warning;
+      }
+    }
+    &.icon-inactive {
+      &, &:hover {
+        color: $indicator-inactive;
+      }
+    }
   }
 </style>

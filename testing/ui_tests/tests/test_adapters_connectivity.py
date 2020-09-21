@@ -95,7 +95,7 @@ class TestAdaptersConnectivity(AdapterTestBase):
 
         self.adapters_page.wait_for_spinner_to_end()
         self.adapters_page.search(AD_ADAPTER_NAME)
-        self.adapters_page.wait_for_adapter_warning()
+        self.adapters_page.wait_for_adapter_red()
         self.adapters_page.clean_adapter_servers(AD_ADAPTER_NAME)
 
         self.adapters_page.switch_to_page()
