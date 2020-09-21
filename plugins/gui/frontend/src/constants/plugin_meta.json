@@ -693,6 +693,11 @@
     "link": "https://docs.axonius.com/docs/device42",
     "description": "Device42 is a cloud-based CMDB for physical, virtual, and cloud servers and containers, network components, software, services, applications, and their relationships and dependencies."
   },
+  "proofpoint_adapter": {
+    "title": "Proofpoint - BETA",
+    "link": "https://docs.axonius.com/docs/proofpoint",
+    "description": "Proofpoint is a cybersecurity solution that protects workers and data from cybersecurity criminals that target email, social media and mobile devices."
+  },
   "ivanti_security_controls_adapter": {
     "title": "Ivanti Security Controls",
     "link": "https://docs.axonius.com/docs/ivanti-security-controls",

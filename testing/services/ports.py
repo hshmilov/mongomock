@@ -114,6 +114,7 @@ DOCKER_PORTS = {
     'saltstack-adapter':                5942,
     'foreman-adapter':                  5943,
     'shodan-adapter':                   5944,
+    'proofpoint-adapter':               5945,
     'checkpoint-r80-adapter':           5948,
     'riverbed-adapter':                 5949,
     'paloalto-panorama-adapter':        5950,
