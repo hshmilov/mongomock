@@ -332,7 +332,7 @@ export default {
 
   .x-chart-metric {
     display: grid;
-    grid-template-columns: 160px auto 20px;
+    grid-template-columns: 160px 480px 20px;
     grid-gap: 16px 8px;
     min-width: 0;
     align-items: flex-start;

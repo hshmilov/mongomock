@@ -1,7 +1,6 @@
 <template>
-  <div class="x-chart-compare">
-    <h5>Select queries for comparison:</h5>
-
+  <div>
+    <h5 class="mb-1">Select queries for comparison:</h5>
     <XSelectViews
       v-model="selectedViews"
       :entities="entities"

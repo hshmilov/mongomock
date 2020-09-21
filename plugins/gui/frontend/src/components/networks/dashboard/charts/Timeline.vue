@@ -6,12 +6,14 @@
       @change="updateIntersection"
     >{{ intersection? 'Intersection' : 'Comparison' }}
     </MdSwitch>
-    <h5
-      v-if="intersection"
-    >Select a base query and another one to intersect with it:</h5>
-    <h5
-      v-else
-    >Select up to {{ max }} queries for comparison:</h5>
+    <h5 class="mb-1">
+      <template v-if="intersection">
+        Select a base query and another one to intersect with it:
+      </template>
+      <template v-else>
+        Select up to {{ max }} queries for comparison:
+      </template>
+    </h5>
     <XSelectViews
       v-model="selectedViews"
       :entities="entities"

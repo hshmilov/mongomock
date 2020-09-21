@@ -183,7 +183,7 @@ export default {
       }
       .view {
         display: grid;
-        grid-template-columns: 160px auto 35px;
+        grid-template-columns: 160px 480px 20px;
         grid-gap: 0 8px;
         min-width: 0;
         margin: 8px 0;
