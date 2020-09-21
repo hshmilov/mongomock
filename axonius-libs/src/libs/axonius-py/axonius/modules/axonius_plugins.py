@@ -1,6 +1,7 @@
 """
 Get access to important utilities of core
 """
+import logging
 from typing import List, Optional, Tuple, Dict
 import re
 from pymongo import MongoClient
@@ -9,6 +10,8 @@ from axonius.consts.plugin_consts import CORE_UNIQUE_NAME, GUI_PLUGIN_NAME, SYST
     AGGREGATOR_PLUGIN_NAME
 from axonius.db.db_client import get_db_client
 from axonius.modules.plugin_settings import PluginSettings, ConfigurableConfigsGeneral
+
+logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class AxoniusPlugins:
@@ -59,3 +62,13 @@ class AxoniusPlugin:
         self.plugin_settings = PluginSettings(db, plugin_unique_name)
         self.configurable_configs = self.plugin_settings.configurable_configs
         self.config_schemas = self.plugin_settings.config_schemas
+
+
+def get_axonius_plugins_singleton(db: MongoClient) -> AxoniusPlugins:
+    try:
+        return get_axonius_plugins_singleton.instance
+    except Exception:
+        logger.info(f'Initiating AxoniusPlugins singleton')
+        get_axonius_plugins_singleton.instance = AxoniusPlugins(db)
+
+    return get_axonius_plugins_singleton.instance

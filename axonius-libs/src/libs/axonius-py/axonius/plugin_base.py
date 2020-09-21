@@ -67,7 +67,6 @@ from axonius.consts.adapter_consts import IGNORE_DEVICE, CLIENT_ID, CONNECTION_L
 from axonius.consts.core_consts import ACTIVATED_NODE_STATUS, CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (CORRELATION_REASONS,
                                        HAS_NOTES,
-                                       FEATURE_FLAGS_CONFIG,
                                        GETTING_STARTED_CHECKLIST_SETTING,
                                        HASH_SALT, CloudComplianceNames,
                                        FeatureFlagsNames)
@@ -104,10 +103,11 @@ from axonius.consts.plugin_consts import (
     UPPERCASE_HOSTNAMES, VAULT_SETTINGS, VOLATILE_CONFIG_PATH, X_UI_USER, X_UI_USER_SOURCE, DEVICE_LOCATION_MAPPING,
     CSV_IP_LOCATION_FILE, TUNNEL_SETTINGS, TUNNEL_EMAILS_RECIPIENTS, TUNNEL_PROXY_ADDR, TUNNEL_PROXY_PORT,
     TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW, TUNNEL_PROXY_SETTINGS, DISCOVERY_CONFIG_NAME, ADAPTER_DISCOVERY,
-    ENABLE_CUSTOM_DISCOVERY, CONNECTION_DISCOVERY, NOTES_DATA_TAG, PASSWORD_EXPIRATION_SETTINGS,
-    REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME, PASSWORD_EXPIRATION_DAYS, CLIENTS_COLLECTION, PASSWORD_MANGER_AWS_SM_VAULT,
-    AWS_SM_ACCESS_KEY_ID, AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION, CLIENT_ACTIVE)
-
+    ENABLE_CUSTOM_DISCOVERY, CONNECTION_DISCOVERY, NOTES_DATA_TAG, PASSWORD_EXPIRATION_SETTINGS, DEVICES_DB, USERS_DB,
+    HISTORICAL_DEVICES_DB_VIEW, HISTORICAL_USERS_DB_VIEW, USER_ADAPTERS_HISTORICAL_RAW_DB,
+    DEVICE_ADAPTERS_HISTORICAL_RAW_DB, DEVICES_FIELDS, USERS_FIELDS, ADAPTERS_CLIENTS_LABELS, USER_ADAPTERS_RAW_DB,
+    DEVICE_ADAPTERS_RAW_DB, REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME, PASSWORD_EXPIRATION_DAYS, CLIENTS_COLLECTION,
+    PASSWORD_MANGER_AWS_SM_VAULT, AWS_SM_ACCESS_KEY_ID, AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION, CLIENT_ACTIVE)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE, DEFAULT_SSL_CIPHERS, NO_RSA_SSL_CIPHERS, \
     SSL_CIPHERS_HIGHER_SECURITY
@@ -124,6 +124,7 @@ from axonius.logging.logger import create_logger
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.feature import Feature
 from axonius.modules.axonius_plugins import AxoniusPlugins
+from axonius.modules.common import AxoniusCommon
 from axonius.plugin_exceptions import PluginNotFoundException, SessionInvalid
 from axonius.profiling.memory_tracing import run_memory_tracing
 from axonius.types.correlation import (MAX_LINK_AMOUNT, CorrelateException,
@@ -422,6 +423,7 @@ class PluginBase(Configurable, Feature, ABC):
         PluginBase.Instance = self
         self.plugins = AxoniusPlugins(self._get_db_connection())
         self.db_files = DBFileHelper(self._get_db_connection())
+        self.common = AxoniusCommon(self._get_db_connection())
 
         super().__init__(*args, **kwargs)
         # Basic configurations concerning axonius-libs. This will be changed by the CI.
@@ -613,10 +615,10 @@ class PluginBase(Configurable, Feature, ABC):
 
         # DB's
         self.aggregator_db_connection = self._get_db_connection()[AGGREGATOR_PLUGIN_NAME]
-        self.devices_db = self.aggregator_db_connection['devices_db']
-        self.users_db = self.aggregator_db_connection['users_db']
-        self.historical_devices_db_view = self.aggregator_db_connection['historical_devices_db_view']
-        self.historical_users_db_view = self.aggregator_db_connection['historical_users_db_view']
+        self.devices_db = self.aggregator_db_connection[DEVICES_DB]
+        self.users_db = self.aggregator_db_connection[USERS_DB]
+        self.historical_devices_db_view = self.aggregator_db_connection[HISTORICAL_DEVICES_DB_VIEW]
+        self.historical_users_db_view = self.aggregator_db_connection[HISTORICAL_USERS_DB_VIEW]
 
         self._entity_db_map = {
             EntityType.Users: self.users_db,
@@ -625,12 +627,12 @@ class PluginBase(Configurable, Feature, ABC):
 
         # pylint: disable=invalid-name
         self._raw_adapter_entity_db_map = {
-            EntityType.Users: self.aggregator_db_connection['user_adapters_raw_db'],
-            EntityType.Devices: self.aggregator_db_connection['device_adapters_raw_db'],
+            EntityType.Users: self.aggregator_db_connection[USER_ADAPTERS_RAW_DB],
+            EntityType.Devices: self.aggregator_db_connection[DEVICE_ADAPTERS_RAW_DB],
         }
         self._raw_adapter_historical_entity_db_map = {
-            EntityType.Users: self.aggregator_db_connection['user_adapters_historical_raw_db'],
-            EntityType.Devices: self.aggregator_db_connection['device_adapters_historical_raw_db'],
+            EntityType.Users: self.aggregator_db_connection[USER_ADAPTERS_HISTORICAL_RAW_DB],
+            EntityType.Devices: self.aggregator_db_connection[DEVICE_ADAPTERS_HISTORICAL_RAW_DB],
         }
 
         self._historical_entity_views_db_map = {
@@ -639,8 +641,8 @@ class PluginBase(Configurable, Feature, ABC):
         }
 
         self._all_fields_db_map = {
-            EntityType.Users: self.aggregator_db_connection['users_fields'],
-            EntityType.Devices: self.aggregator_db_connection['devices_fields'],
+            EntityType.Users: self.aggregator_db_connection[USERS_FIELDS],
+            EntityType.Devices: self.aggregator_db_connection[DEVICES_FIELDS],
         }
 
         self._my_adapters_map: Dict[EntityType, Callable] = {
@@ -704,7 +706,7 @@ class PluginBase(Configurable, Feature, ABC):
             self.__first_time_inserter = None
 
         self.device_id_db = self.aggregator_db_connection['current_devices_id']
-        self.adapter_client_labels_db = self.aggregator_db_connection['adapters_client_labels']
+        self.adapter_client_labels_db = self.aggregator_db_connection[ADAPTERS_CLIENTS_LABELS]
 
         # the execution monitor has its own mechanism. this thread will make exceptions if we run it in execution,
         # since it will try to reject functions and not promises.
@@ -770,35 +772,9 @@ class PluginBase(Configurable, Feature, ABC):
         common_db_indexes(self._historical_entity_views_db_map[entity_type])
         historic_indexes(self._historical_entity_views_db_map[entity_type])
 
-    # pylint: disable=no-self-use, import-error
-    @add_rule('reload_uwsgi')
-    def _reload_uwsgi(self):
-        # We import here because this can not be imported from within the host, and the host uses plugin_base.py
-        import uwsgi
-        logger.info(f'Reloading uwsgi...')
-        uwsgi.reload()
-
     @property
     def is_in_mock_mode(self):
         return self.__is_in_mock_mode
-
-    # pylint: enable=no-self-use
-    def _request_reload_uwsgi(self, plugin_unique_name: str):
-        self.request_remote_plugin('reload_uwsgi', plugin_unique_name)
-        time_passed = 0
-        while time_passed < 280:
-            time.sleep(5)
-            time_passed += 5
-            try:
-                self.request_remote_plugin('version', plugin_unique_name, fail_on_plugin_down=True, timeout=(5, 5))
-                break
-            except Exception:
-                pass
-        else:
-            logger.exception('Adapter did not reload successfully from uwsgi')
-            raise ValueError(f'Adapter did not reload successfully from uwsgi')
-
-        time.sleep(5)
 
     @retry(stop_max_attempt_number=3,
            wait_fixed=5000)
@@ -3501,7 +3477,7 @@ class PluginBase(Configurable, Feature, ABC):
             MongoEncrypt.disable_fips()
 
     def feature_flags_config(self) -> dict:
-        return self.plugins.gui.configurable_configs[FEATURE_FLAGS_CONFIG]
+        return self.common.feature_flags()
 
     @staticmethod
     def _compliance_expired(expiry_date):

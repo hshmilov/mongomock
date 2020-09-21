@@ -375,6 +375,8 @@ class TestGlobalSettings(TestBase):
                         if adapter_entity.get('data'):
                             adapter_entity['data'].pop('backup_source', None)
 
+                    local_item.pop('_id', None)
+                    item_to_compare.pop('_id', None)
                     assert json.dumps(local_item, cls=IteratorJSONEncoder, sort_keys=True) \
                         == json.dumps(item_to_compare, cls=IteratorJSONEncoder, sort_keys=True)
 

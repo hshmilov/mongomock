@@ -7,8 +7,10 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.mixins.configurable import Configurable
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.cisco.abstract import CiscoDevice, InstanceParser
+from axonius.multiprocess.multiprocess import concurrent_multiprocess_yield
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import get_exception_string
+from cisco_adapter.parse import query_devices_by_client_cisco, prepare_for_parse_raw_data_cisco
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -51,9 +53,18 @@ class CiscoAdapter(AdapterBase, Configurable):
         return outside_query_devices_by_client
 
     def _query_devices_by_client(self, client_name, client_data):
-        with client_data:
-            # Returns objects that can later return devices using .get_devices() method (see abstract.py)
-            yield from client_data.query_all()
+        _ = (yield from concurrent_multiprocess_yield(
+            [
+                (
+                    query_devices_by_client_cisco,
+                    (
+                        client_data,
+                    ),
+                    {}
+                )
+            ],
+            1
+        ))
 
     def _clients_schema(self):
         return {
@@ -144,6 +155,9 @@ class CiscoAdapter(AdapterBase, Configurable):
         }
 
     def _parse_raw_data(self, devices_raw_data):
+        yield from self.__parse_raw_data(prepare_for_parse_raw_data_cisco(devices_raw_data))
+
+    def __parse_raw_data(self, devices_raw_data):
         for device in InstanceParser(devices_raw_data).get_devices(self._new_device_adapter):
             try:
                 if not self.__fetch_arp and device.fetch_proto == 'ARP':

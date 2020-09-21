@@ -1,6 +1,7 @@
 """
 Handle all root-master architecture functions.
 """
+# pylint: disable=too-many-nested-blocks
 import json
 import logging
 import os
@@ -9,6 +10,8 @@ import tarfile
 
 from pymongo import ReplaceOne
 from pymongo.errors import BulkWriteError
+
+from axonius.modules.central_core import CentralCore
 from axonius.utils.smb import SMBClient
 from axonius.clients.aws.utils import (
     aws_list_s3_objects,
@@ -31,10 +34,19 @@ RESTORE_FILE = 'restore.tar.gz'
 RESTORE_FILE_GPG = 'restore.tar.gz.gpg'
 
 
+def get_central_core_module() -> CentralCore:
+    try:
+        return get_central_core_module.instance
+    except Exception:
+        get_central_core_module.instance = CentralCore()
+
+    return get_central_core_module.instance
+
+
 # pylint: disable=protected-access, too-many-locals, too-many-branches, too-many-statements
 def root_master_parse_entities(entity_type: EntityType, info, backup_source=None):
     entities = json.loads(info)
-    db = PluginBase.Instance._entity_db_map[entity_type]
+    db = get_central_core_module().entity_db_map[entity_type]
     bulk_replacements = []
     for entity in entities:
         entity.pop('_id', None)  # not interesting
@@ -59,7 +71,7 @@ def root_master_parse_entities(entity_type: EntityType, info, backup_source=None
 
 def root_master_parse_entities_raw(entity_type: EntityType, info):
     entities = json.loads(info)
-    db = PluginBase.Instance._raw_adapter_entity_db_map[entity_type]
+    db = get_central_core_module().raw_adapter_entity_db_map[entity_type]
     bulk_replacements = []
     for entity in entities:
         entity.pop('_id', None)  # not interesting
@@ -75,13 +87,13 @@ def root_master_parse_entities_raw(entity_type: EntityType, info):
 
 def root_master_parse_entities_fields(entity_type: EntityType, info):
     entities = json.loads(info)
-    fields_db_map = PluginBase.Instance._all_fields_db_map[entity_type]
+    fields_db_map = get_central_core_module().fields_db_map[entity_type]
     for entity in entities:
         entity.pop('_id', None)  # not interesting
         schema_name = entity.get('name')
         plugin_name = entity.get('plugin_name')
         plugin_unique_name = entity.get('plugin_unique_name')
-        if schema_name == 'hyperlink' and plugin_name:
+        if schema_name == 'hyperlinks' and plugin_name:
             fields_db_map.replace_one({'name': schema_name, 'plugin_name': plugin_name}, entity, upsert=True)
         elif schema_name in ['parsed', 'dynamic']:
             if plugin_unique_name:
@@ -121,12 +133,13 @@ def root_master_parse_entities_fields(entity_type: EntityType, info):
 def root_master_parse_adapter_client_labels(info):
     try:
         data = json.loads(info)
-        db = PluginBase.Instance.adapter_client_labels_db
+        db = get_central_core_module().adapters_clients_labels_db
 
         for connection in data:
             client_id = connection.get('client_id')
             node_id = connection.get('node_id')
             plugin_unique_name = connection.get('plugin_unique_name')
+            connection.pop('_id', None)
 
             if not client_id or not node_id or not plugin_unique_name:
                 logger.error(f'Weird connection {connection} not putting')
@@ -139,6 +152,67 @@ def root_master_parse_adapter_client_labels(info):
             )
     except Exception:
         logger.exception(f'Failed to parse adapter client labels')
+
+
+def root_master_parse_restore_file(restore_file_identity: str):
+    with tarfile.open(RESTORE_FILE, 'r:gz') as tar_file:
+        for member in tar_file.getmembers():
+            try:
+                if member.name.startswith('devices_'):
+                    root_master_parse_entities(
+                        entity_type=EntityType.Devices,
+                        info=tar_file.extractfile(member).read(),
+                        backup_source=restore_file_identity,
+                    )
+                elif member.name.startswith('users_'):
+                    root_master_parse_entities(
+                        entity_type=EntityType.Users,
+                        info=tar_file.extractfile(member).read(),
+                        backup_source=restore_file_identity,
+                    )
+                elif member.name.startswith('raw_devices_'):
+                    root_master_parse_entities_raw(
+                        entity_type=EntityType.Devices, info=tar_file.extractfile(member).read(),
+                    )
+                elif member.name.startswith('raw_users_'):
+                    root_master_parse_entities_raw(
+                        entity_type=EntityType.Users, info=tar_file.extractfile(member).read(),
+                    )
+                elif member.name.startswith('fields_devices_'):
+                    root_master_parse_entities_fields(
+                        entity_type=EntityType.Devices, info=tar_file.extractfile(member).read(),
+                    )
+                elif member.name.startswith('fields_users_'):
+                    root_master_parse_entities_fields(
+                        entity_type=EntityType.Users, info=tar_file.extractfile(member).read(),
+                    )
+                elif member.name.startswith('adapter_client_labels_'):
+                    root_master_parse_adapter_client_labels(info=tar_file.extractfile(member).read())
+                else:
+                    logger.warning(f'found member {member.name} - no parsing known')
+            except Exception:
+                logger.critical(f'Could not parse member {member.name}')
+
+
+def verify_available_disk_space():
+    disk_free_bytes = get_free_disk_space()
+    disk_free_gb = disk_free_bytes / BYTES_TO_GIGABYTES
+    disk_free_gb_req = DISK_SPACE_FREE_GB_MANDATORY
+    if disk_free_gb <= disk_free_gb_req:
+        err = f'Available space must be above {disk_free_gb_req} GB, but only {disk_free_gb} GB is available'
+        raise ValueError(err)
+
+
+def gpg_decrypt_file(preshared_key: str, decrypt_output: str, decrypt_input: str, key_name: str, location: str):
+    try:
+        subprocess.check_call(
+            ['gpg', '--output', decrypt_output, '--passphrase', preshared_key, '--decrypt', decrypt_input]
+        )
+
+        file_size_in_mb = round(os.stat(RESTORE_FILE).st_size / BYTES_TO_MEGABYTES, 2)
+        logger.info(f'Decrypt Complete: {key_name!r} (location: {location!r}). File size: {file_size_in_mb}mb')
+    except Exception as exc:
+        raise ValueError(f'Failed to decrypt Object {key_name!r} from location {location!r}, bad password? {str(exc)}')
 
 
 def verify_restore_s3(bucket_name, access_key_id=None, secret_access_key=None):
@@ -155,12 +229,15 @@ def verify_restore_s3(bucket_name, access_key_id=None, secret_access_key=None):
     if not bucket_name:
         raise ValueError(f'Must supply "bucket_name" or configure Global Settings > Amazon S3 settings')
 
-    disk_free_bytes = get_free_disk_space()
-    disk_free_gb = disk_free_bytes / (BYTES_TO_GIGABYTES)
-    disk_free_gb_req = DISK_SPACE_FREE_GB_MANDATORY
-    if disk_free_gb <= disk_free_gb_req:
-        err = f'Available space must be above {disk_free_gb_req} GB, but only {disk_free_gb} GB is available'
-        raise ValueError(err)
+    verify_available_disk_space()
+
+
+def restore_cleanup():
+    """Cleanup all the files used by restore process."""
+    if os.path.exists(RESTORE_FILE_GPG):
+        os.unlink(RESTORE_FILE_GPG)
+    if os.path.exists(RESTORE_FILE):
+        os.unlink(RESTORE_FILE)
 
 
 def root_master_restore_from_s3():
@@ -214,14 +291,6 @@ def root_master_restore_from_s3():
         restore_cleanup()
 
 
-def restore_cleanup():
-    """Cleanup all the files used by restore process."""
-    if os.path.exists(RESTORE_FILE_GPG):
-        os.unlink(RESTORE_FILE_GPG)
-    if os.path.exists(RESTORE_FILE):
-        os.unlink(RESTORE_FILE)
-
-
 def restore_from_s3_key(
         key_name,
         bucket_name,
@@ -266,9 +335,9 @@ def restore_from_s3_key(
             raise ValueError(f'Unable to find S3 Object {key_name!r} in bucket {bucket_name!r}, found:{valid}')
 
         disk_free_bytes = get_free_disk_space()
-        disk_free_gb = disk_free_bytes / (BYTES_TO_GIGABYTES)
+        disk_free_gb = disk_free_bytes / BYTES_TO_GIGABYTES
         obj_bytes = obj_meta['ContentLength']
-        obj_gb = obj_bytes / (BYTES_TO_GIGABYTES)
+        obj_gb = obj_bytes / BYTES_TO_GIGABYTES
         check_gb = obj_bytes * 2
 
         if check_gb >= disk_free_bytes:
@@ -294,57 +363,13 @@ def restore_from_s3_key(
             raise ValueError(f'Failed to download S3 object {key_name!r} from bucket {bucket_name!r}: {exc}')
 
         # decrypt
-        try:
-            subprocess.check_call(
-                ['gpg', '--output', RESTORE_FILE, '--passphrase', preshared_key, '--decrypt', RESTORE_FILE_GPG]
-            )
-
-            file_size_in_mb = round(os.stat(RESTORE_FILE).st_size / (BYTES_TO_MEGABYTES), 2)
-            logger.info(f'Decrypt Complete: {key_name}. File size: {file_size_in_mb}mb')
-        except Exception as exc:
-            raise ValueError(f'Failed to decrypt S3 Object {key_name!r} from bucket {bucket_name!r}, bad password?')
+        gpg_decrypt_file(preshared_key, RESTORE_FILE, RESTORE_FILE_GPG, key_name, f's3://{bucket_name}')
 
         if os.path.exists(RESTORE_FILE_GPG):
             os.unlink(RESTORE_FILE_GPG)
 
         logger.info(f'Parsing {key_name}')
-        with tarfile.open(RESTORE_FILE, 'r:gz') as tar_file:
-            for member in tar_file.getmembers():
-                try:
-                    if member.name.startswith('devices_'):
-                        root_master_parse_entities(
-                            entity_type=EntityType.Devices,
-                            info=tar_file.extractfile(member).read(),
-                            backup_source=key_name,
-                        )
-                    elif member.name.startswith('users_'):
-                        root_master_parse_entities(
-                            entity_type=EntityType.Users,
-                            info=tar_file.extractfile(member).read(),
-                            backup_source=key_name,
-                        )
-                    elif member.name.startswith('raw_devices_'):
-                        root_master_parse_entities_raw(
-                            entity_type=EntityType.Devices, info=tar_file.extractfile(member).read(),
-                        )
-                    elif member.name.startswith('raw_users_'):
-                        root_master_parse_entities_raw(
-                            entity_type=EntityType.Users, info=tar_file.extractfile(member).read(),
-                        )
-                    elif member.name.startswith('fields_devices_'):
-                        root_master_parse_entities_fields(
-                            entity_type=EntityType.Devices, info=tar_file.extractfile(member).read(),
-                        )
-                    elif member.name.startswith('fields_users_'):
-                        root_master_parse_entities_fields(
-                            entity_type=EntityType.Users, info=tar_file.extractfile(member).read(),
-                        )
-                    elif member.name.startswith('adapter_client_labels_'):
-                        root_master_parse_adapter_client_labels(info=tar_file.extractfile(member).read())
-                    else:
-                        logger.warning(f'found member {member.name} - no parsing known')
-                except Exception:
-                    logger.critical(f'Could not parse member {member.name}')
+        root_master_parse_restore_file(key_name)
 
         os.unlink(RESTORE_FILE)
 
@@ -389,26 +414,17 @@ def root_master_restore_from_smb():
     try:
         root_master_settings = (PluginBase.Instance.feature_flags_config().get(RootMasterNames.root_key) or {})
         # Verify root master settings
-        if not root_master_settings.get(RootMasterNames.SMB_enabled):
-            raise ValueError(f'Error - Root Master (SMB) mode is not enabled')
+        if not root_master_settings.get(RootMasterNames.enabled):
+            raise ValueError(f'Error - Root Master mode is not enabled')
 
         delete_backups = root_master_settings.get(RootMasterNames.delete_backups) or False
 
-        # Check if there is enough space on this machine. Otherwise stop the process
-        free_disk_space_in_bytes = get_free_disk_space()
-        free_disk_space_in_gb = free_disk_space_in_bytes / (BYTES_TO_GIGABYTES)
-        if free_disk_space_in_gb < DISK_SPACE_FREE_GB_MANDATORY:
-            message = f'Error - only {free_disk_space_in_gb}gb is left on disk, ' \
-                f'while {DISK_SPACE_FREE_GB_MANDATORY} is required'
-            raise ValueError(message)
+        verify_available_disk_space()
 
         smb_settings = PluginBase.Instance._smb_settings.copy()
 
         if not smb_settings.get('enabled'):
             raise ValueError(f'SMB integration is not enabled.')
-
-        if not smb_settings.get('enable_backups'):
-            raise ValueError(f'SMB Backups are not enabled.')
 
         if smb_settings.get('hostname'):
             hostname = smb_settings.get('hostname')
@@ -470,96 +486,50 @@ def root_master_restore_from_smb():
         # For each file, download the file, parse it, set in DB and delete
         for smb_file in new_smb_files:
             try:
-                smb_client.download_files_from_smb([smb_file])
-                logger.info(f'Download complete: {smb_file}, Decrypting')
-            except Exception:
-                logger.exception(f'Unable to download {smb_file} from SMB')
-                raise
+                try:
+                    smb_client.download_files_from_smb([smb_file])
+                    logger.info(f'Download complete: {smb_file}, Decrypting')
+                except Exception:
+                    logger.exception(f'Unable to download {smb_file} from SMB')
+                    raise
 
-            # decrypt
-            try:
-                subprocess.check_call([
-                    'gpg', '--output', RESTORE_FILE,
-                    '--passphrase', preshared_key,
-                    '--decrypt', smb_file
-                ])
-                file_size_in_mb = round(os.stat(RESTORE_FILE).st_size / (BYTES_TO_MEGABYTES), 2)
-                logger.info(f'Decrypt Complete: {smb_file}. '
-                            f'File size: {file_size_in_mb}mb')
-                os.unlink(smb_file)
-            except Exception:
-                logger.exception(f'Unable to decrypt the file: {smb_file}')
-                raise
+                # decrypt
+                gpg_decrypt_file(preshared_key, RESTORE_FILE, smb_file, smb_file, f'smb://{hostname}')
+                if os.path.exists(smb_file):
+                    os.unlink(smb_file)
 
-            try:
-                logger.info(f'Parsing {RESTORE_FILE}')
-                with tarfile.open(RESTORE_FILE, 'r:gz') as tar_file:
-                    for member in tar_file.getmembers():
-                        try:
-                            if member.name.startswith('devices_'):
-                                root_master_parse_entities(
-                                    EntityType.Devices, tar_file.extractfile(
-                                        member).read(), smb_file
-                                )
-                            elif member.name.startswith('users_'):
-                                root_master_parse_entities(
-                                    EntityType.Users, tar_file.extractfile(
-                                        member).read(), smb_file
-                                )
-                            elif member.name.startswith('raw_devices_'):
-                                root_master_parse_entities_raw(
-                                    EntityType.Devices,
-                                    tar_file.extractfile(member).read())
-                            elif member.name.startswith('raw_users_'):
-                                root_master_parse_entities_raw(
-                                    EntityType.Users,
-                                    tar_file.extractfile(member).read())
-                            elif member.name.startswith('fields_devices_'):
-                                root_master_parse_entities_fields(
-                                    EntityType.Devices,
-                                    tar_file.extractfile(member).read())
-                            elif member.name.startswith('fields_users_'):
-                                root_master_parse_entities_fields(
-                                    EntityType.Users,
-                                    tar_file.extractfile(member).read())
-                            elif member.name.startswith('adapter_client_labels_'):
-                                root_master_parse_adapter_client_labels(
-                                    tar_file.extractfile(member).read())
-                            else:
-                                logger.warning(f'found member {member.name}'
-                                               f' - no parsing known')
-                        except Exception:
-                            logger.exception(f'Could not parse member {member.name}')
+                try:
+                    logger.info(f'Parsing {RESTORE_FILE}')
+                    root_master_parse_restore_file(smb_file)
 
-                os.unlink(RESTORE_FILE)
-
-                # Delete from share if necessary
-                if delete_backups:
-                    logger.info(f'Deleting file from SMB share: {smb_file}')
-                    try:
-                        smb_client.delete_files_from_smb([smb_file])
-                    except Exception:
-                        logger.exception(f'Could not delete object {smb_file} '
-                                         f'from {share_name}')
-
-                # Set in db as parsed
-                root_master_config.insert_one({'type': 'parsed_file',
-                                               'key': smb_file})
-                logger.info(f'Parsing {smb_file} complete.')
-            except Exception:
-                logger.exception(f'File download/parse failed: {smb_file}')
-            finally:
-                if os.path.exists(RESTORE_FILE_GPG):
-                    os.unlink(RESTORE_FILE_GPG)
-                if os.path.exists(RESTORE_FILE):
                     os.unlink(RESTORE_FILE)
+
+                    # Delete from share if necessary
+                    if delete_backups:
+                        logger.info(f'Deleting file from SMB share: {smb_file}')
+                        try:
+                            smb_client.delete_files_from_smb([smb_file])
+                        except Exception:
+                            logger.exception(f'Could not delete object {smb_file} '
+                                             f'from {share_name}')
+
+                    # Set in db as parsed
+                    root_master_config.insert_one({'type': 'parsed_file',
+                                                   'key': smb_file})
+                    logger.info(f'Parsing {smb_file} complete.')
+                except Exception:
+                    logger.exception(f'File download/parse failed: {smb_file}')
+                finally:
+                    if os.path.exists(RESTORE_FILE_GPG):
+                        os.unlink(RESTORE_FILE_GPG)
+                    if os.path.exists(RESTORE_FILE):
+                        os.unlink(RESTORE_FILE)
+            except Exception:
+                logger.critical(f'Could not parse restore SMB file {smb_file}', exc_info=True)
     except Exception:
         logger.exception(f'Root Master Mode: Could not restore from SMB')
     finally:
-        if os.path.exists(RESTORE_FILE_GPG):
-            os.unlink(RESTORE_FILE_GPG)
-        if os.path.exists(RESTORE_FILE):
-            os.unlink(RESTORE_FILE)
+        restore_cleanup()
 
     # this is to provide a value to Flask so it doesn't HTTP 500
     return 0
@@ -577,27 +547,18 @@ def root_master_restore_from_azure():
         root_master_settings = (PluginBase.Instance.feature_flags_config().get(
             RootMasterNames.root_key) or {})
         # Verify root master settings
-        if not root_master_settings.get(RootMasterNames.azure_enabled):
+        if not root_master_settings.get(RootMasterNames.enabled):
             raise ValueError(f'Error - Root Master (Azure) mode is not enabled')
 
         delete_backups = root_master_settings.get(
             RootMasterNames.delete_backups) or False
 
-        # Check if there is enough space on this machine. Otherwise stop the process
-        free_disk_space_in_bytes = get_free_disk_space()
-        free_disk_space_in_gb = free_disk_space_in_bytes / BYTES_TO_GIGABYTES
-        if free_disk_space_in_gb < DISK_SPACE_FREE_GB_MANDATORY:
-            message = f'Error - only {free_disk_space_in_gb}gb is left on disk, ' \
-                      f'while {DISK_SPACE_FREE_GB_MANDATORY} is required'
-            raise ValueError(message)
+        verify_available_disk_space()
 
         azure_settings = PluginBase.Instance._azure_storage_settings.copy()
 
         if not azure_settings.get('enabled'):
             raise ValueError(f'Azure integration is not enabled.')
-
-        if not azure_settings.get('enable_backups'):
-            raise ValueError(f'Azure Backups are not enabled.')
 
         if azure_settings.get('storage_container_name'):
             storage_container_name = azure_settings.get('storage_container_name')
@@ -661,110 +622,67 @@ def root_master_restore_from_azure():
         # For each file, download the file, parse it, set in DB and delete
         for azure_file in new_azure_files:
             try:
-                azure_storage_client.block_download_blob(
-                    container_name=storage_container_name,
-                    blob_name=azure_file)
-                logger.info(f'Download complete: {azure_file}, Decrypting')
-            except Exception as err:
-                logger.exception(f'Unable to download {azure_file} from Azure: '
-                                 f'{str(err)}')
-                raise
+                try:
+                    azure_storage_client.block_download_blob(
+                        container_name=storage_container_name,
+                        blob_name=azure_file)
+                    logger.info(f'Download complete: {azure_file}, Decrypting')
+                except Exception as err:
+                    logger.exception(f'Unable to download {azure_file} from Azure: '
+                                     f'{str(err)}')
+                    raise
 
-            # decrypt
-            try:
-                subprocess.check_call([
-                    'gpg', '--output', RESTORE_FILE,
-                    '--passphrase', preshared_key,
-                    '--decrypt', azure_file
-                ])
-                file_size_in_mb = round(
-                    os.stat(RESTORE_FILE).st_size / (BYTES_TO_MEGABYTES), 2)
-                logger.info(f'Decrypt Complete: {azure_file}. '
-                            f'File size: {file_size_in_mb}mb')
-                os.unlink(azure_file)
-            except Exception as err:
-                logger.exception(f'Unable to decrypt the file: {azure_file}: '
-                                 f'{str(err)}')
-                raise
+                # decrypt
+                gpg_decrypt_file(
+                    preshared_key,
+                    RESTORE_FILE,
+                    azure_file,
+                    azure_file,
+                    f'azure://{storage_container_name}'
+                )
 
-            try:
-                logger.info(f'Parsing {RESTORE_FILE}')
-                with tarfile.open(RESTORE_FILE, 'r:gz') as tar_file:
-                    for member in tar_file.getmembers():
-                        try:
-                            if member.name.startswith('devices_'):
-                                root_master_parse_entities(
-                                    EntityType.Devices, tar_file.extractfile(
-                                        member).read(), azure_file
-                                )
-                            elif member.name.startswith('users_'):
-                                root_master_parse_entities(
-                                    EntityType.Users, tar_file.extractfile(
-                                        member).read(), azure_file
-                                )
-                            elif member.name.startswith('raw_devices_'):
-                                root_master_parse_entities_raw(
-                                    EntityType.Devices,
-                                    tar_file.extractfile(member).read())
-                            elif member.name.startswith('raw_users_'):
-                                root_master_parse_entities_raw(
-                                    EntityType.Users,
-                                    tar_file.extractfile(member).read())
-                            elif member.name.startswith('fields_devices_'):
-                                root_master_parse_entities_fields(
-                                    EntityType.Devices,
-                                    tar_file.extractfile(member).read())
-                            elif member.name.startswith('fields_users_'):
-                                root_master_parse_entities_fields(
-                                    EntityType.Users,
-                                    tar_file.extractfile(member).read())
-                            elif member.name.startswith(
-                                    'adapter_client_labels_'):
-                                root_master_parse_adapter_client_labels(
-                                    tar_file.extractfile(member).read())
-                            else:
-                                logger.warning(f'found member {member.name}'
-                                               f' - no parsing known')
-                        except Exception:
-                            logger.exception(
-                                f'Could not parse member {member.name}')
+                if os.path.exists(azure_file):
+                    os.unlink(azure_file)
 
-                os.unlink(RESTORE_FILE)
+                try:
+                    logger.info(f'Parsing {RESTORE_FILE}')
+                    root_master_parse_restore_file(azure_file)
 
-                # Delete from share if necessary
-                if delete_backups:
-                    logger.info(f'Deleting {azure_file} from Azure '
-                                f'storage {storage_container_name}')
-                    try:
-                        azure_storage_client.delete_blob(
-                            container_name=storage_container_name,
-                            blob_name=azure_file
-                        )
-                    except Exception as err:
-                        logger.exception(f'Could not delete {azure_file} '
-                                         f'from {storage_container_name}: '
-                                         f'{str(err)}')
-
-                # Set in db as parsed
-                root_master_config.insert_one({'type': 'parsed_file',
-                                               'key': azure_file})
-                logger.info(f'Parsing of {azure_file} complete.')
-            except Exception as err:
-                logger.exception(f'File download/parse failed: {azure_file}: '
-                                 f'{str(err)}')
-            finally:
-                if os.path.exists(RESTORE_FILE_GPG):
-                    os.unlink(RESTORE_FILE_GPG)
-                if os.path.exists(RESTORE_FILE):
                     os.unlink(RESTORE_FILE)
+
+                    # Delete from share if necessary
+                    if delete_backups:
+                        logger.info(f'Deleting {azure_file} from Azure '
+                                    f'storage {storage_container_name}')
+                        try:
+                            azure_storage_client.delete_blob(
+                                container_name=storage_container_name,
+                                blob_name=azure_file
+                            )
+                        except Exception as err:
+                            logger.exception(f'Could not delete {azure_file} '
+                                             f'from {storage_container_name}: '
+                                             f'{str(err)}')
+
+                    # Set in db as parsed
+                    root_master_config.insert_one({'type': 'parsed_file',
+                                                   'key': azure_file})
+                    logger.info(f'Parsing of {azure_file} complete.')
+                except Exception as err:
+                    logger.exception(f'File download/parse failed: {azure_file}: '
+                                     f'{str(err)}')
+                finally:
+                    if os.path.exists(RESTORE_FILE_GPG):
+                        os.unlink(RESTORE_FILE_GPG)
+                    if os.path.exists(RESTORE_FILE):
+                        os.unlink(RESTORE_FILE)
+            except Exception:
+                logger.critical(f'Could not parse Azure restore key {azure_file}', exc_info=True)
     except Exception as err:
         logger.exception(f'Root Master Mode - Could not restore from Azure: '
                          f'{str(err)}')
     finally:
-        if os.path.exists(RESTORE_FILE_GPG):
-            os.unlink(RESTORE_FILE_GPG)
-        if os.path.exists(RESTORE_FILE):
-            os.unlink(RESTORE_FILE)
+        restore_cleanup()
 
     # this is to provide a value to Flask so it doesn't HTTP 500
     return 0

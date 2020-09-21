@@ -257,18 +257,6 @@ def main():
         subprocess.check_call(
             'docker exec -w /home/axonius/app/gui/frontend -t gui npm run build', shell=True, cwd=ROOT_DIR
         )
-    elif component == 'rel':
-        if not action:
-            print('Please specify an adapter/service')
-            return -1
-        try:
-            service = _get_docker_service(action)
-        except Exception:
-            print(f'No such adapter/service "{action}"!')
-            return -1
-
-        print(f'Reloading {action}...')
-        service.reload_uwsgi()
 
     elif component == 'migrate':
         service = _get_docker_service(action)

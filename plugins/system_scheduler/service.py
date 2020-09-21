@@ -50,6 +50,7 @@ from axonius.consts.scheduler_consts import (SchedulerState, Phases, ResearchPha
                                              SCHEDULER_CONFIG_NAME, SCHEDULER_SAVE_HISTORY_CONFIG_NAME,
                                              RUN_ENFORCEMENT_CHECK_THRESHOLD)
 from axonius.consts.report_consts import TRIGGERS_FIELD
+from axonius.entities import EntityType
 from axonius.logging.audit_helper import (AuditCategory, AuditAction)
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
@@ -63,7 +64,7 @@ from axonius.utils.backup import backup_to_s3, backup_to_external
 from axonius.utils.datetime import time_diff, days_diff
 from axonius.utils.files import get_local_config_file
 from axonius.utils.root_master.root_master import root_master_restore_from_s3, \
-    root_master_restore_from_smb, root_master_restore_from_azure
+    root_master_restore_from_smb, root_master_restore_from_azure, DISK_SPACE_FREE_GB_MANDATORY, get_central_core_module
 from axonius.utils.host_utils import get_free_disk_space, check_installer_locks
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -707,11 +708,62 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
             if (self.feature_flags_config().get(RootMasterNames.root_key) or {}).get(RootMasterNames.enabled):
                 try:
-                    logger.info(f'Root Master mode enabled - Restoring from s3 instead of fetch')
-                    # 1. Restore from s3
-                    root_master_restore_from_s3()
-                    self._request_gui_dashboard_cache_clear()
-                    # 2. Run enforcement center
+                    logger.info(f'Central Core mode enabled')
+
+                    free_disk_space_in_gb = get_free_disk_space() / (1024 ** 3)
+                    if free_disk_space_in_gb < DISK_SPACE_FREE_GB_MANDATORY:
+                        self.create_notification(
+                            f'Central Core Failure',
+                            f'Could not run central core cycle successfully due to low disk space (beginning)',
+                            severity_type='error'
+                        )
+                        raise ValueError(f'ERROR - do not have enough free disk space to start central core cycle')
+
+                    # 1. Restore from various places
+                    if self._aws_s3_settings.get('enabled'):
+                        root_master_restore_from_s3()
+                    if self._smb_settings.get('enabled'):
+                        root_master_restore_from_smb()
+                    if self._azure_storage_settings.get('enabled'):
+                        root_master_restore_from_azure()
+
+                    # 2. Run historical phase
+                    try:
+                        history_config, last_history_date = self.get_history_config()
+                        if self.__save_history and self.should_save_history(history_config, last_history_date):
+                            # Save history.
+                            _change_subphase(ResearchPhases.Save_Historical)
+                            free_disk_space_in_gb = get_free_disk_space() / (1024 ** 3)
+                            if free_disk_space_in_gb < MIN_GB_TO_SAVE_HISTORY:
+                                logger.error(f'Can not save history - less than 15 GB on disk!')
+                            else:
+                                self._run_historical_phase(self.__max_days_to_save)
+                    except Exception:
+                        logger.critical(f'Failed running save historical phase')
+                        self.create_notification(
+                            f'Central Core Failure',
+                            f'Could not run central core cycle successfully due to low disk space (history-phase)',
+                            severity_type='error'
+                        )
+
+                    # 3. Change to new devices_db, users_db, etc. Do not ever promote if the DB is empty!
+                    central_core = get_central_core_module()
+                    new_device_count = central_core.entity_db_map[EntityType.Devices].count({})
+                    new_user_count = central_core.entity_db_map[EntityType.Users].count({})
+
+                    if new_device_count == 0 and new_user_count == 0:
+                        logger.critical(f'New device count and new user count is 0, not promoting!')
+                        self.create_notification(
+                            f'Central Core Failure',
+                            f'Could not run central core - no backups were parsed! '
+                            f'Please check if a recent backup has been uploaded',
+                            severity_type='error'
+                        )
+                    else:
+                        central_core.promote_central_core()
+                        self._request_gui_dashboard_cache_clear(clear_slow=True)
+
+                    # 4. Run enforcement center
                     _change_subphase(ResearchPhases.Post_Correlation)
                     post_correlation_plugins = [plugin for plugin in self._get_plugins(PluginSubtype.PostCorrelation)
                                                 if plugin[PLUGIN_NAME] == REPORTS_PLUGIN_NAME]
@@ -720,51 +772,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         self._request_gui_dashboard_cache_clear()
 
                 except Exception:
-                    logger.critical(f'Could not complete root-master cycle (S3)')
+                    logger.critical(f'Could not complete root-master cycle')
 
                 return  # do not continue the rest of the cycle
 
-            # pylint: disable=no-else-return
-            elif (self.feature_flags_config().get(RootMasterNames.root_key)
-                  or {}).get(RootMasterNames.SMB_enabled):
-                try:
-                    logger.info(f'Root Master Mode enabled - Restoring from '
-                                f'SMB instead of fetch')
-                    response = root_master_restore_from_smb()
-                    self._request_gui_dashboard_cache_clear()
-
-                    _change_subphase(ResearchPhases.Post_Correlation)
-                    post_correlation_plugins = [plugin for plugin in
-                                                self._get_plugins(PluginSubtype.PostCorrelation)
-                                                if plugin[PLUGIN_NAME] == REPORTS_PLUGIN_NAME]
-                    if post_correlation_plugins:
-                        self._run_plugins(post_correlation_plugins)
-                        self._request_gui_dashboard_cache_clear()
-
-                except Exception:
-                    logger.critical(f'Could not complete Root Master cycle (SMB)')
-                    return  # do not continue the rest of the cycle
-
-            # pylint: disable=no-else-return
-            elif (self.feature_flags_config().get(RootMasterNames.root_key)
-                  or {}).get(RootMasterNames.azure_enabled):
-                try:
-                    logger.info(f'Root Master Mode enabled - Restoring from '
-                                f'Azure blob storage instead of fetch')
-                    response = root_master_restore_from_azure()
-                    self._request_gui_dashboard_cache_clear()
-
-                    _change_subphase(ResearchPhases.Post_Correlation)
-                    post_correlation_plugins = [plugin for plugin in
-                                                self._get_plugins(PluginSubtype.PostCorrelation)
-                                                if plugin[PLUGIN_NAME] == REPORTS_PLUGIN_NAME]
-                    if post_correlation_plugins:
-                        self._run_plugins(post_correlation_plugins)
-                        self._request_gui_dashboard_cache_clear()
-
-                except Exception:
-                    logger.critical(f'Could not complete Root Master cycle (Azure)')
-                    return  # do not continue the rest of the cycle
             try:
                 # this is important and is described at https://axonius.atlassian.net/wiki/spaces/AX/pages/799211552/
                 self.request_remote_plugin('wait/execute', REPORTS_PLUGIN_NAME)
