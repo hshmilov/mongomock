@@ -90,6 +90,7 @@ DOCKER_PORTS = {
     'iboss-cloud-adapter':              5782,
     'cyberark-pas-adapter':             5783,
     'mobi-control-adapter':             5784,
+    'cyberark-epm-adapter':             5785,
     'infoblox-adapter':                 5794,
     'nessus-csv-adapter':               5796,
     'tanium-adapter':                   5797,

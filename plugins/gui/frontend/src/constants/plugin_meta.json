@@ -708,6 +708,11 @@
     "link": "https://docs.axonius.com/docs/symantec-endpoint-encryption",
     "description": "Symantec Endpoint Encryption combines full-disk and removable media encryption with centralized management to protect sensitive information and ensure regulatory compliance."
   },
+  "cyberark_epm_adapter": {
+    "title": "CyberArk Endpoint Privilege Manager - BETA",
+    "link": "https://docs.axonius.com/docs/cyberark-endpoint-privilege-manager",
+    "description": "CyberArk Endpoint Privilege Manager enforces least privilege, providing credential theft protection and application control at scale."
+  },
   "promisec_adapter": {
     "title": "Promisec Endpoint Manager",
     "link": "",
