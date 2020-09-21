@@ -2397,7 +2397,7 @@ class PluginBase(Configurable, Feature, ABC):
             if tag_type == 'label':
                 lables = db_session.find_one({'internal_axon_id': entities_candidate['internal_axon_id']},
                                              projection=['labels'])
-                lables = lables['labels'] if 'labels' in lables else []
+                lables = lables['labels'] if lables and 'labels' in lables else []
                 if name in lables and data is False:
                     lables.remove(name)
                 elif name not in lables and data is True:
