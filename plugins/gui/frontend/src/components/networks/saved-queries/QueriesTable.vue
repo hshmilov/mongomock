@@ -36,6 +36,7 @@
         >Reset</XButton>
       </div>
       <XButton
+        class="queries-table-header__learn-use-case"
         type="link"
         icon="question-circle"
         @click="openAxoniusDocs"
@@ -423,12 +424,15 @@ export default {
     .table-td-tags {
       width: 400px;
     }
+    .x-data-table {
+      height: calc(100% - 36px)
+    }
   }
 
   .queries-table-header {
     display: flex;
     justify-content: space-between;
-    .queries-table-header__search {
+    &__search {
       display: flex;
       align-items: flex-end;
       .search__input {
@@ -454,10 +458,15 @@ export default {
       }
       .search__reset {
         margin-left: 16px;
+        align-self: center;
       }
       .private-switch {
-        margin: 0 0 4px 36px;
+        margin-left: 36px;
+        align-self: center;
       }
+    }
+    &__learn-use-case {
+      align-self: center;
     }
   }
 

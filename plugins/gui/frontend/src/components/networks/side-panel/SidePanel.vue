@@ -132,6 +132,8 @@ export default {
       .ant-drawer-title {
         display: flex;
         justify-content: space-between;
+        align-items: center;
+        height: 32px;
 
         .title {
           color: #fff;
@@ -143,6 +145,7 @@ export default {
 
         .actions {
           display: flex;
+          height: 25px;
 
           .action-close {
             font-size: 20px;
@@ -150,7 +153,6 @@ export default {
             color: $theme-white;
             cursor: pointer;
           }
-
 
           ul {
             list-style: none;
