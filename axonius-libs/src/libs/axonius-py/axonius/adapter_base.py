@@ -930,16 +930,14 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
             self._update_client_status(client_name, 'success')
         else:
-            if log_fetch and len(self._clients) > 0:
-                self._log_activity_adapter_client_fetch_start(client_name)
             devices_count = sum(
                 self._save_data_from_plugin(*data, EntityType.Devices)
                 for data
-                in self._query_data(EntityType.Devices))
+                in self._query_data(EntityType.Devices, raise_exc=False, log_fetch=log_fetch))
             users_count = sum(
                 self._save_data_from_plugin(*data, EntityType.Users)
                 for data
-                in self._query_data(EntityType.Users))
+                in self._query_data(EntityType.Users, raise_exc=False))
             if log_fetch and len(self._clients) > 0:
                 self._log_activity_adapter_client_fetch_summary(client_name, current_time, users_count, devices_count)
 
@@ -1797,7 +1795,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             EntityType.Devices, False)
         self._save_field_names_to_db(EntityType.Devices)
 
-    def _query_data(self, entity_type: EntityType) -> Iterable[Tuple[Any, Dict[str, Any]]]:
+    def _query_data(self, entity_type: EntityType, raise_exc=True, log_fetch=False) \
+            -> Iterable[Tuple[Any, Dict[str, Any]]]:
         """
         Synchronously returns all available data types (devices/users) from all clients.
         """
@@ -1810,15 +1809,19 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         # Running query on each device
         for client_name in clients:
             try:
+                if log_fetch:
+                    self._log_activity_adapter_client_fetch_start(client_name)
                 raw_data, parsed_data = self._try_query_data_by_client(client_name, entity_type)
             except adapter_exceptions.CredentialErrorException as e:
                 logger.warning(f'Credentials error for {client_name} on {self.plugin_unique_name}: {repr(e)}')
                 self.create_notification(f'Credentials error for {client_name} on {self.plugin_unique_name}', repr(e))
-                raise
+                if raise_exc:
+                    raise
             except adapter_exceptions.AdapterException as e:
                 logger.exception(f'Error for {client_name} on {self.plugin_unique_name}: {repr(e)}')
                 self.create_notification(f'Error for {client_name} on {self.plugin_unique_name}', repr(e))
-                raise
+                if raise_exc:
+                    raise
             except func_timeout.exceptions.FunctionTimedOut as e:
                 logger.error(f'Timeout on {client_name}')
                 self.create_notification(f'Timeout for \'{client_name}\' client on {self.plugin_unique_name}'
@@ -1826,7 +1829,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 raise adapter_exceptions.AdapterException(f'Fetching has timed out')
             except Exception as e:
                 logger.exception(f'Unknown error for {client_name} on {self.plugin_unique_name}: {repr(e)}')
-                raise
+                if raise_exc:
+                    raise
             else:
                 data_list = {'raw': raw_data,
                              'parsed': parsed_data}
