@@ -1873,31 +1873,31 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             },
             new_id_func)
 
-        @db_migration(raise_on_failure=False)
-        def _update_schema_version_56(self):
-            print('Update to schema 56 - Convert Firemon device.id to a new format')
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_56(self):
+        print('Update to schema 56 - Convert Firemon device.id to a new format')
 
-            def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
-                data = entity.get('data')
-                if not data:
-                    return False
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
 
-                firemon_name = data.get('name') or ''
+            firemon_name = data.get('name') or ''
 
-                # Check if not migrated already
-                if current_id.endswith(f'_{firemon_name}'):
-                    return False
+            # Check if not migrated already
+            if current_id.endswith(f'_{firemon_name}'):
+                return False
 
-                # return new id
-                return f'{current_id}_{firemon_name}'
+            # return new id
+            return f'{current_id}_{firemon_name}'
 
-            self._migrate_entity_id_generic(
-                EntityType.Devices,
-                'firemon_adapter',
-                {
-                    'adapters.data.name': 1
-                },
-                new_id_func)
+        self._migrate_entity_id_generic(
+            EntityType.Devices,
+            'firemon_adapter',
+            {
+                'adapters.data.name': 1
+            },
+            new_id_func)
 
     def _migrate_entity_id_generic(
             self,
