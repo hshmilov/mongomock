@@ -555,6 +555,26 @@ class AdaptersPage(EntitiesPage):
         else:
             wait_until(self.check_vault_passsword_success_status, check_return_value=True, total_timeout=30)
 
+    def fetch_password_from_aws_vault(self, name: str, secret_key: str, is_negative_test: bool = False):
+        wait_until(self.find_password_vault_button,
+                   check_return_value=True,
+                   tolerated_exceptions_list=[NoSuchElementException])
+        self.find_password_vault_button().click()
+        self.wait_for_element_present_by_id(element_id='name', retries=5)
+
+        if isinstance(name, str):
+            self.fill_text_field_by_element_id('name', name)
+
+        if isinstance(secret_key, str):
+            self.fill_text_field_by_element_id('secret_key', secret_key)
+
+        self.click_button('Fetch')
+        time.sleep(1)
+        if isinstance(is_negative_test, bool) and is_negative_test:
+            wait_until(self.check_vault_passsword_failure_status, check_return_value=True, total_timeout=30)
+        else:
+            wait_until(self.check_vault_passsword_success_status, check_return_value=True, total_timeout=30)
+
     def find_server_connection_label_value(self):
         return self.driver.find_element_by_id('connectionLabel').get_attribute('value')
 

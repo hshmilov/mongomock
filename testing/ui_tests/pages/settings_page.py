@@ -13,7 +13,8 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from axonius.adapter_base import WEEKDAYS
 from axonius.consts.gui_consts import PROXY_ERROR_MESSAGE
-from axonius.consts.plugin_consts import CORRELATION_SCHEDULE_HOURS_INTERVAL
+from axonius.consts.plugin_consts import CORRELATION_SCHEDULE_HOURS_INTERVAL, AWS_SM_ACCESS_KEY_ID, \
+    AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION
 from services.axon_service import TimeoutException
 from ui_tests.pages.page import PAGE_BODY, TAB_BODY, Page
 
@@ -173,6 +174,7 @@ class SettingsPage(Page):
     ENTERPRISE_PASSWORD_MGMT_MODE_DDL = 'label[for=conditional] + div.x-select'
     ENTERPRISE_PASSWORD_MGMT_THYCOTIC_SS_TEXT = 'Thycotic Secret Server'
     ENTERPRISE_PASSWORD_MGMT_CYBERARK_VAULT_TEXT = 'CyberArk Vault'
+    ENTERPRISE_PASSWORD_MGMT_AWS_SM_VAULT_TEXT = 'AWS Secrets Manager'
 
     SETTINGS_SAVE_TIMEOUT = 60 * 30
     ROLE_PANEL_CONTENT = '.role-panel.x-side-panel .ant-drawer-body .ant-drawer-body__content'
@@ -1523,6 +1525,10 @@ class SettingsPage(Page):
         self.select_enterprise_password_mgmt_provider(
             vault_provider_text=self.ENTERPRISE_PASSWORD_MGMT_CYBERARK_VAULT_TEXT)
 
+    def select_aws_secrets_manager(self):
+        self.select_enterprise_password_mgmt_provider(
+            vault_provider_text=self.ENTERPRISE_PASSWORD_MGMT_AWS_SM_VAULT_TEXT)
+
     def assert_server_error(self, error):
         assert self.wait_for_element_present_by_css(self.FOOTER_ERROR_CSS).text == error
 
@@ -1546,6 +1552,15 @@ class SettingsPage(Page):
     def fill_thycotic_password(self, password):
         self.fill_text_field_by_element_id('password', password)
 
+    def fill_aws_access_key_id(self, access_key_id):
+        self.fill_text_field_by_element_id(AWS_SM_ACCESS_KEY_ID, access_key_id)
+
+    def fill_aws_secret_access_key(self, secret_access_key):
+        self.fill_text_field_by_element_id(AWS_SM_SECRET_ACCESS_KEY, secret_access_key)
+
+    def fill_aws_region(self, region):
+        self.fill_text_field_by_element_id(AWS_SM_REGION, region)
+
     def clear_enterprise_password_mgmt_settings(self):
         self.switch_to_page()
         self.click_global_settings()
@@ -1563,6 +1578,17 @@ class SettingsPage(Page):
         self.fill_thycotic_port(thycotic_config['port'])
         self.fill_thycotic_username(thycotic_config['username'])
         self.fill_thycotic_password(thycotic_config['password'])
+        self.click_save_global_settings()
+        self.wait_for_saved_successfully_toaster()
+
+    def enable_aws_vault_global_config(self, aws_config: dict):
+        self.switch_to_page()
+        self.click_global_settings()
+        self.set_vault_settings_enabled()
+        self.select_aws_secrets_manager()
+        self.fill_aws_access_key_id(aws_config['access_key_id'])
+        self.fill_aws_secret_access_key(aws_config['secret_access_key'])
+        self.fill_aws_region(aws_config['region'])
         self.click_save_global_settings()
         self.wait_for_saved_successfully_toaster()
 

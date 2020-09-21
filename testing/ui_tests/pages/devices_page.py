@@ -8,7 +8,7 @@ from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD, ActionCategory,
 from axonius.utils.wait import wait_until
 
 from ui_tests.pages.entities_page import EntitiesPage
-from ui_tests.tests.ui_consts import CSV_ADAPTER_FILTER
+from ui_tests.tests.ui_consts import CSV_ADAPTER_FILTER, AWS_ADAPTER_FILTER
 
 
 class DevicesPage(EntitiesPage):
@@ -377,6 +377,12 @@ class DevicesPage(EntitiesPage):
         self.switch_to_page()
         self.refresh()
         self.run_filter_query(CSV_ADAPTER_FILTER)
+        return self.count_entities()
+
+    def check_aws_device_count(self):
+        self.switch_to_page()
+        self.refresh()
+        self.run_filter_query(AWS_ADAPTER_FILTER)
         return self.count_entities()
 
     def get_device_count_by_connection_label(self, operator: str = '', value: str = '') -> int:

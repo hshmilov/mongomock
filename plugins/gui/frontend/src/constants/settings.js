@@ -31,6 +31,24 @@ export const vaultProviderEnum = {
       required: ['query'],
     }
   },
+  aws_secrets_manager_vault: {
+    name: 'aws',
+    title: 'AWS Secrets Manager',
+    type: 'array',
+    schema: {
+      items: [{
+        name: 'name',
+        title: 'Secret name',
+        type: 'string',
+      },
+	  {
+        name: 'secret_key',
+        title: 'Secret key',
+        type: 'string',
+      }],
+      required: ['name', 'secret_key'],
+    }
+  },
 };
 
 export const generateCSRAction = 'generateCSR';

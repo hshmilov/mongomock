@@ -29,19 +29,14 @@ from itertools import groupby, chain
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple
 
-import pymongo
-from urllib3.exceptions import ProtocolError
-# bson is requirement of mongo and its not recommended to install it manually
-from bson import ObjectId, json_util
-# pylint: disable=ungrouped-imports
-from pymongo import ReplaceOne
-from pymongo.collection import Collection
-from pymongo.errors import DuplicateKeyError, OperationFailure
 import cachetools
 import func_timeout
+import pymongo
 import requests
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
+# bson is requirement of mongo and its not recommended to install it manually
+from bson import ObjectId, json_util
 from flask import (Flask, Response, has_request_context, jsonify, request,
                    session)
 from flask_limiter import Limiter
@@ -50,13 +45,19 @@ from funcy import chunks
 from jira import JIRA
 from namedlist import namedtuple
 from promise import Promise
+# pylint: disable=ungrouped-imports
+from pymongo import ReplaceOne
+from pymongo.collection import Collection
+from pymongo.errors import DuplicateKeyError, OperationFailure
 from retrying import retry
 from tlssyslog import TLSSysLogHandler
+from urllib3.exceptions import ProtocolError
 
 import axonius.entities
 from axonius.adapter_exceptions import AdapterException, TagDeviceError
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.clients.abstract.abstract_vault_connection import AbstractVaultConnection, VaultProvider
+from axonius.clients.aws_secrets_manager.connection import AWSSecretsManager
 from axonius.clients.cyberark_vault.connection import CyberArkVaultConnection
 from axonius.clients.opsgenie.connection import OpsgenieConnection
 from axonius.clients.opsgenie.consts import OPSGENIE_DEFAULT_DOMAIN
@@ -70,6 +71,7 @@ from axonius.consts.gui_consts import (CORRELATION_REASONS,
                                        GETTING_STARTED_CHECKLIST_SETTING,
                                        HASH_SALT, CloudComplianceNames,
                                        FeatureFlagsNames)
+from axonius.consts.instance_control_consts import MetricsFields
 from axonius.consts.plugin_consts import (
     ADAPTERS_ERRORS_MAIL_ADDRESS, ADAPTERS_ERRORS_WEBHOOK_ADDRESS,
     ADAPTERS_LIST_LENGTH, AGGREGATION_SETTINGS, AGGREGATOR_PLUGIN_NAME, IPS_CORRELATION_ON_PUBLIC_ONLY,
@@ -103,11 +105,11 @@ from axonius.consts.plugin_consts import (
     CSV_IP_LOCATION_FILE, TUNNEL_SETTINGS, TUNNEL_EMAILS_RECIPIENTS, TUNNEL_PROXY_ADDR, TUNNEL_PROXY_PORT,
     TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW, TUNNEL_PROXY_SETTINGS, DISCOVERY_CONFIG_NAME, ADAPTER_DISCOVERY,
     ENABLE_CUSTOM_DISCOVERY, CONNECTION_DISCOVERY, NOTES_DATA_TAG, PASSWORD_EXPIRATION_SETTINGS,
-    PASSWORD_EXPIRATION_DAYS, CLIENTS_COLLECTION, REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME)
+    REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME, PASSWORD_EXPIRATION_DAYS, CLIENTS_COLLECTION, PASSWORD_MANGER_AWS_SM_VAULT,
+    AWS_SM_ACCESS_KEY_ID, AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE, DEFAULT_SSL_CIPHERS, NO_RSA_SSL_CIPHERS, \
     SSL_CIPHERS_HIGHER_SECURITY
-from axonius.consts.instance_control_consts import MetricsFields
 from axonius.db.db_client import get_db_client
 from axonius.db.files import DBFileHelper
 from axonius.db_migrations import DBMigration
@@ -138,13 +140,6 @@ from axonius.utils.debug import is_debug_attached
 from axonius.utils.encryption.mongo_encrypt import MongoEncrypt
 from axonius.utils.hash import get_preferred_internal_axon_id_from_dict, get_preferred_quick_adapter_id
 from axonius.utils.json_encoders import IteratorJSONEncoder
-from axonius.utils.mongo_retries import CustomRetryOperation, mongo_retry
-from axonius.utils.parsing import get_exception_string, remove_large_ints
-from axonius.utils.revving_cache import rev_cached
-from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH, CA_CERT_PATH, get_private_key_without_passphrase, \
-    SSL_CERT_PATH_LIBS, SSL_KEY_PATH_LIBS, SSL_CIPHERS_CONFIG_FILE, SSL_ECDH_CERT_PATH_LIBS, SSL_ECDH_KEY_PATH_LIBS
-from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
-                                     run_in_executor_helper, ThreadPoolExecutorReusable, singlethreaded)
 from axonius.utils.mongo_indices import (
     common_db_indexes,
     non_historic_indexes,
@@ -152,6 +147,13 @@ from axonius.utils.mongo_indices import (
     adapter_entity_historical_raw_index,
     historic_indexes,
 )
+from axonius.utils.mongo_retries import CustomRetryOperation, mongo_retry
+from axonius.utils.parsing import get_exception_string, remove_large_ints
+from axonius.utils.revving_cache import rev_cached
+from axonius.utils.ssl import SSL_CERT_PATH, SSL_KEY_PATH, CA_CERT_PATH, get_private_key_without_passphrase, \
+    SSL_CERT_PATH_LIBS, SSL_KEY_PATH_LIBS, SSL_CIPHERS_CONFIG_FILE, SSL_ECDH_CERT_PATH_LIBS, SSL_ECDH_KEY_PATH_LIBS
+from axonius.utils.threading import (LazyMultiLocker, run_and_forget,
+                                     run_in_executor_helper, ThreadPoolExecutorReusable, singlethreaded)
 
 # pylint: disable=C0302
 
@@ -188,7 +190,6 @@ except AttributeError:
     # Legacy Python that doesn't verify HTTPS certificates by default
     pass
 
-
 # Global list of all the functions we are registering.
 ROUTED_FUNCTIONS = list()
 
@@ -211,7 +212,7 @@ def random_string(length: int, source: str = string.ascii_letters + string.digit
 def ratelimiting_settings():
     return f'{limiter_settings[PASSWORD_PROTECTION_ALLOWED_RETRIES]} per ' \
            f'{limiter_settings[PASSWORD_PROTECTION_LOCKOUT_MIN]} minute' \
-           if 'enabled' in limiter_settings and limiter_settings['enabled'] else ''
+        if 'enabled' in limiter_settings and limiter_settings['enabled'] else ''
 
 
 def get_username_from_session():
@@ -227,6 +228,7 @@ def route_limiter_key_func():
 # otherwise every request would have go thru the after_request and do nothing in there...
 if os.environ.get('HOT') == 'true':
     import urllib3
+
     urllib3.disable_warnings()
 
     @AXONIUS_REST.after_request
@@ -304,6 +306,7 @@ def add_rule(rule, methods=('GET',), should_authenticate: bool = True):
                                        'message': str(second_err)}), 400
 
         return actual_wrapper
+
     try:
         RUNNING_ADD_RULES_COUNT.inc()
         return wrap
@@ -320,7 +323,7 @@ def retry_if_connection_error(exception):
 
 def retry_if_remote_disconnected(exception):
     """Return True if we should retry (in this case when it's an connection), False otherwise"""
-    return isinstance(exception, requests.exceptions.ConnectionError) and\
+    return isinstance(exception, requests.exceptions.ConnectionError) and \
         exception.args and isinstance(exception.args[0], ProtocolError)
 
 
@@ -1302,11 +1305,11 @@ class PluginBase(Configurable, Feature, ABC):
         )
         try:
             for adapter in adapters:
-                if (not adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled) and\
+                if (not adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled) and \
                         (not adapter[PLUGIN_NAME] in all_plugins_with_custom_connection_discovery_enabled):
                     yield adapter, None
                 if job_name == 'clean_db':
-                    total_clients_without_custom_discovery =\
+                    total_clients_without_custom_discovery = \
                         self.get_adapter_number_of_clients_without_custom_discovery(adapter[PLUGIN_UNIQUE_NAME])
                     # If all adapter clients, has a custom discovery set up, the adapter should be cleaned up upon
                     # global discovery because it won't be triggered on custom adapter discovery job trigger.
@@ -1314,14 +1317,14 @@ class PluginBase(Configurable, Feature, ABC):
                         yield adapter, None
                     # If not all clients has custom discovery, the adapter should be cleaned only if it's not has
                     # custom discovery configured.
-                    elif (total_clients_without_custom_discovery > 0) and\
+                    elif (total_clients_without_custom_discovery > 0) and \
                             (not adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled):
                         yield adapter, None
                 else:
                     if adapter[PLUGIN_NAME] in all_plugins_with_custom_connection_discovery_enabled:
                         # Get all adapters connections, without custom discovery set up.
                         clients = self.get_adapter_clients_without_custom_discovery(adapter[PLUGIN_UNIQUE_NAME])
-                        if clients.count() > 0 and\
+                        if clients.count() > 0 and \
                                 not adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled:
                             yield adapter, [client[CLIENT_ID] for client in clients]
                         elif not adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled:
@@ -1648,6 +1651,7 @@ class PluginBase(Configurable, Feature, ABC):
             'count': count,
             'stats': stats
         })
+
     # pylint: enable=no-self-use
 
     @add_rule('action_update/<action_id>', methods=['POST'])
@@ -2063,7 +2067,7 @@ class PluginBase(Configurable, Feature, ABC):
             inserter = self.__first_time_inserter
             # quickest way to find if there are any devices from this plugin in the DB
             # pylint: disable=bad-continuation
-            if inserter and not\
+            if inserter and not \
                     self._is_last_seen_prioritized and \
                     db_to_use.count_documents({
                         f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name
@@ -2853,6 +2857,7 @@ class PluginBase(Configurable, Feature, ABC):
         db_session.insert_one(new_axonius_entity)
 
         return internal_axon_id, entity_to_split['internal_axon_id']
+
     # pylint: disable=too-many-locals
 
     def __archive_axonius_device(self, plugin_unique_name, device_id, entity_type: EntityType, db_session=None):
@@ -2927,20 +2932,17 @@ class PluginBase(Configurable, Feature, ABC):
             # pylint: disable=cell-var-from-loop
             def perform_tag(specific_identities_chunk: Iterable[dict]):
                 try:
-                    res = self.request_remote_plugin('tag_entities', HEAVY_LIFTING_PLUGIN_NAME,
-                                                     'post', json={
-                                                         'entity': entity.value,
-                                                         'identity_by_adapter': list(specific_identities_chunk),
-                                                         'labels': [label],
-                                                         'are_enabled': are_enabled,
-                                                         'is_huge': False,
-                                                         'with_results': with_results
-                                                     })
+                    res = self.request_remote_plugin('tag_entities', HEAVY_LIFTING_PLUGIN_NAME, 'post',
+                                                     json={'entity': entity.value,
+                                                           'identity_by_adapter': list(specific_identities_chunk),
+                                                           'labels': [label], 'are_enabled': are_enabled,
+                                                           'is_huge': False, 'with_results': with_results})
                     if with_results:
                         return res.json()
                     return None
                 except Exception:
                     logger.exception(f'Problem adding label: {label}')
+
             # pylint: enable=cell-var-from-loop
 
             yield from self._common_executor.map(perform_tag, chunks(1000, identity_by_adapter))
@@ -3855,15 +3857,42 @@ class PluginBase(Configurable, Feature, ABC):
                             'title': 'Password Manager',
                             'enum': [
                                 {
-                                    'name':  VaultProvider.CyberArk.value,
+                                    'name': VaultProvider.AWSSecretsManager.value,
+                                    'title': 'AWS Secrets Manager'
+                                },
+                                {
+                                    'name': VaultProvider.CyberArk.value,
                                     'title': 'CyberArk Vault'
                                 },
                                 {
                                     'name': VaultProvider.Thycotic.value,
                                     'title': 'Thycotic Secret Server'
-                                }
+                                },
                             ],
                             'type': 'string'
+                        },
+                        {
+                            'name': VaultProvider.AWSSecretsManager.value,
+                            'type': 'array',
+                            'items': [
+                                {
+                                    'name': AWS_SM_REGION,
+                                    'title': 'Region',
+                                    'type': 'string'
+                                },
+                                {
+                                    'name': AWS_SM_ACCESS_KEY_ID,
+                                    'title': 'Access Key ID',
+                                    'type': 'string',
+                                },
+                                {
+                                    'name': AWS_SM_SECRET_ACCESS_KEY,
+                                    'title': 'Access Key Secret',
+                                    'type': 'string',
+                                    'format': 'password'
+                                }
+                            ],
+                            'required': [AWS_SM_ACCESS_KEY_ID, AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION]
                         },
                         {
                             'name': VaultProvider.CyberArk.value,
@@ -3931,7 +3960,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'name': 'vault_settings',
                     'title': 'Enterprise Password Management Settings',
                     'type': 'array',
-                    'required': ['enabled']
+                    'required': ['enabled', 'conditional']
                 },
                 {
                     'items': [
@@ -4575,7 +4604,7 @@ class PluginBase(Configurable, Feature, ABC):
             },
             VAULT_SETTINGS: {
                 PASSWORD_MANGER_ENABLED: False,
-                PASSWORD_MANGER_ENUM: PASSWORD_MANGER_CYBERARK_VAULT,
+                PASSWORD_MANGER_ENUM: PASSWORD_MANGER_AWS_SM_VAULT,
                 PASSWORD_MANGER_CYBERARK_VAULT: {
                     CYBERARK_DOMAIN: None,
                     CYBERARK_PORT: None,
@@ -4588,6 +4617,11 @@ class PluginBase(Configurable, Feature, ABC):
                     THYCOTIC_SS_USERNAME: None,
                     THYCOTIC_SS_PASSWORD: None,
                     THYCOTIC_SS_VERIFY_SSL: False
+                },
+                PASSWORD_MANGER_AWS_SM_VAULT: {
+                    AWS_SM_ACCESS_KEY_ID: None,
+                    AWS_SM_SECRET_ACCESS_KEY: None,
+                    AWS_SM_REGION: None
                 }
             },
             NOTIFICATIONS_SETTINGS: {
@@ -4763,6 +4797,12 @@ class PluginBase(Configurable, Feature, ABC):
                                            cyberark_appid=cyberark_vault.get(CYBERARK_APP_ID),
                                            cert=self._grab_file_contents(cyberark_vault.get(CYBERARK_CERT_KEY),
                                                                          stored_locally=False))
+
+        if self._vault_settings.get(PASSWORD_MANGER_ENUM) == PASSWORD_MANGER_AWS_SM_VAULT:
+            aws_secrets_manager_vault = self._vault_settings.get(PASSWORD_MANGER_AWS_SM_VAULT)
+            return AWSSecretsManager(access_key_id=aws_secrets_manager_vault.get(AWS_SM_ACCESS_KEY_ID),
+                                     secret_access_key=aws_secrets_manager_vault.get(AWS_SM_SECRET_ACCESS_KEY),
+                                     region=aws_secrets_manager_vault.get(AWS_SM_REGION))
 
         raise RuntimeError(f'Invalid Vault connection selection --> {PASSWORD_MANGER_ENUM}')
 

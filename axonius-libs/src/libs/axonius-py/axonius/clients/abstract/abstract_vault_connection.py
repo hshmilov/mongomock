@@ -2,7 +2,8 @@ import logging
 from abc import abstractmethod
 from enum import Enum
 from axonius.clients.rest.connection import RESTConnection
-from axonius.consts.plugin_consts import PASSWORD_MANGER_CYBERARK_VAULT, PASSWORD_MANGER_THYCOTIC_SS_VAULT
+from axonius.consts.plugin_consts import PASSWORD_MANGER_CYBERARK_VAULT, PASSWORD_MANGER_THYCOTIC_SS_VAULT, \
+    PASSWORD_MANGER_AWS_SM_VAULT
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -10,6 +11,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class VaultProvider(Enum):
     Thycotic = PASSWORD_MANGER_THYCOTIC_SS_VAULT
     CyberArk = PASSWORD_MANGER_CYBERARK_VAULT
+    AWSSecretsManager = PASSWORD_MANGER_AWS_SM_VAULT
 
 
 class VaultException(Exception):
