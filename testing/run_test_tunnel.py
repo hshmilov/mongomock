@@ -241,12 +241,6 @@ def main(ami_id=None):
                                                        append_ts=False)
         TC.print('Started selenium container on stack machine')
 
-        # Change permissions
-        instance_manager._InstanceManager__ssh_execute(axonius_instance, 'Change axonius_settings folder permissions',
-                                                       'sudo chown -R ubuntu:ubuntu /home/ubuntu/cortex/.axonius_settings',
-                                                       append_ts=False,
-                                                       timeout=600)
-
         instance_manager._InstanceManager__ssh_execute(instance, 'Update resolv file',
                                                        f'docker exec axonius_tunnel /bin/sh -c \'echo -n {base64.b64encode(TUNNELER_RESOLV_CONF.encode("utf-8")).decode("utf-8")} | base64 -d > /etc/resolv.conf\'',
                                                        append_ts=False,
