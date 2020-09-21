@@ -6,73 +6,29 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.azure.consts import AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, AZURE_VERIFY_SSL, \
     AZURE_AUTHORIZATION_CODE, AZURE_ACCOUNT_TAG, AZURE_IS_AZURE_AD_B2C, AZURE_AD_CLOUD_ENVIRONMENT, AZURE_HTTPS_PROXY
 from axonius.clients.rest.connection import RESTConnection
-from axonius.devices.ad_entity import ADEntity
-from axonius.devices.device_adapter import DeviceAdapter
-from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
-from axonius.smart_json_class import SmartJsonClass
-from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import parse_bool_from_raw, int_or_none
+from azure_ad_adapter.azure_ad_cis import append_azure_cis_data_to_user
 from azure_ad_adapter.connection import AUTHORITY_HOST_URL, AzureAdClient
+from azure_ad_adapter.structures import EmailActivity, INUTE_DEVICE_TYPE, AZURE_AD_DEVICE_TYPE, AzureADDevice, \
+    AzureADUser
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-AZURE_AD_DEVICE_TYPE = 'Azure AD'
-INUTE_DEVICE_TYPE = 'Intune'
 
 INTUNE_DEFAULT_REFRESH_TOKEN_LIFTIME_IN_DAYS = 90
 DAYS_TO_WARN_BEFORE_INTUNE_EXPIRY = 14
 
 
-class EmailActivity(SmartJsonClass):
-    is_deleted = Field(bool, 'Deleted')
-    deleted_date = Field(datetime.datetime, 'Deleted Date')
-    send_count = Field(int, 'Send Count')
-    receive_count = Field(int, 'Receive Count')
-    read_count = Field(int, 'Read Count')
-    report_date = Field(datetime.datetime, 'Report Date')
-    report_period = Field(int, 'Report Period')
-    product_license = Field(str, 'License')
-
-
 # pylint: disable=invalid-name,too-many-instance-attributes,arguments-differ
 class AzureAdAdapter(AdapterBase, Configurable):
-    class MyDeviceAdapter(DeviceAdapter):
-        azure_ad_device_type = Field(str, 'Azure AD Device Type', enum=[AZURE_AD_DEVICE_TYPE, INUTE_DEVICE_TYPE])
-        account_tag = Field(str, 'Account Tag')
-        azure_device_id = Field(str, 'Azure Device ID')
-        azure_display_name = Field(str, 'Azure Display Name')
-        azure_is_compliant = Field(bool, 'Azure Is Compliant')
-        azure_is_managed = Field(bool, 'Azure Is Managed')
-        ad_on_premise_last_sync_date_time = Field(datetime.datetime, 'On Premise Last Sync Date Time')
-        ad_on_premise_sync_enabled = Field(bool, 'On Premise Sync Enabled')
-        ad_on_premise_trust_type = Field(str, 'Azure On Premise Trust Type')
-        android_security_patch_level = Field(str, 'Android Security Patch Level')
-        phone_number = Field(str, 'Phone Number')
-        imei = Field(str, 'IMEI')
-        is_encrypted = Field(bool, 'Is Encrypted')
-        user_principal_name = Field(str, 'User Principal Name')
-        managed_device_name = Field(str, 'Managed Device Name')
-        azure_ad_id = Field(str)
-        last_sign_in = Field(datetime.datetime, 'Approximate Last SignIn Time')
-        compliance_state = Field(str, 'Compliance State')
-        grace_period_expiration = Field(datetime.datetime, 'Compliance Grace Period Expiration Date Time')
-        device_enrollment_type = Field(str, 'Device Enrollment Type')
-        device_registration_state = Field(str, 'Device Registration State')
-        eas_activated = Field(bool, 'EAS Activated')
-        enrolled_time = Field(datetime.datetime, 'Enrolled Date Time')
+    class MyDeviceAdapter(AzureADDevice):
+        pass
 
-    class MyUserAdapter(UserAdapter, ADEntity):
-        account_tag = Field(str, 'Account Tag')
-        ad_on_premise_immutable_id = Field(str, 'On Premise Immutable ID')
-        ad_on_premise_sync_enabled = Field(bool, 'On Premise Sync Enabled')
-        ad_on_premise_last_sync_date_time = Field(datetime.datetime, 'On Premise Last Sync Date Time)')
-        is_resource_account = Field(bool, 'Is Resource Account')
-        user_type = Field(str, 'User Type', enum=['Member', 'Guest'])
-        # This data is collected from Office 365.
-        email_activity = Field(EmailActivity, 'Email Activity')
+    class MyUserAdapter(AzureADUser):
+        pass
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -176,6 +132,11 @@ class AzureAdAdapter(AdapterBase, Configurable):
             metadata_dict = dict()
             if client_config.get(AZURE_ACCOUNT_TAG):
                 metadata_dict[AZURE_ACCOUNT_TAG] = client_config.get(AZURE_ACCOUNT_TAG)
+            account_id = '_'.join([
+                client_config.get(AZURE_ACCOUNT_TAG) or '',
+                client_config.get(AZURE_TENANT_ID) or 'unknown-tenant-id'
+            ])
+            metadata_dict['azure_account_id'] = account_id
             return connection, metadata_dict
         except Exception as e:
             message = 'Error connecting to Azure AD with tenant id {0}, reason: {1}'.format(
@@ -414,6 +375,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     continue
                 user.id = str(user_id)
                 user.account_tag = metadata.get(AZURE_ACCOUNT_TAG)
+                user.azure_account_id = metadata.get('azure_account_id')
 
                 account_enabled = raw_user_data.get('accountEnabled')
                 if isinstance(account_enabled, bool):
@@ -552,9 +514,14 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     email_activity_object.report_period = int_or_none(email_activity.get('Report Period'))
                     email_activity_object.product_license = email_activity.get('Assigned Products')
                     user.email_activity = email_activity_object
-
                 # set raw
                 user.set_raw(raw_user_data)
+                try:
+                    user.azure_cis_incompliant = []  # Delete old rules which might be irrelevant now
+                    if self.should_cloud_compliance_run():
+                        append_azure_cis_data_to_user(user)
+                except Exception as e:
+                    logger.debug(f'Failed adding cis data to user: {str(e)}', exc_info=True)
                 yield user
             except Exception:
                 logger.exception(f'Problem parsing user: {str(raw_user_data)}')

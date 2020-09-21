@@ -4,10 +4,11 @@ import socket
 import struct
 
 from axonius.clients.azure.client import AzureCloudConnection
+from axonius.entities import EntityType
 from compliance.utils.AzureAccountReport import AzureAccountReport
 from compliance.utils.account_report import RuleStatus
 from compliance.utils.cis_utils import cis_rule, errors_to_gui, bad_api_response, good_api_response, get_api_error, \
-    get_api_data
+    get_api_data, get_count_incompliant_azure_cis_rule, build_entities_query
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -43,6 +44,7 @@ class CISAzureCategory6:
         self._account_dict = account_dict.copy()
         self._network_security_groups = get_network_security_groups(azure)
 
+    # pylint: disable=too-many-statements
     def check_inbound_nsg(self, rule_section: str, port: int):
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-locals
@@ -55,6 +57,7 @@ class CISAzureCategory6:
         total_resources = 0
 
         errors = []
+        subscriptions_with_errors = []
 
         port_str = str(port)
 
@@ -104,15 +107,43 @@ class CISAzureCategory6:
                         f'Subscription "{subscription_name}": Network Security Group {nsg_name!r} has '
                         f'rules that allow port {port} from the entire internet: {",".join(bad_rules_per_nsg)}'
                     )
+                    subscriptions_with_errors.append(str(subscription_name))
                     continue
 
         if errors:
+
+            # get count affected
+            try:
+                count_affected = get_count_incompliant_azure_cis_rule(
+                    EntityType.Devices,
+                    rule_section,
+                    subscription_names=subscriptions_with_errors)
+            except Exception as e:
+                logger.debug(f'Error counting affected azure devices for rule {rule_section}: {str(e)}')
+                count_affected = 0
+
+            # get affected query
+            try:
+                device_query = build_entities_query(
+                    'devices',
+                    rule_section,
+                    subscription_names=subscriptions_with_errors,
+                    plugin_name='azure_adapter',
+                    field_prefix='azure'
+                )
+            except Exception as e:
+                logger.debug(f'Error building query for affected azure devices for rule '
+                             f'{rule_section}: {str(e)}')
+                device_query = None
+
+            # Add the rule
             self.report.add_rule(
                 RuleStatus.Failed,
                 rule_section,
                 (len(errors), total_resources),
-                0,
-                errors_to_gui(errors)
+                count_affected,
+                errors_to_gui(errors),
+                device_query
             )
         else:
             self.report.add_rule(

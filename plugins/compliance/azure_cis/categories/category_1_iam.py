@@ -2,9 +2,12 @@
 import logging
 
 from axonius.clients.azure.client import AzureCloudConnection
+from axonius.clients.azure.consts import AZURE_ACCOUNT_TAG, AZURE_TENANT_ID
+from axonius.entities import EntityType
 from compliance.utils.AzureAccountReport import AzureAccountReport
 from compliance.utils.account_report import RuleStatus
-from compliance.utils.cis_utils import cis_rule, errors_to_gui
+from compliance.utils.cis_utils import cis_rule, errors_to_gui, get_count_incompliant_azure_cis_rule, \
+    build_entities_query
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -14,6 +17,10 @@ class CISAzureCategory1:
         self.report = report
         self.azure = azure
         self._account_dict = account_dict.copy()
+        self._account_id = '_'.join([
+            self._account_dict.get(AZURE_ACCOUNT_TAG) or '',
+            self._account_dict.get(AZURE_TENANT_ID) or 'unknown-tenant-id'
+        ])
 
     @cis_rule('1.3')
     def check_cis_azure_1_3(self, **kwargs):
@@ -35,12 +42,39 @@ class CISAzureCategory1:
             errors.append(f'Found guest user "{display_name}" ({mail})')
 
         if errors:
+
+            # get count affected
+            try:
+                count_affected = get_count_incompliant_azure_cis_rule(
+                    EntityType.Users,
+                    rule_section,
+                    account_id=self._account_id)
+            except Exception as e:
+                logger.debug(f'Error counting affected azure users for rule {rule_section}: {str(e)}')
+                count_affected = 0
+
+            # get affected users query
+            try:
+                users_query = build_entities_query(
+                    'users',
+                    rule_section,
+                    account_id=self._account_id,
+                    plugin_name='azure_ad_adapter',
+                    field_prefix='azure'
+                )
+            except Exception as e:
+                logger.debug(f'Error building query for affected azure users for rule '
+                             f'{rule_section}: {str(e)}')
+                users_query = None
+
+            # add the rule
             self.report.add_rule(
                 RuleStatus.Failed,
                 rule_section,
                 (len(errors), total_resources),
-                0,
-                errors_to_gui(errors)
+                count_affected,
+                errors_to_gui(errors),
+                users_query
             )
         else:
             self.report.add_rule(

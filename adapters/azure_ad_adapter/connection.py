@@ -360,6 +360,11 @@ class AzureAdClient(RESTConnection):
         #     attrs = USERS_ATTRIBUTES + USERS_ATTRIBUTES_BETA
         # These two lines commented out due to bug in MS Graph API BETA, as of 4 JUN 2020
         # We have to specify the attributes, "*" is not supported.
+        for user in self._paged_get(f'users?$filter=userType eq \'Guest\'&$select={",".join(attrs)}'):
+            # Due to bug in MS Graph API, userType is not returned. So we need to inject them
+            # Using a query...
+            user['userType'] = 'Guest'
+            yield user
         yield from self._paged_get(f'users?$select={",".join(attrs)}')
 
     def _get_users_from_office_365(self):

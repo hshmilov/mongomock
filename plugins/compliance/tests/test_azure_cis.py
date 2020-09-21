@@ -36,8 +36,8 @@ def main():
     account_dict['azure_adapter_type'] = 'azure'
     account_dict['plugin_unique_name'] = 'azure_adapter_0'
     account_dict['name'] = '_'.join([
-        azure_client_config.get(AZURE_ACCOUNT_TAG, ''),
-        azure_client_config.get(AZURE_TENANT_ID, 'unknown-tenant-id')
+        azure_client_config.get(AZURE_ACCOUNT_TAG) or '',
+        azure_client_config.get(AZURE_TENANT_ID) or 'unknown-tenant-id'
     ])
 
     account_id, account_name, report = generate_report_for_azure_account(account_dict)

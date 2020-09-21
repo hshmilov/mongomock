@@ -70,7 +70,7 @@ import XCompliancePanel from './CompliancePanel';
 import XEnforcementMenu from './ComplianceEnforceMenu.vue';
 
 
-const tableFields = [{
+const cisTableFields = [{
   name: 'status', title: '', type: 'string', format: 'status',
 }, {
   name: 'section', title: 'Section', type: 'string',
@@ -180,10 +180,7 @@ export default {
       return `${this.module}/cis/${this.cisName}/report`;
     },
     tableFields() {
-      if (this.cisName === 'azure') {
-        return tableFields.filter((field) => field.name !== 'affected');
-      }
-      return tableFields;
+      return cisTableFields;
     },
   },
   watch: {

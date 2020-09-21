@@ -225,7 +225,7 @@ def get_compliance_rules_include_score_flag(compliance_name: str):
     return result
 
 
-def aggregate_reports(accounts_reports):
+def aggregate_reports(accounts_reports, compliance_name):
     rules_dict = {}  # using rules dictionary for fast search.
     accounts_names = set()
     accounts_ids = set()
@@ -246,7 +246,7 @@ def aggregate_reports(accounts_reports):
             _concat_rules_results(existing_rule_object, rule)
 
     aggregated_rules = rules_dict.values()
-    _replace_entities_results_query(aggregated_rules, accounts_ids)
+    _replace_entities_results_query(aggregated_rules, accounts_ids, compliance_name)
     last_updated.sort()
     return aggregated_rules, list(accounts_ids), list(accounts_names), last_updated.pop()
 
@@ -271,20 +271,23 @@ def _concat_rules_results(target_rule, secondary_rule):
         if target_rule.get('entities_results') else secondary_rule.get('entities_results')
 
 
-def _replace_entities_results_query(aggregated_rules, accounts_ids):
+def _replace_entities_results_query(aggregated_rules, accounts_ids, compliance_name):
     """
-    This function aggregate the affected assets query for each rule.
+    This function aggregates the affected assets query for each rule in ``compliance_name``.
     :param aggregated_rules: [{rule1}, {rule2} ... ]
     :param accounts_ids: {accounts_id1, account_id2 ...} This is a set of unique ids.
+    :param compliance_name: Name of the cis compliance module (currently aws or azure)
     :return:
     """
+    account_id_field = f'data.{compliance_name}_account_id'
     for rule in aggregated_rules:
         entities_results_query = rule.get('entities_results_query', {}).get('query')
         if not entities_results_query:
             continue
 
-        new_entities_results_query = f'(data.aws_account_id in {list(accounts_ids)})'
-        replaced_query = re.sub(r'\((data.aws_account_id == \"[\s\d]+\")\)',
+        new_entities_results_query = f'({account_id_field} in {list(accounts_ids)})'
+        # Modified regex to support different account ids by checking for alphanumeric+underscore+dash
+        replaced_query = re.sub(fr'\(({account_id_field} == \"[\sA-Za-z0-9_-]+\")\)',
                                 new_entities_results_query, entities_results_query)
         rule['entities_results_query']['query'] = replaced_query
 
@@ -460,7 +463,7 @@ def get_compliance_rules(compliance_name, accounts, rules, categories, failed_on
         return return_default_report()
 
     if aggregated:
-        aggregated_rules, account_ids, account_names, last_updated = aggregate_reports(all_reports)
+        aggregated_rules, account_ids, account_names, last_updated = aggregate_reports(all_reports, compliance_name)
         cis_report = prepare_aggregated_report(aggregated_rules, account_ids, account_names, last_updated)
     else:
         cis_report = prepare_report(all_reports)

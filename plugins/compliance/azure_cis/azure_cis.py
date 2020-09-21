@@ -57,8 +57,8 @@ class AzureCISGenerator:
         for azure_client_config in self.all_azure_client_configs.values():
             # Prepare all accounts creds
             client_config_id = '_'.join([
-                azure_client_config.get(AZURE_ACCOUNT_TAG, ''),
-                azure_client_config.get(AZURE_TENANT_ID, 'unknown-tenant-id')
+                azure_client_config.get(AZURE_ACCOUNT_TAG) or '',
+                azure_client_config.get(AZURE_TENANT_ID) or 'unknown-tenant-id'
             ])
 
             logger.info(f'Parsing client_config {client_config_id}')

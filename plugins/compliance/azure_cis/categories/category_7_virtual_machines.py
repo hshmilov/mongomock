@@ -2,10 +2,11 @@
 import logging
 
 from axonius.clients.azure.client import AzureCloudConnection
+from axonius.entities import EntityType
 from compliance.utils.AzureAccountReport import AzureAccountReport
 from compliance.utils.account_report import RuleStatus
 from compliance.utils.cis_utils import cis_rule, errors_to_gui, bad_api_response, good_api_response, get_api_error, \
-    get_api_data
+    get_api_data, get_count_incompliant_azure_cis_rule, build_entities_query
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -65,6 +66,7 @@ class CISAzureCategory7:
             'encryptionatrestwithplatformkey', 'encryptionatrestwithcustomerkey'
         ]
 
+    # pylint: disable=too-many-locals, too-many-branches
     @cis_rule('7.1')
     def check_cis_azure_7_1(self, **kwargs):
         """
@@ -85,7 +87,7 @@ class CISAzureCategory7:
         all_vms_disks = get_api_data(self._vms_disks)
         total_resources = 0
         errors = []
-
+        subscriptions_with_errors = []
         for subscription_name, all_vms_per_subscription in all_vms.items():
             for vm in all_vms_per_subscription.values():
                 total_resources += 1
@@ -114,15 +116,43 @@ class CISAzureCategory7:
                     errors.append(
                         f'Subscription "{subscription_name}" - VM {vm_name!r}: {str(e)}'
                     )
+                    subscriptions_with_errors.append(str(subscription_name))
                     continue
 
         if errors:
+
+            # get count affected
+            try:
+                count_affected = get_count_incompliant_azure_cis_rule(
+                    EntityType.Devices,
+                    rule_section,
+                    subscription_names=subscriptions_with_errors)
+            except Exception as e:
+                logger.debug(f'Error counting affected azure devices for rule {rule_section}: {str(e)}')
+                count_affected = 0
+
+            # get affected query
+            try:
+                device_query = build_entities_query(
+                    'devices',
+                    rule_section,
+                    subscription_names=subscriptions_with_errors,
+                    plugin_name='azure_adapter',
+                    field_prefix='azure'
+                )
+            except Exception as e:
+                logger.debug(f'Error building query for affected azure devices for rule '
+                             f'{rule_section}: {str(e)}')
+                device_query = None
+
+            # Add the rule
             self.report.add_rule(
                 RuleStatus.Failed,
                 rule_section,
                 (len(errors), total_resources),
-                0,
-                errors_to_gui(errors)
+                count_affected,
+                errors_to_gui(errors),
+                device_query
             )
         else:
             self.report.add_rule(
@@ -133,6 +163,7 @@ class CISAzureCategory7:
                 ''
             )
 
+    # pylint: disable=too-many-branches
     @cis_rule('7.2')
     def check_cis_azure_7_2(self, **kwargs):
         """
@@ -154,6 +185,7 @@ class CISAzureCategory7:
         all_vms_disks = get_api_data(self._vms_disks)
         total_resources = 0
         errors = []
+        subscriptions_with_errors = []
 
         for subscription_name, all_vms_per_subscription in all_vms.items():
             for vm in all_vms_per_subscription.values():
@@ -184,15 +216,43 @@ class CISAzureCategory7:
                     errors.append(
                         f'Subscription "{subscription_name}" - VM {vm_name!r}: {str(e)}'
                     )
+                    subscriptions_with_errors.append(subscription_name)
                     continue
 
         if errors:
+
+            # get count affected
+            try:
+                count_affected = get_count_incompliant_azure_cis_rule(
+                    EntityType.Devices,
+                    rule_section,
+                    subscription_names=subscriptions_with_errors)
+            except Exception as e:
+                logger.debug(f'Error counting affected azure devices for rule {rule_section}: {str(e)}')
+                count_affected = 0
+
+            # get affected query
+            try:
+                device_query = build_entities_query(
+                    'devices',
+                    rule_section,
+                    subscription_names=subscriptions_with_errors,
+                    plugin_name='azure_adapter',
+                    field_prefix='azure'
+                )
+            except Exception as e:
+                logger.debug(f'Error building query for affected azure devices for rule '
+                             f'{rule_section}: {str(e)}')
+                device_query = None
+
+            # Add the rule
             self.report.add_rule(
                 RuleStatus.Failed,
                 rule_section,
                 (len(errors), total_resources),
-                0,
-                errors_to_gui(errors)
+                count_affected,
+                errors_to_gui(errors),
+                device_query
             )
         else:
             self.report.add_rule(
