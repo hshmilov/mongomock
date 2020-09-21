@@ -25,7 +25,7 @@ from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from preempt_adapter.client_id import get_client_id
-from preempt_adapter.consts import QUERY_DEVICES, QUERY_USERS
+from preempt_adapter.consts import QUERY_DEVICES, QUERY_USERS, QUERY_DEVICES_2
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -213,13 +213,20 @@ class PreemptAdapter(AdapterBase, Configurable):
         """
         gql_client = client_data
         query = gql(QUERY_DEVICES)
+        query2 = gql(QUERY_DEVICES_2)
 
         variables = {
             'limit': 1000,
             'sortOrder': 'ASCENDING',
             'after': None
         }
-        return self.execute_paginated_query(gql_client, query, variables)
+        try:
+            for device_raw in self.execute_paginated_query(gql_client, query, variables):
+                yield device_raw
+        except Exception:
+            logger.exception(f'Problem with main query')
+            for device_raw in self.execute_paginated_query(gql_client, query2, variables):
+                yield device_raw
 
     @staticmethod
     def _get_client_id(client_config):
