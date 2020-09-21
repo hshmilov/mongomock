@@ -9,7 +9,7 @@ from typing import List
 from funcy import chunks
 from bson import ObjectId
 import requests
-from pymongo import UpdateOne
+from pymongo import UpdateOne, InsertOne
 
 from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_COLLECTION, USERS_CONFIG_COLLECTION,
                                        DASHBOARD_COLLECTION, DASHBOARD_SPACES_COLLECTION,
@@ -1394,6 +1394,54 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
                 'selectedSort': ''
             }
         })
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_45(self):
+        print('Upgrade to schema 45')
+
+        # find all system users
+        all_system_users = self.db.gui_users_collection().find({})
+
+        bulk_insert = []
+        for user in all_system_users:
+            user_id = user.get('_id')
+
+            # find all user's personal spaces
+            user_personal_spaces = self.db.gui_dashboard_spaces_collection.find(
+                self._get_personal_space_db_filter(user_id))
+
+            # keep the one contains data OR use default space model
+            personal_space = next((s for s in user_personal_spaces if len(s.get('panels_order', []))),
+                                  self._get_default_personal_space(user_id))
+
+            # append the insert operation into the bulk
+            bulk_insert.append(InsertOne(personal_space))
+
+        # remove redundant and duplicated personal spaces
+        self.db.gui_dashboard_spaces_collection.remove({
+            'type': DASHBOARD_SPACE_TYPE_PERSONAL,
+            'user_id': {
+                '$exists': True
+            }
+        })
+        # insert a single personal space
+        self.db.gui_dashboard_spaces_collection.bulk_write(bulk_insert)
+
+    @staticmethod
+    def _get_personal_space_db_filter(user_id):
+        return {
+            'type': DASHBOARD_SPACE_TYPE_PERSONAL,
+            'user_id': ObjectId(user_id)
+        }
+
+    @staticmethod
+    def _get_default_personal_space(user_id):
+        return {
+            'name': DASHBOARD_SPACE_PERSONAL,
+            'type': DASHBOARD_SPACE_TYPE_PERSONAL,
+            'user_id': ObjectId(user_id),
+            'panels_order': []
+        }
 
     def _update_default_locked_actions_legacy(self, new_actions):
         """
