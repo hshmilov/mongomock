@@ -349,13 +349,19 @@ def entity_tasks_actions(entity_id: str):
     actions = []
     for task in tasks:
         for action in task.get('actions'):
-            action['additional_info'] = json.dumps(action.get('additional_info', ''))
-            actions.append({
-                'action_id': f'{task.get("uuid")} {action.get("action_name")}',
-                'uuid': task.get('uuid'),
-                'recipe_name': get_task_full_name(task.get('recipe_name'), task.get('recipe_pretty_id')),
-                **action
-            })
+            try:
+                additional_info = action.get('additional_info', '')
+                if additional_info and isinstance(additional_info, bytes):
+                    additional_info = additional_info.decode('utf-8')
+                action['additional_info'] = json.dumps(additional_info)
+                actions.append({
+                    'action_id': f'{task.get("uuid")} {action.get("action_name")}',
+                    'uuid': task.get('uuid'),
+                    'recipe_name': get_task_full_name(task.get('recipe_name'), task.get('recipe_pretty_id')),
+                    **action
+                })
+            except Exception as e:
+                logger.exception(f'Error parsing actions: {e}')
     return actions
 
 
