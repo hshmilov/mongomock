@@ -275,6 +275,7 @@ export default {
     flex: 1 0 auto;
     display: flex;
     position: relative;
+    max-width: 100%;
 
     .x-table {
       max-height: 210px;
