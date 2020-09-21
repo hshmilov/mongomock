@@ -21,7 +21,7 @@ class TaniumAssetConnection(connection.TaniumConnection):
         return 'asset'
 
     # pylint: disable=arguments-differ
-    def get_device_list(self, client_name, client_config, page_size: int = PAGE_SIZE):
+    def get_device_list(self, client_name, client_config, page_size: int = PAGE_SIZE, page_sleep: int = PAGE_SLEEP):
         server_version = self._get_version()
         workbenches = self._get_workbenches_meta()
 
@@ -31,7 +31,7 @@ class TaniumAssetConnection(connection.TaniumConnection):
             'server_version': server_version,
             'workbenches': workbenches,
         }
-        for asset in self._get_assets(page_size=page_size):
+        for asset in self._get_assets(page_size=page_size, page_sleep=page_sleep):
             yield asset, metadata
 
     def _get_assets_page(self, next_id, limit):
@@ -45,7 +45,7 @@ class TaniumAssetConnection(connection.TaniumConnection):
         logger.debug(f'fetched asset counts: {response}')
         return response
 
-    def _get_assets(self, page_size: int = PAGE_SIZE):
+    def _get_assets(self, page_size: int = PAGE_SIZE, page_sleep: int = PAGE_SLEEP):
         next_id = 1
         fetched = 0
         page = 1
@@ -83,7 +83,7 @@ class TaniumAssetConnection(connection.TaniumConnection):
                 next_id = meta.get('nextAssetId', next_id)
 
                 page += 1
-                time.sleep(PAGE_SLEEP)
+                time.sleep(page_sleep)
             except Exception as exc:
                 raise RESTException(f'ERROR during fetch page={page}, fetched=[{fetched}/{total}]: {exc}')
 

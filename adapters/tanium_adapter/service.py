@@ -6,10 +6,12 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection, RESTException
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.smart_json_class import SmartJsonClass
+from axonius.mixins.configurable import Configurable
 from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.utils.files import get_local_config_file
 
 from axonius.clients import tanium
+from tanium_adapter.consts import PAGE_SIZE, PAGE_SLEEP
 
 from tanium_adapter.connection import TaniumPlatformConnection
 
@@ -22,7 +24,7 @@ class ModuleInfo(SmartJsonClass):
     version = Field(field_type=str, title='Version', json_format=JsonStringFormat.version)
 
 
-class TaniumAdapter(AdapterBase):
+class TaniumAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         server_name = Field(field_type=str, title='Tanium Server')
@@ -76,7 +78,12 @@ class TaniumAdapter(AdapterBase):
     def _query_devices_by_client(self, client_name, client_data):
         connection, client_config = client_data
         with connection:
-            yield from connection.get_device_list(client_name=client_name, client_config=client_config)
+            yield from connection.get_device_list(
+                client_name=client_name,
+                client_config=client_config,
+                page_size=self._page_size,
+                page_sleep=self._page_sleep,
+            )
 
     @staticmethod
     def _get_hostname(device_raw):
@@ -86,7 +93,7 @@ class TaniumAdapter(AdapterBase):
                 if value.endswith('.(none)'):
                     value = value[: -len('.(none)')]
                 if './bin/sh' in value:
-                    value = value[:value.find('./bin/sh')]
+                    value = value[: value.find('./bin/sh')]
             return value or ''
         except Exception:
             logger.exception(f'ERROR getting host_name from {value!r} from {list(device_raw)}')
@@ -221,3 +228,31 @@ class TaniumAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {'name': 'page_size', 'title': 'Number of assets to fetch per page', 'type': 'integer'},
+                {
+                    'name': 'page_sleep',
+                    'title': 'Number of seconds to wait in between each page fetch',
+                    'type': 'integer',
+                },
+            ],
+            'required': ['page_size', 'page_sleep'],
+            'pretty_name': 'Tanium Asset Configuration',
+            'type': 'array',
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'page_size': PAGE_SIZE,
+            'page_sleep': PAGE_SLEEP,
+        }
+
+    def _on_config_update(self, config):
+        logger.info(f'Loading Tanium config: {config}')
+        self._page_size = config.get('page_size', PAGE_SIZE)
+        self._page_sleep = config.get('page_sleep', PAGE_SLEEP)

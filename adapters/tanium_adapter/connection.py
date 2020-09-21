@@ -16,7 +16,7 @@ class TaniumPlatformConnection(tanium.connection.TaniumConnection):
         self._tanium_get(endpoint='system_status', options={'row_count': 1, 'row_start': 0})
 
     # pylint: disable=arguments-differ, too-many-locals
-    def get_device_list(self, client_name, client_config):
+    def get_device_list(self, client_name, client_config, page_size: int = PAGE_SIZE, page_sleep: int = PAGE_SLEEP):
         server_version = self._get_version()
         workbenches = self._get_workbenches_meta()
 
@@ -28,10 +28,10 @@ class TaniumPlatformConnection(tanium.connection.TaniumConnection):
         }
 
         last_reg_mins = client_config.get('last_reg_mins', 0)
-        for asset in self._get_assets(last_reg_mins=last_reg_mins):
+        for asset in self._get_assets(last_reg_mins=last_reg_mins, page_size=page_size, page_sleep=page_sleep):
             yield asset, metadata
 
-    def _get_assets(self, last_reg_mins):
+    def _get_assets(self, last_reg_mins, page_size: int = PAGE_SIZE, page_sleep: int = PAGE_SLEEP):
         page = 1
         row_start = 0
         fetched = 0
@@ -50,7 +50,7 @@ class TaniumPlatformConnection(tanium.connection.TaniumConnection):
         while row_start < MAX_DEVICES_COUNT:
             try:
                 options['row_start'] = row_start
-                options['row_count'] = PAGE_SIZE
+                options['row_count'] = page_size
                 options['cache_expiration'] = CACHE_EXPIRATION
 
                 objs = self._tanium_get(endpoint='system_status', options=options)
@@ -69,7 +69,7 @@ class TaniumPlatformConnection(tanium.connection.TaniumConnection):
 
                 left_to_fetch = total - fetched
 
-                row_start += PAGE_SIZE
+                row_start += page_size
 
                 stats = [
                     f'PAGE #{page} rows={this_fetch}',
@@ -92,7 +92,7 @@ class TaniumPlatformConnection(tanium.connection.TaniumConnection):
                     logger.info(f'DONE hit rows total {stats}')
                     break
 
-                time.sleep(PAGE_SLEEP)
+                time.sleep(page_sleep)
             except Exception as exc:
                 raise RESTException(f'ERROR fetching assets: {exc}')
 

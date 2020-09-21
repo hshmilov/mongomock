@@ -13,7 +13,7 @@ from axonius.mixins.configurable import Configurable
 from axonius.clients import tanium
 
 from tanium_asset_adapter.connection import TaniumAssetConnection
-from tanium_asset_adapter.consts import PAGE_SIZE
+from tanium_asset_adapter.consts import PAGE_SIZE, PAGE_SLEEP
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -60,6 +60,7 @@ class TaniumAssetAdapter(AdapterBase, Configurable):
         updated_at = Field(field_type=datetime.datetime, title='Asset Updated At')
         sql_server = ListField(field_type=SqlServer, title='SQL Server')
         application_last_used_time = ListField(field_type=LastUsedTime, title='Application Last Used Time')
+        custom_tags = ListField(field_type=str, title='Custom Tags')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -98,7 +99,10 @@ class TaniumAssetAdapter(AdapterBase, Configurable):
         connection, client_config = client_data
         with connection:
             yield from connection.get_device_list(
-                client_name=client_name, client_config=client_config, page_size=self.__page_size,
+                client_name=client_name,
+                client_config=client_config,
+                page_size=self._page_size,
+                page_sleep=self._page_sleep,
             )
 
     @staticmethod
@@ -203,6 +207,19 @@ class TaniumAssetAdapter(AdapterBase, Configurable):
                 device.add_cpu(**kwargs)
             except Exception:
                 logger.exception(f'ERROR appending with kwargs {kwargs!r}')
+
+    @staticmethod
+    def _add_tags(device, device_raw, key, attr):
+        values = device_raw.get(key)
+        values = tanium.tools.listify(value=values, clean=True)
+        for value in values:
+            try:
+                key = tanium.tools.parse_str(value=value.get('custom_tag', ''), src=value)
+                if key:
+                    device.add_key_value_tag(key=key, value=None)
+                    device.custom_tags.append(key)
+            except Exception:
+                logger.exception(f'ERROR adding tag with value {value!r}')
 
     @staticmethod
     def _add_nic(device, device_raw, key, attr):
@@ -447,6 +464,7 @@ class TaniumAssetAdapter(AdapterBase, Configurable):
             ('ci_logical_disk', None, self._add_disks),
             ('ci_network_adapter', None, self._add_nic),
             ('ci_windows_installer_application', None, self._add_sw),
+            ('ci_custom_tag', None, self._add_tags),
             ('computer_name', 'hostname', tanium.tools.set_str),
             ('cpu_name', None, self._add_cpu),  # cpu_name, cpu_core, cpu_manufacturer, cpu_speed
             ('created_at', 'first_seen', tanium.tools.set_dt),
@@ -556,26 +574,26 @@ class TaniumAssetAdapter(AdapterBase, Configurable):
     def _db_config_schema(cls) -> dict:
         return {
             'items': [
+                {'name': 'page_size', 'title': 'Number of assets to fetch per page', 'type': 'integer'},
                 {
-                    'name': 'page_size',
-                    'title': 'Number of assets to fetch per page',
+                    'name': 'page_sleep',
+                    'title': 'Number of seconds to wait in between each page fetch',
                     'type': 'integer',
-                    'default': PAGE_SIZE,
-
                 },
             ],
-            'required': [
-                'page_size',
-            ],
+            'required': ['page_size', 'page_sleep'],
             'pretty_name': 'Tanium Asset Configuration',
-            'type': 'array'
+            'type': 'array',
         }
 
     @classmethod
     def _db_config_default(cls):
         return {
             'page_size': PAGE_SIZE,
+            'page_sleep': PAGE_SLEEP,
         }
 
     def _on_config_update(self, config):
-        self.__page_size = config.get('page_size') or PAGE_SIZE
+        logger.info(f'Loading Tanium Asset config: {config}')
+        self._page_size = config.get('page_size', PAGE_SIZE)
+        self._page_sleep = config.get('page_sleep', PAGE_SLEEP)

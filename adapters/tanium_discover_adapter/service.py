@@ -10,7 +10,7 @@ from axonius.fields import Field, ListField, JsonStringFormat
 from axonius.utils.parsing import figure_out_os
 from axonius.utils.files import get_local_config_file
 from axonius.mixins.configurable import Configurable
-from tanium_discover_adapter.consts import METHODS, FETCH_OPTS
+from tanium_discover_adapter.consts import METHODS, FETCH_OPTS, PAGE_SIZE, PAGE_SLEEP
 
 from tanium_discover_adapter.connection import TaniumDiscoverConnection
 
@@ -87,7 +87,12 @@ class TaniumDiscoverAdapter(AdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data):
         connection, client_config = client_data
         with connection:
-            yield from connection.get_device_list(client_name=client_name, client_config=client_config)
+            yield from connection.get_device_list(
+                client_name=client_name,
+                client_config=client_config,
+                page_sleep=self._page_sleep,
+                page_size=self._page_size,
+            )
 
     @staticmethod
     def _add_nic(device, device_raw, key, attr):
@@ -277,24 +282,28 @@ class TaniumDiscoverAdapter(AdapterBase, Configurable):
     def _db_config_schema(cls) -> dict:
         return {
             'items': [
+                {'name': 'trust_hostname', 'title': 'Trust Tanium Discover hostname', 'type': 'bool'},
+                {'name': 'page_size', 'title': 'Number of assets to fetch per page', 'type': 'integer'},
                 {
-                    'name': 'trust_hostname',
-                    'title': 'Trust Tanium Discover hostname',
-                    'type': 'bool'
-                }
+                    'name': 'page_sleep',
+                    'title': 'Number of seconds to wait in between each page fetch',
+                    'type': 'integer',
+                },
             ],
-            'required': [
-                'trust_hostname'
-            ],
+            'required': ['trust_hostname', 'page_size', 'page_sleep'],
             'pretty_name': 'Tanium Discover Configuration',
-            'type': 'array'
+            'type': 'array',
         }
 
     @classmethod
     def _db_config_default(cls):
         return {
-            'trust_hostname': False
+            'trust_hostname': False,
+            'page_size': PAGE_SIZE,
+            'page_sleep': PAGE_SLEEP,
         }
 
     def _on_config_update(self, config):
         self.__trust_hostname = config.get('trust_hostname') or False
+        self._page_size = config.get('page_size', PAGE_SIZE)
+        self._page_sleep = config.get('page_sleep', PAGE_SLEEP)

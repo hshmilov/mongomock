@@ -1,24 +1,39 @@
 import datetime
+import json
 import logging
+import pathlib
 import re
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.rest.connection import RESTConnection, RESTException
-from axonius.devices.device_adapter import DeviceAdapter, DeviceAdapterOS, DeviceAdapterCPU, AGENT_NAMES
-from axonius.fields import Field, ListField, JsonStringFormat
-from axonius.utils.files import get_local_config_file
-from axonius.smart_json_class import SmartJsonClass
-from axonius.utils.parsing import normalize_var_name
 from axonius.clients import tanium
+from axonius.clients.rest.connection import RESTConnection, RESTException
+from axonius.consts.instance_control_consts import UPLOAD_FILE_PATH
+from axonius.devices.device_adapter import AGENT_NAMES, DeviceAdapter, DeviceAdapterCPU, DeviceAdapterOS
+from axonius.fields import Field, JsonStringFormat, ListField
+from axonius.mixins.configurable import Configurable
+from axonius.smart_json_class import SmartJsonClass
+from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import normalize_var_name
 from tanium_sq_adapter.connection import TaniumSqConnection
-from tanium_sq_adapter.consts import NET_SENSOR_DISCOVER, NET_SENSORS, IPV4_SENSOR, MAC_SENSOR
+from tanium_sq_adapter.consts import (
+    IPV4_SENSOR,
+    MAC_SENSOR,
+    MAX_HOURS,
+    NET_SENSOR_DISCOVER,
+    NET_SENSORS,
+    NO_RESULTS_WAIT,
+    PAGE_SIZE,
+    REFRESH,
+    SLEEP_GET_ANSWERS,
+)
+
 
 logger = logging.getLogger(f'axonius.{__name__}')
+# pylint: disable=too-many-locals,C0330,too-many-lines
 
 
 def new_complex():
-
     class ComplexSensor(SmartJsonClass):
         pass
 
@@ -76,7 +91,7 @@ class VulnerabilityAggregates(SmartJsonClass):
     percent_low_severity = Field(field_type=float, title='Low Severity Percent')
 
 
-class TaniumSqAdapter(AdapterBase):
+class TaniumSqAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         server_name = Field(field_type=str, title='Tanium Server')
         server_version = Field(field_type=str, title='Tanium Server Version', json_format=JsonStringFormat.version)
@@ -86,11 +101,11 @@ class TaniumSqAdapter(AdapterBase):
         sq_expiration = Field(field_type=datetime.datetime, title='Question Last Asked')
         sq_selects = ListField(field_type=str, title='Question Selects')
         compliance = ListField(field_type=ComplianceAggregates, title='Compliance')
-        vulnerabilities = ListField(
-            field_type=VulnerabilityAggregates, title='Vulnerabilities'
-        )
+        vulnerabilities = ListField(field_type=VulnerabilityAggregates, title='Vulnerabilities')
 
     def __init__(self, *args, **kwargs):
+        self._page_size = PAGE_SIZE
+        self._page_sleep = SLEEP_GET_ANSWERS
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
 
     @staticmethod
@@ -107,8 +122,24 @@ class TaniumSqAdapter(AdapterBase):
 
     @staticmethod
     def get_connection(client_config):
+        domain = client_config['domain']
+        file_pre = 'file://'
+        file_ext = '.json'
+        if domain.startswith(file_pre):
+            # look for it in /home/cortex, if not found throw error
+            # if found json.load() yield each item to the thing
+            file_path = pathlib.Path(domain)
+            if file_path.suffix != file_ext:
+                raise RESTException(f'File name does not end with {file_ext!r}: {file_path.name}')
+            # how to find file in /home/ubuntu/cortex or /home/ubuntu/cortex/adapters/tanium_sq_adapter/
+            upload_file_path = pathlib.Path(UPLOAD_FILE_PATH) / file_path.name
+            actual_path = pathlib.Path('/home/ubuntu/cortex/uploaded_files') / file_path.name
+            if not upload_file_path.is_file():
+                raise RESTException(f'File not found: {actual_path}')
+            return upload_file_path
+
         connection = TaniumSqConnection(
-            domain=client_config['domain'],
+            domain=domain,
             verify_ssl=client_config['verify_ssl'],
             username=client_config['username'],
             password=client_config['password'],
@@ -121,14 +152,25 @@ class TaniumSqAdapter(AdapterBase):
     def _connect_client(self, client_config):
         domain = client_config.get('domain')
         try:
-            return self.get_connection(client_config), client_config
+            return self.get_connection(client_config=client_config), client_config
         except RESTException as exc:
             raise ClientConnectionException(f'Error connecting to client at {domain!r}, reason: {exc}')
 
     def _query_devices_by_client(self, client_name, client_data):
         connection, client_config = client_data
-        with connection:
-            yield from connection.get_device_list(client_name=client_name, client_config=client_config)
+
+        if isinstance(connection, pathlib.Path):
+            with connection.open('r') as fh:
+                assets = json.load(fh)
+                yield from assets
+        else:
+            with connection:
+                yield from connection.get_device_list(
+                    client_name=client_name,
+                    client_config=client_config,
+                    page_size=self._page_size,
+                    page_sleep=self._page_sleep,
+                )
 
     def _sens_hostname(self, device, name, value_map):
         """Sensor: Computer Name."""
@@ -140,7 +182,7 @@ class TaniumSqAdapter(AdapterBase):
                     if value.endswith('.(none)'):
                         value = value[: -len('.(none)')]
                     if './bin/sh' in value:
-                        value = value[:value.find('./bin/sh')]
+                        value = value[: value.find('./bin/sh')]
             except Exception:
                 logger.exception(f'ERROR getting host_name from')
             device.hostname = value
@@ -686,16 +728,9 @@ class TaniumSqAdapter(AdapterBase):
             calc_field='compliance',
         )
 
-    def calc_percent_sensor(self,
-                            device,
-                            name,
-                            value_map,
-                            all_column,
-                            all_field,
-                            str_fields,
-                            count_fields,
-                            calc_class,
-                            calc_field):
+    def calc_percent_sensor(
+        self, device, name, value_map, all_column, all_field, str_fields, count_fields, calc_class, calc_field
+    ):
         values = self._get_value(name=name, value_map=value_map)
 
         for value in values:
@@ -862,9 +897,7 @@ class TaniumSqAdapter(AdapterBase):
         try:
             if has_network_discover:
                 self._sens_netadapters(
-                    device=device,
-                    name=NET_SENSOR_DISCOVER,
-                    value_map=device_raw[NET_SENSOR_DISCOVER],
+                    device=device, name=NET_SENSOR_DISCOVER, value_map=device_raw[NET_SENSOR_DISCOVER],
                 )
             # they only have the network sensors from the base content, which is horrible
             # since we do not know which IP maps to which MAC
@@ -1129,18 +1162,18 @@ class TaniumSqAdapter(AdapterBase):
                 {'name': 'username', 'title': 'User Name', 'type': 'string'},
                 {'name': 'password', 'title': 'Password', 'type': 'string', 'format': 'password'},
                 {'name': 'sq_name', 'type': 'string', 'title': 'Names of Saved Questions to fetch (comma separated)'},
-                {'name': 'sq_refresh', 'title': 'Re-ask every fetch', 'type': 'bool', 'default': False},
+                {'name': 'sq_refresh', 'title': 'Re-ask every fetch', 'type': 'bool', 'default': REFRESH},
                 {
                     'name': 'sq_max_hours',
                     'title': 'Re-ask if results are older than N hours',
                     'type': 'integer',
-                    'default': 6,
+                    'default': MAX_HOURS,
                 },
                 {
                     'name': 'no_results_wait',
                     'title': 'Re-asking waits until all answers are returned',
                     'type': 'bool',
-                    'default': True,
+                    'default': NO_RESULTS_WAIT,
                 },
                 {'name': 'verify_ssl', 'title': 'Verify SSL', 'type': 'bool'},
                 {'name': 'https_proxy', 'title': 'HTTPS Proxy', 'type': 'string'},
@@ -1161,3 +1194,31 @@ class TaniumSqAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {'name': 'page_size', 'title': 'Number of assets to fetch per page', 'type': 'integer'},
+                {
+                    'name': 'page_sleep',
+                    'title': 'Number of seconds to wait in between each page fetch',
+                    'type': 'integer',
+                },
+            ],
+            'required': ['page_size', 'page_sleep'],
+            'pretty_name': 'Tanium Interact Configuration',
+            'type': 'array',
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'page_size': PAGE_SIZE,
+            'page_sleep': SLEEP_GET_ANSWERS,
+        }
+
+    def _on_config_update(self, config):
+        logger.info(f'Loading Tanium Interact config: {config}')
+        self._page_size = config.get('page_size', PAGE_SIZE)
+        self._page_sleep = config.get('page_sleep', SLEEP_GET_ANSWERS)

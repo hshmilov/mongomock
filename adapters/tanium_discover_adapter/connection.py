@@ -42,7 +42,7 @@ class TaniumDiscoverConnection(tanium.connection.TaniumConnection):
         return 'discover'
 
     # pylint: disable=arguments-differ
-    def get_device_list(self, client_name, client_config):
+    def get_device_list(self, client_name, client_config, page_sleep=PAGE_SLEEP, page_size=PAGE_SIZE):
         server_version = self._get_version()
         workbenches = self._get_workbenches_meta()
 
@@ -57,7 +57,7 @@ class TaniumDiscoverConnection(tanium.connection.TaniumConnection):
 
         fetches = self.check_fetch_opts(client_config=client_config)
         for report_id in fetches:
-            for asset in self.get_report_assets(report_id=report_id):
+            for asset in self.get_report_assets(report_id=report_id, page_sleep=page_sleep, page_size=page_size):
                 yield asset, metadata
 
     def get_reports(self):
@@ -102,7 +102,7 @@ class TaniumDiscoverConnection(tanium.connection.TaniumConnection):
 
         return report
 
-    def get_report_assets(self, report_id):
+    def get_report_assets(self, report_id, page_size=PAGE_SIZE, page_sleep=PAGE_SLEEP):
         report = self.get_report(report_id=report_id)
         name = report.get('Name')
         page = 1
@@ -110,7 +110,7 @@ class TaniumDiscoverConnection(tanium.connection.TaniumConnection):
 
         while fetched < MAX_DEVICES_COUNT:
             try:
-                response = self.get_report_page(report=report, page_size=PAGE_SIZE, page_count=page)
+                response = self.get_report_page(report=report, page_size=page_size, page_count=page)
                 total = response.get('Total') or 0
                 total_check = min(total, MAX_DEVICES_COUNT)
                 items = response.get('Items')
@@ -137,7 +137,7 @@ class TaniumDiscoverConnection(tanium.connection.TaniumConnection):
                     break
 
                 page += 1
-                time.sleep(PAGE_SLEEP)
+                time.sleep(page_sleep)
             except Exception as exc:
                 msg = f'ERROR during fetch name={name!r}, page={page}, fetched={fetched}: error={exc}'
                 raise RESTException(msg)
