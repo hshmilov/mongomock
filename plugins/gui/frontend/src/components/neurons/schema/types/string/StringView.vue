@@ -33,6 +33,15 @@
     &nbsp;
   </div>
   <div
+    v-else-if="schema.format && schema.format === 'comments_tooltip' && value"
+    :title="value"
+  >
+    <XIcon
+      family="symbol"
+      type="chat"
+    />
+  </div>
+  <div
     v-else-if="value"
     :class="`table-td-content-${schema.name}`"
     :title="$options.methods.formatDetails(value, schema, title, dateFormat)"

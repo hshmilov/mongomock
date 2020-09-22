@@ -207,6 +207,7 @@ class Page:
 
     # panel consts:
     CSS_SELECTOR_CLOSE_PANEL_ACTION = '.actions .action-close'
+    PANEL_OPEN_CSS = '.ant-drawer-open'
 
     # table consts:
     TABLE_DATA_XPATH = '//tr[@id]/td[position()={data_position}]'
@@ -239,6 +240,7 @@ class Page:
     DATA_COLLECTION_TOASTER = 'Connection established. Data collection initiated...'
     DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS = '.time-picker-text input'
     DISCOVERY_SCHEDULE_INTERVAL_INPUT_CSS = '#system_research_rate'
+    MODAL_CONFIRM = '.ant-modal-confirm'
 
     BUTTON_SWITCH_CSS = '.x-switch button[label=\'{switch_label}\']'
 
@@ -1344,6 +1346,7 @@ class Page:
         values = self.get_column_data_inline(field_name)
         row_num = values.index(field_value)
         self.get_row(row_num + 1).click()
+        time.sleep(1)  # wait for the drawer animation to finish
 
     def get_all_data(self):
         return [data_row.text for data_row in self.find_elements_by_xpath(self.TABLE_DATA_ROWS_XPATH)]
@@ -1377,6 +1380,7 @@ class Page:
 
     def close_side_panel(self):
         self.wait_for_element_present_by_css(self.CSS_SELECTOR_CLOSE_PANEL_ACTION).click()
+        self.wait_for_element_absent_by_css(self.PANEL_OPEN_CSS)
 
     def find_password_policy_requirements(self):
         return self.driver.find_element_by_css_selector(self.PASSWORD_POLICY_REQUIREMENTS_CONTAINER_CSS)

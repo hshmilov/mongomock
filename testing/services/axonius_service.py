@@ -335,6 +335,9 @@ class AxoniusService:
     def get_system_config_db(self):
         return self.db.get_collection(self.gui.unique_name, 'system_config')
 
+    def get_aws_rules_db(self):
+        return self.db.get_collection('compliance', 'aws_rules')
+
     def get_users_preferences_db(self):
         return self.db.gui_users_preferences_collection()
 

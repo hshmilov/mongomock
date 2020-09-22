@@ -61,6 +61,8 @@ export const compliance = {
         name: 'cis', title: 'CIS Controls', type: 'text', expanded: true, order: 11,
       }, {
         name: 'last_updated', title: 'Last Updated', type: 'text', format: 'date-time', expanded: true, order: 12,
+      }, {
+        name: 'comments_csv', title: 'Comments', type: 'text', expanded: true, order: 13,
       }],
       coloumnSizes: [],
       query: {

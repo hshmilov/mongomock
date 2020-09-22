@@ -47,6 +47,22 @@ class CompliancePage(Page):
     EMAIL_AWS_ADMINS_ID = 'accountAdmins'
     EMAIL_SEND_BUTTON_CSS = '.modal-footer .ant-btn-primary'
 
+    COMMENT_TEXTAREA = '.v-expansion-panel-content .ant-input'
+    COMMENT_TEXTAREA_NOT_DISABLED = '.v-expansion-panel-content .ant-input:not([disabled])'
+    ADD_COMMENT_BUTTON = '.v-expansion-panel-content .add_comment'
+    COMMENT_TEXT_VALUE = '.v-expansion-panel-content .comment__text'
+    COMMENT_UPDATE_BUTTON = '.v-expansion-panel-content .x-button[title="Save"]'
+    COMMENT_CANCEL_BUTTON = '.v-expansion-panel-content .x-button[title="Cancel"]'
+    COMMENT_DELETE_BUTTON = '.v-expansion-panel-content .delete'
+    COMMENT_EDIT_BUTTON = '.v-expansion-panel-content .edit'
+    COMMENT_ITEM = '.v-expansion-panel-content .comment'
+    COMMENT_DELETE_CONFIRM_BUTTON = '.ant-modal-confirm-btns .ant-btn-primary'
+    COMMENT_SELECT_ELEMENT = '.v-expansion-panel-content .edit_comment__account'
+    COMMENT_SELECT_ELEMENT_DISABLED_CLASS = 'ant-select-disabled'
+    COMMENT_ACTION_BUTTONS = '.comment__actions .x-button'
+    ACCOUNT_SELECT_XPATH = '//li[contains(@class,\'ant-select-dropdown-menu-item\') and contains(text(),\'{account}\')]'
+    COMMENT_TOOLTIP_XPATH = '//tr[{row}]/td[position()=3]/div'
+
     @property
     def url(self):
         return f'{self.base_url}/cloud_asset_compliance'
@@ -205,3 +221,75 @@ class CompliancePage(Page):
             self.driver.find_element_by_id(self.EMAIL_AWS_ADMINS_ID).click()
         self.driver.find_element_by_css_selector(self.EMAIL_SEND_BUTTON_CSS).click()
         self.wait_for_spinner_to_end()
+
+    def save_new_comment(self):
+        self.driver.find_element_by_css_selector(self.ADD_COMMENT_BUTTON).click()
+
+    def select_comment_account(self, account):
+        self.driver.find_element_by_css_selector(self.COMMENT_SELECT_ELEMENT).click()
+        self.driver.find_element_by_xpath(self.ACCOUNT_SELECT_XPATH.format(account=account)).click()
+
+    def fill_comment_text(self, text):
+        self.fill_text_field_by_css_selector(self.COMMENT_TEXTAREA_NOT_DISABLED, text)
+
+    def add_comment(self, text, account):
+        self.fill_comment_text(text)
+        self.select_comment_account(account)
+        self.save_new_comment()
+
+    def assert_comments_string(self, text):
+        assert ','.join([item.text for item in self.driver.find_elements_by_css_selector(self.COMMENT_ITEM)]) == text
+
+    def assert_comment_tooltip(self, row, text):
+        assert self.driver.find_element_by_xpath(
+            self.COMMENT_TOOLTIP_XPATH.format(row=row)).get_attribute('title') == text
+
+    def update_comment(self):
+        self.driver.find_element_by_css_selector(self.COMMENT_UPDATE_BUTTON).click()
+
+    def cancel_editing_comment(self):
+        self.driver.find_element_by_css_selector(self.COMMENT_UPDATE_BUTTON).click()
+
+    def edit_comment(self):
+        self.driver.find_element_by_css_selector(self.COMMENT_EDIT_BUTTON).click()
+
+    def delete_comment(self):
+        self.driver.find_element_by_css_selector(self.COMMENT_DELETE_BUTTON).click()
+        modal_confirm = self.driver.find_element_by_css_selector(self.MODAL_CONFIRM)
+        self.click_ant_button(self.OK_BUTTON, context=modal_confirm)
+        self.wait_for_element_absent_by_css(self.MODAL_CONFIRM)
+
+    def assert_comment_text(self, text):
+        assert self.driver.find_element_by_css_selector(self.COMMENT_TEXT_VALUE).text == text
+
+    def assert_comment_deleted(self):
+        self.wait_for_element_absent_by_css(self.COMMENT_ITEM)
+
+    def is_add_comment_button_disabled(self):
+        return self.is_element_disabled(self.driver.find_element_by_css_selector(self.ADD_COMMENT_BUTTON))
+
+    def assert_all_edit_and_delete_buttons_disabled(self):
+        assert all([item.get_attribute('disabled') == 'true' for item in
+                    self.driver.find_elements_by_css_selector(self.COMMENT_ACTION_BUTTONS)])
+
+    def is_select_comment_account_disabled(self):
+        return self.has_class(self.driver.find_element_by_css_selector(self.COMMENT_SELECT_ELEMENT),
+                              self.COMMENT_SELECT_ELEMENT_DISABLED_CLASS)
+
+    def get_comment_text_input_value(self):
+        return self.driver.find_element_by_css_selector(self.COMMENT_TEXTAREA_NOT_DISABLED).get_attribute('value')
+
+    def is_add_comment_text_input_disabled(self):
+        return self.driver.find_element_by_css_selector(self.COMMENT_TEXTAREA).get_attribute('disabled')
+
+    def assert_comment(self, field_name, field_value, text):
+        self.click_specific_row_by_field_value(field_name, field_value)
+        self.assert_comments_string(text)
+        self.close_side_panel()
+
+    def assert_cannot_add_edit_or_delete_comment(self):
+        self.wait_for_element_absent_by_css(self.ADD_COMMENT_BUTTON)
+        self.wait_for_element_absent_by_css(self.COMMENT_TEXTAREA)
+        self.wait_for_element_absent_by_css(self.COMMENT_SELECT_ELEMENT)
+        self.wait_for_element_absent_by_css(self.COMMENT_DELETE_BUTTON)
+        self.wait_for_element_absent_by_css(self.COMMENT_EDIT_BUTTON)

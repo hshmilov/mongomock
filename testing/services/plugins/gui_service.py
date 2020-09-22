@@ -1395,6 +1395,32 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             }
         })
 
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_45(self):
+        print('Upgrade to schema 45')
+        roles_collection = self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION)
+        bulk_updates = []
+        roles = roles_collection.find({})
+
+        for role in roles:
+            rule_name = role['name']
+            enabled = rule_name in [PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_OWNER] or \
+                (rule_name != PREDEFINED_ROLE_VIEWER and role['permissions'].get('compliance', {}).get('get',
+                                                                                                       False))
+            bulk_updates.append(UpdateOne(
+                {
+                    '_id': role['_id'],
+                },
+                {
+                    '$set': {
+                        'permissions.compliance.comments.post': enabled
+                    }
+                }
+            ))
+
+        if len(bulk_updates) > 0:
+            roles_collection.bulk_write(bulk_updates)
+
     def _update_default_locked_actions_legacy(self, new_actions):
         """
         Update the config record that holds the FeatureFlags setting, adding received new_actions to it's list of
@@ -1650,7 +1676,7 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
                         session=self._session)
 
     def get_space_id_from_panel(self, panel_id: str):
-        return self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION)\
+        return self.db.get_collection(self.plugin_name, DASHBOARD_COLLECTION) \
             .find_one(filter={'_id': ObjectId(panel_id)}, projection={'space': 1})
 
     def get_gui_settings(self):

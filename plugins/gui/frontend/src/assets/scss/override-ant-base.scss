@@ -126,6 +126,11 @@ input[type='text'], input[type='password'], input[type='number'] {
   padding-left: 0px;
 }
 
+// ASelect
+.v-application ul.ant-select-dropdown-menu {
+  padding-left: 0px;
+}
+
 /****************************************************/
 // Global ant-design-vue Components Styles -- END //
 /****************************************************/

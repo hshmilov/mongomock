@@ -10,6 +10,7 @@ import _isNil from 'lodash/isNil';
 import _get from 'lodash/get';
 import { getEntityPermissionCategory } from '@constants/entities';
 import XStringView from '@neurons/schema/types/string/StringView.vue';
+import ComplianceComments from '@components/networks/compliance/ComplianceComments.vue';
 
 const nonExpandablePanelFields = [{
   name: 'rule', title: 'Rule', type: 'string',
@@ -28,6 +29,8 @@ const expandablePanelFields = [{
 }, {
   name: 'error', title: 'Error', type: 'text', expanded: true,
 }, {
+  name: 'comments', title: 'Comments', type: 'array', expanded: true,
+}, {
   name: 'cis', title: 'CIS Controls', type: 'text', expanded: true,
 }];
 
@@ -37,6 +40,7 @@ export default {
     xSidePanel,
     XButton,
     XStringView,
+    ComplianceComments,
   },
   props: {
     visible: {
@@ -48,6 +52,10 @@ export default {
     },
     fields: {
       type: Array,
+    },
+    cisName: {
+      type: String,
+      default: '',
     },
   },
   data() {
@@ -99,11 +107,20 @@ export default {
       }
       return value;
     },
+    shouldSkipPanel(field) {
+      if (field.name === 'comments') {
+        if (this.$cannot(this.$permissionConsts.categories.Compliance,
+          this.$permissionConsts.actions.Update,
+          this.$permissionConsts.categories.Comments) && !this.data.comments.length) {
+          return true;
+        }
+        return false;
+      }
+      return !this.data[field.name];
+    },
     renderExpandableFields() {
       return this.expandablePanelFieldsToDisplay.map((field) => {
-        if (!this.data[field.name]) {
-          return null;
-        }
+        if (this.shouldSkipPanel(field)) return null;
         return (
           <v-expansion-panel>
             <v-expansion-panel-header>
@@ -112,7 +129,13 @@ export default {
               </h5>
             </v-expansion-panel-header>
             <v-expansion-panel-content>
-              {this.data[field.name]}
+              {
+                field.name === 'comments'
+                  ? <compliance-comments comments={this.data[field.name]} accounts={this.data.account}
+                  cisName={this.cisName} section={this.data.section}
+                  onUpdateComments={(data) => this.$emit('updateComments', data)} />
+                  : this.data[field.name]
+              }
             </v-expansion-panel-content>
           </v-expansion-panel>
         );

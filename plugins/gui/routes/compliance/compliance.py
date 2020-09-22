@@ -7,11 +7,12 @@ import io
 from typing import Optional
 
 from flask import (jsonify,
-                   make_response)
+                   make_response, request)
 
-from axonius.compliance.compliance import get_compliance, get_compliance_initial_cis,\
-    get_compliance_filters, update_rules_score_flag
+from axonius.compliance.compliance import get_compliance, get_compliance_initial_cis, \
+    get_compliance_filters, update_rules_score_flag, update_compliance_comments
 from axonius.consts.gui_consts import (FeatureFlagsNames, CloudComplianceNames, FILE_NAME_TIMESTAMP_FORMAT)
+from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from axonius.plugin_base import return_error, PluginBase
 from axonius.utils.gui_helpers import (accounts as accounts_filter,
@@ -41,7 +42,7 @@ class Compliance:
             return jsonify(get_compliance_initial_cis())
         except Exception as e:
             logger.exception(f'Error getting compliance initial data')
-            return return_error(str(e),  http_status=500)
+            return return_error(str(e), http_status=500)
 
     @gui_route_logged_in('<name>/filters', methods=['GET'])
     def get_compliance_filters(self, name):
@@ -79,7 +80,7 @@ class Compliance:
                         aggregated=True):
         try:
             if not self._is_compliance_visible():
-                return return_error('Cloud asset compliance is not visible',  http_status=400)
+                return return_error('Cloud asset compliance is not visible', http_status=400)
             return jsonify(get_compliance(name, method, accounts, rules, categories, failed_only, aggregated))
         except Exception as e:
             logger.exception(f'Error in get_compliance')
@@ -116,7 +117,7 @@ class Compliance:
         for rule in rules:
             rule['entities_results'] = rule.get('error') \
                 if rule.get('error') else rule.get('entities_results')
-        #pylint: enable=unsupported-assignment-operation
+        # pylint: enable=unsupported-assignment-operation
 
         return get_export_csv(rules, field_by_name, None)
 
@@ -160,7 +161,7 @@ class Compliance:
                               aggregated):
         try:
             if not self._is_compliance_visible():
-                return return_error('Cloud asset compliance is not visible',  http_status=400)
+                return return_error('Cloud asset compliance is not visible', http_status=400)
             return self._send_compliance_email(name, schema_fields, accounts, email_props,
                                                rules, categories, failed_only, aggregated)
         except Exception as e:
@@ -284,3 +285,43 @@ class Compliance:
         if message:
             return return_error('Creating Jira issue failed', http_status=500)
         return make_response('Jira issue created.', 200)
+
+    @gui_route_logged_in('<name>/comments', methods=['POST', 'PUT', 'DELETE'],
+                         required_permission=PermissionValue.get(
+                             PermissionAction.Update, PermissionCategory.Compliance, PermissionCategory.Comments),
+                         skip_activity=True)
+    def api_update_compliance_comments(self, name):
+        content = self.get_request_data_as_object()
+        comment = content.get('comment', {})
+
+        if not self._is_compliance_visible():
+            return return_error('Cloud asset compliance is not visible', http_status=400)
+
+        if request.method != 'DELETE' and (not comment.get('text') or not comment.get('account')):
+            return return_error('Content of comment & account should not be empty', http_status=400)
+
+        if comment.get('text') and len(comment.get('text')) > 150:
+            return return_error('Content of comment cannot exceed 150 characters', http_status=400)
+
+        section = content.get('section')
+        index = content.get('index')
+        try:
+            update_compliance_comments(name, section, comment, index)
+        except BaseException:
+            errors = {
+                'PUT': 'Failed to create comment',
+                'POST': 'Failed to edit comment',
+                'DELETE': 'Failed to delete comment'
+            }
+            return return_error(errors[request.method], http_status=500)
+
+        audit_actions = {
+            'PUT': AuditAction.AddComment,
+            'POST': AuditAction.EditComment,
+            'DELETE': AuditAction.DeleteComment
+        }
+        self.log_activity_user(AuditCategory.Compliance, audit_actions.get(request.method), {
+            'section': section,
+            'name': name
+        })
+        return ''

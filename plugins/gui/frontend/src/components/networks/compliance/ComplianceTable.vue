@@ -56,7 +56,9 @@
       :visible="isPanelOpen"
       :data="currentRule"
       :fields="fields"
+      :cis-name="cisName"
       @close="closeSidePanel"
+      @updateComments="(data) => $emit('updateComments', data)"
     />
   </div>
 </template>
@@ -74,6 +76,8 @@ const cisTableFields = [{
   name: 'status', title: '', type: 'string', format: 'status',
 }, {
   name: 'section', title: 'Section', type: 'string',
+}, {
+  name: 'comments_tooltip', title: '', type: 'string', format: 'comments_tooltip',
 }, {
   name: 'rule', title: 'Rule', type: 'string',
 }, {

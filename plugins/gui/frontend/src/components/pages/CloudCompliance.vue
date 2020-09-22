@@ -73,10 +73,10 @@
             @change="toggleFailedSwitch"
           />
           <XSwitch
-              :checked="aggregatedView"
-              class="cross-account"
-              label="Aggregated view"
-              @change="toggleCrossAccountsSwitch"
+            :checked="aggregatedView"
+            class="cross-account"
+            label="Aggregated view"
+            @change="toggleCrossAccountsSwitch"
           />
           <XButton
             class="search__reset"
@@ -91,8 +91,8 @@
             :all-cis-rules="rulesLabels"
             :custom-sort="rulesSort"
             :cis-title="cisTitle"
-            @save-rules="updateActiveRules"
             :lock-compliance-actions="complianceDisabled || complianceExpired"
+            @save-rules="updateActiveRules"
           />
         </div>
       </div>
@@ -109,6 +109,7 @@
         :failed-only="failedOnly"
         :aggregated-view="aggregatedView"
         :lock-compliance-actions="complianceDisabled || complianceExpired"
+        @updateComments="updateComments"
       />
     </div>
     <XComplianceTip
@@ -308,8 +309,9 @@ export default {
           this.aggregatedView,
         );
         this.allCloudComplianceRules = data.rules;
+        this.addCommentsTooltips(this.allCloudComplianceRules);
         this.score = data.score;
-        this.updateComplianceView({ cisName: this.cisName });
+        await this.updateComplianceView({ cisName: this.cisName });
       } catch (ex) {
         this.error = 'Internal Server Error';
         this.loading = false;
@@ -383,6 +385,26 @@ export default {
     },
     prepareRuleOptionName(rule) {
       return `${rule.section} ${rule.name}`;
+    },
+    updateComments(data) {
+      const allCloudComplianceRules = this.allCloudComplianceRules.map((item) => {
+        return item.section === data.section ? { ...item, comments: data.comments } : item;
+      });
+      this.allCloudComplianceRules = allCloudComplianceRules;
+      const rule = this.allCloudComplianceRules.find((item) => item.section === data.section);
+      this.addCommentsTooltips([rule]);
+    },
+    addCommentsTooltips(rules) {
+      for (let i = 0; i < rules.length; i += 1) {
+        const count = rules[i].comments.length;
+        if (count === 1) {
+          this.$set(rules[i], 'comments_tooltip', rules[i].comments[0].text);
+        } else if (count > 1) {
+          this.$set(rules[i], 'comments_tooltip', `Rule has ${count} comments`);
+        } else {
+          this.$set(rules[i], 'comments_tooltip', '');
+        }
+      }
     },
   },
 };

@@ -109,3 +109,31 @@ export const createJiraIssue = async (name, accounts, jiraProperties, schemaFiel
   }
 };
 
+export const updateComplianceComments = async ({
+  name, section, comment = {}, index,
+}) => {
+  const uri = `/compliance/${name}/comments`;
+  const request = createRequest(uri);
+
+  const requestOptions = {
+    method: 'POST',
+    data: { section, comment, index },
+  };
+  if (index === undefined) { // add comment
+    requestOptions.method = 'PUT';
+  } else if (comment.text === undefined && comment.account === undefined) { // delete comment
+    requestOptions.method = 'DELETE';
+  }
+
+  try {
+    await request(requestOptions);
+    return {
+      success: true,
+    };
+  } catch (e) {
+    return {
+      success: false,
+      error: e.response.data.message,
+    };
+  }
+};

@@ -343,6 +343,7 @@ class TestBase:
         self.axonius_system.db.plugins.gui.configurable_configs.delete_config(IDENTITY_PROVIDERS_CONFIG)
         self.axonius_system.gui.update_config()
         self.axonius_system.get_system_config_db().delete_one({'type': SYSTEM_COLUMNS_TYPE})
+        self.axonius_system.get_aws_rules_db().update_many({}, {'$unset': {'comments': 1}})
 
     def change_base_url(self, new_url):
         old_base_url = self.base_url

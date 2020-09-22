@@ -7,6 +7,7 @@ import urllib.parse
 from datetime import datetime
 from typing import List
 
+from flask import request
 from pymongo import UpdateOne
 
 from axonius.compliance.aws_cis_default_rules import \
@@ -211,17 +212,21 @@ def get_compliance_initial_cis():
     }
 
 
-def get_compliance_rules_include_score_flag(compliance_name: str):
+def get_rules_map(compliance_name: str):
     """
-    return map of <rule_name, include_in_score>
+    return map of <rule_name, <include_in_score, comments>>
     :param compliance_name: aws or azure
     """
     rules_collection = get_compliance_rules_collection(compliance_name)
 
     rules = rules_collection.find({})
     result = {}
+
     for rule in rules:
-        result[rule.get('rule_name')] = rule.get('include_in_score', True)
+        result[rule.get('rule_name')] = {
+            'include_in_score': rule.get('include_in_score', True),
+            'comments': rule.get('comments', [])
+        }
     return result
 
 
@@ -267,7 +272,7 @@ def _concat_rules_results(target_rule, secondary_rule):
     target_rule['affected_entities'] = target_rule.get('affected_entities') + \
         secondary_rule.get('affected_entities', '')
     target_rule['entities_results'] = f'{target_rule.get("entities_results")}' \
-                                      f'\n{secondary_rule.get("entities_results")}'\
+                                      f'\n{secondary_rule.get("entities_results")}' \
         if target_rule.get('entities_results') else secondary_rule.get('entities_results')
 
 
@@ -323,13 +328,24 @@ def _build_aggregation_query(accounts):
     return aggregation_query
 
 
+def get_comments_for_csv(comment_list: list):
+    if comment_list:
+        return [f'{comment["text"]} ({comment["account"]})' for comment in comment_list]
+    return []
+
+
 def _beautify_compliance(
         compliance: dict,
         account_id: str,
         account_name: list,
         last_updated: datetime,
-        rules_score_flag_map: dict):
+        rules_map: dict):
     compliance_results = compliance.get('results') or {}
+
+    all_comments = rules_map.get(compliance.get('rule_name')).get('comments', [])
+    comments_accounts = account_name + ['All']
+    filtered_comments = [item for item in all_comments if item['account'] in comments_accounts]
+
     beautify_object = {
         'id': urllib.parse.quote(
             f'{account_id}__{compliance["section"]}',
@@ -348,7 +364,11 @@ def _beautify_compliance(
         'rule': compliance.get('rule_name'),
         'entities_results_query': compliance.get('entities_results_query'),
         'last_updated': last_updated or datetime.now(),
-        'include_in_score': rules_score_flag_map.get(compliance.get('rule_name'), True)}
+        'include_in_score': rules_map.get(compliance.get('rule_name')).get('include_in_score', True),
+        'comments': filtered_comments,
+        'comments_csv': get_comments_for_csv(filtered_comments)
+    }
+
     return beautify_object
 
 
@@ -410,6 +430,7 @@ def _calculate_score(reports, rules_score_flag_map):
     return round((total_passed / total_checked) * 100)
 
 
+# pylint: disable=too-many-locals
 def get_compliance_rules(compliance_name, accounts, rules, categories, failed_only, aggregated) -> List[dict]:
     if rules is None:
         rules = []
@@ -422,15 +443,16 @@ def get_compliance_rules(compliance_name, accounts, rules, categories, failed_on
     all_reports = list(compliance_reports_collection
                        .aggregate(_build_aggregation_query(accounts)))
 
-    rules_score_flag_map = get_compliance_rules_include_score_flag(compliance_name)
+    rules_map = get_rules_map(compliance_name)
+    rules_score_flag_map = {rule: rules_map[rule]['include_in_score'] for rule in rules_map}
 
     def prepare_default_report(default_rules, time_now):
         time_now = datetime.now()
         if len(all_accounts) == 0:
-            yield from (_beautify_compliance(rule, rule['account'], [rule['account']], time_now, rules_score_flag_map)
+            yield from (_beautify_compliance(rule, rule['account'], [rule['account']], time_now, rules_map)
                         for rule in _filter_rules(default_rules, rules_score_flag_map, rules, categories, failed_only))
         for account in all_accounts:
-            yield from (_beautify_compliance(rule, account, [account], time_now, rules_score_flag_map)
+            yield from (_beautify_compliance(rule, account, [account], time_now, rules_map)
                         for rule in _filter_rules(default_rules, rules_score_flag_map, rules, categories, failed_only)
                         if rule['account'] == account)
 
@@ -438,13 +460,13 @@ def get_compliance_rules(compliance_name, accounts, rules, categories, failed_on
         for report_doc in reports:
             report = report_doc['last']
             yield from (_beautify_compliance(rule, report['account_id'], [report['account_name']],
-                                             report['last_updated'], rules_score_flag_map)
+                                             report['last_updated'], rules_map)
                         for rule in _filter_rules(report['report'].get('rules'), rules_score_flag_map, rules,
                                                   categories, failed_only) or [])
 
     def prepare_aggregated_report(aggregated_rules, accounts_ids, accounts_names, last_updated_report):
         yield from (_beautify_compliance(rule, ','.join(accounts_ids), accounts_names,
-                                         last_updated_report, rules_score_flag_map)
+                                         last_updated_report, rules_map)
                     for rule in _filter_rules(aggregated_rules, rules_score_flag_map, rules,
                                               categories, failed_only) or [])
 
@@ -470,3 +492,41 @@ def get_compliance_rules(compliance_name, accounts, rules, categories, failed_on
 
     score = _calculate_score(all_reports, rules_score_flag_map)
     return cis_report, score
+
+
+def update_compliance_comments(compliance_name, section, comment, index):
+    rules_db = get_compliance_rules_collection(compliance_name)
+
+    find = {'section': section}
+
+    if request.method == 'PUT':
+        rules_db.update_one(
+            find,
+            {
+                '$push': {
+                    'comments': {
+                        '$each': [comment],
+                        '$position': 0
+                    }
+                }
+            })
+    elif request.method == 'POST':
+
+        rules_db.update_one(
+            find,
+            {
+                '$set':
+                    {
+                        f'comments.{index}.text': comment.get('text'),
+                        f'comments.{index}.account': comment.get('account')
+                    }
+            })
+    else:
+        rules_db.update_one(
+            find,
+            {'$unset': {f'comments.{index}': 1}}
+        )
+        rules_db.update_one(
+            find,
+            {'$pull': {'comments': None}}
+        )

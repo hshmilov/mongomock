@@ -25,6 +25,7 @@ class PermissionCategory(Enum):
     Tasks = 'tasks'
     Reports = 'reports'
     Compliance = 'compliance'
+    Comments = 'comments'
 
     @classmethod
     def has_value(cls, value):
@@ -152,6 +153,9 @@ def get_permissions_structure(default_permission: bool) -> dict:
         PermissionCategory.Compliance: {
             PermissionAction.View: default_permission,
             PermissionAction.Update: default_permission,
+            PermissionCategory.Comments: {
+                PermissionAction.Update: default_permission,
+            }
         },
     }
 

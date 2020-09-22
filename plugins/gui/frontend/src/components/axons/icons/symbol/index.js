@@ -16,6 +16,7 @@ import warning from './warning';
 import stacked from './stacked';
 import verticalDots from './verticaldots';
 import trend from './trend';
+import chat from './chat';
 
 export default {
   error,
@@ -36,4 +37,5 @@ export default {
   stacked,
   verticalDots,
   trend,
+  chat,
 };

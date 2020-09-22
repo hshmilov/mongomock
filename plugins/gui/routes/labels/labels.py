@@ -78,7 +78,8 @@ class Labels:
 
             'permissions.compliance': 'Cloud Asset Compliance',
             'permissions.compliance.get': 'View Cloud Asset Compliance',
-            'permissions.compliance.post': 'Update Score Settings',
+            'permissions.compliance.post': 'Update score settings',
+            'permissions.compliance.comments.post': 'Manage comments',
 
             'audit.session': 'User Session',
             'audit.session.login': 'Login',
@@ -360,6 +361,13 @@ class Labels:
             'audit.compliance.csv.template': 'Exported to CSV compliance \'{name}\'',
             'audit.compliance.send_email': 'Send Email',
             'audit.compliance.send_email.template': 'Compliance {cis_title} results sent by email',
+            'audit.compliance.add_comment': 'Add Comment',
+            'audit.compliance.add_comment.template': 'Added comment for rule \'{section}\' on compliance \'{name}\'',
+            'audit.compliance.edit_comments': 'Edit Comment',
+            'audit.compliance.edit_comments.template': 'Edited comment for rule \'{section}\' on compliance \'{name}\'',
+            'audit.compliance.delete_comments': 'Delete Comment',
+            'audit.compliance.delete_comments.template':
+                'Deleted comment for rule \'{section}\' on compliance \'{name}\'',
 
             'audit.tunnel': 'Tunnel',
             'audit.tunnel.connected': 'Tunnel Connected',

@@ -24,6 +24,7 @@ export const PermissionCategory = {
   Tasks: 'tasks',
   Reports: 'reports',
   Compliance: 'compliance',
+  Comments: 'comments',
 };
 
 export const PermissionAction = {
@@ -146,6 +147,7 @@ export const PermissionsStructure = [
     actions: [
       'permissions.compliance.get',
       'permissions.compliance.post',
+      'permissions.compliance.comments.post',
     ],
   },
 ];

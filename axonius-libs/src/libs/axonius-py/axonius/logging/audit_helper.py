@@ -17,6 +17,7 @@ class AuditCategory(Enum):
     Dashboard = 'dashboard'
     Instances = 'instances'
     Charts = 'dashboard.charts'
+    Compliance = 'compliance'
 
 
 class AuditAction(Enum):
@@ -43,6 +44,9 @@ class AuditAction(Enum):
     TagReimaged = 'tag_reimaged'
     ExportCsv = 'export_csv'
     TagUpdate = 'update_tags'
+    AddComment = 'add_comment'
+    EditComment = 'edit_comments'
+    DeleteComment = 'delete_comments'
 
 
 class AuditType(Enum):

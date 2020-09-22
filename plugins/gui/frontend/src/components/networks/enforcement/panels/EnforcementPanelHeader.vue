@@ -46,5 +46,6 @@ export default {
   .action-edit, .action-remove {
     font-size: 20px;
     vertical-align: middle;
+    color: #fff;
   }
 </style>

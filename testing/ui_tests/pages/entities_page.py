@@ -270,7 +270,6 @@ class EntitiesPage(Page):
     EDIT_COLUMNS_MODAL_TITLE = '.x-edit-columns-modal .ant-modal-title'
     EDIT_COLUMNS_MODAL = '.x-edit-columns-modal'
     SAVE_BUTTON_TEXT = 'Save'
-    MODAL_CONFIRM = '.ant-modal-confirm'
     EDIT_SYSTEM_DEFAULT_TITLE = 'Edit System Default'
     EDIT_SYSTEM_SEARCH_DEFAULT_HOSTNAME_TITLE = 'Edit System Search Default (Host Name)'
 
