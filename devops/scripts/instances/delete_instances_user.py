@@ -16,7 +16,7 @@ def main():
         if LOGGED_IN_MARKER_PATH.exists() and pwd.getpwnam(INSTANCE_USER_NAME):
             if Path('/etc/sudoers.d/90-decrypt').exists():
                 Path('/etc/sudoers.d/90-decrypt').unlink()
-            subprocess.check_call(['/usr/sbin/userdel', '-f', '-r', INSTANCE_USER_NAME])
+            subprocess.check_call(['/usr/sbin/userdel', '-f', INSTANCE_USER_NAME])
     except KeyError:
         # Case of pwd.getpwnam() user doesn't exist
         pass
