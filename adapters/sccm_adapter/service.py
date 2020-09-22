@@ -270,9 +270,12 @@ class SccmAdapter(AdapterBase, Configurable):
 
                 device.id = device_id
                 try:
-                    build = device_raw.get('BuildExt') or device_raw.get('Build01')
+                    build = device_raw.get('Build01') or device_raw.get('BuildExt')
                     device.figure_os((device_raw.get('operatingSystem0') or '') + ' ' +
                                      (device_raw.get('Operating_System_Name_and0') or '') + ' ' + (build or ''))
+                    if '(' in build:
+                        build = build.split('(')[1].split(')')[0]
+                    build = build.split('.')[-1]
                     device.os.build = build
                 except Exception:
                     pass

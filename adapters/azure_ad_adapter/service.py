@@ -261,7 +261,16 @@ class AzureAdAdapter(AdapterBase, Configurable):
 
             device.ad_on_premise_trust_type = raw_device_data.get('trustType')
             device.figure_os(raw_device_data.get('operatingSystem', ''))
-            device.os.build = raw_device_data.get('operatingSystemVersion')
+            try:
+                build = raw_device_data.get('operatingSystemVersion')
+                if build and build.startswith('10.0.'):
+                    build = build.split('.')[2]
+                if '(' in build:
+                    build = build.split('(')[1].split(')')[0]
+                if build != 'Windows 10':
+                    device.os.build = build
+            except Exception:
+                pass
             device.adapter_properties = [AdapterProperty.Assets.name, AdapterProperty.Manager.name]
             device.set_raw(raw_device_data)
             return device
