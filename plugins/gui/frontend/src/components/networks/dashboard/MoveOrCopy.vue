@@ -29,7 +29,7 @@
       <ACheckbox
         id="create_panel_copy"
         :checked="copy"
-        :disabled="cannotCopy || isPersonalSpaceSelected"
+        :disabled="cannotCopy || cannotMove || isPersonalSpaceSelected"
         @change="onChangeCopy"
       >
         Create a copy
@@ -124,6 +124,11 @@ export default {
       return this.$cannot(this.$permissionConsts.categories.Dashboard,
         this.$permissionConsts.actions.Add, this.$permissionConsts.categories.Charts);
     },
+    cannotMove() {
+      return !this.cannotCopy
+        && this.$cannot(this.$permissionConsts.categories.Dashboard,
+          this.$permissionConsts.actions.Update, this.$permissionConsts.categories.Charts);
+    },
     isPersonalSpaceSelected() {
       return this.space === this.personalSpace.uuid;
     },
@@ -132,6 +137,8 @@ export default {
     this.space = this.currentSpace;
     if (this.cannotCopy) {
       this.copy = false;
+    } else if (this.cannotMove) {
+      this.copy = true;
     }
   },
   methods: {
