@@ -1573,6 +1573,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
     def _correlate_agent_uuid(self, adapters_to_correlate):
         logger.info('Starting to correlate Agent UUID')
         filtered_adapters_list = filter(get_agent_uuid, adapters_to_correlate)
+        filtered_adapters_list = filter(get_hostname, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_agent_uuid],
                                       [compare_agent_uuids],

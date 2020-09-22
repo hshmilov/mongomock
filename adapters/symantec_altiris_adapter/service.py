@@ -60,7 +60,17 @@ class SymantecAltirisAdapter(AdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data: MSSQLConnection):
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
-
+            encryption_dict = dict()
+            try:
+                for encryption_data in client_data.query(consts.BITLOCKER_QUERY):
+                    asset_id = encryption_data.get('_ResourceGuid')
+                    if not asset_id:
+                        continue
+                    if asset_id not in encryption_dict:
+                        encryption_dict[asset_id] = []
+                    encryption_dict[asset_id].append(encryption_data)
+            except Exception:
+                logger.exception(f'Problem getting encryption')
             inventory_dict = dict()
             try:
                 for inventory_data in client_data.query(consts.INVENTORY_QUERY):
@@ -84,7 +94,7 @@ class SymantecAltirisAdapter(AdapterBase, Configurable):
                 logger.exception(f'Problem getting inventory')
 
             for device_raw in client_data.query(consts.ALTIRIS_QUERY):
-                yield device_raw, inventory_dict, software_dict
+                yield device_raw, inventory_dict, software_dict, encryption_dict
 
     def _clients_schema(self):
         return {
@@ -128,9 +138,9 @@ class SymantecAltirisAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
-    # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks
+    # pylint: disable=too-many-branches, too-many-statements, too-many-nested-blocks, too-many-locals
     def _parse_raw_data(self, devices_raw_data):
-        for device_raw, inventory_dict, software_dict in devices_raw_data:
+        for device_raw, inventory_dict, software_dict, encryption_dict in devices_raw_data:
             try:
                 device_id = str(UUID(bytes=device_raw.get('Guid')))
                 if not device_id:
@@ -143,6 +153,28 @@ class SymantecAltirisAdapter(AdapterBase, Configurable):
                     domain = None
                 device.domain = domain
                 name = device_raw.get('Name')
+                try:
+                    encryption_data = encryption_dict.get(device_raw.get('Guid'))
+                    if encryption_data and isinstance(encryption_data, list):
+                        for encryption_raw in encryption_data:
+                            try:
+                                drive_name = encryption_raw.get('Drive')
+                                protection_status = encryption_raw.get('ProtectionStatus')
+                                if isinstance(protection_status, int):
+                                    protection_status = str(protection_status)
+                                if not drive_name or not protection_status:
+                                    continue
+                                if protection_status == '1':
+                                    is_encrypted = True
+                                elif protection_status == '0':
+                                    is_encrypted = False
+                                else:
+                                    continue
+                                device.add_hd(path=drive_name, is_encrypted=is_encrypted)
+                            except Exception:
+                                logger.exception(f'Problem adding encryption raw {encryption_raw}')
+                except Exception:
+                    logger.exception(f'Problem getting encryption {device_raw}')
                 try:
                     software_data = software_dict.get(device_raw.get('Guid'))
                     if software_data and isinstance(software_data, list):
