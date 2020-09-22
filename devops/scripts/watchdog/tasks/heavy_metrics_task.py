@@ -4,13 +4,17 @@ Like system metrics task, but for heavy things that should run less
 import statistics
 import time
 from collections import defaultdict
+from pathlib import Path
+import json
 
 from axonius.consts.metric_consts import HeavySystemMetric
 from axonius.entities import EntityType
 from scripts.watchdog.watchdog_task import WatchdogTask
 from services.axonius_service import AxoniusService
+from axonius.utils.axonius_query_language import parse_filter
 
-SLEEP_SECONDS = 60 * 60 * 12    # 12 hours
+SLEEP_SECONDS = 60 * 60 * 12  # 12 hours
+QUERIES_FILE = Path('/etc/axonius/count_queries')
 
 
 class HeavySystemMetricsTask(WatchdogTask):
@@ -19,6 +23,7 @@ class HeavySystemMetricsTask(WatchdogTask):
             self.report_info(f'Starting a run of HeavySystemMetricsTask')
             self.report_entities_fields_stats()
             self.report_entities_raw_db_stats()
+            self.report_count_queries()
             time.sleep(SLEEP_SECONDS)
 
     def report_entities_fields_stats(self):
@@ -120,6 +125,30 @@ class HeavySystemMetricsTask(WatchdogTask):
             self.report_error(f'failed to report raw adapter stats - {e}')
         finally:
             del size_per_adapter
+
+    def report_count_queries(self):
+        try:
+            self.report_info(f'Analyzing count metrics')
+            if QUERIES_FILE.is_file():
+                ax = AxoniusService()
+                content = json.loads(QUERIES_FILE.read_text())
+                for entry in content['count_queries']:
+                    entity_type = EntityType(entry['entity_type'])
+                    query = entry['query']
+                    name = entry['name']
+                    query_as_mongo = parse_filter(query)
+                    collection = ax.db.get_entity_db(entity_type)
+                    count = collection.count_documents(query_as_mongo)
+                    self.report_metric(metric_name=HeavySystemMetric.COUNT_QUERIES,
+                                       metric_value=count,
+                                       query_name=name,
+                                       query_entity_type=entity_type.name,
+                                       query_body=query)
+            else:
+                self.report_info(f'No {QUERIES_FILE} was found')
+
+        except Exception as e:
+            self.report_error(f'failed to run count queries - {e}')
 
 
 if __name__ == '__main__':

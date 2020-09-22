@@ -40,6 +40,7 @@ class HeavySystemMetric:
     ENTITIES_FIELDS_SIZE_KEY = 'entities.adapters_parsed_fields_size'
     ENTITIES_ADAPTERS_SIZE_KEY = 'entities.adapters_parsed_data_size'
     ENTITIES_RAW_ADAPTERS_SIZE_KEY = 'entities.adapters_raw_data_size'
+    COUNT_QUERIES = 'count_queries'
 
 
 class ApiMetric:
