@@ -459,7 +459,7 @@ export default {
     onSortChanged(sort) {
       this.chartSort = sort;
       this.currentPage = 1;
-      this.fetchData({ blocking: true });
+      this.fetchData({ blocking: true, refresh: true });
     },
     onChartUpdated(data) {
       this.$emit('chart-changed', data);

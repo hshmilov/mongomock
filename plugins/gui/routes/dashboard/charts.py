@@ -2,6 +2,7 @@ import copy
 import csv
 import io
 import logging
+import threading
 from datetime import datetime
 from enum import Enum
 
@@ -172,6 +173,43 @@ class Charts:
             '$unset': {'linked_dashboard': 1}
         })
 
+    def _get_db_cached_data(self, chart_id):
+        chart_data = self._dashboard_collection.find_one({'_id': ObjectId(chart_id)})
+        if chart_data and chart_data.get('cached_result') and \
+                chart_data.get('cached_config', {}) == chart_data.get('config', {}):
+            logger.info(f'Got chart {chart_data.get("name")} from db cache')
+            return chart_data.get('cached_result')
+        return None
+
+    def _set_db_cached_data(self, chart_id, data):
+        current_config = self._dashboard_collection.find_one({'_id': ObjectId(chart_id)}).get('config')
+        self._dashboard_collection.find_one_and_update(
+            {
+                '_id': ObjectId(chart_id)
+            },
+            {
+                '$set': {
+                    'cached_result': data,
+                    'cached_config': current_config
+                }
+            }
+        )
+
+    def _async_generate_dashboard(self, panel_id, sort_by=None, sort_order=None):
+        try:
+            logger.debug(f'Started generating panel id {panel_id} async')
+            generated_dashboard = generate_dashboard.wait_for_cache(panel_id, sort_by=sort_by,
+                                                                    sort_order=sort_order,
+                                                                    wait_time=REQUEST_MAX_WAIT_TIME)
+        except (TimeoutError, NoCacheException):
+            # the dashboard is still being calculated
+            logger.debug(f'Async Dashboard {panel_id} is not ready')
+            return
+        dashboard_data = generated_dashboard.get('data', [])
+        truncated_dashboard_data = self._process_initial_dashboard_data(dashboard_data)
+        logger.info(f'Finished generating panel id: {panel_id} asynchronously')
+        self._set_db_cached_data(panel_id, truncated_dashboard_data)
+
     def _link_trend_chart(self, chart_data, chart_id: ObjectId, space_id: ObjectId):
         config = chart_data.get('config')
         trend_chart_data = {
@@ -219,6 +257,7 @@ class Charts:
     @gui_route_logged_in('<panel_id>', methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Dashboard))
     @sorted_by_method_endpoint()
+    # pylint: disable=too-many-branches
     def get_dashboard_panel(self, panel_id, skip, limit, from_date: datetime, to_date: datetime,
                             search: str, sort_by=None, sort_order=None):
         """
@@ -235,6 +274,7 @@ class Charts:
         """
         is_refresh = request.args.get('refresh', False) == 'true'
         is_blocking = request.args.get('blocking', False) == 'true'
+        got_from_db_cache = False
         panel_id = ObjectId(panel_id)
         if is_refresh:
             generate_dashboard.clean_cache([panel_id, sort_by, sort_order])
@@ -244,12 +284,30 @@ class Charts:
             generated_dashboard = generate_dashboard_historical(panel_id, from_date, to_date,
                                                                 sort_by=sort_by, sort_order=sort_order)
         else:
+            generated_dashboard = None
             try:
-                if is_refresh or is_blocking:
+                if is_refresh:
                     # we want to wait for a fresh data
                     generated_dashboard = generate_dashboard.wait_for_cache(panel_id, sort_by=sort_by,
                                                                             sort_order=sort_order,
                                                                             wait_time=REQUEST_MAX_WAIT_TIME)
+                elif is_blocking:
+                    if not generate_dashboard.has_cache(panel_id, sort_by=sort_by, sort_order=sort_order):
+                        try:
+                            generated_dashboard = self._get_db_cached_data(panel_id)
+                        except Exception:
+                            logger.error(f'Couldn\'t get cached data from db for panel id: {panel_id}', exc_info=True)
+                    if generated_dashboard is None:
+                        generated_dashboard = generate_dashboard.wait_for_cache(panel_id, sort_by=sort_by,
+                                                                                sort_order=sort_order,
+                                                                                wait_time=REQUEST_MAX_WAIT_TIME)
+                    else:
+                        got_from_db_cache = True
+                        thread = threading.Thread(target=self._async_generate_dashboard,
+                                                  args=(panel_id,),
+                                                  kwargs={'sort_by': sort_by, 'sort_order': sort_order},
+                                                  daemon=True)
+                        thread.start()
                 else:
                     generated_dashboard = generate_dashboard(panel_id, sort_by=sort_by, sort_order=sort_order)
             except (TimeoutError, NoCacheException):
@@ -266,7 +324,13 @@ class Charts:
             dashboard_data = [data for data in dashboard_data
                               if search.lower() in self.get_string_value(data['name']).lower()]
         if not skip:
-            return jsonify(self._process_initial_dashboard_data(dashboard_data))
+            truncated_dashboard_data = self._process_initial_dashboard_data(dashboard_data)
+            if not got_from_db_cache:
+                try:
+                    self._set_db_cached_data(panel_id, truncated_dashboard_data)
+                except Exception:
+                    logger.error(f'Couldn\'t save db cached data to panel id: {panel_id}', exc_info=True)
+            return jsonify(truncated_dashboard_data)
 
         return jsonify({
             'data': dashboard_data[skip: skip + limit],
