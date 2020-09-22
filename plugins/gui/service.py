@@ -19,7 +19,6 @@ from bson.json_util import dumps
 import requests
 import cachetools
 
-
 import pymongo
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
@@ -660,6 +659,8 @@ class GuiService(Triggerable,
 
     def dump_metrics(self):
         try:
+            self.dump_connection_status()
+
             # Uncached because the values here are important for metrics
             adapter_devices = adapter_data.call_uncached(EntityType.Devices)
             adapter_users = adapter_data.call_uncached(EntityType.Users)
@@ -732,6 +733,28 @@ class GuiService(Triggerable,
             dump_per_adapter(adapter_users, 'users')
         except Exception:
             logger.exception('Failed to dump metrics')
+
+    def dump_connection_status(self):
+        try:
+            adapters = self._adapters()
+            for adapter_name, value in adapters.items():
+                for adapter in value:
+                    unique_plugin_name = adapter['unique_plugin_name']
+                    node_name = adapter['node_name']
+                    clients = adapter['clients']
+                    for client in clients:
+                        client.pop('client_config', None)
+                        client.pop('last_fetch_time', None)
+                        client.pop('date_fetched', None)
+                        client.pop('error', None)
+                        log_metric(logger=logger,
+                                   metric_name=SystemMetric.ADAPTER_CONNECTION_INFO,
+                                   metric_value=str(client),
+                                   adapter_name=adapter_name,
+                                   unique_plugin_name=unique_plugin_name,
+                                   node_name=node_name)
+        except Exception:
+            logger.exception(f'Failed to report per adapter connection status')
 
     @property
     def plugin_subtype(self) -> PluginSubtype:

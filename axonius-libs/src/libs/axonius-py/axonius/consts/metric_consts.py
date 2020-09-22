@@ -34,6 +34,7 @@ class SystemMetric:
     CONTRACT_EXPIRED_STATE = 'contract_expired_state'
     LOGIN_MARKER = 'LOGIN_MARKER'
     NEW_NODE_CONNECTED = 'new_node_connected'
+    ADAPTER_CONNECTION_INFO = 'adapter_connection_info'
 
 
 class HeavySystemMetric:

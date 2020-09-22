@@ -85,6 +85,8 @@ class TestMetrics(TestBase):
         wait_until(lambda: tester.is_metric_in_log('adapter.users.json_file_adapter.entities.meta', 2))
         wait_until(lambda: tester.is_metric_in_log('adapter.users.active_directory_adapter.entities', r'\d+'))
         wait_until(lambda: tester.is_metric_in_log('adapter.users.active_directory_adapter.entities.meta', r'\d+'))
+        wait_until(lambda: tester.is_metric_in_log(SystemMetric.ADAPTER_CONNECTION_INFO, r'active_directory_adapter'))
+        wait_until(lambda: tester.is_metric_in_log(SystemMetric.ADAPTER_CONNECTION_INFO, r'status'))
 
     def _create_report(self, report_name):
         self.reports_page.switch_to_page()
