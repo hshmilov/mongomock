@@ -15,6 +15,7 @@ from axonius.consts.plugin_consts import (
 from axonius.db_migrations import db_migration
 from axonius.devices.device_adapter import LAST_SEEN_FIELD
 from axonius.entities import EntityType
+from axonius.utils.debug import redprint, yellowprint, greenprint
 from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.mongo_administration import (create_capped_collection,
                                                 get_collection_storage_size)
@@ -1942,7 +1943,50 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             },
             new_id_func)
 
-    def _migrate_entity_id_generic(
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_59(self):
+        print('Update to schema 59 - Convert Splunk device.id to a new format')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            device_type = data.get('splunk_source')
+            if not device_type.startswith('General Macro '):
+                return False
+
+            hostname = data.get('hostname') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{hostname}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{hostname}'
+
+        self._migrate_entity_id_generic(
+            EntityType.Devices,
+            'splunk_adapter',
+            {
+                'adapters.data.hostname': 1,
+                'adapters.data.splunk_source': 1
+            },
+            new_id_func)
+
+    def _migrate_entity_id_generic(self, *args, **kwargs):
+        number_of_retries = 0
+        while True:
+            try:
+                return self.__migrate_entity_id_generic(*args, **kwargs)
+            except BulkWriteError:
+                number_of_retries += 1
+                if number_of_retries >= 5:
+                    yellowprint(f'Giving up at {number_of_retries} retries of migration. This might be OK')
+                    raise
+                yellowprint(f'Migration BulkWriteError (try {number_of_retries}), running migration again')
+
+    def __migrate_entity_id_generic(
             self,
             entity_type: EntityType,
             plugin_name: str,
@@ -1951,7 +1995,9 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
     ):
         try:
             entities_db = self._entity_db_map[entity_type]
+            raw_entities_db = self._raw_adapter_entity_db_map[entity_type]
             to_fix = []
+            to_fix_raw = []
             # Get all devices which have the plugin adapter
 
             projection.update({
@@ -1995,11 +2041,40 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
                         }
                     }))
 
+                    to_fix_raw.append(pymongo.operations.UpdateOne({
+                        'plugin_unique_name': entity_adapter[PLUGIN_UNIQUE_NAME],
+                        'id': current_id,
+                    }, {
+                        '$set': {
+                            'id': new_id
+                        }
+                    }))
+
+            amount_of_update_operations = len(to_fix_raw) + len(to_fix)
+            if amount_of_update_operations:
+                print(
+                    f'Upgrading {plugin_name} ID format. '
+                    f'Found {len(to_fix)} record ({amount_of_update_operations} operations)..'
+                )
+
+            if to_fix_raw:
+                print(f'Upgrading raw-data')
+                try:
+                    for i in range(0, len(to_fix_raw), 1000):
+                        raw_entities_db.bulk_write(to_fix_raw[i: i + 1000], ordered=False)
+                        percentage = round(((i + 1000) / len(to_fix_raw)) * 100, 2)
+                        print(f'(1/2) Fixed raw chunk of {i + 1000} / {len(to_fix_raw)} records ({percentage}%)')
+                except BulkWriteError as e:
+                    print(f'Exception while upgrading: Caught BulkWriteError, continuing. Error is: {e.details}')
+                except Exception as e:
+                    print(f'Exception while upgrading: exception in raw fixing. continuing. Error is: {str(e)}')
+
             if to_fix:
-                print(f'Upgrading {plugin_name} ID format. Found {len(to_fix)} records..')
+                print(f'Upgrading parsed-data')
                 for i in range(0, len(to_fix), 1000):
                     entities_db.bulk_write(to_fix[i: i + 1000], ordered=False)
-                    print(f'Fixed Chunk of {i + 1000} records')
+                    percentage = round(((i + 1000) / len(to_fix)) * 100, 2)
+                    print(f'(2/2) Fixed parsed chunk of {i + 1000} / {len(to_fix)} records ({percentage}%)')
             else:
                 print(f'{plugin_name} ID upgrade: Nothing to fix. Moving on')
         except BulkWriteError as e:

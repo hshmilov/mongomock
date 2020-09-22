@@ -21,7 +21,7 @@ from utils import (AXONIUS_DEPLOYMENT_PATH,
                    current_file_system_path,
                    print_state,
                    run_cmd,
-                   chown_folder, verify_storage_requirements)
+                   chown_folder, verify_storage_requirements, show_weave_info)
 
 TIMESTAMP = datetime.datetime.now().strftime('%y%m%d-%H%M')
 
@@ -112,12 +112,15 @@ def start_install_flow():
     no_research = args.no_research
     do_not_verify_storage = args.do_not_verify_storage
     master_only = args.master_only
+    first_time = args.first_time
+    if not first_time:
+        show_weave_info()
     if not do_not_verify_storage:
         verify_storage_requirements()
     if os.geteuid() != 0:
         print(f'Please run as root!')
         return False
-    install(args.first_time, no_research, master_only)
+    install(first_time, no_research, master_only)
     print_state(f'Done, took {int(time.time() - start)} seconds')
     return True
 

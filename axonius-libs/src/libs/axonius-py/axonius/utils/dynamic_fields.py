@@ -4,6 +4,7 @@ import logging
 
 from axonius.fields import ListField, Field
 from axonius.smart_json_class import SmartJsonClass
+from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_var_name
 
 EMPTY_VARS = (None, [], {}, '')  # for handling non-null "Falsey" data
@@ -46,6 +47,21 @@ def put_dynamic_field(entity: SmartJsonClass, key: str, value, title: str, allow
     # don't just `if not value` in case value is a false boolean, for example!
     if (not allow_empty) and (value in EMPTY_VARS):
         return
+    # special treatment for dates
+    if isinstance(value, str):
+        try:
+            # Let's make sure that's not a regular float
+            try:
+                float(value)
+            except Exception:
+                # It is not a float/int, then it could be a date.
+                date = parse_date(value)
+                if date:
+                    value = date    # turn to datetime
+        except Exception:
+            # leave it as a string
+            pass
+
     key = normalize_var_name(key)
     if not entity.does_field_exist(key):
         entity.declare_new_field(key, get_entity_new_field(title, value, allow_empty=allow_empty))

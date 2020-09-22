@@ -932,7 +932,7 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
         remove_domain_from_preferred_hostname = PluginBase.Instance._remove_domain_from_preferred_hostname or False
         # pylint: enable=protected-access
     except Exception:
-        pass
+        remove_domain_from_preferred_hostname = False
 
     def _extract_name(field_path):
         """

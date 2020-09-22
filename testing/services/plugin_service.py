@@ -24,7 +24,7 @@ from axonius.config_reader import (AdapterConfig, PluginConfig,
                                    PluginVolatileConfig)
 from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG, FeatureFlagsNames
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, \
-    PLUGIN_NAME, NODE_ID, LIBS_PATH, KEYS_COLLECTION, GUI_PLUGIN_NAME
+    PLUGIN_NAME, NODE_ID, LIBS_PATH, KEYS_COLLECTION, GUI_PLUGIN_NAME, USER_ADAPTERS_RAW_DB, DEVICE_ADAPTERS_RAW_DB
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, WEAVE_NETWORK, DB_KEY_PATH, NODE_MARKER_PATH
 from axonius.entities import EntityType
 from axonius.plugin_base import VOLATILE_CONFIG_PATH
@@ -83,6 +83,11 @@ class PluginService(WeaveService):
         self._entity_db_map: Dict[EntityType, Collection] = {
             EntityType.Users: self.db.client['aggregator']['users_db'],
             EntityType.Devices: self.db.client['aggregator']['devices_db'],
+        }
+
+        self._raw_adapter_entity_db_map: Dict[EntityType, Collection] = {
+            EntityType.Users: self.db.client['aggregator'][USER_ADAPTERS_RAW_DB],
+            EntityType.Devices: self.db.client['aggregator'][DEVICE_ADAPTERS_RAW_DB],
         }
 
         self._all_fields_db_map: Dict[EntityType, Collection] = {

@@ -318,6 +318,8 @@ class AggregatorService(Triggerable, PluginBase):
                 logger.info(f'For {entity_type} not saving history: save only once a day - last saved at {val}')
                 return 'skipping saved history'
 
+        logger.info(f'Saving history. max_days_to_save: {str(settings.get("max_days_to_save"))}, '
+                    f'save_raw_data: {str(settings.get("save_raw_data"))}')
         self._drop_old_historic_collections(entity_type)
         threads = [
             Thread(target=self.call_safe_collection_transfer,
@@ -340,28 +342,32 @@ class AggregatorService(Triggerable, PluginBase):
                          }, {
                              '$merge': to_db.name
                          }])),
-            Thread(target=self.call_safe_collection_transfer,
-                   args=(raw_from_db.aggregate, [
-                       {
-                           '$project': {
-                               '_id': 0
-                           }
-                       },
-                       {
-                           '$addFields': {
-                               'accurate_for_datetime': {
-                                   '$literal': now
-                               }
-                           }
-                       },
-                       {
-                           '$merge': raw_to_db.name
-                       }
-                   ],)),
             Thread(target=self._create_daily_historic_collection,
                    args=(entity_type, from_db, now)
                    )
         ]
+
+        if settings.get('save_raw_data'):
+            threads.append(
+                Thread(target=self.call_safe_collection_transfer,
+                       args=(raw_from_db.aggregate, [
+                           {
+                               '$project': {
+                                   '_id': 0
+                               }
+                           },
+                           {
+                               '$addFields': {
+                                   'accurate_for_datetime': {
+                                       '$literal': now
+                                   }
+                               }
+                           },
+                           {
+                               '$merge': raw_to_db.name
+                           }
+                       ],))
+            )
         # pylint: disable=expression-not-assigned
         [t.start() for t in threads]
         [t.join() for t in threads]

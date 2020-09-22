@@ -89,6 +89,7 @@ def usage():
     {name} wd [kill/restart] - kill all watchdogs / restart all watchdogs
     {name} wd disable [x] - disable watchdogs for x minutes
     {name} tc [run/stop] Run tunnel (mongo & core) to core 
+    {name} set_db [schema-version] [db_name] [schema_version] - e.g. set-db schema-version aggregator 46
     '''
 
 
@@ -257,6 +258,21 @@ def main():
         subprocess.check_call(
             'docker exec -w /home/axonius/app/gui/frontend -t gui npm run build', shell=True, cwd=ROOT_DIR
         )
+
+    elif component == 'set_db':
+        if action == 'schema_version':
+            try:
+                db, version = sys.argv[3]
+                version = int(version)
+            except Exception:
+                print(usage())
+                return -1
+
+            ag.db.client[db]['version'].update_one({'name': 'schema'}, {'$set': {'version': version}})
+            print(f'Done')
+        else:
+            print(usage())
+            return -1
 
     elif component == 'migrate':
         service = _get_docker_service(action)

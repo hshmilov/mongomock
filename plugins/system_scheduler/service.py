@@ -306,6 +306,12 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         else:
             self.__max_days_to_save = False
 
+        history_data_settings = config.get('history_data_settings') or {}
+        if history_data_settings.get('save_raw_data'):
+            self.__save_raw_data = True
+        else:
+            self.__save_raw_data = False
+
         logger.info(f'Setting research mode to: {self.__system_research_mode}')
         logger.info(f'Setting research rate to: {self.__system_research_rate}')
         logger.info(f'Setting research date to: {self.__system_research_date_time}')
@@ -516,6 +522,19 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         }
                     ],
                     'required': ['enabled', 'max_days_to_save']
+                },
+                {
+                    'name': 'history_data_settings',
+                    'title': 'Historical Snapshot Data Settings',
+                    'type': 'array',
+                    'items': [
+                        {
+                            'name': 'save_raw_data',
+                            'title': 'Save entity advanced view data',
+                            'type': 'bool'
+                        },
+                    ],
+                    'required': ['save_raw_data']
                 }
             ],
             'type': 'array',
@@ -553,6 +572,9 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 'enabled': True,
                 'max_days_to_save': 180
             },
+            'history_data_settings': {
+                'save_raw_data': False
+            }
         }
 
     def configure_correlation_scheduler(self):
@@ -737,7 +759,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                             if free_disk_space_in_gb < MIN_GB_TO_SAVE_HISTORY:
                                 logger.error(f'Can not save history - less than 15 GB on disk!')
                             else:
-                                self._run_historical_phase(self.__max_days_to_save)
+                                self._run_historical_phase()
                     except Exception:
                         logger.critical(f'Failed running save historical phase')
                         self.create_notification(
@@ -853,7 +875,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     if free_disk_space_in_gb < MIN_GB_TO_SAVE_HISTORY:
                         logger.error(f'Can not save history - less than 15 GB on disk!')
                     else:
-                        self._run_historical_phase(self.__max_days_to_save)
+                        self._run_historical_phase()
 
                 self._request_gui_dashboard_cache_clear(clear_slow=True)
             except Exception:
@@ -1499,15 +1521,21 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             logger.exception(f'Error while checking for historical data: {e}')
         return {}, None
 
-    def _run_historical_phase(self, max_days_to_save):
+    def _run_historical_phase(self, max_days_to_save=None, save_raw_data=None):
         """
         Trigger saving history
         :return:
         """
+        if max_days_to_save is None:
+            max_days_to_save = self.__max_days_to_save
+
+        if save_raw_data is None:
+            save_raw_data = self.__save_raw_data
+
         self._run_blocking_request(
             AGGREGATOR_PLUGIN_NAME,
             'save_history',
-            data={'max_days_to_save': max_days_to_save},
+            data={'max_days_to_save': max_days_to_save, 'save_raw_data': save_raw_data},
             timeout=3600 * 6,
         )
 

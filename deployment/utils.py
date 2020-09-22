@@ -73,6 +73,15 @@ def chown_folder(path: str, sudo: bool = False):
     run_cmd(cmd.split())
 
 
+def show_weave_info():
+    try:
+        weave_status_connections = subprocess.check_output(['weave', 'status', 'connections']).decode('utf-8').strip()
+        if weave_status_connections:
+            print_state('Note! this system is part of an active weave cluster.')
+    except Exception as e:
+        print_state(f'Could not get status of "weave status connections". This could be normal. moving on: {str(e)}')
+
+
 def verify_storage_requirements():
     try:
         current_dir_free_bytes_left = shutil.disk_usage(CWD).free
