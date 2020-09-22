@@ -26,6 +26,7 @@
       "riskiq_csv",
       "pingaccess",
       "service_now_sql",
+      "service_now_akana",
       "esentire_json",
       "firebom"
     ],

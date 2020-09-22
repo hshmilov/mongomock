@@ -1547,6 +1547,11 @@
     "link": "https://docs.axonius.com/docs/alibaba-cloud",
     "description": "Alibaba Cloud provides cloud computing services and cloud Infrastructure as a service."
   },
+  "service_now_akana_adapter": {
+    "title": "ServiceNow (Akana) - BETA",
+    "link": "https://docs.axonius.com/docs/servicenow",
+    "description": "ServiceNow provides service management software as a service, including IT services management (ITSM), IT operations management (ITOM) and IT business management (ITBM)."
+  },
   "sqlite_adapter": {
     "title": "SQLite",
     "link": "https://docs.axonius.com/docs/sqlite",

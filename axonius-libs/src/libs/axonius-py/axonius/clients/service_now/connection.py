@@ -16,19 +16,22 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
-    def __init__(self, *args, **kwargs):
+
+    TABLE_API_PREFIX = 'table/'
+
+    def __init__(self, *args, url_base_prefix: str = 'api/now/', **kwargs):
         """ Initializes a connection to ServiceNow using its rest API
 
         """
         self.__users_table = dict()
         self.__number_of_offsets = consts.NUMBER_OF_OFFSETS
         self.__offset_size = consts.OFFSET_SIZE
-        super().__init__(url_base_prefix='api/now/', *args, **kwargs)
+        super().__init__(*args, url_base_prefix=url_base_prefix, **kwargs)
         self._permanent_headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
 
     def _connect(self):
         if self._username is not None and self._password is not None:
-            self._get('table/cmdb_ci_computer', url_params={'sysparm_limit': 1}, do_basic_auth=True)
+            self._get(f'{self.TABLE_API_PREFIX}cmdb_ci_computer', url_params={'sysparm_limit': 1}, do_basic_auth=True)
         else:
             raise RESTException('No user name or password')
 
@@ -56,8 +59,7 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
             for table_result in table_results_chunk:
                 yield table_key, table_result
 
-    @staticmethod
-    def _get_table_async_request_params(table_name: str, offset: int, page_size: int,
+    def _get_table_async_request_params(self, table_name: str, offset: int, page_size: int,
                                         additional_url_params: Optional[dict]=None):
         if not additional_url_params:
             additional_url_params = dict()
@@ -66,7 +68,7 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
         if isinstance(additional_query, str):
             # Note: ^ == AND
             sysparm_query = f'{sysparm_query}^{additional_query}'
-        return {'name': f'table/{str(table_name)}',
+        return {'name': f'{self.TABLE_API_PREFIX}{str(table_name)}',
                 'do_basic_auth': True,
                 # See: https://hi.service-now.com/kb_view.do?sysparm_article=KB0727636
                 'url_params': {'sysparm_limit': page_size,
@@ -165,7 +167,7 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
         number_of_exception = 0
         for sysparam_offset in range(0, number_of_offsets):
             try:
-                table_results_paged = self._get(f'table/{str(table_name)}', do_basic_auth=True,
+                table_results_paged = self._get(f'{self.TABLE_API_PREFIX}{str(table_name)}', do_basic_auth=True,
                                                 url_params={'sysparm_limit': self.__offset_size,
                                                             'sysparm_offset': sysparam_offset * self.__offset_size})
                 if len(table_results_paged.get('result', [])) == 0:
@@ -180,11 +182,11 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
                     break
 
     def __add_dict_to_table(self, table_name, dict_data):
-        return self._post(f'table/{str(table_name)}', body_params=dict_data)
+        return self._post(f'{self.TABLE_API_PREFIX}{str(table_name)}', body_params=dict_data)
 
     def __update_dict_in_table(self, table_name, sys_id, dict_data):
-        self._patch(f'table/{table_name}/{sys_id}', body_params=dict_data)
-        return self._get(f'table/{table_name}/{sys_id}')
+        self._patch(f'{self.TABLE_API_PREFIX}{table_name}/{sys_id}', body_params=dict_data)
+        return self._get(f'{self.TABLE_API_PREFIX}{table_name}/{sys_id}')
 
     # pylint: disable=too-many-branches, too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def create_service_now_incident(self, service_now_dict):
