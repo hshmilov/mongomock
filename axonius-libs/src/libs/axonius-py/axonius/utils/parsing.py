@@ -1509,6 +1509,8 @@ def dangerous_asset_names_do_not_contradict(adapter_device1, adapter_device2):
         return True
     else:
         if is_dangerous_asset_names_adapter(adapter_device1):
+            if adapter_device2.get('plugin_name') in ['jamf_adapter']:
+                return True
             asset1 = get_asset_name(adapter_device1)
             asset2 = get_hostname(adapter_device2)
             if asset1 and asset2:
@@ -1518,6 +1520,8 @@ def dangerous_asset_names_do_not_contradict(adapter_device1, adapter_device2):
                     return True
                 return False
         if is_dangerous_asset_names_adapter(adapter_device2):
+            if adapter_device1.get('plugin_name') in ['jamf_adapter']:
+                return True
             asset1 = get_hostname(adapter_device1)
             asset2 = get_asset_name(adapter_device2)
             if asset1 and asset2:
