@@ -926,6 +926,7 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
     :param add_assoc_adapter: whether to return the associated adapter
     :return:                Mapping of a field path to it's value list as found in the entity_data
     """
+    remove_domain_from_preferred_hostname = False
     try:
         # pylint: disable=protected-access
         remove_domain_from_preferred_hostname = PluginBase.Instance._remove_domain_from_preferred_hostname or False

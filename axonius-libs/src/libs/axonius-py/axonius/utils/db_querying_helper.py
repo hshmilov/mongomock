@@ -1,4 +1,5 @@
 import logging
+import threading
 import uuid
 import math
 
@@ -28,6 +29,7 @@ ITERATE_CHUNK_SIZE = 50
 MAX_CURSORS = 100
 # pylint: disable=C0103
 cursors = LRUCache(maxsize=MAX_CURSORS)
+cursors_lock = threading.Lock()
 
 
 @dataclass
@@ -192,7 +194,8 @@ def _get_all_entities_raw(skip: int,
             page_number=math.floor((skip / limit) + 1) if asset_count else 0,
             asset_count=asset_count,
         )
-        cursors[cursor_id] = cursor_obj
+        with cursors_lock:
+            cursors[cursor_id] = cursor_obj
         return cursor_obj
     except Exception:
         logger.exception('Exception when finding cursor')
