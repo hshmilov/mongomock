@@ -1204,7 +1204,7 @@
     "description": "iTop is an open source ITSM solution allows management of configuration items and their relationships in a flexible CMDB."
   },
   "gigamon_fm_adapter": {
-    "title": "Gigamon GigaVUE-FM (Fabric Manager) - BETA",
+    "title": "Gigamon GigaVUE-FM (Fabric Manager)",
     "link": "https://docs.axonius.com/docs/gigamon",
     "description": "Gigamon GigaVUE-FM (Fabric Manager) delivers management and monitoring of all physical and virtual nodes across your on-premises, virtual and public-cloud deployments."
   },
