@@ -132,10 +132,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
             metadata_dict = dict()
             if client_config.get(AZURE_ACCOUNT_TAG):
                 metadata_dict[AZURE_ACCOUNT_TAG] = client_config.get(AZURE_ACCOUNT_TAG)
-            account_id = '_'.join([
-                client_config.get(AZURE_ACCOUNT_TAG) or '',
-                client_config.get(AZURE_TENANT_ID) or 'unknown-tenant-id'
-            ])
+            account_id = client_config.get(AZURE_TENANT_ID) or 'unknown-tenant-id'
             metadata_dict['azure_account_id'] = account_id
             return connection, metadata_dict
         except Exception as e:

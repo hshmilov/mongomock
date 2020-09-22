@@ -127,10 +127,7 @@ class AzureAdapter(AdapterBase):
                 metadata_dict['subscription'] = subscription_id
                 if subscription_data and subscription_data.get('displayName'):
                     metadata_dict['subscription_name'] = subscription_data.get('displayName')
-                account_id = '_'.join([
-                    client_config.get(AZURE_ACCOUNT_TAG) or '',
-                    client_config.get(AZURE_TENANT_ID) or 'unknown-tenant-id'
-                ])
+                account_id = client_config.get(AZURE_TENANT_ID) or 'unknown-tenant-id'
                 metadata_dict['azure_account_id'] = account_id
                 connections.append((connection, metadata_dict))
 

@@ -2,7 +2,7 @@
 import logging
 
 from axonius.clients.azure.client import AzureCloudConnection
-from axonius.clients.azure.consts import AZURE_ACCOUNT_TAG, AZURE_TENANT_ID
+from axonius.clients.azure.consts import AZURE_TENANT_ID
 from axonius.entities import EntityType
 from compliance.utils.AzureAccountReport import AzureAccountReport
 from compliance.utils.account_report import RuleStatus
@@ -17,10 +17,7 @@ class CISAzureCategory1:
         self.report = report
         self.azure = azure
         self._account_dict = account_dict.copy()
-        self._account_id = '_'.join([
-            self._account_dict.get(AZURE_ACCOUNT_TAG) or '',
-            self._account_dict.get(AZURE_TENANT_ID) or 'unknown-tenant-id'
-        ])
+        self._account_id = self._account_dict.get(AZURE_TENANT_ID) or 'unknown-tenant-id'
 
     @cis_rule('1.3')
     def check_cis_azure_1_3(self, **kwargs):
