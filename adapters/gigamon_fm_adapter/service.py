@@ -4,8 +4,9 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.gigamon_fm.connection import GigamonFmConnection
 from axonius.clients.rest.connection import RESTConnection, RESTException
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import is_private_ip
+from axonius.utils.parsing import is_private_ip, parse_bool_from_raw
 from gigamon_fm_adapter.client_id import get_client_id
 from gigamon_fm_adapter.structures import GigamonFmDeviceInstance
 
@@ -126,6 +127,21 @@ class GigamonFmAdapter(AdapterBase):
             device.dns_name = device_raw.get('dnsName')
             device.cluster_mode = device_raw.get('clusterMode')
             device.cluster_id = device_raw.get('clusterId')
+            device.behind_NAT = parse_bool_from_raw(device_raw.get('behindNat'))
+            device.box_id = device_raw.get('boxId')
+            device.cluster_master = device_raw.get('clusterMaster')
+            device.cluster_virtual_ip = device_raw.get('clusterVip')
+            device.disc_outcome = device_raw.get('discOutcome')
+            device.family = device_raw.get('family')
+            device.global_node_id = device_raw.get('globalNodeId')
+            device.health_state = device_raw.get('healthState')
+            device.last_sync_time = parse_date(device_raw.get('lastSyncTime'))
+            device.licensed = parse_bool_from_raw(device_raw.get('licensed'))
+            device.operational_status = device_raw.get('operStatus')
+            device.sw_version = device_raw.get('swVersion')
+            device.topo_node_id = device_raw.get('topoNodeId')
+            device.uboot_version = device_raw.get('ubootVersion')
+
         except Exception:
             logger.exception(f'Failed creating instance for device {device_raw}')
 
@@ -137,6 +153,9 @@ class GigamonFmAdapter(AdapterBase):
                 return None
             device.id = str(device_id) + '_' + (device_raw.get('hostname') or '')
             device.hostname = device_raw.get('hostname')
+            device.last_seen = parse_date(device_raw.get('lastConnectedTime'))
+            device.device_model = device_raw.get('model')
+            device.device_serial = device_raw.get('serialNumber')
             device_ip = device_raw.get('deviceIp')
 
             if device_ip:
