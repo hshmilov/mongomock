@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Iterable, Tuple
+from typing import Iterable, Optional, Tuple
 
 import requests
 from azure.common.credentials import ServicePrincipalCredentials
@@ -10,7 +10,8 @@ from msrestazure import azure_cloud as azure
 
 from axonius.clients.azure.consts import AzureStackHubProxySettings
 from axonius.clients.rest.connection import RESTConnection
-from azure_adapter.consts import RE_VM_RESOURCEGROUP_FROM_ID, RE_VM_RESOURCEGROUP_CG
+from azure_adapter.consts import (RE_VM_RESOURCEGROUP_CG,
+                                  RE_VM_RESOURCEGROUP_FROM_ID)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -34,6 +35,7 @@ class AzureClient:
         cloud = self.get_clouds()[cloud_name]
         self.cloud = cloud
         self.https_proxy = https_proxy
+        self.subscription_id = subscription_id
 
         proxies = {'https': RESTConnection.build_url(https_proxy).strip('/')} if https_proxy else None
         self.using_azure_stack_hub = False
@@ -61,6 +63,7 @@ class AzureClient:
                                                       cloud_environment=cloud, proxies=proxies, verify=verify_ssl)
         self.compute = ComputeManagementClient(credentials, subscription_id, base_url=base_url)
         self.network = NetworkManagementClient(credentials, subscription_id, base_url=base_url)
+
         if proxies:
             if not self.using_azure_stack_hub or (self.using_azure_stack_hub and azure_stack_hub_proxy_settings in [
                     AzureStackHubProxySettings.ProxyOnlyAzureStackHub, AzureStackHubProxySettings.ProxyAll

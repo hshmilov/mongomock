@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from axonius.clients.azure.structures import AzureAdapterEntity
 from axonius.devices.device_adapter import DeviceAdapter
@@ -33,6 +34,21 @@ class AzureNetworkSecurityGroupRule(SmartJsonClass):
     is_default = Field(bool, 'Is Default')
 
 
+class AzureSoftwareUpdate(SmartJsonClass):
+    id = Field(str, 'ID')
+    name = Field(str, 'Name')
+    automation_account_name = Field(str, 'Automation Account Name')
+    location = Field(str, 'Location')
+    operating_system = Field(str, 'Operating System')
+    duration = Field(str, 'Duration')
+    frequency = Field(str, 'Frequency')
+    provisioning_state = Field(str, 'Provisioning State')
+    start_time = Field(datetime, 'Start Time')
+    creation_time = Field(datetime, 'Creation Time')
+    last_modified_time = Field(datetime, 'Last Modified')
+    next_run = Field(datetime, 'Next Run')
+
+
 class AzureDeviceInstance(DeviceAdapter, AzureAdapterEntity):
     account_tag = Field(str, 'Account Tag')
     location = Field(str, 'Azure Location')
@@ -46,3 +62,4 @@ class AzureDeviceInstance(DeviceAdapter, AzureAdapterEntity):
     subscription_id = Field(str, 'Azure Subscription ID')
     subscription_name = Field(str, 'Azure Subscription Name')
     virtual_networks = ListField(str, 'Virtual Networks')
+    software_updates = ListField(AzureSoftwareUpdate, 'Software Updates')

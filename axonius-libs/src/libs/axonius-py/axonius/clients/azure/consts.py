@@ -32,3 +32,5 @@ AZURE_STACK_HUB_PROXY_SETTINGS = 'azure_stack_hub_proxy_settings'
 
 
 PAGINATION_LIMIT = 1000000      # protect from infinite loop
+
+AUTOMATION_API_VERSIION = '2019-06-01'

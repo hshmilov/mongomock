@@ -9,6 +9,7 @@ from requests import HTTPError
 
 from axonius.clients.azure.ad import AzureADConnection
 from axonius.clients.azure.app_service import AzureAppServiceConnection
+from axonius.clients.azure.automation import AzureAutomationConnection
 from axonius.clients.azure.compute import AzureComputeConnection
 from axonius.clients.azure.consts import AzureStackHubProxySettings, PAGINATION_LIMIT, AzureClouds
 from axonius.clients.azure.keyvault import AzureKeyvaultConnection
@@ -154,6 +155,7 @@ class AzureCloudConnection(RESTConnection):
         self.network_watchers = AzureNetworkWatchersConnection(self)
         self.kubernetes = AzureKubernetesConnection(self)
         self.app_service = AzureAppServiceConnection(self)
+        self.automation = AzureAutomationConnection(self)
 
         self.__all_subscriptions = None
 
@@ -249,9 +251,21 @@ class AzureCloudConnection(RESTConnection):
     def rm_paginated_get(self, url: str, api_version=None, **kwargs):
         yield from self.rm_paginated_request('GET', url, api_version=api_version, **kwargs)
 
-    def rm_subscription_paginated_get(self, url: str, subscription: str, api_version=None, **kwargs):
+    def rm_subscription_paginated_get(
+            self,
+            url: str,
+            subscription: str,
+            api_version=None,
+            url_prefix=None,
+            **kwargs
+    ):
+        if url_prefix:
+            full_url = f'{url_prefix}/subscriptions/{subscription}/{url.lstrip("/")}'
+        else:
+            full_url = f'subscriptions/{subscription}/{url.lstrip("/")}'
+
         yield from self.rm_paginated_request(
-            'GET', f'subscriptions/{subscription}/{url.lstrip("/")}', api_version=api_version, **kwargs
+            'GET', full_url, api_version=api_version, **kwargs
         )
 
     def rm_get(self, url, api_version=None, **kwargs):

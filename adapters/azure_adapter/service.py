@@ -5,14 +5,24 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.azure.client import AzureCloudConnection
-from axonius.clients.azure.consts import AZURE_SUBSCRIPTION_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID, \
-    AZURE_CLOUD_ENVIRONMENT, AZURE_VERIFY_SSL, AZURE_STACK_HUB_PROXY_SETTINGS, AzureStackHubProxySettings, \
-    AZURE_STACK_HUB_RESOURCE, AZURE_STACK_HUB_URL, AZURE_ACCOUNT_TAG, AZURE_HTTPS_PROXY, AzureClouds
+from axonius.clients.azure.consts import (AZURE_ACCOUNT_TAG, AZURE_CLIENT_ID,
+                                          AZURE_CLIENT_SECRET,
+                                          AZURE_CLOUD_ENVIRONMENT,
+                                          AZURE_HTTPS_PROXY,
+                                          AZURE_STACK_HUB_PROXY_SETTINGS,
+                                          AZURE_STACK_HUB_RESOURCE,
+                                          AZURE_STACK_HUB_URL,
+                                          AZURE_SUBSCRIPTION_ID,
+                                          AZURE_TENANT_ID, AZURE_VERIFY_SSL,
+                                          AzureClouds,
+                                          AzureStackHubProxySettings)
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from azure_adapter.azure_cis import append_azure_cis_data_to_device
 from azure_adapter.client import AzureClient
 from azure_adapter.consts import POWER_STATE_MAP
-from azure_adapter.structures import AzureDeviceInstance, AzureImage, AzureNetworkSecurityGroupRule
+from azure_adapter.structures import (AzureDeviceInstance, AzureImage,
+                                      AzureNetworkSecurityGroupRule, AzureSoftwareUpdate)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -33,7 +43,7 @@ class AzureAdapter(AdapterBase):
     def _test_reachability(self, client_config):
         raise NotImplementedError
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches,too-many-statements,too-many-locals
     def _connect_client(self, client_config):
         """ If fetch_all_subscriptions is checked, pull all associated
         Subscriptions and create a client for each of them. If an error
@@ -46,6 +56,7 @@ class AzureAdapter(AdapterBase):
         """
         azure_stack_hub_proxy_settings_value = client_config.get(AZURE_STACK_HUB_PROXY_SETTINGS)
         azure_stack_hub_proxy_settings = AzureStackHubProxySettings.ProxyOnlyAuth
+        _azure_rest_client = None
         try:
             if azure_stack_hub_proxy_settings_value:
                 azure_stack_hub_proxy_settings = [
@@ -86,6 +97,7 @@ class AzureAdapter(AdapterBase):
                     https_proxy=client_config.get(AZURE_HTTPS_PROXY),
                     verify_ssl=client_config.get(AZURE_VERIFY_SSL)
             ) as azure_rest_client:
+                _azure_rest_client = azure_rest_client
                 subscriptions = azure_rest_client.all_subscriptions.copy()
         except Exception:
             subscriptions = {}
@@ -125,6 +137,7 @@ class AzureAdapter(AdapterBase):
                 if client_config.get(AZURE_ACCOUNT_TAG):
                     metadata_dict[AZURE_ACCOUNT_TAG] = client_config.get(AZURE_ACCOUNT_TAG)
                 metadata_dict['subscription'] = subscription_id
+                metadata_dict['azure_client'] = _azure_rest_client
                 if subscription_data and subscription_data.get('displayName'):
                     metadata_dict['subscription_name'] = subscription_data.get('displayName')
                 account_id = client_config.get(AZURE_TENANT_ID) or 'unknown-tenant-id'
@@ -224,19 +237,195 @@ class AzureAdapter(AdapterBase):
             'type': 'array'
         }
 
+    @staticmethod
+    def _fetch_all_software_updates(
+            azure_client: AzureCloudConnection,
+            raw_software_updates: dict,
+            subscription_id: str
+    ):
+        """
+        Fetch software updates only for new subscriptions where it wasn't fetched before.
+        Return updated list of of these updates to be used later for other devices.
+
+        raw_software_updates contains raw software updates in the following structure:
+        {
+          "subscriptionID1_resourceGroupID2":
+          {
+            "automation_account_1":
+            {
+              "name": "",
+              "location": "",
+              "update_plans":
+              [
+                {
+                  "name": "update_config_1"
+                  .....
+                  .....
+                }
+              ]
+            }
+          }
+        }
+
+        :param azure_client:
+        :param raw_software_updates: dict
+        :param subscription_id: str
+        :return: raw_software_updates
+        """
+
+        if not (subscription_id and isinstance(subscription_id, str)):
+            raise Exception(f'Invalid subscription id: {str(subscription_id)}')
+
+        if raw_software_updates.get(subscription_id):
+            return raw_software_updates
+
+        raw_software_updates[subscription_id] = {}
+
+        try:
+            automation_accounts = list(azure_client.automation.get_all_automation_accounts_for_subscription(
+                subscription_id
+            ))
+        except Exception as err:
+            logger.debug(
+                f'Failed to fetch all automation accounts of subscription: {subscription_id} , '
+                f'Error: {str(err)}',
+                exc_info=True
+            )
+            return raw_software_updates
+
+        for automation_account in automation_accounts:
+            automation_account_name = automation_account.get('name')
+            automation_account_id = automation_account.get('id')
+            resource_group = automation_account_id[automation_account_id.find(
+                '/resourceGroups/') + len('/resourceGroups/'):].split('/')[0]
+            if not (automation_account_name and isinstance(automation_account_name, str)):
+                logger.warning(
+                    f'Invalid automation account name: {str(automation_account_name)} '
+                    f', subscription id: {str(subscription_id)}'
+                )
+                continue
+
+            # Get list of software update plans if it doesn't exist already.
+            try:
+                raw_updates = list(azure_client.automation.get_update_configurations(
+                    subscription_id=subscription_id,
+                    automation_account_name=automation_account_name,
+                    resource_group=resource_group
+                ))
+            except Exception as exc:
+                logger.debug(
+                    f'Could not fetch the required software update configurations for '
+                    f'subscription id: {subscription_id} ,'
+                    f'automation account: {automation_account_name} ,'
+                    f'resource group: {resource_group} '
+                    f'Exception: {str(exc)}',
+                    exc_info=True
+                )
+                continue
+
+            if not isinstance(raw_updates, list):
+                logger.debug(f'Invalid format of software update configurations: {str(raw_updates)[:50]}')
+                continue
+
+            raw_software_updates[subscription_id] = {
+                automation_account_name:
+                    {
+                        'location': automation_account.get('location'),
+                        'update_plans': raw_updates
+                    }
+            }
+
+        return raw_software_updates
+
+    def _parse_software_updates(self, device: MyDeviceAdapter, raw_software_updates):
+        subscription_id = device.subscription_id
+        resource_group = device.resources_group
+        machine_id = device.id
+
+        if not isinstance(subscription_id, str):
+            raise TypeError(f'Unexpected type of subscription id: {str(type(subscription_id))}')
+        if not isinstance(resource_group, str):
+            raise TypeError(f'Unexpected type of resource group: {str(type(resource_group))}')
+        if not isinstance(machine_id, str):
+            raise TypeError(f'Unexpected type of machine id: {str(type(machine_id))}')
+
+        for subscription_resource_group in raw_software_updates:
+            automation_accounts = raw_software_updates.get(subscription_resource_group)
+            for automation_account_name in automation_accounts:
+                automation_account = automation_accounts.get(automation_account_name)
+                raw_update_plans = automation_account.get('update_plans')
+                for raw_update_plan in raw_update_plans:
+                    properties = raw_update_plan.get('properties', {})
+                    update_configuration = properties.get('updateConfiguration', {})
+                    if self._is_relevant_software_update(device, update_configuration):
+                        device.software_updates.append(
+                            AzureSoftwareUpdate(
+                                name=raw_update_plan.get('name'),
+                                id=raw_update_plan.get('id'),
+                                automation_account_name=automation_account_name,
+                                location=automation_account.get('location'),
+                                operating_system=update_configuration.get('operatingSystem'),
+                                duration=update_configuration.get('duration'),
+                                frequency=properties.get('frequency'),
+                                provisioning_state=properties.get('provisioningState'),
+                                start_time=parse_date(properties.get('startTime')),
+                                creation_time=parse_date(properties.get('creationTime')),
+                                last_modified_time=parse_date(properties.get('lastModifiedTime')),
+                                next_run=parse_date(properties.get('nextRun'))
+                            )
+                        )
+
+    @staticmethod
+    # pylint: disable=W0640
+    def _is_relevant_software_update(device: MyDeviceAdapter, raw_update_configurations: dict):
+        azure_queries = raw_update_configurations.get('targets', {}).get('azureQueries', [])
+
+        for azure_query in azure_queries:
+            device_os = device.get_field_safe('os') or device.get_field_safe('os_guess')
+            device_os_type = device_os.get_field_safe('type').lower() or ''
+            resource_group_identifier = f'/subscriptions/{device.subscription_id}' \
+                                        f'/resourceGroups/{device.resources_group}'.lower()
+
+            scope = azure_query.get('scope', [])
+            if isinstance(scope, str):
+                logger.debug(f'Unexpected type for scope: {scope}')
+                scope = []
+            scope = [s.lower() for s in scope]
+            locations = azure_query.get('locations', [])
+            tags = azure_query.get('tagSettings', {}).get('tags', {})
+            filter_operator = azure_query.get('tagSettings', {}).get('filterOperator', '').lower()
+            update_target_os = raw_update_configurations.get('operatingSystem', '').lower()
+
+            if update_target_os and update_target_os != device_os_type:
+                continue
+            if scope and resource_group_identifier not in scope:
+                continue
+            if locations and device.location not in locations:
+                continue
+
+            def has_tag(tag):
+                return tag in tags
+            if tags and filter_operator == 'any':
+                if not any(has_tag(dev_tag) for dev_tag in device.tags):
+                    continue
+            if tags and filter_operator == 'all':
+                if not all(has_tag(dev_tag) for dev_tag in device.tags):
+                    continue
+
+            return True
+        return False
+
     # pylint: disable=arguments-differ
     def _query_devices_by_client(self, client_name, client_data_all):
         for connection in client_data_all:
             try:
                 (client_data, metadata) = connection
             except Exception:
-                logger.exception(f'Failed to process a connection: '
-                                 f'{str(connection)}')
+                logger.exception(f'Failed to process a connection: {str(connection)}')
                 continue
 
-            logger.info(f'Querying vms for subscription '
-                        f'{metadata.get("subscription")}')
-
+            subscription_id = metadata.get('subscription')
+            logger.info(f'Querying vms for subscription {subscription_id}')
             try:
                 yield client_data.get_virtual_machines(), metadata
             except Exception as e:
@@ -247,11 +436,14 @@ class AzureAdapter(AdapterBase):
 
     # pylint: disable=arguments-differ,too-many-nested-blocks,too-many-branches,too-many-statements,too-many-locals, inconsistent-return-statements
     def _parse_raw_data(self, devices_raw_data_all):
+        raw_software_updates = {}
+
         for devices_raw_data, metadata in devices_raw_data_all:
             for device_raw in devices_raw_data:
                 device = self._new_device_adapter()
-                device.id = device_raw['id']
                 device_id = device_raw['id']
+                device.id = device_id
+                device.resources_group = None
                 if device_id and '/resourceGroups/' in device_id:
                     device.resources_group = device_id[device_id.find('/resourceGroups/') +
                                                        len('/resourceGroups/'):].split('/')[0]
@@ -430,8 +622,18 @@ class AzureAdapter(AdapterBase):
 
                 device.account_tag = metadata.get(AZURE_ACCOUNT_TAG)
                 device.subscription_name = metadata.get('subscription_name')
-
                 device.subscription_id = metadata.get('subscription')
+                device.software_updates = []
+                azure_client = metadata.get('azure_client')
+                try:
+                    raw_software_updates = self._fetch_all_software_updates(
+                        azure_client=azure_client,
+                        raw_software_updates=raw_software_updates,
+                        subscription_id=device.subscription_id
+                    )
+                    self._parse_software_updates(device, raw_software_updates)
+                except Exception as error:
+                    logger.warning(f'Error occurred while fetching software updates, error:{str(error)}', exc_info=True)
                 device.azure_account_id = metadata.get('azure_account_id')
 
                 device.set_raw(device_raw)
