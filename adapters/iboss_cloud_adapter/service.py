@@ -9,11 +9,11 @@ from axonius.clients.rest.connection import RESTConnection, RESTException
 from axonius.devices.device_adapter import AGENT_NAMES
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import parse_bool_from_raw
+from axonius.utils.parsing import parse_bool_from_raw, int_or_none
 from iboss_cloud_adapter.connection import IbossCloudConnection
 from iboss_cloud_adapter.client_id import get_client_id
 from iboss_cloud_adapter.structures import IbossCloudDeviceInstance, IbossCloudUserInstance
-from iboss_cloud_adapter.consts import NODE_DEVICE, DOMAIN_CONFIG, CLOUD_CONNECTED_DEVICE
+from iboss_cloud_adapter.consts import NODE_DEVICE, DOMAIN_CONFIG, CLOUD_CONNECTED_DEVICE, STATIC_DEVICE, DYNAMIC_DEVICE
 from iboss_cloud_adapter.structures import SubnetPolicy, NodeCollection, DeviceInstance
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -351,6 +351,7 @@ class IbossCloudAdapter(AdapterBase):
                     # noinspection PyTypeChecker
                     device = self._create_node_device(device_raw, instance_type, domain, self._new_device_adapter())
                 elif instance_type == CLOUD_CONNECTED_DEVICE:
+                    # noinspection PyTypeChecker
                     device = self._create_cloud_connected_device(device_raw, instance_type, domain,
                                                                  self._new_device_adapter())
                 else:
@@ -373,13 +374,81 @@ class IbossCloudAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Failed creating instance for user {user_raw}')
 
-    def _create_user(self, user_raw: dict, user: MyUserAdapter):
+    @staticmethod
+    def _fill_iboss_cloud_connected_user_fields(user_raw: dict, user: MyUserAdapter):
+        try:
+            user.first_seen = parse_date(user_raw.get('firstSeen'))
+
+            try:
+                registration_info = user_raw.get('registrationInfo')
+                if registration_info:
+                    extra_info = json.loads(base64.b64decode(registration_info).decode('utf-8'))
+                    if isinstance(extra_info, dict):
+                        group_association = extra_info.get('mappedByGroupPolicyLayerNames')
+                        if isinstance(group_association, list):
+                            user.group_association = group_association
+            except Exception:
+                logger.exception(f'Failed parsing registration info base64 info of {registration_info}')
+
+        except Exception:
+            logger.exception(f'Failed creating instance for cloud connected user {user_raw}')
+
+    @staticmethod
+    def _create_dynamic_user(user_raw: dict, domain: str, instance_type: str, user: MyUserAdapter):
+        try:
+            user_id = user_raw.get('id')
+            username = user_raw.get('username')
+            if user_id is None or not username:
+                logger.warning(f'Bad dynamic user with no ID {user_raw}')
+                return None
+            user.id = str(user_id) + '_' + (user_raw.get('username') or '')
+
+            user.username = username
+            user.policy_group = int_or_none(user_raw.get('groupNumber'))
+            user.policy_group_name = user_raw.get('groupName')
+            user.ip_v4 = user_raw.get('ipAddress')
+            user.ip_v4_raw = user_raw.get('ipAddress')
+            user.note = user_raw.get('note')
+
+            user.set_raw(user_raw)
+            return user
+        except Exception:
+            logger.exception(f'Problem with fetching IbossCloud {instance_type} User for {user_raw} in {domain}')
+            return None
+
+    def _create_cloud_connected_user(self, user_raw: dict, domain: str, user: MyUserAdapter):
+        try:
+            user_id = user_raw.get('agentReference')
+            if user_id is None:
+                logger.warning(f'Bad cloud user with no ID {user_raw}')
+                return None
+            user.id = str(user_id) + '_' + (user_raw.get('username') or '')
+
+            # Means that these are servers and a single user would not be associated with a server
+            if user_raw.get('username') == user_raw.get('deviceName'):
+                logger.debug(f'Server could not be associated with a user {user_raw}')
+                return None
+
+            user.username = user_raw.get('username')
+            user.last_seen = parse_date(user_raw.get('lastSeen'))
+            user.add_associated_device(device_caption=user_raw.get('deviceName'))
+
+            self._fill_iboss_cloud_connected_user_fields(user_raw, user)
+
+            user.set_raw(user_raw)
+            return user
+        except Exception:
+            logger.exception(f'Problem with fetching IbossCloud User for {user_raw} in {domain}')
+            return None
+
+    def _create_user(self, user_raw: dict, domain: str, user: MyUserAdapter):
         try:
             user_id = user_raw.get('id')
             if user_id is None:
                 logger.warning(f'Bad user with no ID {user_raw}')
                 return None
-            user.id = user_id
+            user.id = str(user_id) + '_' + (user_raw.get('userName') or '')
+
             user.first_name = user_raw.get('firstName')
             user.last_name = user_raw.get('lastName')
             user.username = user_raw.get('userName')
@@ -391,7 +460,7 @@ class IbossCloudAdapter(AdapterBase):
             user.set_raw(user_raw)
             return user
         except Exception:
-            logger.exception(f'Problem with fetching IbossCloud User for {user_raw}')
+            logger.exception(f'Problem with fetching IbossCloud User for {user_raw} from {domain}')
             return None
 
     # pylint: disable=arguments-differ
@@ -401,12 +470,19 @@ class IbossCloudAdapter(AdapterBase):
         :param users_raw_data: the raw data we get.
         :return:
         """
-        for user_raw in users_raw_data:
+        for user_raw, _, instance_type, domain in users_raw_data:
             if not user_raw:
                 continue
             try:
-                # noinspection PyTypeChecker
-                user = self._create_user(user_raw, self._new_user_adapter())
+                if instance_type == CLOUD_CONNECTED_DEVICE:
+                    # noinspection PyTypeChecker
+                    user = self._create_cloud_connected_user(user_raw, domain, self._new_user_adapter())
+                elif instance_type in (STATIC_DEVICE, DYNAMIC_DEVICE):
+                    # noinspection PyTypeChecker
+                    user = self._create_dynamic_user(user_raw, domain, instance_type, self._new_user_adapter())
+                else:
+                    # noinspection PyTypeChecker
+                    user = self._create_user(user_raw, domain, self._new_user_adapter())
                 if user:
                     yield user
             except Exception:

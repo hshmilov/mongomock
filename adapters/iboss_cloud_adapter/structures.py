@@ -1,7 +1,10 @@
-from axonius.fields import Field, ListField
+import datetime
+
+from axonius.fields import Field, ListField, JsonStringFormat
 from axonius.smart_json_class import SmartJsonClass
 from axonius.users.user_adapter import UserAdapter
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.utils.parsing import format_ip, format_ip_raw
 
 
 class SubnetPolicy(SmartJsonClass):
@@ -52,3 +55,7 @@ class IbossCloudUserInstance(UserAdapter):
     note = Field(str, 'Note')
     policy_group = Field(int, 'Policy Group')
     policy_group_name = Field(str, 'Policy Group Name')
+    first_seen = Field(datetime.datetime, 'First Seen')
+    group_association = ListField(str, 'Group Association')
+    ip_v4 = Field(str, 'IPv4', converter=format_ip, json_format=JsonStringFormat.ip)
+    ip_v4_raw = Field(str, converter=format_ip_raw, hidden=True)

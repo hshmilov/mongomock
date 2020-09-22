@@ -1916,6 +1916,32 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
                 }
             )
 
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_58(self):
+        print('Update to schema 58 - Convert IBoss Cloud user.id to a new format')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            iboss_cloud_username = data.get('username') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{iboss_cloud_username}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{iboss_cloud_username}'
+
+        self._migrate_entity_id_generic(
+            EntityType.Users,
+            'iboss_cloud_adapter',
+            {
+                'adapters.data.username': 1
+            },
+            new_id_func)
+
     def _migrate_entity_id_generic(
             self,
             entity_type: EntityType,

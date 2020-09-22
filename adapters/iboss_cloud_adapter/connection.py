@@ -11,10 +11,10 @@ from iboss_cloud_adapter.consts import API_LOGIN_IDS, API_LOGIN_IDS_SUFFIX, API_
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-
 # pylint: disable=logging-format-interpolation
 
 
+# pylint: disable=invalid-triple-quote
 class IbossCloudConnection(RESTConnection):
     """ rest client for IbossCloud adapter """
 
@@ -26,13 +26,12 @@ class IbossCloudConnection(RESTConnection):
 
         self._uid = None
         self._token = None
-        self._session_id = None
         self._setting_ids = []
-        self._api_domain = None
+        self._api_domains_swg = []
         self._api_domains_reports = []
         self._b64_auth_str = None
 
-    def _get_login_ids(self):
+    def _get_login_ids(self, api_domain: str):
         try:
             if not self._token:
                 error_message = 'Token is not set, cant make api calls'
@@ -42,7 +41,7 @@ class IbossCloudConnection(RESTConnection):
             body_params = dict(API_LOGIN_IDS)
             body_params['userName'] = self._token
 
-            url = self._api_domain + API_LOGIN_IDS_SUFFIX
+            url = api_domain + API_LOGIN_IDS_SUFFIX
             response = self._post(url, body_params=body_params, force_full_url=True)
             if not isinstance(response, dict) or 'sessionId' not in response or 'uid' not in response:
                 raise RESTException(f'Login IDS failed, received invalid response: {response}')
@@ -83,28 +82,36 @@ class IbossCloudConnection(RESTConnection):
         self._api_domains_reports = list(api_domains_reports)
 
     def _get_swg_domain(self):
-        try:
-            url_params = {
-                'accountSettingsId': self._setting_ids[0]
-            }
-            response = self._get(API_DOMAINS_URL, url_params=url_params, force_full_url=True)
-            if not isinstance(response, list):
-                raise RESTException(f'Get swg domain failed, received invalid response: {response}')
+        api_domains_swg = set()
 
-            for domain in response:
-                if not isinstance(domain, dict):
-                    continue
-                if domain.get('productFamily') == 'swg' and self._api_domain is None:
-                    api_domain = domain.get('adminInterfaceDns')
+        for account_settings_id in self._setting_ids:
+            try:
+                url_params = {
+                    'accountSettingsId': account_settings_id
+                }
+                response = self._get(API_DOMAINS_URL, url_params=url_params, force_full_url=True)
+                if not isinstance(response, list):
+                    raise RESTException(f'Get swg domain failed, received invalid response: {response}')
 
-                    if api_domain and isinstance(api_domain, str):
-                        if api_domain.endswith('/'):
-                            api_domain = api_domain[:-1]
-                        self._api_domain = f'https://{api_domain}'
-                        break
+                for domain in response:
+                    if not isinstance(domain, dict):
+                        continue
 
-        except RESTException as e:
-            logger.exception('Error: Failed fetching IBoss swg domain')
+                    if domain.get('productFamily') == 'swg':
+                        api_domain_swg = domain.get('adminInterfaceDns')
+
+                        if api_domain_swg and isinstance(api_domain_swg, str):
+                            if api_domain_swg.endswith('/'):
+                                api_domain_swg = api_domain_swg[:-1]
+                            api_domain_swg_url = f'https://{api_domain_swg}'
+                            api_domains_swg.add(api_domain_swg_url)
+
+                            break
+
+            except RESTException as e:
+                logger.exception('Error: Failed fetching IBoss swg domain')
+
+        self._api_domains_swg = list(api_domains_swg)
 
     def _get_domains(self):
         try:
@@ -116,7 +123,7 @@ class IbossCloudConnection(RESTConnection):
             self._get_swg_domain()
             self._get_reports_domains()
 
-            if not (self._api_domain or self._api_domains_reports):
+            if not (self._api_domains_swg or self._api_domains_reports):
                 raise ValueError('Error: Failed fetching IBoss domains')
 
         except RESTException as e:
@@ -194,14 +201,14 @@ class IbossCloudConnection(RESTConnection):
             self._get_token()
             self._get_setting_ids()
             self._get_domains()
-            uid, session_id = self._get_login_ids()
+            uid, session_id = self._get_login_ids(self._api_domains_swg[0])
 
             url_params = dict(API_PAGINATION)
             url_params['maxItems'] = 1
             url_params['sessionId'] = session_id
             url_params['uid'] = uid
 
-            url = self._api_domain + API_USER_ENDPOINT_SUFFIX
+            url = self._api_domains_swg[0] + API_USER_ENDPOINT_SUFFIX
             self._get(url, url_params=url_params, force_full_url=True)
 
         except Exception as e:
@@ -211,62 +218,89 @@ class IbossCloudConnection(RESTConnection):
         try:
             policies_by_network = defaultdict(list)  # type: Dict[IPv4Network, List[dict]]
 
-            uid, session_id = self._get_login_ids()
-            url_params = {
-                'uid': uid,
-                'sessionId': session_id
-            }
-            url = self._api_domain + API_LOCALSUBNETS_SUFFIX
-            response = self._get(url, url_params=url_params, force_full_url=True)
-            if not (isinstance(response, dict) and isinstance(response.get('entries'), list)):
-                logger.warning(f'Received invalid response for local subnets: {response}')
-                return {}
-
-            for policy_dict in response.get('entries'):
-                if not isinstance(policy_dict, dict):
-                    logger.debug(f'Invalid type of local subnets entries {response.get("entries")}')
-                    break
+            for api_domain in self._api_domains_swg:
+                uid, session_id = self._get_login_ids(api_domain)
+                url_params = {
+                    'uid': uid,
+                    'sessionId': session_id
+                }
+                url = api_domain + API_LOCALSUBNETS_SUFFIX
                 try:
-                    network = f'{policy_dict.get("ipAddress")}/{policy_dict.get("subnet")}'
-                    ip_network = ipaddress.ip_network(network)
-                except Exception:
-                    logger.exception(f'Failed creating ip_network for {network}')
-                    continue
-                policies_by_network[ip_network].append(policy_dict)
+                    response = self._get(url, url_params=url_params, force_full_url=True)
+                    if not (isinstance(response, dict) and isinstance(response.get('entries'), list)):
+                        logger.error(f'Received invalid response in {url} for local subnets: {response}')
+                        continue
 
+                    for policy_dict in response.get('entries'):
+                        if not isinstance(policy_dict, dict):
+                            logger.debug(f'Invalid type of local subnets entries {response.get("entries")}')
+                            break
+                        try:
+                            network = f'{policy_dict.get("ipAddress")}/{policy_dict.get("subnet")}'
+                            ip_network = ipaddress.ip_network(network)
+                        except Exception:
+                            logger.exception(f'Failed creating ip_network for {network}')
+                            continue
+                        policies_by_network[ip_network].append(policy_dict)
+
+                    logger.info(f'Got total of {len(policies_by_network)} subnets from {url}')
+                except Exception:
+                    logger.exception(f'Failed fetching local subnets for {url}')
+
+            logger.info(f'Got total of {len(policies_by_network)} subnets')
             return policies_by_network
         except Exception:
             logger.exception(f'Failed fetching Local Subnets')
             return {}
 
+    @staticmethod
+    def _is_last_device_page(response: dict, total_devices: int, max_items: int):
+        if response.get('staticDeviceCount') and total_devices >= response.get('staticDeviceCount'):
+            return True
+
+        if response.get('dynamicDeviceCount') and total_devices >= response.get('dynamicDeviceCount'):
+            return True
+
+        if len(response.get('entries')) < max_items:
+            return True
+
+        return False
+
     def _paginated_device_get(self):
         try:
             local_subnets = self._get_local_subnets()
+            total_fetched_devices = 0
 
-            for api_device_endpoint, device_instance in API_DEVICES_ENDPOINTS:
-                full_url = self._api_domain + api_device_endpoint
-                url_params = dict(API_PAGINATION)
-                total_devices = 0
-                while total_devices < MAX_NUMBER_OF_DEVICES:
-                    url_params['uid'], url_params['sessionId'] = self._get_login_ids()
-                    response = self._get(full_url, url_params=url_params, force_full_url=True)
-                    if not (isinstance(response, dict) and isinstance(response.get('entries'), list)):
-                        logger.warning(f'Received invalid response for devices: {response}')
-                        continue
+            for api_domain in self._api_domains_swg:
+                for api_device_endpoint, device_instance in API_DEVICES_ENDPOINTS:
 
-                    for device in response.get('entries'):
-                        yield device, local_subnets, device_instance, self._api_domain
-                        total_devices += 1
+                    try:
+                        full_url = api_domain + api_device_endpoint
+                        url_params = dict(API_PAGINATION)
+                        total_devices = 0
+                        while total_devices < MAX_NUMBER_OF_DEVICES:
+                            url_params['uid'], url_params['sessionId'] = self._get_login_ids(api_domain)
+                            response = self._get(full_url, url_params=url_params, force_full_url=True)
+                            if not (isinstance(response, dict) and isinstance(response.get('entries'), list)):
+                                logger.warning(f'Received invalid response for devices: {response}')
+                                continue
 
-                    if (response.get('staticDeviceCount') and total_devices >= response.get('staticDeviceCount')) or \
-                       (response.get('dynamicDeviceCount') and total_devices >= response.get('dynamicDeviceCount')) or \
-                       len(response.get('entries')) < url_params['maxItems']:
-                        logger.info(f'Last page had {len(response.get("entries"))} < {url_params["maxItems"]}')
-                        break
+                            for device in response.get('entries'):
+                                yield device, local_subnets, device_instance, api_domain
+                                total_devices += 1
 
-                    url_params['currentRow'] += url_params['maxItems']
+                            if self._is_last_device_page(response, total_devices, url_params['maxItems']):
+                                logger.info(f'Last page had {len(response.get("entries"))} < {url_params["maxItems"]}')
+                                break
 
-                logger.info(f'Got total of {total_devices} of {device_instance}')
+                            url_params['currentRow'] += url_params['maxItems']
+                    except Exception:
+                        logger.exception(f'Failed paginating devices for {api_domain}')
+
+                logger.info(f'Got total of {total_devices} of {device_instance} from {full_url}')
+                total_fetched_devices += total_devices
+
+            logger.info(f'Got total of {total_fetched_devices} of Devices')
         except Exception as e:
             logger.exception(f'Invalid request made while paginating devices {str(e)}')
             raise
@@ -344,35 +378,55 @@ class IbossCloudConnection(RESTConnection):
 
     def _paginated_user_get(self):
         try:
-            url_params = dict(API_PAGINATION)
-            total_users = 0
-            while total_users < MAX_NUMBER_OF_USERS:
-                url_params['uid'], url_params['sessionId'] = self._get_login_ids()
-                url = self._api_domain + API_USER_ENDPOINT_SUFFIX
-                response = self._get(url, url_params=url_params, force_full_url=True)
-                if not (isinstance(response, dict) and isinstance(response.get('entries'), list)):
-                    logger.warning(f'Received invalid response for users: {response}')
-                    continue
+            total_fetched_users = 0
 
-                for user in response.get('entries'):
-                    yield user
-                    total_users += 1
+            for api_domain in self._api_domains_swg:
+                url_params = dict(API_PAGINATION)
+                total_users = 0
+                try:
+                    while total_fetched_users < MAX_NUMBER_OF_USERS:
+                        url_params['uid'], url_params['sessionId'] = self._get_login_ids(api_domain)
+                        url = api_domain + API_USER_ENDPOINT_SUFFIX
+                        response = self._get(url, url_params=url_params, force_full_url=True)
+                        if not (isinstance(response, dict) and isinstance(response.get('entries'), list)):
+                            logger.warning(f'Received invalid response for users: {response}')
+                            continue
 
-                if (response.get('userCount') and total_users >= response.get('userCount')) or \
-                        len(response.get('entries')) < url_params['maxItems']:
-                    logger.info(f'Done Users pagination, got {total_users}')
-                    break
+                        for user in response.get('entries'):
+                            yield user, None, None, url
+                            total_users += 1
 
-                url_params['currentRow'] += url_params['maxItems']
+                        if (response.get('userCount') and total_users >= response.get('userCount')) or \
+                                len(response.get('entries')) < url_params['maxItems']:
+                            logger.info(f'Done Users pagination for {url}, got {total_users}')
+                            break
 
-            logger.info(f'Got total of {total_users} from Users')
+                        url_params['currentRow'] += url_params['maxItems']
+
+                    logger.info(f'Got total of {total_users} from Users from {url}')
+                    total_fetched_users += total_users
+                except Exception:
+                    logger.exception(f'Failed paginating users for {api_domain}')
+
+            logger.info(f'Got total of {total_fetched_users} from Users')
         except Exception as e:
             logger.exception(f'Invalid request made while paginating users {str(e)}')
             raise
 
     def get_user_list(self):
         try:
+            # Using device get because it also contains information about users
+            yield from self._paginated_device_get()
+        except RESTException as e:
+            logger.exception(f'Failed paginating devices. {str(e)}')
+
+        try:
+            # Using cloud connected device get because it also contains information about users
+            yield from self._paginated_cloud_connected_device_get()
+        except RESTException as e:
+            logger.exception(f'Failed paginating cloud connected users. {str(e)}')
+
+        try:
             yield from self._paginated_user_get()
         except RESTException as e:
-            logger.exception(str(e))
-            raise
+            logger.exception(f'Failed paginating users. {str(e)}')
