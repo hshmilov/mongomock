@@ -8,7 +8,7 @@ from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.files import get_local_config_file
 from axonius.fields import Field, ListField
-from axonius.devices.device_adapter import TenableSource, TenableVulnerability
+from axonius.devices.device_adapter import TenableSource, TenableVulnerability, DeviceAdapterOS
 from axonius.plugin_base import add_rule, return_error
 from axonius.clients.rest.exception import RESTException
 from axonius.utils.datetime import parse_date
@@ -269,6 +269,12 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             os_list = device_raw.get('operating_systems')
             if len(os_list) > 0:
                 device.figure_os(str(os_list[0]))
+                if len(os_list) > 1:
+                    try:
+                        os_type = device.os.type
+                        device.os = DeviceAdapterOS(type=os_type)
+                    except Exception:
+                        pass
         except Exception:
             logger.exception(f'Problem getting OS for {device_raw}')
         fqdns = device_raw.get('fqdns', [])
