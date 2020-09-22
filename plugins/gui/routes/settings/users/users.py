@@ -209,13 +209,13 @@ class Users:
             except pymongo.errors.DuplicateKeyError:
                 logger.warning(f'Duplicate key error on {username}:{source}', exc_info=True)
             user = self._users_collection.find_one(filter_archived(match_user))
+            self._add_personal_space(user.get('_id'))
         elif role_id and role_id != user.get(ROLE_ID)\
                 and not user.get(IGNORE_ROLE_ASSIGNMENT_RULES)\
                 and change_role_on_every_login\
                 and assignment_rule_match_found:
             user[ROLE_ID] = ObjectId(role_id)
             self._users_collection.update_one(match_user, {'$set': {ROLE_ID: user[ROLE_ID]}})
-        self._add_personal_space(user.get('_id'))
         return user
 
     def _add_personal_space(self, user_id):
