@@ -836,8 +836,8 @@ export default {
       }
     }
 
-    .upload-file {
-      .file-name {
+    .x-file-edit {
+      .file {
         width: 120px;
       }
     }

@@ -1,123 +1,206 @@
 <template>
-    <div class="upload-file">
-        <template v-if="uploading">
-            <div class="file-name">
-                <XIcon family="symbol" type="running" spin />
-                <div class="name-placeholder">Uploading...</div>
-            </div>
-        </template>
-        <template v-else>
-            <input type="file" @change="uploadFile" @focusout="onFocusout" ref="file" :disabled="readOnly" :id="schema.name" />
-            <div class="file-name" :class="{'error-border': error}">{{value ? value.filename : "No file chosen"}}</div>
-            <x-button type="link" :disabled="readOnly" @click="selectFile">Choose file</x-button>
-        </template>
-    </div>
+  <div class="x-file-edit">
+    <template v-if="uploading">
+      <div class="file">
+        <XIcon
+          family="symbol"
+          type="running"
+          spin
+        />
+        <div class="name-placeholder">
+          Uploading...
+        </div>
+      </div>
+    </template>
+    <template v-else>
+      <input
+        :id="schema.name"
+        ref="file"
+        type="file"
+        :disabled="readOnly"
+        @change="uploadFile"
+        @focusout="onFocusout"
+      >
+      <div
+        class="file"
+        :title="fileName"
+        :class="{'error-border': error}"
+      >
+        <div class="file__name">{{ fileName }}</div>
+        <div class="file__remove">
+          <XButton
+            v-if="!readOnly && value"
+            type="link"
+            @click="removeFile"
+          >x</XButton>
+        </div>
+      </div>
+      <XButton
+        type="link"
+        :disabled="readOnly"
+        @click="selectFile"
+      >
+        Choose file
+      </XButton>
+    </template>
+  </div>
 </template>
 
 <script>
-    import XIcon from '@axons/icons/Icon';
-    import xButton from '../../../../axons/inputs/Button.vue'
-    import {currentHost} from '../../../../../store/actions'
+import axiosClient from '@api/axios';
 
-    import axiosClient from '@api/axios.js'
+import XIcon from '@axons/icons/Icon';
+import XButton from '../../../../axons/inputs/Button.vue';
 
-    export default {
-        name: 'x-array-edit',
-        components: { xButton, XIcon },
-        props: ['schema', 'value', 'apiUpload', 'readOnly'],
-        data() {
-            return {
-                valid: !!this.value,
-                error: '',
-                uploading: false,
-                filename: ""
-            }
-        },
-        methods: {
-        	selectFile(e) {
-                e.preventDefault()
-        		this.$refs.file.click()
-            },
-            uploadFile(uploadEvent) {
-                const files = uploadEvent.target.files || uploadEvent.dataTransfer.files
-                if (!files.length) {
-                	this.valid = false
-                    this.validate(false)
-                    return
-                }
-                let file = files[0]
-                let formData = new FormData()
-                formData.append("field_name", this.schema.name)
-                formData.append("userfile", file)
+export default {
+  name: 'XFileEdit',
+  components: { XButton, XIcon },
+  props: {
+    schema: {
+      type: Object,
+      required: true,
+    },
+    value: {
+      type: Object,
+      default: () => ({}),
+    },
+    apiUpload: {
+      type: String,
+      required: true,
+    },
+    readOnly: {
+      type: Boolean,
+      default: false
+    },
+  },
+  computed: {
+    fileName() {
+      return this.value ? this.value.filename : 'No file chosen';
+    },
+  },
+  data() {
+    return {
+      valid: !!this.value,
+      error: '',
+      uploading: false,
+      filename: '',
+    };
+  },
+  methods: {
+    selectFile(e) {
+      e.preventDefault();
+      this.$refs.file.click();
+    },
+    uploadFile(uploadEvent) {
+      const files = uploadEvent.target.files || uploadEvent.dataTransfer.files;
+      if (!files.length) {
+        this.valid = false;
+        this.validate(false);
+        return;
+      }
+      const file = files[0];
+      const formData = new FormData();
+      formData.append('field_name', this.schema.name);
+      formData.append('userfile', file);
 
-                this.uploading = true
-                let upload_url = `${this.apiUpload}/upload_file`
-                axiosClient.post(upload_url, formData).then(response => {
-                    this.uploading = false
-                    this.filename = file.name
-                    this.valid = true
-                    this.validate(true)
-                    this.$emit('input', {"uuid": response.data.uuid, "filename": file.name})
-                });
-            },
-            validate(silent) {
-                if (!this.schema.required) return
+      this.uploading = true;
+      const uploadUrl = `${this.apiUpload}/upload_file`;
+      axiosClient.post(uploadUrl, formData).then((response) => {
+        this.uploading = false;
+        this.filename = file.name;
+        this.valid = true;
+        this.validate(true);
+        this.$emit('input', { uuid: response.data.uuid, filename: file.name });
+      });
+    },
+    removeFile() {
+      this.$emit('input', null);
+    },
+    validate(silent) {
+      if (!this.schema.required) return;
 
-				this.error = ''
-                if (!silent && !this.valid) {
-                	this.error = `${this.schema.name} File is required`
-                }
-                this.$emit('validate', {
-                	name: this.schema.name, valid: this.valid, error: this.error
-                })
-            },
-            onFocusout() {
-        		this.validate(false)
-            }
-        }
-    }
+      this.error = '';
+      if (!silent && !this.valid) {
+        this.error = `${this.schema.name} File is required`;
+      }
+      this.$emit('validate', {
+        name: this.schema.name, valid: this.valid, error: this.error,
+      });
+    },
+    onFocusout() {
+      this.validate(false);
+    },
+  },
+};
 </script>
 
 <style lang="scss">
-    .upload-file {
+  .x-file-edit {
+    display: flex;
+    position: relative;
+
+    input[type=file] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      z-index: 0;
+    }
+
+    .x-button.ant-btn-link {
+      color: $theme-black;
+      font-size: 12px;
+      font-weight: 200;
+      line-height: 30px;
+
+      &:disabled {
+        cursor: default;
+      }
+    }
+
+    .file {
+      border: 1px solid $grey-2;
+      background: $theme-white;
+      z-index: 2;
+      height: 30px;
+      line-height: 30px;
+      padding: 8px 4px;
+      display: flex;
+      align-items: center;
+      width: 240px;
+
+      &__name {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+
+      &__remove {
+        flex: 1;
+        margin-left: 4px;
         display: flex;
-        position: relative;
-        input[type=file] {
-            position: absolute;
-            left: 0;
-            top: 0;
-            z-index: 0;
+        justify-content: flex-end;
+
+        .x-button {
+          padding: 0;
+          display: flex;
+          align-items: center;
         }
-        .x-button.ant-btn-link {
-            color: $theme-black;
-            font-size: 12px;
-            font-weight: 200;
-            &:disabled {
-                cursor: default;
-            }
+      }
+
+      .x-icon {
+        margin-right: 8px;
+        vertical-align: super;
+
+        .svg-stroke {
+          stroke: $grey-3;
+          stroke-width: 6px;
         }
-        .file-name {
-            border: 1px solid $grey-2;
-            background: $theme-white;
-            z-index: 2;
-            padding: 0 8px;
-            line-height: 26px;
-            overflow: hidden;
-            white-space: nowrap;
-            text-overflow: ellipsis;
-            .x-icon {
-                margin-right: 8px;
-                .svg-stroke {
-                    stroke: $grey-3;
-                    stroke-width: 6px;
-                }
-            }
-            .name-placeholder {
-                display: inline-block;
-            }
-        }
+      }
     }
-    .x-form .x-array-edit .object .upload-file input {
-        width: 10px;
-    }
+  }
+
+  .x-form .x-array-edit .object .x-file-edit input {
+    width: 10px;
+  }
+
 </style>

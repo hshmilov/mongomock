@@ -1353,8 +1353,9 @@ class SettingsPage(Page):
 
     @staticmethod
     def assert_ca_file_name_after_upload(cert_info: str):
-        file_name, choose_file_label, x_label = cert_info.split('\n')
+        file_name, file_x_label, choose_file_label, x_label = cert_info.split('\n')
         assert file_name != 'No file chosen'
+        assert file_x_label == 'x'
         assert choose_file_label == 'Choose file'
         assert x_label == 'x'
 

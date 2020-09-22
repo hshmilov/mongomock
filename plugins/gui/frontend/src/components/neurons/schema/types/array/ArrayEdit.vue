@@ -327,7 +327,7 @@ export default {
       this.$refs.itemChild.forEach((item) => item.validate(silent));
     },
     addNewItem() {
-      if (!this.schema.items.items) {
+      if (!this.schema.items.items || this.schema.items.type === 'file') {
         this.data = [...this.data, null];
       } else {
         this.data = [...this.data,
