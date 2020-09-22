@@ -251,6 +251,7 @@ import { tunnelConnectionStatuses } from '@constants/settings';
 import XAdapterClientConnection from '@networks/adapters/adapter-client-connection.vue';
 import { GET_CONNECTION_LABEL, REQUIRE_CONNECTION_LABEL } from '@store/getters';
 import { SAVE_PLUGIN_CONFIG } from '@store/modules/settings';
+import _isNil from 'lodash/isNil';
 
 export default {
   name: 'XAdapter',
@@ -370,7 +371,7 @@ export default {
         // eslint-disable-next-line camelcase
         const { node_id } = client;
         const instance = instances.get(node_id);
-
+        const clientActive = _isNil(client.active) ? true : client.active;
         return {
           ...client,
           ...client.client_config,
@@ -378,7 +379,7 @@ export default {
           connection_label: client.connectionLabel || this.getConnectionLabel(client.client_id, {
             plugin_name: this.adapterId, node_id,
           }),
-          status: client.active ? client.status : 'inactive',
+          status: clientActive ? client.status : 'inactive',
         };
       });
     },

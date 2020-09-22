@@ -138,7 +138,7 @@ class AggregatorService(Triggerable, PluginBase):
             if not adapters_clients.get(_adapter_unique_name):
                 return self._get_db_connection()[_adapter_unique_name]['clients'].find(
                     filter={
-                        CLIENT_ACTIVE: True
+                        CLIENT_ACTIVE: {'$ne': False}
                     },
                     projection={
                         'client_id': True,
@@ -192,7 +192,7 @@ class AggregatorService(Triggerable, PluginBase):
             return [x['client_id'] for x
                     in self._get_db_connection()[adapter]['clients'].find(
                     filter={
-                        CLIENT_ACTIVE: True
+                        CLIENT_ACTIVE: {'$ne': False}
                     },
                     projection={
                         'client_id': True,

@@ -154,7 +154,7 @@ class Adapters(Connections):
                             '$sum': {
                                 '$cond': [
                                     {'$and': [
-                                        {'$eq': ['$active', True]},
+                                        {'$ne': ['$active', False]},
                                         {'$eq': ['$status', 'success']}
                                     ]}, 1, 0]
                             }
@@ -163,7 +163,7 @@ class Adapters(Connections):
                             '$sum': {
                                 '$cond': [
                                     {'$and': [
-                                        {'$eq': ['$active', True]},
+                                        {'$ne': ['$active', False]},
                                         {'$eq': ['$status', 'error']}
                                     ]}, 1, 0]
                             }

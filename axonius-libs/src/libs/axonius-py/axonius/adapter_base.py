@@ -1927,7 +1927,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         Gets all the adapter active clients
         :return: List with all of the active client ids
         """
-        return [x['client_id'] for x in self._get_clients_config({CLIENT_ACTIVE: True})]
+        return [x['client_id'] for x in self._get_clients_config({CLIENT_ACTIVE: {'$ne': False}})]
 
     def _get_client_config_by_client_id(self, client_id: str):
         """Returning the data inside 'clients' Collection on <plugin_unique_name> db.

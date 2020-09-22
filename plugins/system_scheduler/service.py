@@ -1134,7 +1134,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         :return: Returns the amount of clients in adapter
         """
         return self._get_db_connection()[adapter_unique_name][CLIENTS_COLLECTION].count_documents({
-            CLIENT_ACTIVE: True,
+            CLIENT_ACTIVE: {'$ne': False},
             f'{CONNECTION_DISCOVERY}.{ENABLE_CUSTOM_DISCOVERY}': True
         })
 
@@ -1145,7 +1145,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         :return: Returns the active clients in adapter
         """
         return self._get_db_connection()[adapter_unique_name][CLIENTS_COLLECTION]\
-            .find({CLIENT_ACTIVE: True},
+            .find({CLIENT_ACTIVE: {'$ne': False}},
                   projection={CONNECTION_DISCOVERY: 1, CLIENT_ID: 1, LAST_FETCH_TIME: 1, '_id': 1})
 
     def __check_adapter_clients_status(self):

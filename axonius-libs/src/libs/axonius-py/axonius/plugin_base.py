@@ -1328,7 +1328,7 @@ class PluginBase(Configurable, Feature, ABC):
         :return: Returns the list of clients in adapter
         """
         return self._get_db_connection()[adapter_unique_name][CLIENTS_COLLECTION].find({
-            CLIENT_ACTIVE: True,
+            CLIENT_ACTIVE: {'$ne': False},
             f'{CONNECTION_DISCOVERY}.{ENABLE_CUSTOM_DISCOVERY}': False
         }, projection={CLIENT_ID: 1})
 
