@@ -685,7 +685,7 @@ class ReportGenerator:
             field_to_title = self._get_field_titles(entity)
             # Fetch only saved views that were added by user, excluding out-of-the-box queries
             if query_per_entity.get(entity.name.lower()) and not include_all_saved_views:
-                saved_views_filter = filter_by_ids(query_per_entity[entity.name.lower()])
+                saved_views_filter = filter_archived(filter_by_ids(query_per_entity[entity.name.lower()]))
 
             if not saved_views_filter:
                 continue
