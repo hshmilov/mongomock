@@ -6,7 +6,7 @@ from axonius.consts.gui_consts import (FeatureFlagsNames, RootMasterNames, Cloud
 from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME
 from axonius.mixins.configurable import Configurable
 from axonius.utils.build_modes import get_build_mode, BuildModes
-from gui.logic.dashboard_data import (generate_dashboard_uncached, dashboard_historical_uncached)
+from gui.logic.dashboard_data import (generate_dashboard, generate_dashboard_historical)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -74,11 +74,11 @@ class FeatureFlags(Configurable):
 
         present_limit = current_setting.get(DashboardControlNames.present_call_limit)
         if present_limit != previous_setting.get(DashboardControlNames.present_call_limit):
-            generate_dashboard_uncached.init_semaphore(present_limit)
+            generate_dashboard.init_lock(present_limit)
 
         historical_limit = current_setting.get(DashboardControlNames.historical_call_limit)
         if historical_limit != previous_setting.get(DashboardControlNames.historical_call_limit):
-            dashboard_historical_uncached.init_semaphore(historical_limit)
+            generate_dashboard_historical.init_lock(historical_limit)
 
     @classmethod
     def _db_config_schema(cls) -> dict:

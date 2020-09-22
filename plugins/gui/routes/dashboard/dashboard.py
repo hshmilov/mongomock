@@ -8,7 +8,7 @@ from flask import jsonify
 
 from axonius.consts.gui_consts import (DASHBOARD_LIFECYCLE_ENDPOINT,
                                        DASHBOARD_SPACE_TYPE_CUSTOM,
-                                       ResearchStatus, DashboardControlNames, DASHBOARD_CALL_LIMIT, TunnelStatuses,
+                                       ResearchStatus, DashboardControlNames, TunnelStatuses,
                                        DASHBOARD_SPACE_TYPE_PERSONAL)
 from axonius.consts.plugin_consts import SYSTEM_SCHEDULER_PLUGIN_NAME
 from axonius.consts.scheduler_consts import (Phases, ResearchPhases,
@@ -21,9 +21,8 @@ from axonius.utils.permissions_helper import (PermissionAction,
                                               PermissionCategory,
                                               PermissionValue)
 from axonius.utils.revving_cache import (NoCacheException,
-                                         rev_cached)
-from gui.logic.dashboard_data import (adapter_data, generate_dashboard,
-                                      generate_dashboard_uncached, dashboard_historical_uncached)
+                                         rev_cached, CACHE_CALL_LIMIT)
+from gui.logic.dashboard_data import (adapter_data, generate_dashboard, generate_dashboard_historical)
 from gui.logic.fielded_plugins import get_fielded_plugins
 from gui.logic.filter_utils import filter_archived
 from gui.logic.historical_dates import (all_historical_dates,
@@ -179,8 +178,8 @@ class Dashboard(Charts, Notifications):
             try:
                 chart_data = generate_dashboard(
                     chart['_id'],
-                    sort_by=chart_sort_config.get('sort_by', None),
-                    sort_order=chart_sort_config.get('sort_order', None))
+                    sort_by=chart_sort_config.get('sort_by'),
+                    sort_order=chart_sort_config.get('sort_order'))
                 has_data = chart_data.get('data') and chart_data['data'][0].get('portion', 0) not in [0, 1]
             except NoCacheException:
                 return False
@@ -343,10 +342,10 @@ class Dashboard(Charts, Notifications):
         Warms up the cache for all dashboards for all users
         """
         dashboard_control = self._current_feature_flag_config.get(DashboardControlNames.root_key, {})
-        generate_dashboard_uncached.init_semaphore(dashboard_control.get(
-            DashboardControlNames.present_call_limit, DASHBOARD_CALL_LIMIT))
-        dashboard_historical_uncached.init_semaphore(dashboard_control.get(
-            DashboardControlNames.historical_call_limit, DASHBOARD_CALL_LIMIT))
+        generate_dashboard.init_lock(dashboard_control.get(
+            DashboardControlNames.present_call_limit, CACHE_CALL_LIMIT))
+        generate_dashboard_historical.init_lock(dashboard_control.get(
+            DashboardControlNames.historical_call_limit, CACHE_CALL_LIMIT))
         for dashboard in self._dashboard_collection.find(
                 filter=filter_archived(),
                 projection={
@@ -363,8 +362,7 @@ class Dashboard(Charts, Notifications):
             except Exception:
                 logger.warning(f'Failed generating dashboard for {dashboard}', exc_info=True)
 
-    def _get_dashboard(self, skip=0, limit=0, uncached: bool = False,
-                       space_ids: list = None, exclude_personal=False, generate_data=True):
+    def _get_dashboard(self, skip=0, limit=0, space_ids: list = None, exclude_personal=False, generate_data=True):
         """
         GET Fetch current dashboard chart definitions. For each definition, fetch each of it's views and
         fetch devices_db with their view. Amount of results is mapped to each views' name, under 'data' key,
@@ -427,16 +425,13 @@ class Dashboard(Charts, Notifications):
             try:
                 generated_dashboard = {}
                 if generate_data:
-                    if uncached:
-                        generated_dashboard = generate_dashboard_uncached(dashboard['_id'])
-                    else:
-                        try:
-                            generated_dashboard = generate_dashboard(
-                                dashboard['_id'],
-                                sort_by=dashboard_sort_config.get('sort_by', None),
-                                sort_order=dashboard_sort_config.get('sort_order', None))
-                        except NoCacheException:
-                            logger.debug(f'dashboard {dashboard["_id"]} is not ready')
+                    try:
+                        generated_dashboard = generate_dashboard(
+                            dashboard['_id'],
+                            sort_by=dashboard_sort_config.get('sort_by', None),
+                            sort_order=dashboard_sort_config.get('sort_order', None))
+                    except NoCacheException:
+                        logger.debug(f'dashboard {dashboard["_id"]} is not ready')
                     if generated_dashboard:
                         yield {
                             **generated_dashboard,

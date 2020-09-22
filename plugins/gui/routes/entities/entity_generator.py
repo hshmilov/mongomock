@@ -52,7 +52,7 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @filtered_fields()
         @metadata()
         @gui_route_logged_in(methods=['GET', 'POST'], required_permission=PermissionValue.get(
-            PermissionAction.View, permission_category, ), skip_activity=True)
+            PermissionAction.View, permission_category), skip_activity=True)
         def get(self, limit, skip, mongo_filter, mongo_sort,
                 mongo_projection, history: datetime,
                 field_filters,

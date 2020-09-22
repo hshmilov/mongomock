@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from datetime import datetime
-from threading import Event, RLock
+from threading import Event, RLock, Semaphore
 from typing import Callable, Iterable, Tuple, Dict, Hashable, List
 
 from apscheduler.job import Job
@@ -18,6 +18,8 @@ from axonius.utils.memory_usage import memory
 logger = logging.getLogger(f'axonius.{__name__}')
 
 EVENT_MAX_WAIT_TIME = 900
+CACHE_CALL_LOCK = 'CACHE_CALL_LOCK'
+CACHE_CALL_LIMIT = 5
 
 
 def hashkey(func: Callable, *args, **kwargs):
@@ -207,7 +209,9 @@ class RevCached:
         with self.__initial_values_lock_dict[cache_entry.key]:
             started_time = datetime.now()
             try:
-                cache_entry.calculated_value = self.__func(*cache_entry.args, **cache_entry.kwargs)
+                cache_entry.calculated_value = self.__func(*cache_entry.args,
+                                                           **cache_entry.kwargs,
+                                                           has_cache=cache_entry.event.is_set())
                 cache_entry.exception = None
             except Exception as e:
                 cache_entry.exception = e
@@ -408,7 +412,7 @@ class RevCached:
 
 
 def rev_cached(ttl: int, initial_values: Iterable[Tuple] = None, remove_from_cache_ttl: int = 3600 * 48,
-               key_func: Callable = None, blocking=True):
+               key_func: Callable = None, blocking=True, limit_parallel_calls=False):
     """
     See RevCached documentation
     You can call .update_cache on the method this decorates to trigger a cache update asynchronously
@@ -419,7 +423,26 @@ def rev_cached(ttl: int, initial_values: Iterable[Tuple] = None, remove_from_cac
     """
 
     def wrap(func):
-        cache = RevCached(ttl, func, initial_values or [], remove_from_cache_ttl, key_func=key_func)
+        g = func.__globals__
+
+        def init_lock(call_limit=CACHE_CALL_LIMIT):
+            g[CACHE_CALL_LOCK] = Semaphore(call_limit)
+
+        def func_wrapper(*args, **kwargs):
+            has_cache = kwargs.pop('has_cache', False)
+            if not limit_parallel_calls or not has_cache:
+                return func(*args, **kwargs)
+
+            if CACHE_CALL_LOCK not in g:
+                init_lock()
+
+            g[CACHE_CALL_LOCK].acquire()
+            try:
+                return func(*args, **kwargs)
+            finally:
+                g[CACHE_CALL_LOCK].release()
+
+        cache = RevCached(ttl, func_wrapper, initial_values or [], remove_from_cache_ttl, key_func=key_func)
         ALL_CACHES.append(cache)
 
         def actual_wrapper(*args, **kwargs):
@@ -433,6 +456,8 @@ def rev_cached(ttl: int, initial_values: Iterable[Tuple] = None, remove_from_cac
         actual_wrapper.remove_from_cache = cache.remove_from_cache
         actual_wrapper.has_cache = cache.has_cache
         actual_wrapper.wait_for_cache = cache.wait_for_cache
+        if limit_parallel_calls:
+            actual_wrapper.init_lock = init_lock
 
         return actual_wrapper
 

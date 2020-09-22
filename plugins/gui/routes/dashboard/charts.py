@@ -127,20 +127,22 @@ class Charts:
         insert_result = self._dashboard_collection.insert_one(chart_data)
         if not insert_result or not insert_result.inserted_id:
             return return_error('Error saving dashboard chart', 400)
-        trend_chart_id = self._trend_chart_handler(chart_data, insert_result.inserted_id, space_id)
+        chart_id = insert_result.inserted_id
+        trend_chart_id = self._trend_chart_handler(chart_data, chart_id, source_space_id)
         # Adding to the 'panels_order' attribute the newly panelId created through the wizard
         space = self._dashboard_spaces_collection.find_one_and_update({
             '_id': ObjectId(space_id)
         }, {
             '$push': {
-                'panels_order': str(insert_result.inserted_id)
+                'panels_order': str(chart_id)
             }
         })
         chart_name = chart_data.get('name', '')
         chart_metric = chart_data.get('metric')
+        chart_config = chart_data.get('config', {})
         return jsonify({
-            'uuid': str(insert_result.inserted_id),
-            'config': chart_data.get('config', {}),
+            'uuid': str(chart_id),
+            'config': chart_config,
             'metric': chart_metric,
             'name': chart_name,
             'space': str(space_id),
@@ -152,7 +154,7 @@ class Charts:
             CHART_TYPE: chart_metric
         })
 
-    def _trend_chart_handler(self, chart_data, chart_id, space_id):
+    def _trend_chart_handler(self, chart_data, chart_id: ObjectId, space_id: ObjectId):
         if chart_data.get('config').get('show_timeline'):
             generated_id = self._link_trend_chart(chart_data, chart_id, space_id)
             return generated_id
@@ -160,25 +162,33 @@ class Charts:
             self._unlink_trend_chart(chart_data.get('linked_dashboard'), chart_id)
         return None
 
-    def _unlink_trend_chart(self, trend_chart_id, chart_id):
-        self._dashboard_collection.find_one_and_delete({'_id': ObjectId(trend_chart_id)})
+    def _unlink_trend_chart(self, trend_chart_id, chart_id: ObjectId):
+        self._dashboard_collection.find_one_and_delete({
+            '_id': ObjectId(trend_chart_id)
+        })
         self._dashboard_collection.find_one_and_update({
-            '_id': ObjectId(chart_id)
+            '_id': chart_id
         }, {
             '$unset': {'linked_dashboard': 1}
         })
 
-    def _link_trend_chart(self, chart_data, chart_id, space_id):
+    def _link_trend_chart(self, chart_data, chart_id: ObjectId, space_id: ObjectId):
         config = chart_data.get('config')
-        trend_chart_data = {'metric': 'segment_timeline',
-                            'name': chart_data.get('name'), 'view': 'line',
-                            'space': ObjectId(space_id), 'user_id': get_connected_user_id(),
-                            'is_linked_dashboard': True, 'hide_empty': True,
-                            'config': {
-                                'entity': config['entity'], 'view': config['view'],
-                                'field': config['field'], 'value_filter': config['value_filter'],
-                                'include_empty': config.get('include_empty', False),
-                                'timeframe': config['timeframe']}, LAST_UPDATED_FIELD: datetime.now()}
+        trend_chart_data = {
+            'metric': 'segment_timeline',
+            'name': chart_data.get('name'),
+            'view': 'line',
+            'space': space_id,
+            'user_id': get_connected_user_id(),
+            'is_linked_dashboard': True,
+            'hide_empty': True,
+            'config': {
+                'entity': config['entity'], 'view': config['view'],
+                'field': config['field'], 'value_filter': config['value_filter'],
+                'include_empty': config.get('include_empty', False),
+                'timeframe': config['timeframe']
+            }, LAST_UPDATED_FIELD: datetime.now()
+        }
 
         insert_result = self._dashboard_collection.find_one_and_update(
             {'_id': ObjectId(chart_data.get('linked_dashboard'))},
@@ -190,7 +200,7 @@ class Charts:
             # link trend chart to the original chart
             trend_chart_id = str(insert_result.get('_id'))
             self._dashboard_collection.find_one_and_update({
-                '_id': ObjectId(chart_id)
+                '_id': chart_id
             }, {
                 '$set': {'linked_dashboard': ObjectId(trend_chart_id)}
             })

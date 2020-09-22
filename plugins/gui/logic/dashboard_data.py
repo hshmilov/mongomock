@@ -2,9 +2,7 @@
 import logging
 from collections import defaultdict, Counter, Hashable
 from datetime import date, datetime, timedelta
-from functools import wraps
 from multiprocessing import cpu_count
-from threading import Semaphore
 from typing import (List, Iterable, Tuple, Optional)
 import re
 
@@ -13,8 +11,7 @@ from dateutil.parser import parse as parse_date
 
 from axonius.consts.gui_consts import (ChartMetrics, ChartViews, ChartFuncs, ChartRangeTypes, ChartRangeUnits,
                                        ADAPTERS_DATA, SPECIFIC_DATA, RANGE_UNIT_DAYS,
-                                       DASHBOARD_COLLECTION, SortType, SortOrder, LABELS_FIELD, DASHBOARD_CALL_LOCK,
-                                       DASHBOARD_CALL_LIMIT)
+                                       DASHBOARD_COLLECTION, SortType, SortOrder, LABELS_FIELD)
 from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase, return_error
@@ -26,34 +23,6 @@ from axonius.utils.threading import GLOBAL_RUN_AND_FORGET
 from gui.logic.db_helpers import beautify_db_entry
 
 logger = logging.getLogger(f'axonius.{__name__}')
-
-
-def dashboard_call_limit():
-    """
-    Limits the amount of calls to dashboard creation to only Limit at a time
-    """
-
-    def limit_dec(func):
-        g = func.__globals__
-
-        def init_semaphore(semaphore_limit):
-            g[DASHBOARD_CALL_LOCK] = Semaphore(semaphore_limit)
-
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            if DASHBOARD_CALL_LOCK not in g:
-                init_semaphore(DASHBOARD_CALL_LIMIT)
-
-            g[DASHBOARD_CALL_LOCK].acquire()
-            try:
-                return func(*args, **kwargs)
-            finally:
-                g[DASHBOARD_CALL_LOCK].release()
-
-        wrapper.init_semaphore = init_semaphore
-        return wrapper
-
-    return limit_dec
 
 
 @rev_cached_entity_type(ttl=300)
@@ -1354,7 +1323,6 @@ def fetch_chart_adapter_segment(chart_view: ChartViews, entity: EntityType, sele
     return data
 
 
-@dashboard_call_limit()
 def generate_dashboard_uncached(dashboard_id: ObjectId, sort_by=None, sort_order=None):
     """
     See _get_dashboard
@@ -1402,12 +1370,9 @@ def generate_dashboard_uncached(dashboard_id: ObjectId, sort_by=None, sort_order
 
 
 # there's no trivial way to remove the TTL functionality entirely, so let's just make it long enough
-@rev_cached(ttl=3600 * 6, blocking=False)
+@rev_cached(ttl=3600 * 6, blocking=False, limit_parallel_calls=True)
 def generate_dashboard(dashboard_id: ObjectId, sort_by=None, sort_order=None):
-    """
-    See _get_dashboard
-    """
-    return generate_dashboard_uncached(dashboard_id, sort_by=sort_by, sort_order=sort_order)
+    return generate_dashboard_uncached(dashboard_id, sort_by, sort_order)
 
 
 def fetch_latest_date(entity: EntityType, from_given_date: datetime, to_given_date: datetime):
@@ -1513,7 +1478,6 @@ def fetch_chart_matrix_historical(card, from_given_date, to_given_date):
     return fetch_chart_matrix(ChartViews[card['view']], **config, for_date=latest_date)
 
 
-@dashboard_call_limit()
 def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, to_date: datetime,
                                   sort_by=None, sort_order=None):
     # pylint: disable=protected-access
@@ -1558,7 +1522,7 @@ def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, t
     return beautify_db_entry(dashboard)
 
 
-@rev_cached(ttl=3600 * 24 * 365)
+@rev_cached(ttl=3600 * 24 * 365, limit_parallel_calls=True)
 def generate_dashboard_historical(dashboard_id: ObjectId, from_date: datetime, to_date: datetime,
                                   sort_by=None, sort_order=None):
     return dashboard_historical_uncached(dashboard_id, from_date, to_date, sort_by, sort_order)
