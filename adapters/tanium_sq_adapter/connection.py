@@ -152,7 +152,21 @@ class TaniumSqConnection(tanium.connection.TaniumConnection):
         sq = self._get_by_name(objtype='saved_questions', value=name)
         question = sq.get('question', {})
         selects = question.get('selects', [])
-        sensor_names = [x.get('sensor', {}).get('name') for x in selects]
+        sensors = [x.get('sensor', {}) for x in selects if x.get('sensor', {})]
+        sensor_names = []
+
+        for sensor in sensors:
+            sensor_name = sensor['name']
+            sensor_names.append(sensor_name)
+            sensor_hash = sensor['hash']
+            sinfo = f'sensor name {sensor_name!r} for Saved Question {name!r}'
+            try:
+                self._get_by_hash(objtype='sensors', value=sensor_hash)
+                logger.info(f'Successfully retrieved {sinfo}')
+            except Exception as exc:
+                raise RESTException(
+                    f'Unable to access {sinfo}, check that RBAC allows access to appropriate content set'
+                )
 
         missing = self.missing_sensors(name=name, sensor_names=sensor_names)
         if missing:
