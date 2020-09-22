@@ -151,7 +151,7 @@ class Dashboard(Charts, Notifications):
             'spaces': spaces
         })
 
-    @gui_route_logged_in('<space_id>', methods=['GET'], activity_params=[SPACE_NAME])
+    @gui_route_logged_in('<space_id>', methods=['GET'], enforce_trial=False, activity_params=[SPACE_NAME])
     def get_space_by_id(self, space_id):
 
         if not space_id:

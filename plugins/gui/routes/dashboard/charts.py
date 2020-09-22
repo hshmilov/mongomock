@@ -255,7 +255,7 @@ class Charts:
     @historical_range()
     @search_filter()
     @gui_route_logged_in('<panel_id>', methods=['GET'], required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.Dashboard))
+        PermissionAction.View, PermissionCategory.Dashboard), enforce_trial=False)
     @sorted_by_method_endpoint()
     # pylint: disable=too-many-branches
     def get_dashboard_panel(self, panel_id, skip, limit, from_date: datetime, to_date: datetime,
