@@ -690,7 +690,7 @@ def _generate_segmented_field_query_filter(field_name, value, with_regex=False):
                 query_filter = f'{field_name} == regex("{escape_regex_value(value)}","i")'
             else:
                 query_filter = f'{field_name} == "{escape_new_line(value)}"'
-    elif isinstance(value, int):
+    elif isinstance(value, (int, float)):
         query_filter = f'{field_name} == {value}'
     elif isinstance(value, datetime):
         query_filter = f'{field_name} == date("{value}")'
