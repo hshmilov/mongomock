@@ -1,9 +1,10 @@
 import shortid from 'shortid';
 import _size from 'lodash/size';
 import _get from 'lodash/get';
-import { pluginMeta } from '../../constants/plugin_meta';
-import { REQUEST_API } from '../actions';
+import _sumBy from 'lodash/sumBy';
 import { CHANGE_PLUGIN_CONFIG } from '@store/modules/settings';
+import { pluginMeta } from '@constants/plugin_meta';
+import { REQUEST_API } from '../actions';
 
 export const HINT_ADAPTER_UP = 'HINT_ADAPTER_UP';
 export const FETCH_ADAPTERS = 'FETCH_ADAPTERS';
@@ -11,7 +12,7 @@ export const FETCH_ADAPTER_CONNECTIONS = 'FETCH_ADAPTER_CONNECTIONS';
 export const SET_ADAPTER_CONNECTIONS = 'SET_ADAPTER_CONNECTIONS';
 export const SET_ADAPTER_SCHEMA = 'SET_ADAPTER_SCHEMA';
 export const FETCH_SELECTABLE_INSTANCES = 'FETCH_SELECTABLE_INSTANCES';
-export const LAZY_FETCH_SELECTABLE_INSTANCES = 'LAZY_FETCH_SELECTABLE_INSTANCES'
+export const LAZY_FETCH_SELECTABLE_INSTANCES = 'LAZY_FETCH_SELECTABLE_INSTANCES';
 export const LAZY_FETCH_ADAPTERS = 'LAZY_FETCH_ADAPTERS';
 export const SET_ADAPTERS = 'SET_ADAPTERS';
 export const SET_SELECTABLE_INSTANCES = 'SET_SELECTABLE_INSTANCES';
@@ -22,7 +23,7 @@ export const SAVE_ADAPTER_CLIENT = 'SAVE_ADAPTER_CLIENT';
 export const TEST_ADAPTER_SERVER = 'TEST_ADAPTER_SERVER';
 export const ARCHIVE_CLIENT = 'ARCHIVE_CLIENT';
 export const REMOVE_CLIENT = 'REMOVE_CLIENT';
-export const LOAD_ADAPTER_CONFIG = 'LOAD_ADAPTER_CONFIG'
+export const LOAD_ADAPTER_CONFIG = 'LOAD_ADAPTER_CONFIG';
 
 export const UPDATE_EXISTING_CLIENT = 'UPDATE_EXISTING_CLIENT';
 export const ADD_NEW_CLIENT = 'ADD_NEW_CLIENT';
@@ -46,7 +47,7 @@ export const adapters = {
     tableFilter: {
       searchText: '',
       showOnlyConfigured: false,
-    }
+    },
   },
   mutations: {
     [SET_ADAPTERS](state, payload) {
@@ -76,15 +77,13 @@ export const adapters = {
 
 
           const adapterInstancesIds = currentAdapter.map((adapterInstance) => adapterInstance.node_id);
-          const adaptersClients = currentAdapter.reduce((clientsStat, adapterData) => ({
-            count: clientsStat.count + adapterData.clients_count.total_count,
-            success: clientsStat.success + adapterData.clients_count.success_count,
-            error: clientsStat.success + adapterData.clients_count.error_count,
-            inactive: clientsStat.inactive + adapterData.clients_count.inactive_count,
-          }), {
-            count: 0, success: 0, error: 0, inactive: 0,
-          });
-
+          const adapterClientsCounters = currentAdapter.map((_adapter) => _adapter.clients_count);
+          const adaptersClients = {
+            count: _sumBy(adapterClientsCounters, 'total_count'),
+            success: _sumBy(adapterClientsCounters, 'success_count'),
+            error: _sumBy(adapterClientsCounters, 'error_count'),
+            inactive: _sumBy(adapterClientsCounters, 'inactive_count'),
+          };
           let adapterStatus;
           if (adaptersClients.error) {
             adapterStatus = 'error';
