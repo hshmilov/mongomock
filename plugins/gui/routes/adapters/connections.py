@@ -1,4 +1,4 @@
-# pylint: disable=no-member,cell-var-from-loop,access-member-before-definition,too-many-locals
+# pylint: disable=no-member,cell-var-from-loop,access-member-before-definition,too-many-locals,protected-access
 
 import logging
 import time
@@ -8,6 +8,7 @@ from multiprocessing.pool import ThreadPool
 from flask import (request, jsonify)
 from bson import ObjectId
 
+from axonius.adapter_base import AdapterBase
 from axonius.consts.adapter_consts import LAST_FETCH_TIME, CLIENT_ID, CONNECTION_LABEL
 from axonius.consts.gui_consts import (FeatureFlagsNames, IS_INSTANCES_MODE, INSTANCE_NAME, INSTANCE_PREV_NAME)
 from axonius.consts.plugin_consts import (PLUGIN_NAME, PLUGIN_UNIQUE_NAME, NODE_ID, CONNECTION_DISCOVERY, CLIENT_ACTIVE)
@@ -192,16 +193,19 @@ class Connections:
                     'Instance_id': instance
                 }
 
+            connection_discovery_default = AdapterBase._connection_discovery_schema_default()
             # object to be updated
             current_client_info = get_client_info(client_config,
                                                   client_label.get(CONNECTION_LABEL) if client_label else None,
-                                                  connection_from_db[CONNECTION_DISCOVERY],
+                                                  connection_from_db.get(CONNECTION_DISCOVERY,
+                                                                         connection_discovery_default),
                                                   connection_from_db[CLIENT_ACTIVE],
                                                   prev_instance_id or instance_id)
             # object post updated
             updated_client_info = get_client_info(connection_data['connection'],
                                                   connection_data[CONNECTION_LABEL],
-                                                  connection_data[CONNECTION_DISCOVERY],
+                                                  connection_data.get(CONNECTION_DISCOVERY,
+                                                                      connection_discovery_default),
                                                   connection_data[CLIENT_ACTIVE],
                                                   instance_id)
 
