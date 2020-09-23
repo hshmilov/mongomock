@@ -990,7 +990,7 @@ class Page:
 
     def get_filename_by_input_id(self, input_id):
         return self.driver.find_element_by_xpath(
-            f'//div[child::input[@id=\'{input_id}\']]/div[contains(@class, \'file-name\')]').text
+            f'//div[child::input[@id=\'{input_id}\']]/div/div[contains(@class, \'file__name\')]').text
 
     def is_saved_queries_opened(self):
         saved_queries = self.driver.find_elements_by_css_selector('button[title="Saved Queries"] > span')

@@ -122,10 +122,10 @@ class SettingsPage(Page):
     CERT_ELEMENT_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=cert_file]'
     PRIVATE_ELEMENT_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=private_key]'
     MUTUAL_TLS_CERTIFICATE_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=ca_certificate]'
-    CERT_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=cert_file] + ' \
-                                     'div[class=file-name]'
+    CERT_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=cert_file] + div[class=file] '\
+                                     'div[class=file__name]'
     PRIVATE_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=private_key] ' \
-                                        '+ div[class=file-name]'
+                                        '+ div[class=file] div[class=file__name]'
     CSV_IP_TO_LOCATION_SELECTOR = 'div.x-tab.active.global-settings-tab ' \
                                   'input[id=csv_ip_location_file]'
 
