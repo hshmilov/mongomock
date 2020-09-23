@@ -32,13 +32,13 @@ class NVDSearcher:
         self.__products_db = dict()
         self.__use_lock = threading.RLock()
 
-    def update(self):
+    def update(self, from_internal_cache=True):
         """
         Updates the NVD DB.
         :return:
         """
         try:
-            nvd_update.update()
+            nvd_update.update(from_internal_cache=from_internal_cache)
         except requests.exceptions.RequestException:
             logger.warning(f'Warning, Internet problem. moving on: {get_exception_string()}')
         except Exception:

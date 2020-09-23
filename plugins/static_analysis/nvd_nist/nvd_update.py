@@ -8,9 +8,13 @@ import logging
 import os
 import sys
 import pickle
+from urllib.parse import urlparse
 
 import requests
 from retrying import retry
+
+from axonius.clients.rest.connection import RESTConnection
+from axonius.consts.system_consts import CORTEX_PATH
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -24,6 +28,9 @@ TIMEOUT_FOR_REQUESTS_IN_SECONDS = 15
 CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
 CURRENT_STATE_FILE = os.path.join(CURRENT_DIR, 'nvd_current_state.json')
 ARTIFACT_FOLDER = os.path.join(CURRENT_DIR, 'artifacts')
+
+NVD_ARTIFACTS_URL = 'https://davinci.axonius.lan:1001/'
+NVD_ARTIFACTS_PATH = os.path.join(CORTEX_PATH, 'plugins', 'static_analysis', 'nvd_nist', 'artifacts')
 
 # pylint: disable=invalid-triple-quote, pointless-string-statement
 
@@ -69,7 +76,35 @@ def get_nvd_file_for_version(version):
     return res.content
 
 
-def update(earliest_year=None, hard=False):
+def update_from_internal_cache():
+    """
+    Simply calls the download artifacts script to download things from the internet before we create the installer.
+    :return:
+    """
+    # Download nvd artifacts
+    print(f'Downloading NVD artifacts from {NVD_ARTIFACTS_URL}...')
+    response = requests.get(NVD_ARTIFACTS_URL, verify=False, timeout=60)
+    response.raise_for_status()
+    for file_name in response.json():
+        print(f'Downloading {NVD_ARTIFACTS_URL + file_name}...')
+        response = requests.get(NVD_ARTIFACTS_URL + file_name, verify=False, timeout=60)
+        response.raise_for_status()
+        with open(os.path.join(NVD_ARTIFACTS_PATH, file_name.split('/')[-1]), 'wb') as f:
+            f.write(response.content)
+
+    print(f'Done downloading NVD Artifacts')
+
+
+def update(earliest_year=None, hard=False, from_internal_cache=True):
+    if from_internal_cache:
+        parsed_url = urlparse(NVD_ARTIFACTS_URL)
+        if RESTConnection.test_reachability(parsed_url.hostname, parsed_url.port):
+            update_from_internal_cache()
+    else:
+        update_from_internet(earliest_year, hard)
+
+
+def update_from_internet(earliest_year=None, hard=False):
     """
     Downloads the files from the internet.
     :param earliest_year: the earliest nvd db year to download.
