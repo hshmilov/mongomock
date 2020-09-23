@@ -1,7 +1,7 @@
 <template>
   <div class="x-vault-edit">
     <XStringEdit
-      v-model="processedData"
+      v-model="data"
       :schema="schema"
       :read-only="readOnly"
       @validate="onValidate"
@@ -117,13 +117,8 @@ export default {
         return providerName ? vaultProviderEnum[providerName] : {};
       },
     }),
-    processedData: {
-      get() {
-        return this.isUnchangedPassword ? '********' : this.data;
-      },
-      set(value) {
-        this.data = value;
-      },
+    isNativePassword() {
+      return Array.isArray(this.data) || typeof this.data === 'string';
     },
     getTooltip() {
       if (this.error) {
@@ -134,9 +129,6 @@ export default {
         return this.vaultProvider.schema.items.map(fieldToTitledValue).join('\n');
       }
       return `Use ${this.vaultProvider.title}`;
-    },
-    isUnchangedPassword() {
-      return this.inputType === 'password' && this.data && this.data[0] === 'unchanged';
     },
     vaultIcon() {
       return this.vaultProvider.name || '';
@@ -158,8 +150,8 @@ export default {
     });
   },
   mounted() {
+    this.data = this.value;
     if (this.value && this.value.data) {
-      this.data = this.value;
       this.queryModal.data = this.value.data;
       if (this.value.error) {
         this.error = this.value.error;
@@ -212,7 +204,10 @@ export default {
       this.input();
     },
     checkData() {
-      return this.success || !this.schema.required;
+      if (!this.schema.required) {
+        return true;
+      }
+      return this.success || (this.isNativePassword && !_isEmpty(this.data));
     },
     updateFetchValidity(validity) {
       this.queryModal.valid = validity;
