@@ -296,6 +296,11 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                 device.add_agent_version(agent=AGENT_NAMES.crowd_strike, version=device_raw.get('agent_version'),
                                          status=device_raw.get('status'))
                 device.cs_agent_version = device_raw.get('agent_version')
+                try:
+                    if isinstance(device_raw.get('ou'), list):
+                        device.organizational_unit = device_raw.get('ou')
+                except Exception:
+                    logger.exception(f'Problem with OU')
                 mac_address = device_raw.get('mac_address')
                 local_ip = device_raw.get('local_ip')
                 device.add_ips_and_macs(mac_address, local_ip.split(',') if local_ip is not None else None)

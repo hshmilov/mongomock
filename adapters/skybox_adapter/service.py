@@ -10,7 +10,7 @@ from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import format_ip
+from axonius.utils.parsing import format_ip, format_ip_raw
 from skybox_adapter.connection import SkyboxConnection
 from skybox_adapter.client_id import get_client_id
 from skybox_adapter.consts import FIREWALL_ACTION, FIREWALL_DIRECTION
@@ -24,6 +24,7 @@ class SkyboxNic(SmartJsonClass):
     id = Field(str, 'ID')
     name = Field(str, 'Name')
     ip_address = Field(str, 'IP', converter=format_ip, json_format=JsonStringFormat.ip)
+    ip_address_raw = Field(str, converter=format_ip_raw, hidden=True)
     description = Field(str, 'Description')
     type = Field(str, 'Type')
     zone_name = Field(str, 'Zone Name')
@@ -225,6 +226,7 @@ class SkyboxAdapter(AdapterBase):
                             id=nic_raw.get('id'),
                             name=nic_raw.get('name'),
                             ip_address=nic_raw.get('ipAddress'),
+                            ip_address_raw=nic_raw.get('ipAddress'),
                             description=nic_raw.get('description'),
                             type=nic_raw.get('type'),
                             zone_name=nic_raw.get('zoneName'),
