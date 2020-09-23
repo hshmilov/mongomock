@@ -3,7 +3,7 @@
     <span class="error-input indicator-error--text">{{ error }}</span>
     <EditComment
       v-if="canEditComplianceComments"
-      :accounts="accounts"
+      :accounts="accountsSorted"
       :add="true"
       :disabled="isInEditingMode"
       @save="saveItem"
@@ -18,7 +18,7 @@
       <EditComment
         v-if="index === editIndex"
         :data="{...item, index}"
-        :accounts="accounts"
+        :accounts="accountsSorted"
         @save="saveItem"
         @cancel="cancelEdit"
       />
@@ -63,10 +63,8 @@
 </template>
 
 <script>
+import _sortBy from 'lodash/sortBy';
 import { updateComplianceComments } from '@api/compliance';
-import {
-  Modal,
-} from 'ant-design-vue';
 import XIcon from '@axons/icons/Icon';
 import XButton from '@axons/inputs/Button.vue';
 import EditComment from './EditComment.vue';
@@ -76,7 +74,6 @@ export default {
   components: {
     XIcon,
     XButton,
-    Modal,
     EditComment,
   },
   props: {
@@ -104,6 +101,9 @@ export default {
     };
   },
   computed: {
+    accountsSorted() {
+      return _sortBy(this.accounts);
+    },
     isInEditingMode() {
       return this.editIndex !== null;
     },
@@ -128,11 +128,12 @@ export default {
     },
     deleteItem(index) {
       this.removeError();
-      Modal.confirm({
-        centered: true,
-        title: 'You are about to delete a comment. This comment will no longer be visible for all users.',
-        content: 'Are you sure you want to delete this comment?',
-        onOk: async () => {
+      this.$safeguard.show({
+        text: `You are about to delete a comment.<br/>
+              This comment will no longer be visible for all users.<br/>
+              Are you sure you want to delete this comment?`,
+        confirmText: 'Delete',
+        onConfirm: async () => {
           const comments = this.comments.filter((comment, i) => i !== index);
           const result = await updateComplianceComments({
             name: this.cisName, section: this.section, index,
@@ -178,6 +179,7 @@ export default {
   .x-compliance-components {
     .comment {
       display: flex;
+      margin-bottom: 20px;
       &__actions{
         display: flex;
         .x-button {

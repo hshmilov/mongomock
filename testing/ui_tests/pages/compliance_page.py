@@ -255,8 +255,7 @@ class CompliancePage(Page):
 
     def delete_comment(self):
         self.driver.find_element_by_css_selector(self.COMMENT_DELETE_BUTTON).click()
-        modal_confirm = self.driver.find_element_by_css_selector(self.MODAL_CONFIRM)
-        self.click_ant_button(self.OK_BUTTON, context=modal_confirm)
+        self.safeguard_click_confirm(self.DELETE_BUTTON)
         self.wait_for_element_absent_by_css(self.MODAL_CONFIRM)
 
     def assert_comment_text(self, text):
