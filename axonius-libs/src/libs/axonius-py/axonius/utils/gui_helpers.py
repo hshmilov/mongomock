@@ -1334,6 +1334,15 @@ def get_generic_fields(entity_type: EntityType):
     raise AssertionError
 
 
+def get_plugin_name_from_unique_name(plugin_unique_name):
+    if re.search(r'_(\d+)$', plugin_unique_name):
+        plugin_name = '_'.join(plugin_unique_name.split('_')[:-1])  # turn plugin unique name to plugin name
+    else:
+        plugin_name = plugin_unique_name
+
+    return plugin_name
+
+
 # pylint: disable=too-many-locals
 @rev_cached_entity_type(ttl=60)
 def entity_fields(entity_type: EntityType):
@@ -1359,7 +1368,7 @@ def entity_fields(entity_type: EntityType):
 
     def get_per_adapter_fields(field_name: str):
         return {
-            x[PLUGIN_UNIQUE_NAME]: x
+            get_plugin_name_from_unique_name(x[PLUGIN_UNIQUE_NAME]): x
             for x
             in all_data_from_fields
             if x['name'] == field_name and PLUGIN_UNIQUE_NAME in x
@@ -1522,14 +1531,13 @@ def entity_fields(entity_type: EntityType):
 
     exclude_specific_schema = set(item['name'] for item in generic_fields.get('items', []))
     for plugin in plugins_available:
-        plugin_unique_name = plugin[PLUGIN_UNIQUE_NAME]
         plugin_name = plugin[PLUGIN_NAME]
 
-        plugin_fields_record = per_adapter_parsed_field.get(plugin_unique_name)
+        plugin_fields_record = per_adapter_parsed_field.get(plugin_name)
         if not plugin_fields_record:
             continue
 
-        plugin_fields_existing = per_adapter_exist_field.get(plugin_unique_name)
+        plugin_fields_existing = per_adapter_exist_field.get(plugin_name)
         if plugin_fields_existing and plugin_name != GUI_PLUGIN_NAME:
             # We don't filter out GUI fields
             # https://axonius.atlassian.net/browse/AX-3113

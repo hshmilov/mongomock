@@ -4,7 +4,7 @@ import datetime
 from axonius.fields import Field, ListField, JsonStringFormat
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.smart_json_class import SmartJsonClass
-from axonius.utils.parsing import format_ip
+from axonius.utils.parsing import format_ip, format_ip_raw
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -40,6 +40,7 @@ class ContainerService(SmartJsonClass):
 
 class ContainerNetworkBindings(SmartJsonClass):
     bind_ip = Field(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
+    bind_ip_raw = Field(str, converter=format_ip_raw, hidden=True)
     container_port = Field(int, 'Container port')
     host_port = Field(int, 'Host port')
     name = Field(str, 'Name')

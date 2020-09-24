@@ -1,4 +1,3 @@
-import json
 import os
 import random
 import shutil
@@ -11,9 +10,9 @@ from botocore.exceptions import ClientError
 from retrying import retry
 from selenium.common.exceptions import NoSuchElementException
 
-from axonius.utils.json_encoders import IteratorJSONEncoder
-from axonius.utils.wait import wait_until
 from scripts.instances.instances_consts import PROXY_DATA_HOST_PATH
+from axonius.utils.json import to_json, from_json
+from axonius.utils.wait import wait_until
 from services.plugins.gui_service import GuiService
 from services.standalone_services.smtp_service import SmtpService
 from test_credentials.test_aws_credentials import (AWS_DEV_3_TESTING_BUCKET_RW_ACCESS_KEY_ID,
@@ -267,8 +266,8 @@ class TestGlobalSettings(TestBase):
 
                 def validate_data(db, internal_file_name):
                     if internal_file_name is not None:
-                        with open(local_dir / internal_file_name) as file:
-                            items = json.load(file)
+                        with open(local_dir / internal_file_name, 'rt') as file:
+                            items = from_json(file.read())
                             num_of_backup_items = len(items)
 
                         assert db.count_documents({}) == num_of_backup_items
@@ -278,8 +277,8 @@ class TestGlobalSettings(TestBase):
                             item_to_compare = items[random_item_position]
                             local_item = db.find_one({'internal_axon_id': item_to_compare['internal_axon_id']})
 
-                            assert json.dumps(local_item, cls=IteratorJSONEncoder, sort_keys=True) \
-                                == json.dumps(item_to_compare, cls=IteratorJSONEncoder, sort_keys=True)
+                            assert to_json(local_item, sort_keys=True) \
+                                == to_json(item_to_compare, sort_keys=True)
                         else:
                             raise AssertionError(f'S3 Backup: backup file: {internal_file_name} is empty.')
                     else:
@@ -338,8 +337,8 @@ class TestGlobalSettings(TestBase):
                 # get devices and users data.
                 def get_backup_data(internal_file_name):
                     if internal_file_name is not None:
-                        with open(local_dir / internal_file_name) as file:
-                            items = json.load(file)
+                        with open(local_dir / internal_file_name, 'rt') as file:
+                            items = from_json(file.read())
                             if items is not None:
                                 num_of_backup_items = len(items)
                                 random_item_position = random.randint(0, num_of_backup_items - 1)
@@ -377,8 +376,8 @@ class TestGlobalSettings(TestBase):
 
                     local_item.pop('_id', None)
                     item_to_compare.pop('_id', None)
-                    assert json.dumps(local_item, cls=IteratorJSONEncoder, sort_keys=True) \
-                        == json.dumps(item_to_compare, cls=IteratorJSONEncoder, sort_keys=True)
+                    assert to_json(local_item, sort_keys=True) \
+                        == to_json(item_to_compare, sort_keys=True)
 
                 assert_data_after_restore(self.axonius_system.get_devices_db(), devices_data.get('item_to_compare'),
                                           devices_data.get('num_of_items'))

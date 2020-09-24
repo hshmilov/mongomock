@@ -2,7 +2,6 @@
 Handle all root-master architecture functions.
 """
 # pylint: disable=too-many-nested-blocks
-import json
 import logging
 import os
 import subprocess
@@ -12,6 +11,7 @@ from pymongo import ReplaceOne
 from pymongo.errors import BulkWriteError
 
 from axonius.modules.central_core import CentralCore
+from axonius.utils.json import from_json
 from axonius.utils.smb import SMBClient
 from axonius.clients.aws.utils import (
     aws_list_s3_objects,
@@ -45,7 +45,7 @@ def get_central_core_module() -> CentralCore:
 
 # pylint: disable=protected-access, too-many-locals, too-many-branches, too-many-statements
 def root_master_parse_entities(entity_type: EntityType, info, backup_source=None):
-    entities = json.loads(info)
+    entities = from_json(info)
     db = get_central_core_module().entity_db_map[entity_type]
     bulk_replacements = []
     for entity in entities:
@@ -70,7 +70,7 @@ def root_master_parse_entities(entity_type: EntityType, info, backup_source=None
 
 
 def root_master_parse_entities_raw(entity_type: EntityType, info):
-    entities = json.loads(info)
+    entities = from_json(info)
     db = get_central_core_module().raw_adapter_entity_db_map[entity_type]
     bulk_replacements = []
     for entity in entities:
@@ -86,7 +86,7 @@ def root_master_parse_entities_raw(entity_type: EntityType, info):
 
 
 def root_master_parse_entities_fields(entity_type: EntityType, info):
-    entities = json.loads(info)
+    entities = from_json(info)
     fields_db_map = get_central_core_module().fields_db_map[entity_type]
     for entity in entities:
         entity.pop('_id', None)  # not interesting
@@ -132,7 +132,7 @@ def root_master_parse_entities_fields(entity_type: EntityType, info):
 
 def root_master_parse_adapter_client_labels(info):
     try:
-        data = json.loads(info)
+        data = from_json(info)
         db = get_central_core_module().adapters_clients_labels_db
 
         for connection in data:

@@ -1163,6 +1163,7 @@ def parse_raw_data_inner_regular(
                     for network_binding in (container_raw.get('networkBindings') or []):
                         device.add_network_binding(
                             bind_ip=network_binding.get('bindIP'),
+                            bind_ip_raw=network_binding.get('bindIP'),
                             container_port=network_binding.get('containerPort'),
                             host_port=network_binding.get('hostPort'),
                             protocol=network_binding.get('protocol')

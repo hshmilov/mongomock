@@ -1,7 +1,6 @@
 # pylint: disable=too-many-branches, too-many-statements, protected-access
 import datetime
 import io
-import json
 import logging
 import os
 import re
@@ -17,7 +16,7 @@ from axonius.clients.azure.utils import AzureBlobStorageClient, \
 from axonius.entities import EntityType
 from axonius.plugin_base import PluginBase
 from axonius.utils.host_utils import get_free_disk_space
-from axonius.utils.json_encoders import IteratorJSONEncoder
+from axonius.utils.json import to_json
 from axonius.utils.smb import SMBClient
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -99,7 +98,7 @@ def add_cursor_to_tar(tar_obj: tarfile, cursor_obj: PluginBase.Instance, entity_
         total += len(entities)
         tarinfo = tarfile.TarInfo(f'{entity_name}_{i}')
         try:
-            data = json.dumps(entities, cls=IteratorJSONEncoder).encode('utf-8')
+            data = to_json(entities).encode('utf-8')
         except Exception:
             logger.exception(f'Unable to dump JSON data: {tarinfo}')
             raise

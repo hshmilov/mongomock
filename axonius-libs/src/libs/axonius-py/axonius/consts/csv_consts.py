@@ -6,7 +6,7 @@ IDENTIFIERS = {
              'endpointname'],
     'hostname': ['host', 'fqdn', 'fullyqualifieddomainname', 'hostname', 'compname', 'computername', 'servername',
                  'dnsname', 'hosthostname', 'endpointfqdn', 'devicename', 'dns', 'nthost', 'dnshostname', 'cn'],
-    'mac_address': ['mac', 'macaddress', 'macaddresses', 'macs', 'registermac', 'clientid'],
+    'mac_address': ['mac', 'macaddress', 'macaddresses', 'macs', 'registermac', 'clientid', 'nicaddress'],
     'ip': ['ipaddresstext', 'ip', 'ipaddress', 'ipaddresses', 'ips', 'primaryip', 'endpointipaddress', 'registerip',
            'lastip', 'address'],
     'subnetmask': ['ipsubnetmask'],
