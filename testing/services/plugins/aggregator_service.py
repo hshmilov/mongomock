@@ -2062,7 +2062,7 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
                 try:
                     for i in range(0, len(to_fix_raw), 1000):
                         raw_entities_db.bulk_write(to_fix_raw[i: i + 1000], ordered=False)
-                        percentage = round(((i + 1000) / len(to_fix_raw)) * 100, 2)
+                        percentage = round(((i + 1000) / len(to_fix_raw)) * 100, 2) if len(to_fix_raw) >= 1000 else 100
                         print(f'(1/2) Fixed raw chunk of {i + 1000} / {len(to_fix_raw)} records ({percentage}%)')
                 except BulkWriteError as e:
                     print(f'Exception while upgrading: Caught BulkWriteError, continuing. Error is: {e.details}')
@@ -2073,7 +2073,7 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
                 print(f'Upgrading parsed-data')
                 for i in range(0, len(to_fix), 1000):
                     entities_db.bulk_write(to_fix[i: i + 1000], ordered=False)
-                    percentage = round(((i + 1000) / len(to_fix)) * 100, 2)
+                    percentage = round(((i + 1000) / len(to_fix)) * 100, 2) if len(to_fix) >= 1000 else 100
                     print(f'(2/2) Fixed parsed chunk of {i + 1000} / {len(to_fix)} records ({percentage}%)')
             else:
                 print(f'{plugin_name} ID upgrade: Nothing to fix. Moving on')

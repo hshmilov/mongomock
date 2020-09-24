@@ -4,7 +4,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 
 logger = logging.getLogger(f'axonius.{__name__}')
-ENTITIES_PER_PAGE = 1000
+ENTITIES_PER_PAGE = 100
 
 
 class GNaapiConnection(RESTConnection):
