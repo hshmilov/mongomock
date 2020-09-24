@@ -33,6 +33,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.axonius_query_language import parse_filter, parse_filter_non_entities, PREFERRED_SUFFIX
+from axonius.utils.datetime import parse_date
 from axonius.utils.revving_cache import rev_cached_entity_type
 from axonius.utils.threading import singlethreaded
 from axonius.utils.dict_utils import is_filter_in_value, make_hash
@@ -1066,10 +1067,12 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                         elif specific_property in _adapter and \
                                 (sub_property_val != [] and sub_property_val is not None):
                             val = sub_property_val
-                            last_seen = _adapter['last_seen']
+                            last_seen = _adapter['last_seen'] if isinstance(_adapter['last_seen'], datetime) else \
+                                parse_date(_adapter['last_seen'])
                         elif specific_property in _adapter and not isinstance(sub_property, str):
                             val = _adapter[specific_property]
-                            last_seen = _adapter['last_seen']
+                            last_seen = _adapter['last_seen'] if isinstance(_adapter['last_seen'], datetime) else \
+                                parse_date(_adapter['last_seen'])
 
                     # Second priority is active-directory data
                     # pylint: disable=too-many-boolean-expressions
@@ -1096,11 +1099,13 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                                 if tmp_val is not None and isinstance(sub_property, str) and \
                                         (sub_property_val is not None and sub_property_val != []):
                                     val = sub_property_val
-                                    last_seen = tmp_last_seen
+                                    last_seen = tmp_last_seen if isinstance(tmp_last_seen, datetime) else \
+                                        parse_date(tmp_last_seen)
                                     val_changed_by_ad = True
                                 elif tmp_val is not None and sub_property is None:
                                     val = tmp_val
-                                    last_seen = tmp_last_seen
+                                    last_seen = tmp_last_seen if isinstance(tmp_last_seen, datetime) else \
+                                        parse_date(tmp_last_seen)
                                     val_changed_by_ad = True
                                 if val == '':
                                     last_seen = datetime(1970, 1, 1, 0, 0, 0)
