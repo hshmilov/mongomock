@@ -23,7 +23,7 @@ REBOOTING_MSG = 'rebooting_now'
 
 INTERNAL_PORT = 4433  # 0.0.0.0:443 could be mutual-tls protected. The host exposes 127.0.0.1:4433 without it.
 
-GUI_IS_DEAD_THRESH = 60 * 10  # 10 minutes
+GUI_IS_DEAD_THRESH = 60 * 30  # 30 minutes
 
 
 class GuiAliveTask(WatchdogTask):
