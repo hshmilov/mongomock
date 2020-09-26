@@ -33,9 +33,9 @@ class CommandLogger(monitoring.CommandListener):
 
 def get_db_client() -> MongoClient:
     # https://jira.mongodb.org/browse/PYTHON-986
-    max_pool_size = 500
+    max_pool_size = 100
     if os.getenv('MONGO_MAXPOOLSIZE'):
-        max_pool_size = os.getenv('MONGO_MAXPOOLSIZE')
+        max_pool_size = int(os.getenv('MONGO_MAXPOOLSIZE'))
     if os.getenv('MONGO_DEBUG') == '1':
         return MongoClient(
             DB_HOST, replicaSet='axon-cluster', retryWrites=True,
