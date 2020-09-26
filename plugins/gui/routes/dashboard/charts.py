@@ -2,7 +2,6 @@ import copy
 import csv
 import io
 import logging
-import threading
 from datetime import datetime
 from enum import Enum
 
@@ -200,21 +199,6 @@ class Charts:
             }
         )
 
-    def _async_generate_dashboard(self, panel_id, sort_by=None, sort_order=None):
-        try:
-            logger.debug(f'Started generating panel id {panel_id} async')
-            generated_dashboard = generate_dashboard.wait_for_cache(panel_id, sort_by=sort_by,
-                                                                    sort_order=sort_order,
-                                                                    wait_time=REQUEST_MAX_WAIT_TIME)
-        except (TimeoutError, NoCacheException):
-            # the dashboard is still being calculated
-            logger.debug(f'Async Dashboard {panel_id} is not ready')
-            return
-        dashboard_data = generated_dashboard.get('data', [])
-        truncated_dashboard_data = self._process_initial_dashboard_data(dashboard_data)
-        logger.info(f'Finished generating panel id: {panel_id} asynchronously')
-        self._set_db_cached_data(panel_id, truncated_dashboard_data)
-
     def _link_trend_chart(self, chart_data, chart_id: ObjectId, space_id: ObjectId):
         config = chart_data.get('config')
         trend_chart_data = {
@@ -310,11 +294,6 @@ class Charts:
                                                                                 use_semaphore=True)
                     else:
                         got_from_db_cache = True
-                        thread = threading.Thread(target=self._async_generate_dashboard,
-                                                  args=(panel_id,),
-                                                  kwargs={'sort_by': sort_by, 'sort_order': sort_order},
-                                                  daemon=True)
-                        thread.start()
                 else:
                     generated_dashboard = generate_dashboard(panel_id, sort_by=sort_by, sort_order=sort_order,
                                                              use_semaphore=True)
