@@ -1370,7 +1370,7 @@ def generate_dashboard_uncached(dashboard_id: ObjectId, sort_by=None, sort_order
 
 
 # there's no trivial way to remove the TTL functionality entirely, so let's just make it long enough
-@rev_cached(ttl=3600 * 6, blocking=False, limit_parallel_calls=True)
+@rev_cached(ttl=3600 * 6, blocking=False)
 def generate_dashboard(dashboard_id: ObjectId, sort_by=None, sort_order=None):
     return generate_dashboard_uncached(dashboard_id, sort_by, sort_order)
 
@@ -1522,7 +1522,7 @@ def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, t
     return beautify_db_entry(dashboard)
 
 
-@rev_cached(ttl=3600 * 24 * 365, limit_parallel_calls=True)
+@rev_cached(ttl=3600 * 24 * 365)
 def generate_dashboard_historical(dashboard_id: ObjectId, from_date: datetime, to_date: datetime,
                                   sort_by=None, sort_order=None):
     return dashboard_historical_uncached(dashboard_id, from_date, to_date, sort_by, sort_order)

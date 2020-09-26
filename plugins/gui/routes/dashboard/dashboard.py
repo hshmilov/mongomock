@@ -354,9 +354,11 @@ class Dashboard(Charts, Notifications):
                 }):
             try:
                 dashboard_sort_config = dashboard['config'].get('sort', {}) or {}
+                # pylint: disable=unexpected-keyword-arg
                 generate_dashboard(dashboard['_id'],
                                    sort_by=dashboard_sort_config.get('sort_by', None),
-                                   sort_order=dashboard_sort_config.get('sort_order', None))
+                                   sort_order=dashboard_sort_config.get('sort_order', None),
+                                   use_semaphore=True)
             except NoCacheException:
                 logger.debug(f'dashboard {dashboard["_id"]} is not ready')
             except Exception:

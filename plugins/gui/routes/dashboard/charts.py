@@ -141,6 +141,11 @@ class Charts:
         chart_name = chart_data.get('name', '')
         chart_metric = chart_data.get('metric')
         chart_config = chart_data.get('config', {})
+        try:
+            sort = chart_config.get('sort', {})
+            generate_dashboard(chart_id, sort.get('sort_by'), sort.get('sort_order'))
+        except NoCacheException:
+            pass
         return jsonify({
             'uuid': str(chart_id),
             'config': chart_config,
@@ -257,7 +262,7 @@ class Charts:
     @gui_route_logged_in('<panel_id>', methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Dashboard), enforce_trial=False)
     @sorted_by_method_endpoint()
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches, unexpected-keyword-arg
     def get_dashboard_panel(self, panel_id, skip, limit, from_date: datetime, to_date: datetime,
                             search: str, sort_by=None, sort_order=None):
         """
@@ -282,7 +287,8 @@ class Charts:
 
         if from_date and to_date:
             generated_dashboard = generate_dashboard_historical(panel_id, from_date, to_date,
-                                                                sort_by=sort_by, sort_order=sort_order)
+                                                                sort_by=sort_by, sort_order=sort_order,
+                                                                use_semaphore=True)
         else:
             generated_dashboard = None
             try:
@@ -300,7 +306,8 @@ class Charts:
                     if generated_dashboard is None:
                         generated_dashboard = generate_dashboard.wait_for_cache(panel_id, sort_by=sort_by,
                                                                                 sort_order=sort_order,
-                                                                                wait_time=REQUEST_MAX_WAIT_TIME)
+                                                                                wait_time=REQUEST_MAX_WAIT_TIME,
+                                                                                use_semaphore=True)
                     else:
                         got_from_db_cache = True
                         thread = threading.Thread(target=self._async_generate_dashboard,
@@ -309,7 +316,8 @@ class Charts:
                                                   daemon=True)
                         thread.start()
                 else:
-                    generated_dashboard = generate_dashboard(panel_id, sort_by=sort_by, sort_order=sort_order)
+                    generated_dashboard = generate_dashboard(panel_id, sort_by=sort_by, sort_order=sort_order,
+                                                             use_semaphore=True)
             except (TimeoutError, NoCacheException):
                 # the dashboard is still being calculated
                 logger.debug(f'Dashboard {panel_id} is not ready')

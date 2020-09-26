@@ -20,6 +20,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 EVENT_MAX_WAIT_TIME = 900
 CACHE_CALL_LOCK = 'CACHE_CALL_LOCK'
 CACHE_CALL_LIMIT = 5
+USE_SEMAPHORE = 'use_semaphore'
 
 
 def hashkey(func: Callable, *args, **kwargs):
@@ -171,6 +172,9 @@ class RevCached:
 
         self.__initialized = False
 
+        self.__semaphore = None
+        self.init_lock()
+
     def delayed_initialization(self):
         """
         Must be called only once, and from PluginBase
@@ -198,20 +202,23 @@ class RevCached:
         self.__initialized = True
 
     def __get_key_from_args(self, *args, **kwargs):
+        kwargs.pop(USE_SEMAPHORE, None)
         if self.__key_func:
             return self.__key_func(*args, **kwargs)
         return hashkey(self.__func, *args, **kwargs)
 
-    def __warm_cache(self, cache_entry: CachedEntry):
+    def __warm_cache(self, cache_entry: CachedEntry, use_semaphore: bool = False):
         """
         Updates the value in the cache for the function with the given parameters
         """
+        if use_semaphore:
+            self.__semaphore.acquire()
         with self.__initial_values_lock_dict[cache_entry.key]:
             started_time = datetime.now()
             try:
                 cache_entry.calculated_value = self.__func(*cache_entry.args,
                                                            **cache_entry.kwargs,
-                                                           has_cache=cache_entry.event.is_set())
+                                                           )
                 cache_entry.exception = None
             except Exception as e:
                 cache_entry.exception = e
@@ -220,6 +227,8 @@ class RevCached:
                          f'Current memory consumption: {memory()}')
 
             cache_entry.event.set()
+        if use_semaphore:
+            self.__semaphore.release()
 
     def __clean_unused_values(self):
         """
@@ -264,6 +273,7 @@ class RevCached:
         This deals with the case that a fetch request is made before the first value
         has been calculated to make sure we don't run the function more than necessary
         """
+        use_semaphore = kwargs.pop(USE_SEMAPHORE, False)
         key = self.__get_key_from_args(*args, **kwargs)
 
         cache_entry = self.__initial_values.get(key)
@@ -274,12 +284,11 @@ class RevCached:
             cache_entry = self.__initial_values.get(key)
             if cache_entry:
                 return cache_entry.get_cached_result()
-
             cache_entry = CachedEntry(args, kwargs, datetime.now(), key, self.__func)
-            self.__warm_cache(cache_entry)
+            self.__warm_cache(cache_entry, use_semaphore)
             cache_entry.job = plugin_base_instance().cached_operation_scheduler.add_job(
                 func=self.__warm_cache,
-                args=[cache_entry],
+                args=[cache_entry, use_semaphore],
                 trigger=IntervalTrigger(
                     seconds=self.__ttl),
                 name=f'{self.__func.__name__}_calc',
@@ -295,6 +304,7 @@ class RevCached:
         This deals with the case that a fetch request is made before the first value
         has been calculated to make sure we don't run the function more than necessary
         """
+        use_semaphore = kwargs.pop(USE_SEMAPHORE, False)
         key = self.__get_key_from_args(*args, **kwargs)
 
         cache_entry = self.__initial_values.get(key)
@@ -312,7 +322,7 @@ class RevCached:
             cache_entry = CachedEntry(args, kwargs, datetime.now(), key, self.__func)
             cache_entry.job = plugin_base_instance().cached_operation_scheduler.add_job(
                 func=self.__warm_cache,
-                args=[cache_entry],
+                args=[cache_entry, use_semaphore],
                 trigger=IntervalTrigger(
                     seconds=self.__ttl),
                 name=f'{self.__func.__name__}_calc',
@@ -358,24 +368,29 @@ class RevCached:
                    in enumerate(args)):
                 yield initial_value
 
-    def trigger_cache_update_now(self, args: List = None) -> int:
+    def trigger_cache_update_now(self, args: List = None,
+                                 recalculate_using_semaphore: bool = False) -> int:
         """
         Triggers a cache update right now, asynchronously
+        :param recalculate_using_semaphore:
         :param args: If not none, only update that specific parameter set. Otherwise, updates all values
         :return: The amount of cache entries affected
         """
         counter = 0
         for cached_entry in self.get_all_values(args):
             if cached_entry:
+                cached_entry.job.modify(args=[cached_entry, recalculate_using_semaphore])
                 cached_entry.job.modify(next_run_time=datetime.now())
                 counter += 1
 
         plugin_base_instance().cached_operation_scheduler.wakeup()
         return counter
 
-    def sync_clean_cache(self, args: List = None) -> int:
+    def sync_clean_cache(self, args: List = None,
+                         recalculate_using_semaphore: bool = False) -> int:
         """
         Triggers a cache flush synchronously
+        :param recalculate_using_semaphore:
         :param args: If not none, only update that specific parameter set. Otherwise, updates all values
         :return: The amount of cache entries affected
         """
@@ -385,7 +400,7 @@ class RevCached:
                 cached_entry.event.clear()
                 counter += 1
 
-        self.trigger_cache_update_now(args)
+        self.trigger_cache_update_now(args, recalculate_using_semaphore=recalculate_using_semaphore)
         return counter
 
     def call_uncached(self, *args, **kwargs):
@@ -410,9 +425,13 @@ class RevCached:
                 self.__initial_values.pop(cached_entry.key)
         return counter
 
+    def init_lock(self, call_limit=CACHE_CALL_LIMIT):
+        semaphore = Semaphore(call_limit)
+        self.__semaphore = semaphore
+
 
 def rev_cached(ttl: int, initial_values: Iterable[Tuple] = None, remove_from_cache_ttl: int = 3600 * 48,
-               key_func: Callable = None, blocking=True, limit_parallel_calls=False):
+               key_func: Callable = None, blocking=True):
     """
     See RevCached documentation
     You can call .update_cache on the method this decorates to trigger a cache update asynchronously
@@ -423,26 +442,7 @@ def rev_cached(ttl: int, initial_values: Iterable[Tuple] = None, remove_from_cac
     """
 
     def wrap(func):
-        g = func.__globals__
-
-        def init_lock(call_limit=CACHE_CALL_LIMIT):
-            g[CACHE_CALL_LOCK] = Semaphore(call_limit)
-
-        def func_wrapper(*args, **kwargs):
-            has_cache = kwargs.pop('has_cache', False)
-            if not limit_parallel_calls or not has_cache:
-                return func(*args, **kwargs)
-
-            if CACHE_CALL_LOCK not in g:
-                init_lock()
-
-            g[CACHE_CALL_LOCK].acquire()
-            try:
-                return func(*args, **kwargs)
-            finally:
-                g[CACHE_CALL_LOCK].release()
-
-        cache = RevCached(ttl, func_wrapper, initial_values or [], remove_from_cache_ttl, key_func=key_func)
+        cache = RevCached(ttl, func, initial_values or [], remove_from_cache_ttl, key_func=key_func)
         ALL_CACHES.append(cache)
 
         def actual_wrapper(*args, **kwargs):
@@ -456,8 +456,7 @@ def rev_cached(ttl: int, initial_values: Iterable[Tuple] = None, remove_from_cac
         actual_wrapper.remove_from_cache = cache.remove_from_cache
         actual_wrapper.has_cache = cache.has_cache
         actual_wrapper.wait_for_cache = cache.wait_for_cache
-        if limit_parallel_calls:
-            actual_wrapper.init_lock = init_lock
+        actual_wrapper.init_lock = cache.init_lock
 
         return actual_wrapper
 
