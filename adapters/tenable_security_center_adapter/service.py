@@ -330,7 +330,11 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             except Exception:
                 logger.error(f'Couldn\'t parse last scan {last_scan}')
         try:
-            device.repository_name = (raw_device_data.get('repository') or {}).get('name')
+            repository_name = (raw_device_data.get('repository') or {}).get('name')
+            device.repository_name = repository_name
+            if repository_name and self.__repository_name_exclude_list and \
+                    repository_name in self.__repository_name_exclude_list:
+                return None
         except Exception:
             logger.exception('Problem getting repository')
         device.score = raw_device_data.get('score')
@@ -515,6 +519,11 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                     'name': 'info_vulns_plugin_ids',
                     'title': 'Fetch info level vulnerabilities only for listed plugin IDs',
                     'type': 'string',
+                },
+                {
+                    'name': 'repository_name_exclude_list',
+                    'title': 'Repository Name Exclude List',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -536,6 +545,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             'fetch_vulnerabilities': False,
             'drop_only_unauth_scans': False,
             'info_vulns_plugin_ids': '',
+            'repository_name_exclude_list': None
         }
 
     @staticmethod
@@ -554,6 +564,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         self.__fetch_software_per_device = config['fetch_software_per_device']
         self.__fetch_vulnerabilities = config['fetch_vulnerabilities']
         self.__drop_only_unauth_scans = config['drop_only_unauth_scans']
+        self.__repository_name_exclude_list = config['repository_name_exclude_list'].split(',') \
+            if config.get('repository_name_exclude_list') else None
         self.__info_vulns_plugin_ids = self._parse_info_vulns_plugin_ids_config(config.get('info_vulns_plugin_ids'))
 
     def outside_reason_to_live(self) -> bool:
