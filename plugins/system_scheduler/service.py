@@ -1430,8 +1430,9 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
         try:
             for enforcement_data in enforcements_to_run:
-                self._async_trigger_remote_plugin(REPORTS_PLUGIN_NAME, 'run', data=enforcement_data).then(
-                    did_fulfill=triggered, did_reject=rejected)
+                self._async_trigger_remote_plugin(
+                    REPORTS_PLUGIN_NAME, 'run', priority=True, data=enforcement_data
+                ).then(did_fulfill=triggered, did_reject=rejected)
         except Exception:
             logger.exception('Error triggering enforcements to run')
         logger.info('Finished Triggering Enforcements')
