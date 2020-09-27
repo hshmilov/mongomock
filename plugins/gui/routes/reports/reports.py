@@ -106,7 +106,7 @@ class Reports:
         report_name = report_to_add['name'] = report_to_add['name'].strip()
 
         if re.match(r'^[\w@.\s-]*$', report_name) is None:
-            return f'Report name can only contain letters, numbers and the characters: @,_.-', 400
+            return f'Report name can only contain letters, numbers and the characters: @_.-', 400
 
         if len(report_name) > 50:
             return 'Report name cannot exceed 50 characters.', 400

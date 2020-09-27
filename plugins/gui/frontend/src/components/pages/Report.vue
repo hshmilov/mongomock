@@ -188,7 +188,7 @@
             :loading="downloading"
             @click="startDownload"
           >
-            {{ downloading ? 'Downloading': 'Download Report'}}
+            {{ downloading ? 'Downloading': 'Download Report' }}
           </XButton>
           <XButton
             id="report_save"
@@ -332,7 +332,7 @@ export default {
       if (this.cannotEditReport) {
         return false;
       }
-      if (!this.report.name) {
+      if (!this.report.name || !this.validateReportName()) {
         return false;
       }
       if (!this.report.include_dashboard && !this.report.include_saved_views) {
@@ -353,6 +353,9 @@ export default {
     error() {
       if (!this.report.name) {
         return 'Report Name is a required field';
+      }
+      if (!this.validateReportName()) {
+        return 'Report name can only contain letters, numbers and the characters: @_.-';
       }
       if (!this.report.include_dashboard && !this.report.include_saved_views) {
         return 'You must include the dashboard or "Saved Views"';
@@ -717,6 +720,10 @@ export default {
           }
         }
       }
+    },
+    validateReportName() {
+      const reportNameRegex = /^[\p{L}\p{N}\s@.\-_]*$/u;
+      return this.report.name && reportNameRegex.test(this.report.name);
     },
   },
 };

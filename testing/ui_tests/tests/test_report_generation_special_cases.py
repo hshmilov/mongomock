@@ -28,6 +28,18 @@ class TestReportGenerationSpecialCases(TestReportGenerationBase):
         assert 'Device Discovery' not in text
         assert 'User Discovery' not in text
 
+    def test_report_name_restricted_chars_regex(self):
+        self.reports_page.switch_to_page()
+        self.reports_page.click_new_report()
+
+        restricted_chars = [';', ',', '&', '^', '#', '!']
+
+        for char in restricted_chars:
+            self.reports_page.fill_report_name(f'{self.EMPTY_REPORT_NAME} {char}')
+            assert self.reports_page.is_save_button_disabled()
+            assert self.reports_page.is_report_error(self.reports_page.REGEX_ERROR_MESSAGE)
+            self.reports_page.fill_report_name(' ')
+
     def test_saved_views_data_device_no_dashboard_query(self):
         stress = stresstest_service.StresstestService()
         stress_scanner = stresstest_scanner_service.StresstestScannerService()

@@ -60,6 +60,7 @@ class ReportsPage(EntitiesPage):
     REPORT_DOWNLOADING_TEXT = 'Downloading'
     REPORT_IS_SAVED_TOASTER = 'Report is saved and being generated in the background'
     ERROR_TEXT_CSS = '.error-text'
+    REGEX_ERROR_MESSAGE = 'Report name can only contain letters, numbers and the characters: @_.-'
     BEFORE_SAVE_MESSAGE = 'Saving the report...'
     REPORT_NAME_DUPLICATE_ERROR = 'Report name already taken by another report'
     SPACES_LABEL = 'Dashboard spaces'
