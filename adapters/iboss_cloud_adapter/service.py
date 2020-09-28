@@ -406,8 +406,11 @@ class IbossCloudAdapter(AdapterBase):
             user.username = username
             user.policy_group = int_or_none(user_raw.get('groupNumber'))
             user.policy_group_name = user_raw.get('groupName')
-            user.ip_v4 = user_raw.get('ipAddress')
-            user.ip_v4_raw = user_raw.get('ipAddress')
+            try:
+                user.ip_v4 = user_raw.get('ipAddress')
+                user.ip_v4_raw = user_raw.get('ipAddress')
+            except Exception:
+                pass
             user.note = user_raw.get('note')
 
             user.set_raw(user_raw)
@@ -429,7 +432,12 @@ class IbossCloudAdapter(AdapterBase):
                 logger.debug(f'Server could not be associated with a user {user_raw}')
                 return None
 
+            username = user_raw.get('username')
             user.username = user_raw.get('username')
+
+            if isinstance(username, str) and '@' in username:
+                user.mail = username
+
             user.last_seen = parse_date(user_raw.get('lastSeen'))
             user.add_associated_device(device_caption=user_raw.get('deviceName'))
 
