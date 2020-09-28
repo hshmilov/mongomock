@@ -185,6 +185,19 @@ class Charts:
             return chart_data.get('cached_result')
         return None
 
+    def _clean_db_cached_data(self, chart_id):
+        self._dashboard_collection.find_one_and_update(
+            {
+                '_id': ObjectId(chart_id)
+            },
+            {
+                '$unset': {
+                    'cached_result': '',
+                    'cached_config': ''
+                }
+            }
+        )
+
     def _set_db_cached_data(self, chart_id, data):
         current_config = self._dashboard_collection.find_one({'_id': ObjectId(chart_id)}).get('config')
         self._dashboard_collection.find_one_and_update(
@@ -278,6 +291,7 @@ class Charts:
             try:
                 if is_refresh:
                     # we want to wait for a fresh data
+                    self._clean_db_cached_data(panel_id)
                     generated_dashboard = generate_dashboard.wait_for_cache(panel_id, sort_by=sort_by,
                                                                             sort_order=sort_order,
                                                                             wait_time=REQUEST_MAX_WAIT_TIME)
@@ -312,7 +326,7 @@ class Charts:
                               if search.lower() in self.get_string_value(data['name']).lower()]
         if not skip:
             truncated_dashboard_data = self._process_initial_dashboard_data(dashboard_data)
-            if not got_from_db_cache:
+            if not got_from_db_cache and generated_dashboard:
                 try:
                     self._set_db_cached_data(panel_id, truncated_dashboard_data)
                 except Exception:
