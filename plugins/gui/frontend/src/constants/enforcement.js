@@ -71,6 +71,12 @@ export const actionsMeta = {
   cybereason_unisolate: {
     title: 'Unisolate in Cybereason Deep Detect & Respond',
   },
+  limacharlie_isolate: {
+    title: 'Isolate in Limacharlie',
+  },
+  limacharlie_unisolate: {
+    title: 'Unisolate in Limacharlie',
+  },
   cybereason_tag: {
     title: 'Tag in Cybereason Deep Detect & Respond',
   },
@@ -231,7 +237,7 @@ export const actionsMeta = {
   },
   isolate_edr: {
     title: 'Execute Endpoint Security Agent Action',
-    items: ['carbonblack_isolate', 'carbonblack_unisolate', 'cybereason_isolate', 'cybereason_unisolate', 'cybereason_tag', 'carbonblack_defense_change_policy', 'carbonblack_defense_quarantine', 'carbonblack_defense_unquarantine', 'sentinelone_initiate_scan_action', 'automox_install_update', 'desktop_central_do_som_action'],
+    items: ['carbonblack_isolate', 'carbonblack_unisolate', 'cybereason_isolate', 'cybereason_unisolate', 'cybereason_tag', 'carbonblack_defense_change_policy', 'carbonblack_defense_quarantine', 'carbonblack_defense_unquarantine', 'sentinelone_initiate_scan_action', 'automox_install_update', 'desktop_central_do_som_action', 'limacharlie_isolate', 'limacharlie_unisolate'],
   },
   scan_va: {
     title: 'Update VA Coverage',

@@ -200,6 +200,7 @@ DOCKER_PORTS = {
     'mysql-special-adapter':            6134,
     'jita-adapter':                     6135,
     'zoom-adapter':                     6136,
+    'limacharlie-adapter':              6137,
     'diag-w':                           6665,  # reserved
     'diag-l':                           6666,  # reserved
     'code42-adapter':                   6667,

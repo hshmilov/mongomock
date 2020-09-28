@@ -1472,6 +1472,11 @@
     "link": "",
     "description": "The JSON File Adapter processes files containing JSON formatted devices."
   },
+  "limacharlie_adapter": {
+    "title": "LimaCharlie",
+    "description": "LimaCharlie provides endpoint-driven information security tools and to run an MSSP or SOC as well as providing API’s that allow users to build and monetize their own products.",
+    "link": "https://docs.axonius.com/docs/limacharlie"
+  },
   "next_think_adapter": {
     "title": "Nexthink",
     "link": "https://docs.axonius.com/docs/nexthink",

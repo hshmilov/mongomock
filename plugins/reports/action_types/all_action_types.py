@@ -23,6 +23,8 @@ from reports.action_types.base.carbonblack_unisolate import CarbonblackUnisolate
 from reports.action_types.base.create_servicenow_computer import ServiceNowComputerAction
 from reports.action_types.base.create_servicenow_incident_per_entity import ServiceNowIncidentPerEntity
 from reports.action_types.base.cybereason_isolate import CybereasonIsolateAction
+from reports.action_types.base.limacharlie_isolate import LimacharlieIsolateAction
+from reports.action_types.base.limacharlie_unisolate import LimacharlieUnisolateAction
 from reports.action_types.base.cybereason_unisolate import CybereasonUnisolateAction
 from reports.action_types.base.disable_entity import DisableEntities
 from reports.action_types.base.enable_entity import EnableEntities
@@ -100,7 +102,9 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'slack_send_message': SlackSendMessageAction,
     'carbonblack_defense_change_policy': CarbonblackDefenseChangePolicyAction,
     'cybereason_isolate': CybereasonIsolateAction,
+    'limacharlie_isolate': LimacharlieIsolateAction,
     'cybereason_unisolate': CybereasonUnisolateAction,
+    'limacharlie_unisolate': LimacharlieUnisolateAction,
     'cybereason_tag': CybereasonTagAction,
     'tenable_sc_add_ips_to_asset': TenableScAddIPsToAsset,
     'tenable_io_add_ips_to_target_group': TenableIoAddIPsToTargetGroup,

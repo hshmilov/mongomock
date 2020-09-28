@@ -2,7 +2,7 @@ import logging
 
 from axonius.types.enforcement_classes import EntitiesResult
 from reports.action_types.action_type_base import ActionTypeBase, add_node_selection, add_node_default
-from reports.action_types.base.cybereason_utils import cybereason_action
+from reports.action_types.base.endpoint_utils import endpoint_action
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -50,7 +50,7 @@ class CybereasonTagAction(ActionTypeBase):
         :return:
         """
         tags_dict = {self._config['tag_name']: self._config['tag_value']}
-        return cybereason_action('tag_sensor', self._get_entities_from_view({
+        return endpoint_action('cybereason_adapter', 'tag_sensor', self._get_entities_from_view({
             'internal_axon_id': 1,
             'adapters.client_used': 1,
             'adapters.data.name': 1,

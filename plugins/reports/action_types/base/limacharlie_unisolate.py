@@ -7,9 +7,9 @@ from reports.action_types.base.endpoint_utils import endpoint_action
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class CybereasonUnisolateAction(ActionTypeBase):
+class LimacharlieUnisolateAction(ActionTypeBase):
     """
-    Isolate a Cybereason response device
+    Isolate a Limacharlie response device
     """
 
     @staticmethod
@@ -22,15 +22,15 @@ class CybereasonUnisolateAction(ActionTypeBase):
 
     def _run(self) -> EntitiesResult:
         """
-        Performs a Cybereason action
+        Performs a Limacharlie action
         :param action: The action to perform (isolate, unisolate)
         :param entity_type: The entity type
         :param internal_axon_ids: list of axonius devices to isolate
         :return:
         """
-        return endpoint_action('cybereason_adapter', 'unisolate_device', self._get_entities_from_view({
+        return endpoint_action('limacharlie_adapter', 'unisolate_device', self._get_entities_from_view({
             'internal_axon_id': 1,
             'adapters.client_used': 1,
-            'adapters.data.pylum_id': 1,
+            'adapters.data.sid': 1,
             'adapters.plugin_name': 1
         }), self.action_node_id)

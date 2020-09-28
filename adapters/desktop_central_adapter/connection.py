@@ -29,6 +29,9 @@ class DesktopCentralConnection(RESTConnection):
             if (('message_response' not in response or 'status' not in response or 'message_version' not in response or
                  'message_version' not in response) or (response['status'] != 'success')):
                 raise RESTException(f'Unknown connection error in authentication {str(response)}')
+            if not response['message_response'].get('authentication') \
+                    or not response['message_response']['authentication'].get('auth_data'):
+                raise RESTException('Authentication response is invalid')
             self._session_headers['Authorization'] = response['message_response']['authentication']['auth_data'][
                 'auth_token']
         else:
