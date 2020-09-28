@@ -28,16 +28,18 @@ class AzureClient:
                  client_id, client_secret, tenant_id, cloud_name=None,
                  azure_stack_hub_resource=None, azure_stack_hub_url=None,
                  azure_stack_hub_proxy_settings: AzureStackHubProxySettings = AzureStackHubProxySettings.ProxyOnlyAuth,
-                 https_proxy=None, verify_ssl=None):
+                 https_proxy=None, proxy_username=None, proxy_password=None, verify_ssl=None):
 
         if cloud_name is None:
             cloud_name = self.DEFAULT_CLOUD
         cloud = self.get_clouds()[cloud_name]
         self.cloud = cloud
         self.https_proxy = https_proxy
+        self.__proxy_username = proxy_username
+        self.__proxy_password = proxy_password
         self.subscription_id = subscription_id
 
-        proxies = {'https': RESTConnection.build_url(https_proxy).strip('/')} if https_proxy else None
+        proxies = self.build_proxy_dict()
         self.using_azure_stack_hub = False
         self.azure_stack_hub_proxy_settings = azure_stack_hub_proxy_settings
         self.azure_stack_hub_url = azure_stack_hub_url
@@ -77,12 +79,19 @@ class AzureClient:
             self.network.config.connection.verify = False
             self.compute.config.connection.verify = False
 
+    def build_proxy_dict(self) -> Optional[dict]:
+        if not self.https_proxy:
+            return None
+
+        proxy_url = RESTConnection.build_url(self.https_proxy).strip('/')
+        if self.__proxy_username and self.__proxy_password:
+            proxy_url = f'{self.__proxy_username}:{self.__proxy_password}@{proxy_url}'
+
+        return {'https': proxy_url}
+
     def _test_connectivity(self):
         # not working
-        if self.https_proxy:
-            proxies = {'https': RESTConnection.build_url(self.https_proxy).strip('/')}
-        else:
-            proxies = None
+        proxies = self.build_proxy_dict()
 
         if self.using_azure_stack_hub and \
                 self.azure_stack_hub_proxy_settings not in [AzureStackHubProxySettings.ProxyOnlyAuth,
@@ -103,9 +112,7 @@ class AzureClient:
             if self.https_proxy and \
                     self.azure_stack_hub_proxy_settings in [AzureStackHubProxySettings.ProxyOnlyAzureStackHub,
                                                             AzureStackHubProxySettings.ProxyAll]:
-                proxies = {'https': RESTConnection.build_url(self.https_proxy).strip('/')}
-            else:
-                proxies = None
+                proxies = self.build_proxy_dict()
 
             logger.info(f'Testing connectivity for endpoint {self.azure_stack_hub_url} with proxy {proxies}')
             response = requests.get(self.azure_stack_hub_url, verify=False, proxies=proxies, timeout=10)

@@ -97,6 +97,8 @@ class AzureAdapter(AdapterBase, Configurable):
                     resource=resource,
                     azure_stack_hub_proxy_settings=azure_stack_hub_proxy_settings_for_rest_client,
                     https_proxy=client_config.get(AZURE_HTTPS_PROXY),
+                    proxy_username=client_config.get('proxy_username'),
+                    proxy_password=client_config.get('proxy_password'),
                     verify_ssl=client_config.get(AZURE_VERIFY_SSL)
             ) as azure_rest_client:
                 _azure_rest_client = azure_rest_client
@@ -131,6 +133,8 @@ class AzureAdapter(AdapterBase, Configurable):
                                          azure_stack_hub_url=client_config.get(AZURE_STACK_HUB_URL),
                                          azure_stack_hub_proxy_settings=azure_stack_hub_proxy_settings,
                                          https_proxy=client_config.get(AZURE_HTTPS_PROXY),
+                                         proxy_username=client_config.get('proxy_username'),
+                                         proxy_password=client_config.get('proxy_password'),
                                          verify_ssl=client_config.get(AZURE_VERIFY_SSL))
 
                 connection.test_connection()
@@ -219,6 +223,17 @@ class AzureAdapter(AdapterBase, Configurable):
                     'name': AZURE_HTTPS_PROXY,
                     'title': 'HTTPS Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'proxy_username',
+                    'title': 'HTTPS Proxy User Name',
+                    'type': 'string'
+                },
+                {
+                    'name': 'proxy_password',
+                    'title': 'HTTPS Proxy Password',
+                    'type': 'string',
+                    'format': 'password'
                 },
                 {
                     'name': AZURE_VERIFY_SSL,
