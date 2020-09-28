@@ -254,7 +254,7 @@ class PhpIpamAdapter(ScannerAdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('hostname') or '')
+            device.id = str(device_id) + '_' + (device_raw.get('hostname') or '')
 
             device.owner = device_raw.get('owner')
             device.description = device_raw.get('description')

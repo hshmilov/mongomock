@@ -189,7 +189,7 @@ class VectraAdapter(AdapterBase):
             if not device_id:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('name') or '')
+            device.id = str(device_id) + '_' + (device_raw.get('name') or '')
 
             device.hostname = device_raw.get('name')
             device.owner = device_raw.get('owner_name')
