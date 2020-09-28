@@ -55,6 +55,7 @@
 import { mapMutations } from 'vuex';
 import _get from 'lodash/get';
 import _isNil from 'lodash/isNil';
+import _sumBy from 'lodash/sumBy';
 import XPie from '@axons/charts/Pie.vue';
 import XLegend from '@axons/charts/ChartLegend.vue';
 import XLine from '@axons/charts/Line.vue';
@@ -131,12 +132,8 @@ export default {
       this.$router.push({ path: module });
     },
     formatCountLabel(_, data) {
-      if (!data.content.length) {
-        return 0;
-      }
-      const [{ value, portion }] = data.content;
-      const count = portion === 1 ? value : Math.round(1 / (portion / value));
-      return `Total ${count}`;
+      const total = _sumBy(data.content, (slice) => slice.value) || 0;
+      return `Total ${total}`;
     },
   },
 };

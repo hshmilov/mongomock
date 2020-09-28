@@ -26,7 +26,6 @@
 <script>
 import { mapState } from 'vuex';
 import _get from 'lodash/get';
-import _isNil from 'lodash/isNil';
 import { GChart } from 'vue-google-charts';
 import XIcon from '@axons/icons/Icon';
 import defaultChartColors from '@constants/colors';
@@ -75,7 +74,9 @@ export default {
         ...this.data.slice(1).map((row) => {
           const [day, ...values] = row;
           values.forEach((value, index) => {
-            lastValues[index] = _isNil(value) ? 0 : value;
+            if (value) {
+              lastValues[index] = value;
+            }
           });
           return [new Date(day), ...lastValues];
         }),
