@@ -202,8 +202,10 @@ class NetAppAdapter(AdapterBase):
                     logger.exception(f'Failed parsing membership, got {membership} of type {type(membership)}')
 
             try:
-                over_temperature = device_raw.get('controller').get('over_temperature')
-                device.over_temperature = over_temperature
+                controller_raw = device_raw.get('controller')
+                if isinstance(controller_raw, dict):
+                    over_temperature = controller_raw.get('over_temperature')
+                    device.over_temperature = over_temperature
             except Exception:
                 if over_temperature is not None:
                     logger.exception(f'Failed parsing over temperature, got {over_temperature} of type '
@@ -226,7 +228,7 @@ class NetAppAdapter(AdapterBase):
             device.id = str(device_id) + '_' + (device_raw.get('name') or '')
 
             device.name = device_raw.get('name')
-            device.date = parse_date(device_raw.get('date'))
+            device.last_seen = parse_date(device_raw.get('date'))
             uptime_seconds = int_or_none(device_raw.get('uptime'))
             # convert seconds to days
             if uptime_seconds:
@@ -327,11 +329,18 @@ class NetAppAdapter(AdapterBase):
                 return None
             user.id = str(user_id) + '_' + (user_raw.get('name') or '')
 
-            user.username = user.get('name')
+            name = user_raw.get('name')
+            if isinstance(name, str) and '\\' in name:
+                domain, username = name.split('\\', 1)
+                user.domain = domain
+                user.username = username
+            else:
+                user.username = name
+
             user.is_locked = parse_bool_from_raw(user_raw.get('locked'))
 
-            if user.get('role') and isinstance(user.get('role'), dict):
-                user.user_title = user.get('role').get('name')
+            if user_raw.get('role') and isinstance(user_raw.get('role'), dict):
+                user.user_title = user_raw.get('role').get('name')
 
             self._fill_netapp_user_fields(user_raw, user)
 

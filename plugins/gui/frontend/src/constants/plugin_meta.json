@@ -684,7 +684,7 @@
     "description": "The UniFi Controller is a wireless network management software solution for managing multiple wireless networks using a web browser."
   },
   "net_app_adapter": {
-    "title": "NetApp - BETA",
+    "title": "NetApp",
     "link": "https://docs.axonius.com/docs/netapp",
     "description": "NetApp offers hybrid cloud data services for management of applications and data across cloud and on-premises environments."
   },
