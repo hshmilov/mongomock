@@ -453,13 +453,16 @@ class AdaptersPage(EntitiesPage):
         configured_adapters_count = self.get_configured_adapters_count_from_switch_label()
         assert configured_adapters_count == adapters_count
 
-    def create_new_adapter_connection(self, plugin_title: str, adapter_input: dict):
+    def create_new_adapter_connection(self, plugin_title: str, adapter_input: dict, should_fetch=True):
         self.wait_for_adapter(plugin_title)
         self.click_adapter(plugin_title)
         self.wait_for_table_to_load()
         self.click_new_server()
         self.fill_creds(**adapter_input)
-        self.click_save_and_fetch()
+        if should_fetch:
+            self.click_save_and_fetch()
+        else:
+            self.click_save_without_fetch()
 
     def get_instances_dropdown_selected_value(self):
         return self.driver.find_element_by_css_selector(self.INSTANCE_DROPDOWN_CSS_SELECTED).text

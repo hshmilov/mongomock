@@ -186,6 +186,7 @@ class CompliancePage(Page):
 
     def assert_default_number_of_rules(self):
         #  asserts the count, to the default number of rules currently defined in cac.
+        self.wait_for_table_to_be_responsive()
         return self.get_total_rules_count() == self.AWS_DEFAULT_RULES_NUMBER
 
     def assert_azure_default_number_of_rules(self):

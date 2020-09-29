@@ -1,5 +1,3 @@
-import pytest
-
 from test_credentials.test_gui_credentials import AXONIUS_USER
 from test_credentials.test_aws_credentials import client_details as aws_client_details
 from test_credentials.test_azure_credentials import client_details as azure_client_details
@@ -56,7 +54,6 @@ class TestCloudComplianceFilters(TestBase):
         self.wait_for_adapter_down(AWS_ADAPTER)
         self.settings_page.restore_feature_flags(True)
 
-    @pytest.mark.skip('AX-7870')
     def test_compliance_aggregated_view(self):
 
         def parse_rule_result(result):
@@ -69,8 +66,10 @@ class TestCloudComplianceFilters(TestBase):
         with AwsService().contextmanager(take_ownership=True), \
                 ComplianceService().contextmanager(take_ownership=True):
             self.adapters_page.wait_for_adapter(AWS_ADAPTER_NAME)
-            self.adapters_page.create_new_adapter_connection(AWS_ADAPTER_NAME, aws_client_details[0][0])
-            self.adapters_page.create_new_adapter_connection(AWS_ADAPTER_NAME, aws_client_details[1][0])
+            self.adapters_page.create_new_adapter_connection(AWS_ADAPTER_NAME, aws_client_details[0][0],
+                                                             should_fetch=False)
+            self.adapters_page.create_new_adapter_connection(AWS_ADAPTER_NAME, aws_client_details[3][0],
+                                                             should_fetch=False)
 
             self.settings_page.switch_to_page()
             self.base_page.run_discovery()
@@ -130,7 +129,6 @@ class TestCloudComplianceFilters(TestBase):
             self.base_page.run_discovery()
             self.compliance_page.switch_to_page()
 
-            self.compliance_page.wait_for_table_to_be_responsive()
             assert self.compliance_page.assert_default_number_of_rules()
 
             total_failed_rules = self.compliance_page.get_total_failed_rules()
