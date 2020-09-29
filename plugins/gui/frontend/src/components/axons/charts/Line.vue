@@ -26,9 +26,15 @@
 <script>
 import { mapState } from 'vuex';
 import _get from 'lodash/get';
+import _isNil from 'lodash/isNil';
 import { GChart } from 'vue-google-charts';
 import XIcon from '@axons/icons/Icon';
 import defaultChartColors from '@constants/colors';
+
+function getLabels(entry) {
+  if (typeof entry === 'string') return entry;
+  return entry.label;
+}
 
 export default {
   name: 'XLine',
@@ -65,21 +71,29 @@ export default {
     },
     processedData() {
       if (!this.data[0]) return [];
-      const lastValues = Array(this.data[0].length - 1).fill(null);
+      let [xAxisLabels] = this.data;
+      xAxisLabels = xAxisLabels.map(getLabels);
+
+      let yAxisValues = this.data.slice(1);
+      const lastDiscoverdValue = new Map();
+
+      yAxisValues = yAxisValues.reduce((axisValues, entry) => {
+        const [discoveryDay, ...values] = entry;
+        const graphEntry = [new Date(discoveryDay)];
+        values.forEach((value, index) => {
+          if (_isNil(value)) {
+          // no history for the current day, use the value of the last discovery for the matching query (line)
+            graphEntry.push(lastDiscoverdValue.get(index) || 0);
+          } else {
+            graphEntry.push(value);
+            lastDiscoverdValue.set(index, value);
+          }
+        });
+        return [...axisValues, graphEntry];
+      }, []);
       return [
-        this.data[0].map((entry) => {
-          if (typeof entry === 'string') return entry;
-          return entry.label;
-        }),
-        ...this.data.slice(1).map((row) => {
-          const [day, ...values] = row;
-          values.forEach((value, index) => {
-            if (value) {
-              lastValues[index] = value;
-            }
-          });
-          return [new Date(day), ...lastValues];
-        }),
+        xAxisLabels,
+        ...yAxisValues,
       ];
     },
     chartColors() {
