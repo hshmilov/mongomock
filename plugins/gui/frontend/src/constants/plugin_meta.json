@@ -494,6 +494,11 @@
     "title": "HP Network Node Manager i (NNMi)",
     "description": "HP Network Node Manager i (NNMi) is a network health and performance monitoring software with scalability and device support.\n"
   },
+  "vmware_vrops_adapter": {
+    "title": "VMware vRealize Operations (vROps)",
+    "link": "https://docs.axonius.com/docs/vmware-vrops",
+    "description": "VMware vRealize Operations (vROps) delivers an IT operations management platform for private, hybrid, and multi-cloud environments that covers the physical, virtual and cloud infrastructure, including VMs and containers."
+  },
   "kaspersky_sc_adapter": {
     "title": "Kaspersky Security Center",
     "link": "https://docs.axonius.com/docs/kaspersky-security-center",
