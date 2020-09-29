@@ -363,6 +363,8 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
             if sort:
                 field, desc = next(iter(sort.items()))
                 mongo_sort = {'desc': int(desc), 'field': field}
+            req_expressions = request_data.get('expressions', '[]')
+            expressions = json.loads(req_expressions) if isinstance(req_expressions, str) else req_expressions
             self.gui_dbs.entity_query_views_db_map[entity_type].replace_one(
                 {'name': {'$exists': False}, 'view.query.filter': view_filter},
                 {
@@ -372,7 +374,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
                         'coloumnSizes': [],
                         'query': {
                             'filter': view_filter,
-                            'expressions': json.loads(request_data.get('expressions', '[]'))
+                            'expressions': expressions
                         },
                         'sort': mongo_sort
                     },
