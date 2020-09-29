@@ -1331,6 +1331,10 @@ def generate_dashboard_uncached(dashboard_id: ObjectId, sort_by=None, sort_order
     dashboard = PluginBase.Instance._get_collection(DASHBOARD_COLLECTION).find_one({
         '_id': dashboard_id
     })
+    if not dashboard:
+        logger.error(f'Problem fetching dashboard to handle {dashboard_id}')
+        return {}
+
     # pylint: enable=protected-access
     handler_by_metric = {
         ChartMetrics.compare: fetch_chart_compare,

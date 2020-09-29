@@ -134,6 +134,9 @@ class Dashboard(Charts, Notifications):
         }
         all_public_spaces_filter = {'type': {'$ne': DASHBOARD_SPACE_TYPE_PERSONAL}}
         spaces_filter = filter_archived({
+            'name': {
+                '$exists': True
+            },
             '$or': [
                 personal_space_filter,
                 public_spaces_with_roles_filter if not self.is_admin_user() else all_public_spaces_filter
