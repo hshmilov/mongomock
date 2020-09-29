@@ -652,7 +652,7 @@ def main():
                         print(test_module)
 
                 return {
-                    'ui_' + test_module.split('.py')[0]:
+                    'ui_' + test_module.split('/')[-1].split('.py')[0]:
                         'python3 -u ./testing/run_ui_tests.py -p no:testing/tests/conftest.py '
                         f'{all_extra_pytest_args} {os.path.join(DIR_MAP["ui"], test_module)}'
                     for test_module in ui_tests
@@ -683,9 +683,7 @@ def main():
                 'Unit Tests',
                 'ui_test_instances_after_join',
                 'ui_test_dashboard',
-                'ui_test_devices_query_advanced_cases',
                 'ui_test_report_generation',
-                'ui_test_devices_query_advanced_more_cases',
                 'ui_test_enforcement_actions',
                 'ui_test_instances_master_docker_restart',
                 'ui_test_instances_before_join',
@@ -695,7 +693,6 @@ def main():
                 'ui_test_cyberark_vault_integration',
                 'ui_test_users_table',
                 'ui_test_saved_query',
-                'ui_test_devices_query_advanced_cases',
                 'ui_test_session',
                 'integ_test_system',
                 'integ_test_watchdogs',

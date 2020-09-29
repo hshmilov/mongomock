@@ -15,7 +15,8 @@ from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
 from axonius.utils.serial_csv.constants import (MAX_ROWS_LEN, CELL_JOIN_DEFAULT)
 from ui_tests.pages.page import Page, TableRow
-from ui_tests.tests.ui_consts import AD_ADAPTER_NAME
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, COMP_CONTAINS, COMP_REGEX, COMP_EQUALS, COMP_IN, \
+    JSON_ADAPTER_FILTER
 
 TABLE_COUNT_CSS = '.table-header .table-title .count'
 CSV_TIMEOUT = 60 * 60
@@ -68,26 +69,6 @@ class EntitiesPage(Page):
     QUERY_REMOVE_EXPRESSION_CSS = '.x-button.expression-remove'
     QUERY_LOGIC_DROPDOWN_CSS = 'div.x-select.x-select-logic'
     QUERY_ERROR_CSS = '.x-filter .error-text'
-    QUERY_COMP_EXISTS = 'exists'
-    QUERY_COMP_CONTAINS = 'contains'
-    QUERY_COMP_REGEX = 'regex'
-    QUERY_COMP_TRUE = 'true'
-    QUERY_COMP_FALSE = 'false'
-    QUERY_COMP_EQUALS = 'equals'
-    QUERY_COMP_IN = 'in'
-    QUERY_COMP_SUBNET = 'in subnet'
-    QUERY_COMP_SIZE = 'count ='
-    QUERY_COMP_SIZE_ABOVE = 'count >'
-    QUERY_COMP_SIZE_BELOW = 'count <'
-    QUERY_COMP_DAYS = 'last days'
-    QUERY_COMP_NEXT_DAYS = 'next days'
-    QUERY_COMP_HOURS = 'last hours'
-    QUERY_COMP_NEXT_HOURS = 'next hours'
-    QUERY_COMP_GREATER_THAN = '>'
-    QUERY_COMP_LESS_THAN = '<'
-    QUERY_COMP_STARTS = 'starts'
-    QUERY_LOGIC_AND = 'and'
-    QUERY_LOGIC_OR = 'or'
     OUTDATED_TOGGLE_CSS = 'div.md-switch.md-theme-default > div > div'
     TABLE_CLASS = '.table'
     TABLE_SELECT_ALL_CURRENT_PAGE_CHECKBOX_CSS = 'thead .x-checkbox'
@@ -151,7 +132,6 @@ class EntitiesPage(Page):
     UNSAVED_QUERY_STATUS = '[Unsaved]'
     RANDOM_FILTER_VALUE = 'some random filter'
 
-    JSON_ADAPTER_FILTER = 'adapters == "json_file_adapter"'
     STRESSTEST_ADAPTER_FILTER = 'adapters == "stresstest_adapter"'
     PRINTER_DEVICE_FILTER = 'specific_data.data.hostname == "Computer-next-to-printer.TestDomain.test"'
     SPECIFIC_JSON_ADAPTER_FILTER = 'adapters_data.json_file_adapter.username == "ofri" or ' \
@@ -664,13 +644,13 @@ class EntitiesPage(Page):
         self.close_dropdown()
 
     def build_query_field_contains(self, field_name, field_value):
-        self.build_query(field_name, field_value, self.QUERY_COMP_CONTAINS)
+        self.build_query(field_name, field_value, COMP_CONTAINS)
 
     def build_query_field_regex(self, field_name, field_value):
-        self.build_query(field_name, field_value, self.QUERY_COMP_REGEX)
+        self.build_query(field_name, field_value, COMP_REGEX)
 
     def build_query_field_contains_with_adapter(self, field_name, field_value, adapter_name):
-        self.build_query_with_adapter(field_name, field_value, self.QUERY_COMP_CONTAINS, adapter_name)
+        self.build_query_with_adapter(field_name, field_value, COMP_CONTAINS, adapter_name)
 
     def build_query(self, field_name, field_value, comp_op):
         self.click_query_wizard()
@@ -703,10 +683,10 @@ class EntitiesPage(Page):
         self.add_query_child_condition(expression)
         children = self.get_asset_entity_children(expression)
         self.select_asset_entity_field(children[0], field_name_1)
-        self.select_query_comp_op(self.QUERY_COMP_EQUALS, children[0])
+        self.select_query_comp_op(COMP_EQUALS, children[0])
         self.fill_query_string_value(value_string_1, children[0])
         self.select_asset_entity_field(children[1], field_name_2)
-        self.select_query_comp_op(self.QUERY_COMP_EQUALS, children[1])
+        self.select_query_comp_op(COMP_EQUALS, children[1])
         self.fill_query_string_value(value_string_2, children[1])
 
     def change_asset_entity_query(self, child_element, field_name=None, value_string=None):
@@ -719,14 +699,14 @@ class EntitiesPage(Page):
         if value_string:
             self.fill_query_string_value(value_string, child_element)
 
-    def change_query_params(self, field, value, comp_op, field_type, subfield=None, obj=False):
+    def change_query_params(self, field, value, comp_op, field_type, subfield=None):
         """
         Assumes Query Wizard is open and contains one built query
         Change the field, operator and value to those given
         """
         expressions = self.find_expressions()
         assert len(expressions) == 1
-        if obj:
+        if subfield:
             self.select_context_obj(expressions[0])
         self.select_query_field(field, expressions[0])
         conditions = self.find_conditions()
@@ -1429,7 +1409,7 @@ class EntitiesPage(Page):
         self.assert_csv_match_ui_data(result, self.get_field_data(), self.get_field_columns_header_text())
 
     def query_json_adapter(self):
-        self.run_filter_query(self.JSON_ADAPTER_FILTER)
+        self.run_filter_query(JSON_ADAPTER_FILTER)
 
     def query_printer_device(self):
         self.run_filter_query(self.PRINTER_DEVICE_FILTER)
@@ -1753,9 +1733,9 @@ class EntitiesPage(Page):
         expressions = self.find_expressions()
         self.select_query_field(attribute, parent=expressions[0])
         self.select_query_comp_op(operator, parent=expressions[0])
-        if operator == self.QUERY_COMP_EQUALS:
+        if operator == COMP_EQUALS:
             self.select_query_value_without_search(value, parent=expressions[0])
-        elif operator == self.QUERY_COMP_IN:
+        elif operator == COMP_IN:
             self.fill_query_string_value(value, parent=expressions[0])
         self.wait_for_table_to_be_responsive()
 

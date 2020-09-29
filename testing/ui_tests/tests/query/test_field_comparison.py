@@ -2,7 +2,7 @@ import pytest
 from dateutil import parser
 from selenium.common.exceptions import NoSuchElementException
 
-from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME, COMP_GREATER_THAN, COMP_LESS_THAN
 from ui_tests.tests.ui_test_base import TestBase
 from test_credentials.test_esx_credentials import esx_json_file_mock_devices
 
@@ -49,7 +49,7 @@ class TestFieldComparison(TestBase):
         self.devices_page.select_context_cmp(expression)
         self.devices_page.select_query_adapter(AD_ADAPTER_NAME, select_num=0)
         self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expression)
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_GREATER_THAN)
+        self.devices_page.select_query_comp_op(COMP_GREATER_THAN)
         # Make sure the options menu opened, which means the options we wanted to choose is not available
         assert len(self.devices_page.find_elements_by_css(self.devices_page.QUERY_CONDITIONS_OPTIONS_CSS)) == 1
         self.devices_page.safe_refresh()
@@ -59,7 +59,7 @@ class TestFieldComparison(TestBase):
         self.devices_page.select_context_cmp(expression)
         self.devices_page.select_query_adapter(AD_ADAPTER_NAME, select_num=0)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expression)
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_GREATER_THAN)
+        self.devices_page.select_query_comp_op(COMP_GREATER_THAN)
         self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, select_num=1)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expression, select_num=1)
         self.devices_page.click_search()
@@ -71,7 +71,7 @@ class TestFieldComparison(TestBase):
         self.devices_page.select_context_cmp(expression)
         self.devices_page.select_query_adapter(AD_ADAPTER_NAME, select_num=0)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expression)
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_LESS_THAN)
+        self.devices_page.select_query_comp_op(COMP_LESS_THAN)
         self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, select_num=1)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expression, select_num=1)
         self.devices_page.click_search()
@@ -102,7 +102,7 @@ class TestFieldComparison(TestBase):
         self.devices_page.select_context_cmp(expression)
         self.devices_page.select_query_adapter(AD_ADAPTER_NAME, select_num=0)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expression)
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_GREATER_THAN)
+        self.devices_page.select_query_comp_op(COMP_GREATER_THAN)
         self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, select_num=1)
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expression, select_num=1)
         self.devices_page.click_search()
@@ -111,7 +111,7 @@ class TestFieldComparison(TestBase):
         if self.devices_page.get_table_count() == 0:
             # adapters_data.active_directory_adapter.last_seen < adapters_data.json_file_adapter.last_seen
             self.devices_page.click_query_wizard()
-            self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_LESS_THAN)
+            self.devices_page.select_query_comp_op(COMP_LESS_THAN)
             self.devices_page.click_search()
             grater = False
         self.devices_page.wait_for_table_to_load()

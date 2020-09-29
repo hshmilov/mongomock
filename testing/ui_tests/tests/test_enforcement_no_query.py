@@ -9,7 +9,7 @@ from axonius.consts.metric_consts import SystemMetric
 from axonius.utils.wait import wait_until
 from axonius.utils.parsing import normalize_timezone_date
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME
+from ui_tests.tests.ui_consts import MANAGED_DEVICES_QUERY_NAME, JSON_ADAPTER_FILTER
 from ui_tests.pages.enforcements_page import ActionCategory, Action, Period
 
 ENFORCEMENT_NAME = 'Special enforcement name'
@@ -189,7 +189,7 @@ class TestEnforcementNoQuery(TestBase):
         print('Starting test_run_added_entities.')
         self.devices_page.switch_to_page()
         self.base_page.run_discovery()
-        self.devices_page.delete_devices(self.devices_page.JSON_ADAPTER_FILTER)
+        self.devices_page.delete_devices(JSON_ADAPTER_FILTER)
         self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME, ENFORCEMENT_CHANGE_FILTER)
         print('Finished creating saved query.')
 

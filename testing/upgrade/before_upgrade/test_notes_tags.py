@@ -1,4 +1,4 @@
-from ui_tests.tests.ui_consts import Notes, Tags
+from ui_tests.tests.ui_consts import Notes, Tags, COMP_EQUALS
 from ui_tests.tests.ui_test_base import TestBase
 
 
@@ -22,4 +22,4 @@ class TestNotes(TestBase):
         self.devices_page.wait_for_table_to_load()
         self.devices_page.build_query(self.devices_page.FIELD_ASSET_NAME,
                                       device_name,
-                                      self.devices_page.QUERY_COMP_EQUALS)
+                                      COMP_EQUALS)

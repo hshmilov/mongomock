@@ -8,7 +8,7 @@ from ui_tests.tests.ui_consts import (AD_MISSING_AGENTS_QUERY_NAME, CSV_NAME,
                                       CSV_PLUGIN_NAME,
                                       DEVICES_SEEN_IN_LAST_7_DAYS_QUERY,
                                       LABEL_CLIENT_WITH_SAME_ID,
-                                      WMI_ADAPTER_NAME, JSON_ADAPTER_NAME)
+                                      WMI_ADAPTER_NAME, JSON_ADAPTER_NAME, JSON_ADAPTER_FILTER)
 
 
 class TestDevicesTableMoreCases(TestEntitiesTable):
@@ -179,7 +179,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
         self.devices_page.customize_view_and_save('test_save_query', 50, self.devices_page.FIELD_HOSTNAME_TITLE,
                                                   [],
                                                   [self.devices_page.FIELD_LAST_SEEN, self.devices_page.FIELD_OS_TYPE],
-                                                  self.devices_page.JSON_ADAPTER_FILTER)
+                                                  JSON_ADAPTER_FILTER)
         view_data = self.devices_page.get_all_data()
 
         # Load some default view, to change it and test the saved view's influence
@@ -209,7 +209,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
 
-        self.devices_page.delete_devices(self.devices_page.JSON_ADAPTER_FILTER)
+        self.devices_page.delete_devices(JSON_ADAPTER_FILTER)
 
     def test_device_hover(self):
         self.settings_page.switch_to_page()

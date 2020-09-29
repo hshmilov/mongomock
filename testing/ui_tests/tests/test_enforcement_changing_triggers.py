@@ -50,5 +50,3 @@ class TestEnforcementChangingTriggers(TestEnforcementConfigBase):
             # restore JSON client
             self.adapters_page.add_server(json_file_creds, JSON_ADAPTER_NAME)
             self.adapters_page.wait_for_server_green()
-            self.adapters_page.wait_for_table_to_load()
-            self.adapters_page.wait_for_data_collection_toaster_absent()

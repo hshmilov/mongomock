@@ -2,7 +2,7 @@ import random
 import math
 
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import JSON_ADAPTER_NAME, AD_ADAPTER_NAME
+from ui_tests.tests.ui_consts import JSON_ADAPTER_NAME, AD_ADAPTER_NAME, COMP_EXISTS, COMP_CONTAINS, COMP_IN
 
 
 class TestUsersQuery(TestBase):
@@ -28,7 +28,7 @@ class TestUsersQuery(TestBase):
         self.users_page.click_query_wizard()
         self.users_page.select_query_adapter(AD_ADAPTER_NAME)
         assert self.users_page.get_query_field() == self.users_page.ID_FIELD
-        assert self.users_page.get_query_comp_op() == self.users_page.QUERY_COMP_EXISTS
+        assert self.users_page.get_query_comp_op() == COMP_EXISTS
 
     def test_over_20_query(self):
         # Do a query that results in more then 20 users (Can use testSecDomain credentials to get more users).
@@ -52,7 +52,7 @@ class TestUsersQuery(TestBase):
         expressions = self.users_page.find_expressions()
         assert len(expressions) == 1
         self.users_page.select_query_field(self.users_page.FIELD_USERNAME_TITLE, parent=expressions[0])
-        self.users_page.select_query_comp_op(self.users_page.QUERY_COMP_CONTAINS, parent=expressions[0])
+        self.users_page.select_query_comp_op(COMP_CONTAINS, parent=expressions[0])
         self.users_page.fill_query_string_value('avi', parent=expressions[0])
         self.users_page.wait_for_spinner_to_end()
         self.users_page.wait_for_table_to_load()
@@ -97,7 +97,7 @@ class TestUsersQuery(TestBase):
 
         self.users_page.click_query_wizard()
         self.users_page.select_query_field(self.users_page.FIELD_LOGON_COUNT)
-        self.users_page.select_query_comp_op(self.users_page.QUERY_COMP_IN)
+        self.users_page.select_query_comp_op(COMP_IN)
         self.users_page.fill_query_string_value(','.join(logon_counts))
         self.users_page.wait_for_table_to_load()
         self.users_page.wait_for_spinner_to_end()
@@ -122,7 +122,7 @@ class TestUsersQuery(TestBase):
         self.users_page.click_query_wizard()
         self.users_page.select_query_adapter(AD_ADAPTER_NAME)
         self.users_page.select_query_field(self.users_page.AD_ORGANIZATIONAL_UNIT_FIELD)
-        self.users_page.select_query_comp_op(self.users_page.QUERY_COMP_EXISTS)
+        self.users_page.select_query_comp_op(COMP_EXISTS)
         self.users_page.click_search()
         self.users_page.wait_for_table_to_be_responsive()
         self.users_page.edit_columns(add_col_names=[self.users_page.AD_ORGANIZATIONAL_UNIT_COLUMN])

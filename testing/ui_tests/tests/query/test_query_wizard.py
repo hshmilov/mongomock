@@ -1,5 +1,6 @@
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import DEVICES_SEEN_NEGATIVE_VALUE_QUERY, WINDOWS_QUERY_NAME, JSON_ADAPTER_NAME
+from ui_tests.tests.ui_consts import DEVICES_SEEN_NEGATIVE_VALUE_QUERY, WINDOWS_QUERY_NAME, JSON_ADAPTER_NAME, \
+    COMP_CONTAINS, COMP_EQUALS, COMP_NEXT_DAYS
 from test_credentials.test_cisco_credentials import cisco_json_file_mock_credentials
 
 
@@ -13,7 +14,7 @@ class TestQueryWizard(TestBase):
         self.devices_page.wait_for_table_to_be_responsive()
         self.devices_page.add_query_last_seen_negative_value(JSON_ADAPTER_NAME,
                                                              self.devices_page.FIELD_LAST_SEEN,
-                                                             self.devices_page.QUERY_COMP_NEXT_DAYS,
+                                                             COMP_NEXT_DAYS,
                                                              -1)
         current_query = self.devices_page.find_search_value()
         assert DEVICES_SEEN_NEGATIVE_VALUE_QUERY == current_query
@@ -32,7 +33,7 @@ class TestQueryWizard(TestBase):
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 1
         self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, parent=expressions[0])
+        self.devices_page.select_query_comp_op(COMP_CONTAINS, parent=expressions[0])
         self.devices_page.fill_query_string_value('test', parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
 
@@ -55,7 +56,7 @@ class TestQueryWizard(TestBase):
         assert len(expressions) == 1
 
         self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, parent=expressions[0])
+        self.devices_page.select_query_comp_op(COMP_CONTAINS, parent=expressions[0])
         self.devices_page.fill_query_string_value('test', parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         query_search_value = self.devices_page.find_search_value()
@@ -66,13 +67,13 @@ class TestQueryWizard(TestBase):
         query_search_value = self.devices_page.find_search_value()
         assert query_search_value == '(specific_data.data.hostname == regex("test\+special\-characters", "i"))'
 
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, parent=expressions[0])
+        self.devices_page.select_query_comp_op(COMP_EQUALS, parent=expressions[0])
         self.devices_page.fill_query_string_value('test+special-characters', parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         query_search_value = self.devices_page.find_search_value()
         assert query_search_value == '(specific_data.data.hostname == "test+special-characters")'
 
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, parent=expressions[0])
+        self.devices_page.select_query_comp_op(COMP_CONTAINS, parent=expressions[0])
         self.devices_page.fill_query_string_value('test+special-characters', parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         query_search_value = self.devices_page.find_search_value()
@@ -92,7 +93,7 @@ class TestQueryWizard(TestBase):
         self.devices_page.switch_to_page()
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE)
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS)
+        self.devices_page.select_query_comp_op(COMP_EQUALS)
         assert not self.devices_page.is_element_clickable(self.devices_page.get_search_button())
         self.devices_page.fill_query_string_value('random meaningless value')
         assert self.devices_page.is_element_clickable(self.devices_page.get_search_button())

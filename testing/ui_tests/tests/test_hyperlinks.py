@@ -5,7 +5,7 @@ from axonius.utils.wait import wait_until
 from services.adapters.stresstest_service import StresstestService
 from ui_tests.tests.ui_consts import (STRESSTEST_ADAPTER,
                                       STRESSTEST_ADAPTER_NAME,
-                                      JSON_ADAPTER_NAME)
+                                      JSON_ADAPTER_NAME, COMP_EXISTS)
 from ui_tests.tests.ui_test_base import TestBase
 from test_credentials.test_cisco_credentials import cisco_json_file_mock_credentials
 
@@ -145,7 +145,7 @@ class TestHyperlinks(TestBase):
         # Test Aggregated/General Data Advanced tables links
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_field(self.devices_page.FIELD_CONNECTED_DEVICES)
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS)
+        self.devices_page.select_query_comp_op(COMP_EXISTS)
         self.devices_page.click_search()
         self.devices_page.wait_for_table_to_load()
         link = self.devices_page.find_general_data_table_link(self.devices_page.FIELD_CONNECTED_DEVICES)

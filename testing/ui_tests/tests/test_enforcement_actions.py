@@ -26,7 +26,7 @@ from test_credentials.test_esx_credentials import esx_json_file_mock_devices
 from test_helpers.log_tester import LogTester
 from ui_tests.pages.enforcements_page import (ENFORCEMENT_WMI_SAVED_QUERY,
                                               ENFORCEMENT_WMI_SAVED_QUERY_NAME)
-from ui_tests.tests.ui_consts import REPORTS_LOG_PATH, Enforcements, MANAGED_DEVICES_QUERY_NAME
+from ui_tests.tests.ui_consts import REPORTS_LOG_PATH, Enforcements, MANAGED_DEVICES_QUERY_NAME, JSON_ADAPTER_FILTER
 from ui_tests.tests.ui_test_base import TestBase
 
 ENFORCEMENT_NAME = 'Special enforcement name'
@@ -298,8 +298,7 @@ class TestEnforcementActions(TestBase):
 
         self.devices_page.switch_to_page()
         self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME,
-                                              AD_LAST_OR_ADDED_QUERY.format(added_filter=self.devices_page.
-                                                                            JSON_ADAPTER_FILTER))
+                                              AD_LAST_OR_ADDED_QUERY.format(added_filter=JSON_ADAPTER_FILTER))
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_load()
         self.enforcements_page.click_new_enforcement()
@@ -314,8 +313,7 @@ class TestEnforcementActions(TestBase):
         self.base_page.run_discovery()
 
         self.devices_page.switch_to_page()
-        self.devices_page.fill_filter(AD_LAST_OR_ADDED_QUERY.format(added_filter=self.devices_page.
-                                                                    JSON_ADAPTER_FILTER))
+        self.devices_page.fill_filter(AD_LAST_OR_ADDED_QUERY.format(added_filter=JSON_ADAPTER_FILTER))
         self.devices_page.enter_search()
         self.enforcements_page.wait_for_table_to_load()
         assert self.devices_page.get_first_row_tags() == TAG_ALL_COMMENT
@@ -341,7 +339,7 @@ class TestEnforcementActions(TestBase):
 
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
-        self.devices_page.fill_filter(self.devices_page.JSON_ADAPTER_FILTER)
+        self.devices_page.fill_filter(JSON_ADAPTER_FILTER)
         self.devices_page.enter_search()
         self.enforcements_page.wait_for_table_to_load()
         assert self.devices_page.get_first_row_tags() == TAG_NEW_COMMENT
@@ -352,7 +350,7 @@ class TestEnforcementActions(TestBase):
 
             self.devices_page.switch_to_page()
             self.base_page.run_discovery()
-            test_query = AD_LAST_OR_ADDED_QUERY.format(added_filter=self.devices_page.JSON_ADAPTER_FILTER)
+            test_query = AD_LAST_OR_ADDED_QUERY.format(added_filter=JSON_ADAPTER_FILTER)
             self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME, test_query,
                                                   optional_sort=self.devices_page.FIELD_HOSTNAME_TITLE)
             self.enforcements_page.switch_to_page()
@@ -392,7 +390,7 @@ class TestEnforcementActions(TestBase):
 
             self.devices_page.switch_to_page()
             self.devices_page.run_filter_and_save(ENFORCEMENT_CHANGE_NAME, AD_LAST_OR_ADDED_QUERY.format(
-                added_filter=self.devices_page.JSON_ADAPTER_FILTER))
+                added_filter=JSON_ADAPTER_FILTER))
             self.enforcements_page.switch_to_page()
             self.enforcements_page.click_new_enforcement()
             self.enforcements_page.wait_for_spinner_to_end()

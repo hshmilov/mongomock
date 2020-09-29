@@ -9,8 +9,9 @@ from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils.wait import wait_until
 from test_credentials.json_file_credentials import (DEVICE_MAC,
                                                     DEVICE_THIRD_IP)
-from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
-                                      JSON_ADAPTER_NAME)
+from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME, JSON_ADAPTER_NAME,
+                                      COMP_EXISTS, COMP_CONTAINS, COMP_TRUE, COMP_EQUALS, COMP_IN,
+                                      COMP_SUBNET, COMP_DAYS, COMP_STARTS, LOGIC_AND, LOGIC_OR)
 from ui_tests.tests.ui_test_base import TestBase
 
 
@@ -29,7 +30,7 @@ class TestDevicesSimpleQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS)
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SUBNET)
+        self.devices_page.select_query_comp_op(COMP_SUBNET)
         self.devices_page.fill_query_string_value('1.1.1.1')
         self.devices_page.wait_for_element_present_by_text('Specify <address>/<CIDR> to filter IP by subnet')
         self.devices_page.click_search()
@@ -48,7 +49,7 @@ class TestDevicesSimpleQuery(TestBase):
 
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_field(self.devices_page.FIELD_TAGS)
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_IN)
+        self.devices_page.select_query_comp_op(COMP_IN)
         self.devices_page.fill_query_string_value(special_tag)
         self.devices_page.wait_for_table_to_be_responsive()
 
@@ -64,7 +65,7 @@ class TestDevicesSimpleQuery(TestBase):
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_adapter(AD_ADAPTER_NAME)
         assert self.devices_page.get_query_field() == self.devices_page.ID_FIELD
-        assert self.devices_page.get_query_comp_op() == self.devices_page.QUERY_COMP_EXISTS
+        assert self.devices_page.get_query_comp_op() == COMP_EXISTS
 
     def test_devices_query_wizard_list_field(self):
         self.dashboard_page.switch_to_page()
@@ -73,7 +74,7 @@ class TestDevicesSimpleQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_USED_USERS)
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_STARTS)
+        self.devices_page.select_query_comp_op(COMP_STARTS)
         self.devices_page.fill_query_string_value('test')
         self.devices_page.wait_for_table_to_be_responsive()
         assert self.devices_page.count_entities() == 1
@@ -147,15 +148,15 @@ class TestDevicesSimpleQuery(TestBase):
         expressions = self.devices_page.find_expressions()
         self.devices_page.toggle_not(expressions[0])
         self.devices_page.select_query_field(self.devices_page.FIELD_OS_MAJOR, parent=expressions[0])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS)
+        self.devices_page.select_query_comp_op(COMP_EXISTS)
 
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[1])
+        self.devices_page.select_query_logic_op(LOGIC_AND, expressions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_OS_BUILD, parent=expressions[1])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, parent=expressions[1])
+        self.devices_page.select_query_comp_op(COMP_EXISTS, parent=expressions[1])
 
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[2])
+        self.devices_page.select_query_logic_op(LOGIC_AND, expressions[2])
         self.devices_page.select_query_field(self.devices_page.FIELD_PART_OF_DOMAIN, parent=expressions[2])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_TRUE, parent=expressions[2])
+        self.devices_page.select_query_comp_op(COMP_TRUE, parent=expressions[2])
         self.devices_page.click_search()
 
     def test_clear_query_wizard(self):
@@ -192,7 +193,7 @@ class TestDevicesSimpleQuery(TestBase):
         self.devices_page.wait_for_table_to_be_responsive()
         query_filter = self.devices_page.find_search_value()
         results_count = len(self.devices_page.get_all_data())
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_DAYS, parent=expressions[0])
+        self.devices_page.select_query_comp_op(COMP_DAYS, parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         assert len(self.devices_page.get_all_data()) == results_count
         assert self.devices_page.find_search_value() == query_filter
@@ -210,7 +211,7 @@ class TestDevicesSimpleQuery(TestBase):
         conditions = self.devices_page.find_conditions(expressions[0])
         assert len(conditions) == 1
         self.devices_page.select_query_field(self.devices_page.FIELD_IPS, conditions[0])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, conditions[0])
+        self.devices_page.select_query_comp_op(COMP_EXISTS, conditions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         results_count = self.devices_page.count_entities()
         self.devices_page.click_on_filter_adapter(AD_ADAPTER_NAME, parent=expressions[0])
@@ -224,11 +225,11 @@ class TestDevicesSimpleQuery(TestBase):
         assert len(expressions) == 2
         self.devices_page.toggle_left_bracket(expressions[0])
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS, expressions[0])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, expressions[0])
+        self.devices_page.select_query_comp_op(COMP_EQUALS, expressions[0])
         self.devices_page.fill_query_string_value(DEVICE_THIRD_IP, expressions[0])
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[1])
+        self.devices_page.select_query_logic_op(LOGIC_AND, expressions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_MAC, expressions[1])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, expressions[1])
+        self.devices_page.select_query_comp_op(COMP_CONTAINS, expressions[1])
         self.devices_page.fill_query_string_value(DEVICE_MAC, expressions[1])
         self.devices_page.toggle_right_bracket(expressions[1])
         self.devices_page.wait_for_table_to_be_responsive()
@@ -296,7 +297,7 @@ class TestDevicesSimpleQuery(TestBase):
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 1
         self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, parent=expressions[0])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, parent=expressions[0])
+        self.devices_page.select_query_comp_op(COMP_EXISTS, parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         results_count = self.devices_page.count_entities()
         self.devices_page.click_on_clear_all_filter_adapters(parent=expressions[0])
@@ -327,11 +328,11 @@ class TestDevicesSimpleQuery(TestBase):
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 3
         self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, parent=expressions[0])
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_OR)
+        self.devices_page.select_query_logic_op(LOGIC_OR)
         self.devices_page.select_query_adapter(AD_ADAPTER_NAME, parent=expressions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[2])
         self.devices_page.select_query_comp_op('exists', parent=expressions[2])
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, parent=expressions[2])
+        self.devices_page.select_query_logic_op(LOGIC_AND, parent=expressions[2])
         self.devices_page.click_search()
         self.devices_page.wait_for_table_to_be_responsive()
         self._text_exclude_entities_on_current_data()
@@ -347,11 +348,11 @@ class TestDevicesSimpleQuery(TestBase):
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 3
         self.devices_page.select_query_adapter(JSON_ADAPTER_NAME, parent=expressions[0])
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_OR)
+        self.devices_page.select_query_logic_op(LOGIC_OR)
         self.devices_page.select_query_adapter(AD_ADAPTER_NAME, parent=expressions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_LAST_SEEN, parent=expressions[2])
         self.devices_page.select_query_comp_op('exists', parent=expressions[2])
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, parent=expressions[2])
+        self.devices_page.select_query_logic_op(LOGIC_AND, parent=expressions[2])
         self.devices_page.click_search()
         self.devices_page.wait_for_table_to_be_responsive()
         filtered_out_indices = self._text_exclude_entities_on_current_data()
@@ -383,7 +384,7 @@ class TestDevicesSimpleQuery(TestBase):
 
         expressions = self.devices_page.find_expressions()
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS, expressions[0])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, expressions[0])
+        self.devices_page.select_query_comp_op(COMP_EQUALS, expressions[0])
         self.devices_page.fill_query_string_value(DEVICE_THIRD_IP, expressions[0])
         self.devices_page.click_search()
         self.devices_page.wait_for_table_to_load()

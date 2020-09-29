@@ -7,7 +7,10 @@ from test_credentials.json_file_credentials import (DEVICE_FIRST_IP,
                                                     DEVICE_SECOND_IP,
                                                     DEVICE_SUBNET)
 from ui_tests.tests.test_entities_table import TestEntitiesTable
-from ui_tests.tests.ui_consts import TAG_NAME, AD_ADAPTER_NAME, WMI_ADAPTER_NAME, JSON_ADAPTER_NAME
+from ui_tests.tests.ui_consts import (TAG_NAME,
+                                      AD_ADAPTER_NAME, WMI_ADAPTER_NAME, JSON_ADAPTER_NAME,
+                                      COMP_EXISTS, COMP_CONTAINS, COMP_EQUALS, COMP_SUBNET, LOGIC_AND,
+                                      JSON_ADAPTER_FILTER)
 
 
 class TestDevicesTableMoreCases(TestEntitiesTable):
@@ -53,7 +56,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
 
             # Testing regular Adapter
             self.devices_page.switch_to_page()
-            self.devices_page.fill_filter(self.devices_page.JSON_ADAPTER_FILTER)
+            self.devices_page.fill_filter(JSON_ADAPTER_FILTER)
             self.devices_page.enter_search()
             self.devices_page.wait_for_table_to_load()
             first_id = self.devices_page.find_first_id()
@@ -106,7 +109,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
 
-        self.check_toggle_advanced_basic(self.devices_page, self.devices_page.JSON_ADAPTER_FILTER,
+        self.check_toggle_advanced_basic(self.devices_page, JSON_ADAPTER_FILTER,
                                          JSON_ADAPTER_NAME, self.devices_page.ADVANCED_VIEW_RAW_FIELD,
                                          self.devices_page.FIELD_ASSET_NAME)
 
@@ -129,19 +132,19 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
         expressions = self.devices_page.find_expressions()
         assert len(expressions) == 4
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_IPS, expressions[0])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_SUBNET, expressions[0])
+        self.devices_page.select_query_comp_op(COMP_SUBNET, expressions[0])
         self.devices_page.fill_query_string_value(DEVICE_SUBNET, expressions[0])
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[1])
+        self.devices_page.select_query_logic_op(LOGIC_AND, expressions[1])
         self.devices_page.select_query_field(self.devices_page.FIELD_HOSTNAME_TITLE, expressions[1])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_CONTAINS, expressions[1])
+        self.devices_page.select_query_comp_op(COMP_CONTAINS, expressions[1])
         self.devices_page.fill_query_string_value('st', expressions[1])
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[2])
+        self.devices_page.select_query_logic_op(LOGIC_AND, expressions[2])
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_SUBNETS, expressions[2])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EQUALS, expressions[2])
+        self.devices_page.select_query_comp_op(COMP_EQUALS, expressions[2])
         self.devices_page.fill_query_string_value(DEVICE_SUBNET, expressions[2])
-        self.devices_page.select_query_logic_op(self.devices_page.QUERY_LOGIC_AND, expressions[3])
+        self.devices_page.select_query_logic_op(LOGIC_AND, expressions[3])
         self.devices_page.select_query_field(self.devices_page.FIELD_NETWORK_INTERFACES_MAC, expressions[3])
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS, expressions[3])
+        self.devices_page.select_query_comp_op(COMP_EXISTS, expressions[3])
         self.devices_page.wait_for_table_to_load()
         self.devices_page.wait_for_spinner_to_end()
         assert len(self.devices_page.get_all_data()) == 1

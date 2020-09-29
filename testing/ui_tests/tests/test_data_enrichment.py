@@ -7,8 +7,6 @@ class TestDataEnrichment(TestBase):
     def test_ip_to_location_enrichment(self):
         self.adapters_page.add_server(esx_json_file_mock_devices, JSON_ADAPTER_NAME)
         self.adapters_page.wait_for_server_green()
-        self.adapters_page.wait_for_table_to_load()
-        self.adapters_page.wait_for_data_collection_toaster_absent()
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
         self.settings_page.find_checkbox_by_label('Enable device location mapping').click()

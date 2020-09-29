@@ -7,7 +7,7 @@ from ui_tests.tests.ui_consts import (GUI_LOG_PATH,
                                       NEW_PASSWORD,
                                       FIRST_NAME,
                                       LAST_NAME,
-                                      STRESSTEST_ADAPTER_NAME)
+                                      STRESSTEST_ADAPTER_NAME, JSON_ADAPTER_FILTER)
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.pages import page
 from ui_tests.pages.reports_page import ReportConfig
@@ -85,7 +85,7 @@ class TestGettingStarted(TestBase):
 
         # 3) save a new query and check milestone has been completed
         self.devices_page.switch_to_page()
-        self.devices_page.create_saved_query(self.devices_page.JSON_ADAPTER_FILTER, self.SAVED_QUERY)
+        self.devices_page.create_saved_query(JSON_ADAPTER_FILTER, self.SAVED_QUERY)
         self.base_page.assert_milestone_completed(page.Milestones.query_saved.name)
 
         # 4) tag a device and check milestone has been completed

@@ -142,7 +142,10 @@ export default {
       if (!schemaFieldsByName || !Object.keys(schemaFieldsByName).length) {
         return [];
       }
-      const fieldsToUse = this.fields ? this.fields : this.viewFields;
+      const fieldsToUse = this.fields || this.viewFields;
+      if (!fieldsToUse) {
+        return [];
+      }
       return fieldsToUse.map((fieldName) => schemaFieldsByName[fieldName]).filter((field) => field);
     },
   },
@@ -159,7 +162,7 @@ export default {
       };
     }
     await this.fetchDataFields({ module: this.module });
-    if (!this.viewFields.length && !this.fields) {
+    if (_isEmpty(this.viewFields) && _isEmpty(this.fields)) {
       this.updateView({
         module: this.module,
         view: {

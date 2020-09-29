@@ -8,7 +8,7 @@ from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD, ActionCategory,
 from axonius.utils.wait import wait_until
 
 from ui_tests.pages.entities_page import EntitiesPage
-from ui_tests.tests.ui_consts import CSV_ADAPTER_FILTER, AWS_ADAPTER_FILTER
+from ui_tests.tests.ui_consts import CSV_ADAPTER_FILTER, AWS_ADAPTER_FILTER, COMP_DAYS, COMP_NEXT_DAYS, LOGIC_AND
 
 
 class DevicesPage(EntitiesPage):
@@ -232,7 +232,7 @@ class DevicesPage(EntitiesPage):
         self.click_query_wizard()
         self.add_query_expression()
         expressions = self.find_expressions()
-        self.select_query_logic_op(self.QUERY_LOGIC_AND, parent=expressions[1])
+        self.select_query_logic_op(LOGIC_AND, parent=expressions[1])
         self.select_query_field(self.FIELD_LAST_SEEN, parent=expressions[1])
         self.select_query_comp_op(query_comp_day, parent=expressions[1])
         self.fill_query_value(5, parent=expressions[1])
@@ -249,10 +249,10 @@ class DevicesPage(EntitiesPage):
         self.close_dropdown()
 
     def add_query_last_seen_last_day(self):
-        self._add_query_last_seen(self.QUERY_COMP_DAYS)
+        self._add_query_last_seen(COMP_DAYS)
 
     def add_query_last_seen_next_day(self):
-        self._add_query_last_seen(self.QUERY_COMP_NEXT_DAYS)
+        self._add_query_last_seen(COMP_NEXT_DAYS)
 
     def run_enforcement_on_selected_device(self, enforcement_name, close_result_modal=True):
         self.open_enforce_dialog()
@@ -364,7 +364,7 @@ class DevicesPage(EntitiesPage):
         self.click_query_wizard()
         expressions = self.find_expressions()
         self.select_query_field(self.FIELD_LAST_SEEN, parent=expressions[0])
-        self.select_query_comp_op(self.QUERY_COMP_DAYS, parent=expressions[0])
+        self.select_query_comp_op(COMP_DAYS, parent=expressions[0])
         self.fill_query_value(days, parent=expressions[0])
         self.wait_for_table_to_load()
         self.close_dropdown()

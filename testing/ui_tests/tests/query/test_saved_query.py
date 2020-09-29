@@ -11,8 +11,10 @@ from services.axon_service import TimeoutException
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import (READ_ONLY_USERNAME, NEW_PASSWORD,
                                       UPDATE_USERNAME, UPDATE_PASSWORD, UPDATE_FIRST_NAME, UPDATE_LAST_NAME,
-                                      WINDOWS_QUERY_NAME, LINUX_QUERY_NAME, JSON_ADAPTER_NAME,
-                                      DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME)
+                                      WINDOWS_QUERY_NAME, LINUX_QUERY_NAME,
+                                      JSON_ADAPTER_NAME, JSON_ADAPTER_FILTER,
+                                      DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME,
+                                      COMP_NEXT_DAYS, COMP_DAYS)
 from test_credentials.json_file_credentials import (DEVICE_FIRST_HOSTNAME, DEVICE_SECOND_NAME)
 
 
@@ -259,7 +261,7 @@ class TestSavedQuery(TestBase):
 
     def _test_admin_query(self, date_str):
         self.devices_page.switch_to_page()
-        self.devices_page.run_filter_and_save(self.CUSTOM_QUERY_SAVE_NAME_1, self.devices_page.JSON_ADAPTER_FILTER)
+        self.devices_page.run_filter_and_save(self.CUSTOM_QUERY_SAVE_NAME_1, JSON_ADAPTER_FILTER)
         self._check_saved_query(self.CUSTOM_QUERY_SAVE_NAME_1, date_str, self.username, self.ADMIN_NAME)
 
     def _check_saved_query(self, query_name, date_str, username, first_name='', last_name=''):
@@ -294,7 +296,7 @@ class TestSavedQuery(TestBase):
         self.login_page.switch_user(UPDATE_USERNAME, UPDATE_PASSWORD, '/devices')
         self._check_saved_query(self.CUSTOM_QUERY_SAVE_NAME_1, date_str, self.username, self.ADMIN_NAME)
         self.devices_page.switch_to_page()
-        self.devices_page.run_filter_and_save(self.CUSTOM_QUERY_SAVE_NAME_2, self.devices_page.JSON_ADAPTER_FILTER)
+        self.devices_page.run_filter_and_save(self.CUSTOM_QUERY_SAVE_NAME_2, JSON_ADAPTER_FILTER)
         self._check_saved_query(self.CUSTOM_QUERY_SAVE_NAME_2, date_str, UPDATE_USERNAME,
                                 UPDATE_FIRST_NAME, UPDATE_LAST_NAME)
 
@@ -438,10 +440,10 @@ class TestSavedQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()
         assert self.devices_page.find_query_status_text() != self.EDITED_QUERY_STATUS
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_NEXT_DAYS)
+        self.devices_page.select_query_comp_op(COMP_NEXT_DAYS)
         self.devices_page.wait_for_table_to_be_responsive()
         assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_DAYS)
+        self.devices_page.select_query_comp_op(COMP_DAYS)
         self.devices_page.wait_for_table_to_be_responsive()
         assert self.devices_page.find_query_status_text() != self.EDITED_QUERY_STATUS
         self.devices_page.click_search()
@@ -452,10 +454,10 @@ class TestSavedQuery(TestBase):
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()
         assert self.devices_page.find_query_status_text() != self.EDITED_QUERY_STATUS
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_NEXT_DAYS)
+        self.devices_page.select_query_comp_op(COMP_NEXT_DAYS)
         self.devices_page.wait_for_table_to_be_responsive()
         assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_DAYS)
+        self.devices_page.select_query_comp_op(COMP_DAYS)
         self.devices_page.wait_for_table_to_be_responsive()
         assert self.devices_page.find_query_status_text() != self.EDITED_QUERY_STATUS
 

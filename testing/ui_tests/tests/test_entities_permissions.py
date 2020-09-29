@@ -6,6 +6,7 @@ from ui_tests.tests import ui_consts
 from ui_tests.tests.entities_enforcements_tasks_test_base import EntitiesEnforcementTasksTestBase
 
 # pylint: disable=no-member
+from ui_tests.tests.ui_consts import JSON_ADAPTER_FILTER
 
 
 class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
@@ -37,7 +38,7 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
                                                                      self.settings_page.RESTRICTED_ROLE)
         self.devices_page.switch_to_page()
         self.devices_page.run_filter_and_save(self.CUSTOM_DEVICES_QUERY_SAVE_NAME,
-                                              self.devices_page.JSON_ADAPTER_FILTER)
+                                              JSON_ADAPTER_FILTER)
         self.devices_page.refresh()
         self.devices_page.load_notes()
         self.devices_page.create_note(self.NOTE_TEXT)
@@ -85,7 +86,7 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
                                                                      self.settings_page.RESTRICTED_ROLE)
         self.devices_page.switch_to_page()
         self.devices_page.run_filter_and_save(self.CUSTOM_DEVICES_QUERY_SAVE_NAME,
-                                              self.devices_page.JSON_ADAPTER_FILTER)
+                                              JSON_ADAPTER_FILTER)
         self.settings_page.switch_to_page()
         settings_permissions = {
             'devices_assets': [
@@ -222,7 +223,7 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
                                                                      self.settings_page.RESTRICTED_ROLE)
         self.users_page.switch_to_page()
         self.users_page.run_filter_and_save(self.CUSTOM_USERS_QUERY_SAVE_NAME,
-                                            self.users_page.JSON_ADAPTER_FILTER)
+                                            JSON_ADAPTER_FILTER)
 
         self.settings_page.switch_to_page()
         settings_permissions = {
@@ -394,7 +395,8 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
             queries_page.get_enforce_panel_action()
         queries_page.run_query()
 
-    def _test_saved_queries_with_create_permission(self, entities_page, query_name):
+    @staticmethod
+    def _test_saved_queries_with_create_permission(entities_page, query_name):
         entities_page.switch_to_page()
         entities_page.wait_for_table_to_load()
         entities_page.fill_filter('cb')
@@ -402,7 +404,7 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
         entities_page.open_actions_query()
         assert not entities_page.is_query_save_disabled()
         entities_page.open_actions_query()
-        entities_page.run_filter_and_save(query_name, self.devices_page.JSON_ADAPTER_FILTER)
+        entities_page.run_filter_and_save(query_name, JSON_ADAPTER_FILTER)
 
     @staticmethod
     def _test_saved_queries_with_delete_permission(entities_page, queries_page, query_name, new_query_name):

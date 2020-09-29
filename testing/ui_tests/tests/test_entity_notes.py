@@ -5,7 +5,7 @@ from axonius.entities import EntityType
 from axonius.consts.gui_consts import HAS_NOTES_TITLE
 from axonius.utils.wait import wait_until
 from ui_tests.tests import ui_consts
-from ui_tests.tests.ui_consts import NOTE_COLUMN
+from ui_tests.tests.ui_consts import NOTE_COLUMN, COMP_FALSE
 from ui_tests.tests.ui_test_base import TestBase
 
 
@@ -129,7 +129,7 @@ class TestEntityNotes(TestBase):
         entities_page.switch_to_page()
         entities_page.wait_for_table_to_be_responsive()
         initial_entities_number = entities_page.count_entities()
-        entities_page.build_query(HAS_NOTES_TITLE, None, entities_page.QUERY_COMP_FALSE)
+        entities_page.build_query(HAS_NOTES_TITLE, None, COMP_FALSE)
         entities_page.wait_for_table_to_be_responsive()
         assert initial_entities_number == entities_page.count_entities()
 

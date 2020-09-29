@@ -2,29 +2,25 @@ import math
 from datetime import datetime
 import random
 
-import pytest
 from dateutil.relativedelta import relativedelta
 
 from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD
 from json_file_adapter.service import DEVICES_DATA, FILE_NAME, USERS_DATA
 from services.adapters import stresstest_scanner_service, stresstest_service
-from services.adapters.csv_service import CsvService
-from test_credentials.test_aws_credentials_mock import aws_json_file_mock_devices
 from test_credentials.test_crowd_strike_mock_credentials import crowd_strike_json_file_mock_devices
-from test_credentials.test_csv_credentials import CSV_FIELDS
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 from ui_tests.tests.ui_consts import (AD_ADAPTER_NAME,
                                       LINUX_QUERY_NAME,
                                       STRESSTEST_ADAPTER,
                                       STRESSTEST_SCANNER_ADAPTER,
                                       WINDOWS_QUERY_NAME,
-                                      JSON_ADAPTER_NAME, STRESSTEST_ADAPTER_NAME, STRESSTEST_SCANNER_ADAPTER_NAME,
-                                      LABEL_CLIENT_WITH_SAME_ID, CSV_NAME, CSV_PLUGIN_NAME)
+                                      JSON_ADAPTER_NAME,
+                                      STRESSTEST_ADAPTER_NAME, STRESSTEST_SCANNER_ADAPTER_NAME,
+                                      COMP_CONTAINS, COMP_IN, COMP_NEXT_DAYS)
 from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestDevicesQueryAdvancedMoreCases(TestBase):
-    LABEL_CLIENT_WITH_SAME_ID = 'client_with_same_id'
 
     def test_devices_id_contains_query(self):
         self.dashboard_page.switch_to_page()
@@ -34,7 +30,7 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
                                                                   AD_ADAPTER_NAME)
         self.devices_page.wait_for_table_to_be_responsive()
         self.devices_page.click_query_wizard()
-        assert self.devices_page.get_query_comp_op() == self.devices_page.QUERY_COMP_CONTAINS
+        assert self.devices_page.get_query_comp_op() == COMP_CONTAINS
 
     def test_regex_no_escaping(self):
         self.devices_page.switch_to_page()
@@ -58,7 +54,7 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
 
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_field(ADAPTER_CONNECTIONS_FIELD)
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_IN)
+        self.devices_page.select_query_comp_op(COMP_IN)
         self.devices_page.fill_query_string_value(','.join(adapters))
         self.devices_page.wait_for_table_to_be_responsive()
 
@@ -98,7 +94,7 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
         def json_query_filter_last_seen_next_days(days_value=0):
             self.devices_page.click_query_wizard()
             self.devices_page.select_query_with_adapter(attribute=self.devices_page.FIELD_LAST_SEEN,
-                                                        operator=self.devices_page.QUERY_COMP_NEXT_DAYS,
+                                                        operator=COMP_NEXT_DAYS,
                                                         value=days_value)
             self.devices_page.wait_for_table_to_be_responsive()
             self.devices_page.click_search()
@@ -134,8 +130,6 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
         }
 
         self.adapters_page.add_server(client_details, adapter_name=JSON_ADAPTER_NAME)
-        self.adapters_page.wait_for_data_collection_toaster_start()
-        self.adapters_page.wait_for_data_collection_toaster_absent()
         self.devices_page.switch_to_page()
         self.devices_page.refresh()
         json_query_filter_last_seen_next_days(1)
@@ -177,8 +171,6 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
         """
         self.adapters_page.add_server(crowd_strike_json_file_mock_devices, JSON_ADAPTER_NAME)
         self.adapters_page.wait_for_server_green(position=2)
-        self.adapters_page.wait_for_table_to_load()
-        self.adapters_page.wait_for_data_collection_toaster_absent()
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
         self.devices_page.click_query_wizard()
@@ -220,7 +212,7 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
 
             self.devices_page.click_query_wizard()
             self.devices_page.select_query_field(self.devices_page.FIELD_OS_TYPE)
-            self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_IN)
+            self.devices_page.select_query_comp_op(COMP_IN)
             self.devices_page.fill_query_string_value(','.join(set(os_types)))
             self.devices_page.wait_for_table_to_be_responsive()
 
@@ -244,51 +236,3 @@ class TestDevicesQueryAdvancedMoreCases(TestBase):
             self.adapters_page.clean_adapter_servers(STRESSTEST_SCANNER_ADAPTER_NAME)
         self.wait_for_stress_adapter_down(STRESSTEST_ADAPTER)
         self.wait_for_stress_adapter_down(STRESSTEST_SCANNER_ADAPTER)
-
-    @pytest.mark.skip('AX-7287')
-    def test_connection_label_query_with_same_client_id(self):
-        """
-          verify connection label when adapter client have same client_id ( like tanium adapters )
-          in order to test this mock aws usign json_file adapter and csv adapter are used
-          use case : same label on multiple adapters then remove label from one adapter and compare device count
-        """
-        # JSON FILE - AWS mock
-        aws_json_mock_with_label = aws_json_file_mock_devices.copy()
-        aws_json_mock_with_label[FILE_NAME] = LABEL_CLIENT_WITH_SAME_ID
-        aws_json_mock_with_label['connectionLabel'] = LABEL_CLIENT_WITH_SAME_ID
-        self.adapters_page.add_json_server(aws_json_mock_with_label, run_discovery_at_last=True, position=2)
-
-        with CsvService().contextmanager(take_ownership=True):
-            # CSV
-            client_details = {
-                'user_id': 'user',
-                LABEL_CLIENT_WITH_SAME_ID: FileForCredentialsMock(
-                    'csv_name',
-                    ','.join(CSV_FIELDS) +
-                    f'\nkatooth,Serial1,Windows,11:22:22:33:11:33,Office,02:11:24.485Z 02:11:24.485Z, 1.1.1.1')
-            }
-            self.adapters_page.upload_csv(LABEL_CLIENT_WITH_SAME_ID, client_details)
-
-            devices_by_label = self.devices_page.get_device_count_by_connection_label(
-                operator=self.devices_page.QUERY_COMP_EQUALS, value=LABEL_CLIENT_WITH_SAME_ID)
-
-            # update label for csv mock
-            self.adapters_page.update_csv_connection_label(file_name=LABEL_CLIENT_WITH_SAME_ID,
-                                                           update_label='UPDATE_LABEL')
-
-            update_devices_by_label = self.devices_page.get_device_count_by_connection_label(
-                operator=self.devices_page.QUERY_COMP_EQUALS, value=LABEL_CLIENT_WITH_SAME_ID)
-            assert update_devices_by_label < devices_by_label
-
-            # update label for aws json file
-            self.adapters_page.update_json_file_server_connection_label(client_name=LABEL_CLIENT_WITH_SAME_ID,
-                                                                        update_label='UPDATE_LABEL')
-
-            update_devices_by_label = self.devices_page.get_device_count_by_connection_label(
-                operator=self.devices_page.QUERY_COMP_EQUALS, value='UPDATE_LABEL')
-            assert update_devices_by_label == devices_by_label
-
-            self.adapters_page.clean_adapter_servers(CSV_NAME, True)
-
-        self.wait_for_adapter_down(CSV_PLUGIN_NAME)
-        self.adapters_page.remove_json_extra_server(aws_json_mock_with_label)

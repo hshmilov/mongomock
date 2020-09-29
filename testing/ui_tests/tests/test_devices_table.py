@@ -10,7 +10,7 @@ from ui_tests.tests.test_entities_table import TestEntitiesTable
 from ui_tests.tests.ui_consts import (MANAGED_DEVICES_QUERY_NAME,
                                       STRESSTEST_ADAPTER,
                                       STRESSTEST_ADAPTER_NAME,
-                                      AD_ADAPTER_NAME, AWS_ADAPTER_NAME, AWS_ADAPTER)
+                                      AD_ADAPTER_NAME, AWS_ADAPTER_NAME, AWS_ADAPTER, COMP_EXISTS)
 
 from test_credentials.test_crowd_strike_mock_credentials import crowd_strike_json_file_mock_devices
 from test_credentials.test_aws_credentials import client_details
@@ -50,7 +50,7 @@ class TestDevicesTable(TestEntitiesTable):
             self.devices_page.switch_to_page()
             self.devices_page.click_query_wizard()
             self.devices_page.select_query_field(self.devices_page.FIELD_USERS_USERNAME)
-            self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS)
+            self.devices_page.select_query_comp_op(COMP_EXISTS)
             self.devices_page.click_search()
             self.devices_page.wait_for_table_to_load()
             self.devices_page.click_row()

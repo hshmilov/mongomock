@@ -52,7 +52,6 @@ class TestDiscoverySchedule(TestBase):
             device_dict = {'device_count': 10, 'name': 'testonius', 'fetch_device_interval': 5}
             self.adapters_page.add_server(device_dict, STRESSTEST_ADAPTER_NAME)
             self.adapters_page.wait_for_server_green()
-            self.adapters_page.wait_for_data_collection_toaster_absent()
             # CLOCK SYNC TO START ON ROUND TIME
             time.sleep(60 - datetime.utcnow().second)
             self.settings_page.set_discovery__to_time_of_day(self.set_discovery_time(minutes=2))

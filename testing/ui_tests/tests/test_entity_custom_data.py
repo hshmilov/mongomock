@@ -7,7 +7,7 @@ from selenium.common.exceptions import (ElementNotVisibleException,
 
 from services.adapters.linux_ssh_service import LinuxSshService
 from testing.test_credentials.test_linux_ssh_credentials import CLIENT_DETAILS as linux_client_details
-from ui_tests.tests.ui_consts import JSON_ADAPTER_NAME
+from ui_tests.tests.ui_consts import JSON_ADAPTER_NAME, JSON_ADAPTER_FILTER
 from ui_tests.tests.ui_test_base import TestBase
 
 LINUX_SSH_ADAPTER_NAME = 'Linux SSH'
@@ -164,14 +164,14 @@ class TestEntityCustomData(TestBase):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
 
-        self.devices_page.load_custom_data(self.devices_page.JSON_ADAPTER_FILTER)
+        self.devices_page.load_custom_data(JSON_ADAPTER_FILTER)
         self._test_init_state(self.devices_page)
         self._test_first_data(self.devices_page, self.devices_page.FIELD_ASSET_NAME)
         self._test_new_fields(self.devices_page)
         self._test_error_fields(self.devices_page, self.devices_page.FIELD_ASSET_NAME)
         self._test_custom_data_bulk(self.devices_page, self.devices_page.FIELD_ASSET_NAME)
 
-        self.users_page.load_custom_data(self.users_page.JSON_ADAPTER_FILTER)
+        self.users_page.load_custom_data(JSON_ADAPTER_FILTER)
         self._test_init_state(self.users_page)
         self._test_first_data(self.users_page, self.users_page.FIELD_USERNAME_TITLE)
         self._test_new_fields(self.users_page)
@@ -238,7 +238,7 @@ class TestEntityCustomData(TestBase):
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
 
-        self.devices_page.load_custom_data(self.devices_page.JSON_ADAPTER_FILTER)
+        self.devices_page.load_custom_data(JSON_ADAPTER_FILTER)
         self._test_first_data(self.devices_page, self.devices_page.FIELD_HOSTNAME_TITLE)
         self.devices_page.click_general_tab()
         host_name_value = self.devices_page.get_host_name_aggregated_value()

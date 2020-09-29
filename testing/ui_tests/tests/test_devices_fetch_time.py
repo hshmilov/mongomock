@@ -1,5 +1,6 @@
 from services.adapters.ad_service import AdService
 from ui_tests.tests.test_entities_table import TestEntitiesTable
+from ui_tests.tests.ui_consts import COMP_EXISTS
 
 
 class TestDevicesFetchTime(TestEntitiesTable):
@@ -50,7 +51,7 @@ class TestDevicesFetchTime(TestEntitiesTable):
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_query_wizard()
         self.devices_page.select_query_field(self.devices_page.FIELD_FIRST_FETCH_TIME)
-        self.devices_page.select_query_comp_op(self.devices_page.QUERY_COMP_EXISTS)
+        self.devices_page.select_query_comp_op(COMP_EXISTS)
         self.devices_page.wait_for_spinner_to_end()
         self.devices_page.wait_for_table_to_load()
         assert self.devices_page.count_entities() > 0

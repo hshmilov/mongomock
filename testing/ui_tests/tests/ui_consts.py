@@ -50,7 +50,6 @@ AD_ADAPTER_NAME = 'Microsoft Active Directory (AD)'
 WMI_ADAPTER_NAME = 'Windows Management Instrumentation (WMI)'
 CISCO_PRIME_ADAPTER_NAME = 'Cisco Prime'
 
-
 CSV_NAME = 'CSV'
 CSV_PLUGIN_NAME = 'csv_adapter'
 
@@ -78,23 +77,6 @@ TANIUM_ASSET_ADAPTER = 'Tanium Asset'
 
 OKTA_ADAPTER = 'okta_adapter'
 OKTA_ADAPTER_NAME = 'Okta'
-
-WINDOWS_QUERY_NAME = 'Windows Operating System'
-LINUX_QUERY_NAME = 'Linux Operating System'
-AD_MISSING_AGENTS_QUERY_NAME = 'AD devices missing agents'
-MANAGED_DEVICES_QUERY_NAME = 'Managed Devices'
-UNMANAGED_DEVICES_QUERY_NAME = 'Unmanaged Devices'
-MANAGED_DEVICES_QUERY = '(specific_data.data.adapter_properties == "Agent") ' \
-                        'or (specific_data.data.adapter_properties == "Manager")'
-UNMANAGED_DEVICES_QUERY_NAME = 'Unmanaged Devices'
-DEVICES_NOT_SEEN_IN_LAST_30_DAYS_QUERY_NAME = 'Devices not seen in last 30 days'
-DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME = 'Devices seen in last 7 days'
-DEVICES_SEEN_IN_LAST_7_DAYS_QUERY = '(specific_data.data.last_seen >= date("NOW - 7d"))'
-
-HOSTNAME_DC_QUERY = 'specific_data.data.hostname == regex("dc", "i")'
-HOSTNAME_DC_QUERY_NAME = 'DC Devices'
-IPS_192_168_QUERY = 'specific_data.data.network_interfaces.ips == regex("192.168", "i")'
-IPS_192_168_QUERY_NAME = 'IPs Subnet 192.168.0.0'
 
 DEVICES_MODULE = 'Devices'
 USERS_MODULE = 'Users'
@@ -126,6 +108,51 @@ LABEL_CLIENT_WITH_SAME_ID = 'client_with_same_id'
 DEVICES_SEEN_NEGATIVE_VALUE_QUERY = '(adapters_data.json_file_adapter.last_seen <= date("NOW - 1d"))'
 
 MASTER_NODE_NAME = 'Master'
+
+################
+# Query Wizard #
+################
+
+# Saved Query Names
+WINDOWS_QUERY_NAME = 'Windows Operating System'
+LINUX_QUERY_NAME = 'Linux Operating System'
+AD_MISSING_AGENTS_QUERY_NAME = 'AD devices missing agents'
+MANAGED_DEVICES_QUERY_NAME = 'Managed Devices'
+UNMANAGED_DEVICES_QUERY_NAME = 'Unmanaged Devices'
+DEVICES_NOT_SEEN_IN_LAST_30_DAYS_QUERY_NAME = 'Devices not seen in last 30 days'
+DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME = 'Devices seen in last 7 days'
+HOSTNAME_DC_QUERY_NAME = 'DC Devices'
+IPS_192_168_QUERY_NAME = 'IPs Subnet 192.168.0.0'
+
+# Query Filters
+MANAGED_DEVICES_QUERY = '(specific_data.data.adapter_properties == "Agent") ' \
+                        'or (specific_data.data.adapter_properties == "Manager")'
+DEVICES_SEEN_IN_LAST_7_DAYS_QUERY = '(specific_data.data.last_seen >= date("NOW - 7d"))'
+HOSTNAME_DC_QUERY = 'specific_data.data.hostname == regex("dc", "i")'
+IPS_192_168_QUERY = 'specific_data.data.network_interfaces.ips == regex("192.168", "i")'
+JSON_ADAPTER_FILTER = 'adapters == "json_file_adapter"'
+
+# Functions
+COMP_EXISTS = 'exists'
+COMP_CONTAINS = 'contains'
+COMP_REGEX = 'regex'
+COMP_TRUE = 'true'
+COMP_FALSE = 'false'
+COMP_EQUALS = 'equals'
+COMP_IN = 'in'
+COMP_SUBNET = 'in subnet'
+COMP_SIZE = 'count ='
+COMP_SIZE_ABOVE = 'count >'
+COMP_SIZE_BELOW = 'count <'
+COMP_DAYS = 'last days'
+COMP_NEXT_DAYS = 'next days'
+COMP_HOURS = 'last hours'
+COMP_NEXT_HOURS = 'next hours'
+COMP_GREATER_THAN = '>'
+COMP_LESS_THAN = '<'
+COMP_STARTS = 'starts'
+LOGIC_AND = 'and'
+LOGIC_OR = 'or'
 
 
 class EmailSettings:

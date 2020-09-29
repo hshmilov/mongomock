@@ -16,8 +16,6 @@ class TestStopDiscoverySanity(TestBase):
         # Add AD clients.
         self.adapters_page.add_server(ad_client1_details)
         self.adapters_page.add_server(ad_client2_details)
-        self.adapters_page.wait_for_toaster(self.adapters_page.DATA_COLLECTION_TOASTER)
-        self.adapters_page.wait_for_data_collection_toaster_absent()
 
         # Wait for discovery to start.
         self.base_page.run_discovery(wait=False)
@@ -35,8 +33,6 @@ class TestStopDiscoverySanity(TestBase):
         self.adapters_page.click_row()
         self.adapters_page.click_save_and_fetch()
         self.adapters_page.wait_for_server_green(retries=400)
-        self.adapters_page.wait_for_table_to_load()
-        self.adapters_page.wait_for_data_collection_toaster_absent()
 
         time.sleep(20)
         self.adapters_page.refresh()
@@ -45,5 +41,3 @@ class TestStopDiscoverySanity(TestBase):
         self.adapters_page.remove_server(ad_client1_details, expected_left=0)
         self.adapters_page.add_server(ad_client1_details)
         self.adapters_page.wait_for_server_green()
-        self.adapters_page.wait_for_table_to_load()
-        self.adapters_page.wait_for_data_collection_toaster_absent()

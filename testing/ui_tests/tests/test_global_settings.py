@@ -153,7 +153,6 @@ class TestGlobalSettings(TestBase):
         # save without connection label
         assert not self.settings_page.get_connection_label_required_value()
         self.adapters_page.add_server(ad_client1_details)
-        self.adapters_page.wait_for_data_collection_toaster_start()
         self.adapters_page.remove_server(ad_client1_details)
 
         # make connection label required
@@ -170,7 +169,6 @@ class TestGlobalSettings(TestBase):
         # verify that save succeeds with connection label
         ad_client1_details['connectionLabel'] = 'connection'
         self.adapters_page.add_server(ad_client1_details)
-        self.adapters_page.wait_for_data_collection_toaster_start()
 
         # clean up
         self.adapters_page.remove_server(ad_client1_details)

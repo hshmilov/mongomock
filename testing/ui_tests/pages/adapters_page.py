@@ -372,6 +372,9 @@ class AdaptersPage(EntitiesPage):
         if instance:
             self.select_instance(instance)
         self.click_save_and_fetch()
+        self.wait_for_table_to_be_responsive()
+        self.wait_for_data_collection_toaster_start()
+        self.wait_for_data_collection_toaster_absent()
 
     def wait_for_adapter(self, adapter_name, retries=60 * 3, interval=2):
         for _ in range(retries):
