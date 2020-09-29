@@ -214,9 +214,13 @@ class ServiceNowConnectionMixin(ABC):
                         fetch_users_info_for_devices=False,
                         fetch_ci_relations=False,
                         fetch_compliance_exceptions=False,
+                        fetch_business_unit_dict=False,
                         parallel_requests=consts.DEFAULT_ASYNC_CHUNK_SIZE):
         additional_params_by_table_key = {}
         sub_tables_to_request_by_key = consts.DEVICE_SUB_TABLES_KEY_TO_NAME.copy()
+
+        if fetch_business_unit_dict:
+            sub_tables_to_request_by_key[consts.BUSINESS_UNIT_TABLE] = consts.BUSINESS_UNIT_TABLE
 
         if fetch_users_info_for_devices:
             sub_tables_to_request_by_key[consts.USERS_TABLE_KEY] = consts.USERS_TABLE
