@@ -1,4 +1,5 @@
 import logging
+import time
 from collections import defaultdict
 from datetime import datetime
 from threading import Event, RLock, Semaphore
@@ -94,6 +95,8 @@ class CachedEntry:
     event: Event = field(default_factory=Event)
     # The job associated with this cache entry
     job: Job = None
+
+    ignore_semaphore: bool = False
 
     def get_cached_result(self):
         """
@@ -211,8 +214,11 @@ class RevCached:
         """
         Updates the value in the cache for the function with the given parameters
         """
+        did_catch_semaphore = False
         if use_semaphore:
-            self.__semaphore.acquire()
+            while not did_catch_semaphore and not cache_entry.ignore_semaphore:
+                did_catch_semaphore = self.__semaphore.acquire(blocking=False)
+                time.sleep(1)
         with self.__initial_values_lock_dict[cache_entry.key]:
             started_time = datetime.now()
             try:
@@ -227,8 +233,9 @@ class RevCached:
                          f'Current memory consumption: {memory()}')
 
             cache_entry.event.set()
-        if use_semaphore:
+        if did_catch_semaphore:
             self.__semaphore.release()
+        cache_entry.ignore_semaphore = False
 
     def __clean_unused_values(self):
         """
@@ -312,12 +319,19 @@ class RevCached:
             return cache_entry.get_cached_result()
         # if cache_entry exists and the event is not set, __warm_cache is running
         if cache_entry:
+            # warm cache is running and we dont want to use semaphore anymore
+            if not use_semaphore:
+                cache_entry.ignore_semaphore = True
             raise NoCacheException
+
         with self.__initial_values_lock_dict[key]:
             cache_entry = self.__initial_values.get(key)
             if cache_entry and cache_entry.event.is_set():
                 return cache_entry.get_cached_result()
             if cache_entry:
+                # warm cache is running and we dont want to use semaphore anymore
+                if not use_semaphore:
+                    cache_entry.ignore_semaphore = True
                 raise NoCacheException
             cache_entry = CachedEntry(args, kwargs, datetime.now(), key, self.__func)
             cache_entry.job = plugin_base_instance().cached_operation_scheduler.add_job(
@@ -379,6 +393,8 @@ class RevCached:
         counter = 0
         for cached_entry in self.get_all_values(args):
             if cached_entry:
+                if not recalculate_using_semaphore:
+                    cached_entry.ignore_semaphore = True
                 cached_entry.job.modify(args=[cached_entry, recalculate_using_semaphore])
                 cached_entry.job.modify(next_run_time=datetime.now())
                 counter += 1
