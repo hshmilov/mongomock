@@ -49,12 +49,8 @@
 <script>
 import axiosClient from '@api/axios';
 
-import XIcon from '@axons/icons/Icon';
-import XButton from '../../../../axons/inputs/Button.vue';
-
 export default {
   name: 'XFileEdit',
-  components: { XButton, XIcon },
   props: {
     schema: {
       type: Object,

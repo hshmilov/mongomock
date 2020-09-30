@@ -59,13 +59,12 @@ import XColorPicker from '@axons/inputs/ColorPicker.vue';
 import defaultChartsColors from '../../../constants/colors';
 import XSelectSymbol from './SelectSymbol.vue';
 import XSelect from '../../axons/inputs/select/Select.vue';
-import XButton from '../../axons/inputs/Button.vue';
 
 const viewTemplate = { id: '', entity: '' };
 export default {
   name: 'XSelectViews',
   components: {
-    XSelectSymbol, XSelect, XButton, XColorPicker,
+    XSelectSymbol, XSelect, XColorPicker,
   },
   props: {
     value: {

@@ -86,15 +86,13 @@ import { vaultProviderEnum } from '@constants/settings';
 import primitiveMixin from '@mixins/primitive';
 
 import { Icon, Modal } from 'ant-design-vue';
-import XButton from '@axons/inputs/Button.vue';
 import XForm from '@neurons/schema/Form.vue';
 import XStringEdit from './StringEdit.vue';
-import XIcon from '@axons/icons/Icon';
 
 export default {
   name: 'XVaultEdit',
   components: {
-    XStringEdit, AIcon: Icon, AModal: Modal, XButton, XForm, XIcon,
+    XStringEdit, AIcon: Icon, AModal: Modal, XForm,
   },
   mixins: [primitiveMixin],
   data() {

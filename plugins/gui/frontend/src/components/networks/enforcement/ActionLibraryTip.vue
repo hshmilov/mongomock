@@ -29,12 +29,11 @@
 
 <script>
   import xModal from '../../axons/popover/Modal/index.vue'
-  import xButton from '../../axons/inputs/Button.vue'
 
   export default {
     name: 'XActionLibraryTip',
     components: {
-      xModal, xButton
+      xModal
     },
     props: {
       action: {

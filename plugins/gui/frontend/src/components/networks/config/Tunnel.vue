@@ -166,9 +166,7 @@
 <script>
 import { mapActions, mapState } from 'vuex';
 import { Steps } from 'ant-design-vue';
-import XButton from '@axons/inputs/Button.vue';
 import XToast from '@axons/popover/Toast.vue';
-import XIcon from '@axons/icons/Icon';
 import {
   GET_TUNNEL_STATUS,
   SAVE_TUNNEL_EMAILS_LIST,
@@ -185,11 +183,9 @@ import _get from 'lodash/get';
 export default {
   name: 'XTunnel',
   components: {
-    XButton,
     XArrayEdit,
     XToast,
     XForm,
-    XIcon,
     ASteps: Steps,
     AStep: Steps.Step,
   },

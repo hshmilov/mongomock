@@ -128,7 +128,6 @@ import { mapState, mapGetters, mapMutations } from 'vuex';
 import { UPDATE_COMPLIANCE_FILTERS, UPDATE_COMPLIANCE_VIEW } from '@store/modules/compliance';
 
 import XPage from '@axons/layout/Page.vue';
-import XButton from '@axons/inputs/Button.vue';
 import XCombobox from '@axons/inputs/combobox/index.vue';
 import XSwitch from '@axons/inputs/Switch.vue';
 import XComplianceTable from '@components/networks/compliance/ComplianceTable.vue';
@@ -147,7 +146,6 @@ export default {
     XPage,
     XComplianceTable,
     XComplianceTip,
-    XButton,
     XCombobox,
     XComplianceScore,
     XComplianceSelect,

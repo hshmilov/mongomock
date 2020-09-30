@@ -31,13 +31,11 @@
 
 <script>
 import { Tooltip } from 'ant-design-vue';
-import XIcon from '@axons/icons/Icon';
 
 export default {
   name: 'XEnforcementPanelHeader',
   components: {
     ATooltip: Tooltip,
-    XIcon,
   },
 };
 </script>

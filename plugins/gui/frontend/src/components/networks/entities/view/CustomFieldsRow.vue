@@ -70,14 +70,13 @@ import string from '../../../neurons/schema/types/string/StringEdit.vue';
 import number from '../../../neurons/schema/types/numerical/NumberEdit.vue';
 import integer from '../../../neurons/schema/types/numerical/IntegerEdit.vue';
 import bool from '../../../neurons/schema/types/boolean/BooleanEdit.vue';
-import XButton from '../../../axons/inputs/Button.vue';
 
 import { validateFieldName } from '../../../../constants/validations';
 
 export default {
   name: 'XCustomFieldsRow',
   components: {
-    XSelect, string, number, integer, bool, XButton,
+    XSelect, string, number, integer, bool,
   },
   model: {
     prop: 'field',

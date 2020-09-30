@@ -14,7 +14,6 @@ import {
   xActionItem as XActionItem,
   xActionsGroup as XActionsGroup,
 } from '@networks/side-panel/PanelActions';
-import XButton from '@axons/inputs/Button.vue';
 import XPasswordPolicyRequirements from '@neurons/alerts/PasswordPolicyRequirements.vue';
 import { SHOW_TOASTER_MESSAGE } from '@store/mutations';
 
@@ -25,7 +24,6 @@ const XModalResetPassword = () => import(/* webpackChunkName: "XModalResetPasswo
 export default {
   name: 'UserPanel',
   components: {
-    XButton,
     XSidePanel,
     XActionItem,
     XActionsGroup,
@@ -239,7 +237,7 @@ export default {
             ) : null
           }
           <div class="buttons">
-            <XButton type="primary" onClick={this.onSave} disabled={this.isFormInvalid}>Save</XButton>
+            <x-button type="primary" onClick={this.onSave} disabled={this.isFormInvalid}>Save</x-button>
           </div>
         </div>
       </XSidePanel>

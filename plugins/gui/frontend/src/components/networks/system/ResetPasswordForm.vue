@@ -39,7 +39,6 @@
 <script>
 import { validateResetPasswordToken, resetUserPasswordByToken } from '@api/accounts-password';
 import XForm from '../../neurons/schema/Form.vue';
-import XButton from '../../axons/inputs/Button.vue';
 import { NOT_LOGGED_IN, SET_USER_ERROR } from '@store/modules/auth';
 import { mapMutations } from 'vuex';
 import { SHOW_TOASTER_MESSAGE } from '@store/mutations';
@@ -47,7 +46,7 @@ import { SHOW_TOASTER_MESSAGE } from '@store/mutations';
 export default {
   name: 'XResetPasswordForm',
   components: {
-    XForm, XButton,
+    XForm,
   },
   props: {
     token: {

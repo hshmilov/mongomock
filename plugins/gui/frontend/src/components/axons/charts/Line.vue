@@ -28,12 +28,11 @@ import { mapState } from 'vuex';
 import _get from 'lodash/get';
 import _isNil from 'lodash/isNil';
 import { GChart } from 'vue-google-charts';
-import XIcon from '@axons/icons/Icon';
 import defaultChartColors from '@constants/colors';
 
 export default {
   name: 'XLine',
-  components: { GChart, XIcon },
+  components: { GChart },
   props: {
     data: {
       type: Array,

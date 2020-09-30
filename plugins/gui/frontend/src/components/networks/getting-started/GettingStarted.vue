@@ -51,9 +51,7 @@
 </template>
 
 <script>
-import XIcon from '@axons/icons/Icon';
 import XMilestone from "./Milestone.vue";
-import XButton from "../../axons/inputs/Button.vue";
 import XProgressGauge from "../../axons/visuals/ProgressGauge.vue";
 import XCheckbox from "../../axons/inputs/Checkbox.vue";
 import _get from "lodash/get";
@@ -69,7 +67,7 @@ function getCompletedMilestones(item) {
 }
 
 export default {
-  components: { XMilestone, XProgressGauge, XCheckbox, XButton, XIcon },
+  components: { XMilestone, XProgressGauge, XCheckbox },
   props: {
     value: {
       type: Boolean,

@@ -123,7 +123,6 @@ import integer from '../numerical/IntegerEdit.vue';
 import bool from '../boolean/BooleanEdit.vue';
 import file from './FileEdit.vue';
 import range from '../string/RangeEdit.vue';
-import XButton from '../../../../axons/inputs/Button.vue';
 import XListInput from '../../../../axons/inputs/ListInput.vue';
 import { validateEmail } from '../../../../../constants/validations';
 import arrayMixin from '../../../../../mixins/array';
@@ -144,7 +143,6 @@ export default {
     bool,
     file,
     range,
-    XButton,
     XListInput,
     vault,
     draggable,

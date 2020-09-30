@@ -53,7 +53,6 @@
 
 <script>
 import { mapGetters } from 'vuex';
-import XIcon from '@axons/icons/Icon';
 import { formatDate } from '@constants/utils';
 import { DATE_FORMAT } from '@store/getters';
 import _get from 'lodash/get';
@@ -61,7 +60,6 @@ import _isNil from 'lodash/isNil';
 
 export default {
   name: 'XStringView',
-  components: { XIcon },
   props: {
     schema: {
       type: Object,

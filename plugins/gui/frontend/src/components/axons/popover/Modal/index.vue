@@ -60,11 +60,8 @@
 </template>
 
 <script>
-import XButton from '../../inputs/Button.vue';
-
 export default {
   name: 'XModal',
-  components: { XButton },
   props: {
     approveText:
       {

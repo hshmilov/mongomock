@@ -110,7 +110,6 @@ import {
 import XEditUserColumnsModal from './EditUserColumnsModal.vue';
 import XEditSystemColumnsModal from './EditSystemColumnsModal.vue';
 import XCsvExportConfig from './CsvExportConfig.vue';
-import XButton from '../../axons/inputs/Button.vue';
 
 export default {
   name: 'XOptionMenu',
@@ -118,7 +117,6 @@ export default {
     XEditUserColumnsModal,
     XEditSystemColumnsModal,
     XCsvExportConfig,
-    XButton,
     ADropdown: Dropdown,
     AMenu: Menu,
     AMenuItem: Menu.Item,

@@ -66,7 +66,6 @@
 
 <script>
 import Draggable from 'vuedraggable';
-import XIcon from '@axons/icons/Icon';
 import XHistogram from '@pages/dashboards/chart/visualization/Histogram.vue';
 import XAdapterHistogram from '@pages/dashboards/chart/visualization/AdaptersHistogram.vue';
 import XPie from '@pages/dashboards/chart/visualization/Pie.vue';
@@ -82,7 +81,6 @@ export default {
   name: 'XSpaceContent',
   components: {
     Draggable,
-    XIcon,
     XHistogram,
     XAdapterHistogram,
     XPie,

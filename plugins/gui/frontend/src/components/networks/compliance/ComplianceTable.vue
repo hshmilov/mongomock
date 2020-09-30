@@ -67,7 +67,6 @@ import { mapActions, mapState } from 'vuex';
 
 import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
 import XTable from '@components/neurons/data/Table.vue';
-import XButton from '@axons/inputs/Button.vue';
 import XCompliancePanel from './CompliancePanel';
 import XEnforcementMenu from './ComplianceEnforceMenu.vue';
 
@@ -97,7 +96,6 @@ export default {
   components: {
     XCompliancePanel,
     XTable,
-    XButton,
     XEnforcementMenu,
   },
   props: {

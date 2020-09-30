@@ -221,12 +221,10 @@
 import { mapActions, mapGetters, mapState } from 'vuex';
 import _get from 'lodash/get';
 import _set from 'lodash/set';
-import XIcon from '@axons/icons/Icon';
 import XPage from '@axons/layout/Page.vue';
 import XTableWrapper from '@axons/tables/TableWrapper.vue';
 import XTable from '@axons/tables/Table.vue';
 import XModal from '@axons/popover/Modal/index.vue';
-import XButton from '@axons/inputs/Button.vue';
 import XSwitch from '@axons/inputs/Switch.vue';
 import XTitle from '@axons/layout/Title.vue';
 import XToast from '@axons/popover/Toast.vue';
@@ -261,11 +259,9 @@ export default {
     XTable,
     XForm,
     XModal,
-    XButton,
     XTitle,
     XToast,
     AIcon: Icon,
-    XIcon,
     XAdapterAdvancedSettings,
     XAdapterTunnelConnectionMessage,
     ATabs,

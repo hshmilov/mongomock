@@ -80,7 +80,6 @@ import { Icon } from 'ant-design-vue';
 import { mapMutations, mapState } from 'vuex';
 
 import XModal from '@axons/popover/Modal/index.vue';
-import XButton from '@axons/inputs/Button.vue';
 import { getUserResetPasswordLink, sendResetPasswordTokenEmail } from '@api/accounts-password';
 import { SHOW_TOASTER_MESSAGE } from '@store/mutations';
 
@@ -88,7 +87,6 @@ export default {
   name: 'XModalResetPassword',
   components: {
     XModal,
-    XButton,
     PulseLoader,
     AIcon: Icon,
   },

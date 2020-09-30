@@ -100,7 +100,6 @@
 
 
 <script>
-import XIcon from '@axons/icons/Icon';
 import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
 import { mapState, mapMutations, mapActions, mapGetters } from 'vuex';
 import XPage from '../axons/layout/Page.vue';
@@ -118,7 +117,7 @@ function getConnectedAdapters(adapter) {
 export default {
   name: 'XAdapters',
   components: {
-    XPage, XTitle, XSearchInput, PulseLoader, XIcon,
+    XPage, XTitle, XSearchInput, PulseLoader,
   },
   computed: {
     ...mapState({

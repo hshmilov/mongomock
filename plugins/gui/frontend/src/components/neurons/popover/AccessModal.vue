@@ -18,12 +18,11 @@
 </template>
 
 <script>
-import XButton from '../../axons/inputs/Button.vue';
 import XModal from '../../axons/popover/Modal/index.vue';
 
 export default {
   name: 'XAccessModal',
-  components: { XButton, XModal },
+  components: { XModal },
   props: { value: {} },
   methods: {
     dismissAccessMessage() {

@@ -19,7 +19,6 @@
 
 <script>
   import xForm from '../../neurons/schema/Form.vue'
-  import xButton from '../../axons/inputs/Button.vue'
 
   import { mapActions } from 'vuex'
   import { SUBMIT_SIGNUP } from '../../../store/modules/auth'
@@ -28,7 +27,7 @@
   export default {
     name: 'XSignupForm',
     components: {
-      xForm, xButton
+      xForm,
     },
     data() {
       return {

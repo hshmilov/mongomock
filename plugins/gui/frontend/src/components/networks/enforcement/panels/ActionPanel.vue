@@ -75,7 +75,6 @@ import _constant from 'lodash/constant';
 import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
 import XSidePanel from '@networks/side-panel/SidePanel.vue';
-import XButton from '@axons/inputs/Button.vue';
 import XEnforcementActionConfig from '@networks/enforcement/EnforcementActionConfig.vue';
 import {
   mainCondition,
@@ -89,7 +88,6 @@ export default {
   name: 'XActionPanel',
   components: {
     XSidePanel,
-    XButton,
     XEnforcementActionConfig,
     XEnforcementPanelHeader,
     ASpin: Spin,

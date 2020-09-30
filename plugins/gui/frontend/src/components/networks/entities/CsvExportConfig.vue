@@ -70,7 +70,6 @@ import _get from 'lodash/get';
 import {
   Modal, Form, Input, InputNumber,
 } from 'ant-design-vue';
-import XButton from '../../axons/inputs/Button.vue';
 
 export default {
   name: 'XCsvExportConfig',
@@ -80,7 +79,6 @@ export default {
     AFormItem: Form.Item,
     AInputNumber: InputNumber,
     AInput: Input,
-    XButton,
   },
   data() {
     return {

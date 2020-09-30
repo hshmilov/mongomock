@@ -132,7 +132,6 @@ import _capitalize from 'lodash/capitalize';
 import XTableWrapper from '../../axons/tables/TableWrapper.vue';
 import XTable from '../../axons/tables/Table.vue';
 import XTableData from './TableData';
-import XButton from '../../axons/inputs/Button.vue';
 
 export default {
   name: 'XDataTable',
@@ -140,7 +139,6 @@ export default {
     XTableWrapper,
     XTable,
     XTableData,
-    XButton,
   },
   props: {
     module: {

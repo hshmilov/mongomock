@@ -27,14 +27,13 @@
 import _keyBy from 'lodash/keyBy';
 import XSelect from '../../../axons/inputs/select/Select.vue';
 import XConditionFunction from './ConditionFunction.vue';
-import XButton from '../../../axons/inputs/Button.vue';
 import { getUpdatedValueAfterFieldChange } from '../../../../logic/condition';
 
 
 export default {
   name: 'XConditionComplexFieldChild',
   components: {
-    XSelect, XConditionFunction, XButton,
+    XSelect, XConditionFunction,
   },
   model: {
     prop: 'condition',

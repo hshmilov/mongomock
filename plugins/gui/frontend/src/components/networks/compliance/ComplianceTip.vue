@@ -40,14 +40,12 @@
 </template>
 
 <script>
-import XIcon from '@axons/icons/Icon';
 import XModal from '../../axons/popover/Modal/index.vue';
-import XButton from '../../axons/inputs/Button.vue';
 
 export default {
   name: 'XComplianceTip',
   components: {
-    XModal, XButton, XIcon,
+    XModal,
   },
   props: {
     enabled: {

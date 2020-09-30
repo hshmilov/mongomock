@@ -211,7 +211,6 @@ import {
 import { Modal } from 'ant-design-vue';
 import XPage from '../axons/layout/Page.vue';
 import XBox from '../axons/layout/Box.vue';
-import XButton from '../axons/inputs/Button.vue';
 import XCheckbox from '../axons/inputs/Checkbox.vue';
 import XSelectSymbol from '../neurons/inputs/SelectSymbol.vue';
 import XSelect from '../axons/inputs/select/Select.vue';
@@ -237,7 +236,7 @@ import { DATE_FORMAT } from '../../store/getters';
 export default {
   name: 'XReport',
   components: {
-    XPage, XBox, XButton, XSelect, XCheckbox, XSelectSymbol, XArrayEdit, PulseLoader, XRecurrence,
+    XPage, XBox, XSelect, XCheckbox, XSelectSymbol, XArrayEdit, PulseLoader, XRecurrence,
   },
   mixins: [viewsMixin, configMixin],
   data() {

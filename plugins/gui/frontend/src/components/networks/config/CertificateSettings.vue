@@ -140,7 +140,6 @@
 
 import { mapActions, mapState, mapGetters } from 'vuex';
 import _get from 'lodash/get';
-import XButton from '@axons/inputs/Button.vue';
 import XToast from '@axons/popover/Toast.vue';
 import {
   LOAD_PLUGIN_CONFIG,
@@ -161,7 +160,6 @@ import {
 export default {
   name: 'XCertificateSettings',
   components: {
-    XButton,
     XToast,
     XModal,
     XForm,

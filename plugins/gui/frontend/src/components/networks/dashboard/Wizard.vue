@@ -87,7 +87,6 @@
 
 <script>
 import { mapActions, mapGetters } from 'vuex';
-import XIcon from '@axons/icons/Icon';
 import { formatDate, getTimeZoneDiff } from '@constants/utils';
 
 import XFeedbackModal from '../../neurons/popover/FeedbackModal.vue';
@@ -126,7 +125,6 @@ export default {
     XChartAbstract,
     XChartTimeline,
     XChartMatrix,
-    XIcon,
   },
   mixins: [viewsMixin],
   props: {

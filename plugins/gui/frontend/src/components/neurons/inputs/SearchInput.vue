@@ -28,11 +28,8 @@
 </template>
 
 <script>
-import XIcon from '@axons/icons/Icon';
-
 export default {
   name: 'XSearchInput',
-  components: { XIcon },
   props: {
     value: {
       type: String,

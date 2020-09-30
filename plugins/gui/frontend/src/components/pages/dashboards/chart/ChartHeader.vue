@@ -38,12 +38,10 @@
 
 <script>
 import { Tooltip as ATooltip } from 'ant-design-vue';
-import XIcon from '@axons/icons/Icon';
-import XButton from '@axons/inputs/Button.vue';
 
 export default {
   name: 'XChartHeader',
-  components: { XIcon, XButton, ATooltip },
+  components: { ATooltip },
   props: {
     filters: {
       type: Object,

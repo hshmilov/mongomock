@@ -36,13 +36,11 @@ import { UPDATE_DATA_VIEW } from '@store/mutations';
 import dayjs from 'dayjs';
 import _capitalize from 'lodash/capitalize';
 import { DATE_FORMAT } from '@store/getters';
-import XButton from '@axons/inputs/Button.vue';
 import XSearchInput from './SearchInput.vue';
 
 export default {
   name: 'XTableSearchFilters',
   components: {
-    XButton,
     XSearchInput,
     ARangePicker: DatePicker.RangePicker,
   },

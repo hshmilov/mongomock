@@ -34,11 +34,10 @@
 
 <script>
 import XCustomFieldsRow from './CustomFieldsRow.vue';
-import XButton from '../../../axons/inputs/Button.vue';
 
 export default {
   name: 'XEntityCustomFields',
-  components: { XCustomFieldsRow, XButton },
+  components: { XCustomFieldsRow },
   props: {
     value: {
       type: Array,

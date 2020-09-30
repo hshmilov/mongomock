@@ -47,14 +47,11 @@
 
 <script>
 import { Drawer } from 'ant-design-vue';
-import XIcon from '@axons/icons/Icon';
-
 
 export default {
   name: 'XSidePanel',
   components: {
     ADrawer: Drawer,
-    XIcon,
   },
   props: {
     panelContainer: {

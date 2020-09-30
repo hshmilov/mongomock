@@ -67,7 +67,6 @@ import { mapState, mapActions } from 'vuex';
 import { getEntityPermissionCategory } from '@constants/entities';
 import XSearchInput from '../../../neurons/inputs/SearchInput.vue';
 import XTable from '../../../axons/tables/Table.vue';
-import XButton from '../../../axons/inputs/Button.vue';
 import XModal from '../../../axons/popover/Modal/index.vue';
 import XToast from '../../../axons/popover/Toast.vue';
 
@@ -76,7 +75,7 @@ import { SAVE_DATA_NOTE, REMOVE_DATA_NOTE } from '../../../../store/actions';
 export default {
   name: 'XEntityNotes',
   components: {
-    XSearchInput, XTable, XButton, XModal, XToast,
+    XSearchInput, XTable, XModal, XToast,
   },
   props: {
     module: {

@@ -96,7 +96,6 @@ import {
 } from 'ant-design-vue';
 import XSpaceOptionsMenu from '@networks/dashboard/SpaceOptionsMenu.vue';
 import XEditSpaceModal from '@networks/dashboard/EditSpaceModal.vue';
-import XButton from '@axons/inputs/Button.vue';
 import XWizard from '@networks/dashboard/Wizard.vue';
 
 import {
@@ -114,7 +113,6 @@ import XSpaceContent from './SpaceContent.vue';
 export default {
   name: 'XDashboardSpaces',
   components: {
-    XButton,
     XEditSpaceModal,
     XSpaceOptionsMenu,
     ATabs,

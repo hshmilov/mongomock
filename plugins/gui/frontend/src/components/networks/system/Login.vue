@@ -51,7 +51,6 @@
 <script>
 import { mapState, mapActions } from 'vuex';
 import _get from 'lodash/get';
-import XIcon from '@axons/icons/Icon';
 import XSignupForm from './SignupForm.vue';
 import XLoginForm from './LoginForm.vue';
 import XLoginOptions from './LoginOptions.vue';
@@ -62,7 +61,7 @@ import { GET_SIGNUP, GET_LOGIN_OPTIONS } from '../../../store/modules/auth';
 export default {
   name: 'XLogin',
   components: {
-    XLoginForm, XSignupForm, XLoginOptions, XResetPasswordForm, XIcon,
+    XLoginForm, XSignupForm, XLoginOptions, XResetPasswordForm,
   },
   data() {
     return {

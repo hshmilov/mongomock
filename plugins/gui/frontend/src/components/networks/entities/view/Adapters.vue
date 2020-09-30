@@ -77,7 +77,6 @@ import entityCustomData from '@mixins/entity_custom_data';
 import XTabs from '../../../axons/tabs/Tabs.vue';
 import XTab from '../../../axons/tabs/Tab.vue';
 import XList from '../../../neurons/schema/List.vue';
-import XButton from '../../../axons/inputs/Button.vue';
 import XModal from '../../../axons/popover/Modal/index.vue';
 import XCustomFields from './CustomFields.vue';
 import XToast from '../../../axons/popover/Toast.vue';
@@ -99,7 +98,6 @@ export default {
     XTabs,
     XTab,
     XList,
-    XButton,
     XModal,
     XCustomFields,
     XToast,

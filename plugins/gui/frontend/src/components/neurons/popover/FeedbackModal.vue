@@ -77,18 +77,14 @@
 </template>
 
 <script>
-import XIcon from '@axons/icons/Icon';
 import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
-import XButton from '../../axons/inputs/Button.vue';
 import XModal from '../../axons/popover/Modal/index.vue';
 
 export default {
   name: 'XFeedbackModal',
   components: {
-    XButton,
     XModal,
     PulseLoader,
-    XIcon,
   },
   model: {
     prop: 'launch',

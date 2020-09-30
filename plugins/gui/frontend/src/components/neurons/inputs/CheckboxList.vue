@@ -36,13 +36,12 @@
 
 <script>
 import draggable from 'vuedraggable';
-import XIcon from '@axons/icons/Icon';
 import XCheckbox from '../../axons/inputs/Checkbox.vue';
 
 export default {
   name: 'XCheckboxList',
   components: {
-    draggable, XCheckbox, XIcon,
+    draggable, XCheckbox,
   },
   props: {
     items: {

@@ -91,12 +91,10 @@ import _some from 'lodash/some';
 import _head from 'lodash/head';
 import XSearchInput from '../../../neurons/inputs/SearchInput.vue';
 import XCheckbox from '../Checkbox.vue';
-import XButton from '../Button.vue';
-
 
 export default {
   name: 'XSelectContent',
-  components: { XCheckbox, XButton, XSearchInput },
+  components: { XCheckbox, XSearchInput },
   props: {
     multiSelect: {
       type: Boolean,

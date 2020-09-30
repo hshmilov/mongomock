@@ -62,7 +62,6 @@
 </template>
 
 <script>
-import XButton from '@axons/inputs/Button.vue';
 import { calcMaxIndex } from '@constants/utils';
 import { expression } from '@constants/filter';
 import Draggable from 'vuedraggable';
@@ -70,7 +69,7 @@ import XExpression from './Expression.vue';
 
 export default {
   name: 'XFilter',
-  components: { XExpression, XButton, Draggable },
+  components: { XExpression, Draggable },
   props: {
     module: {
       type: String,

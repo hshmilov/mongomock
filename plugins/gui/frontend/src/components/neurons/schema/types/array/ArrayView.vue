@@ -86,7 +86,6 @@
 </template>
 
 <script>
-import XButton from '../../../../axons/inputs/Button.vue';
 import XTypeWrap from './TypeWrap.vue';
 import XSlice from '../../Slice.vue';
 import XTableData from '../../../../axons/tables/TableData';
@@ -97,7 +96,6 @@ import arrayMixin from '../../../../../mixins/array';
 export default {
   name: 'Array',
   components: {
-    XButton,
     XTypeWrap,
     XSlice,
     XTableData,

@@ -43,7 +43,6 @@
 <script>
 import { Input, DatePicker } from 'ant-design-vue';
 import { mapState } from 'vuex';
-import XButton from '@axons/inputs/Button.vue';
 import dayjs from 'dayjs';
 import _get from 'lodash/get';
 import _isNil from 'lodash/isNil';
@@ -53,7 +52,6 @@ export default {
   components: {
     AInputSearch: Input.Search,
     ADatePicker: DatePicker,
-    XButton,
   },
   props: {
     filters: {

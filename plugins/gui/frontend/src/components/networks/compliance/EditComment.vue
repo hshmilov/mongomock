@@ -70,12 +70,10 @@ import _get from 'lodash/get';
 import {
   Select, Input,
 } from 'ant-design-vue';
-import XButton from '@axons/inputs/Button.vue';
 
 export default {
   name: 'XEditComment',
   components: {
-    XButton,
     ASelect: Select,
     ASelectOption: Select.Option,
     ATextarea: Input.TextArea,

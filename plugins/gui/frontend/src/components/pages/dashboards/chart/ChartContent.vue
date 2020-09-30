@@ -46,12 +46,10 @@
 
 <script>
 import { Spin as ASpin } from 'ant-design-vue';
-import XButton from '@axons/inputs/Button.vue';
-import XIcon from '@axons/icons/Icon';
 
 export default {
   name: 'XChartContent',
-  components: { ASpin, XButton, XIcon },
+  components: { ASpin },
   props: {
     loading: {
       type: Boolean,

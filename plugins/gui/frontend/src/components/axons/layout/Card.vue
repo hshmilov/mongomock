@@ -25,13 +25,11 @@
 
 <script>
 import XTitle from './Title.vue';
-import XButton from '../inputs/Button.vue';
 
 export default {
   name: 'XCard',
   components: {
     XTitle,
-    XButton,
   },
   props: {
     title: {

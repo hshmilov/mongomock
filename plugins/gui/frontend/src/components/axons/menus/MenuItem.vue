@@ -31,12 +31,11 @@
 </template>
 
 <script>
-import XIcon from '@axons/icons/Icon';
 import { Tooltip as ATooltip } from 'ant-design-vue';
 
 export default {
   name: 'XMenuItem',
-  components: { XIcon, ATooltip },
+  components: { ATooltip },
   props: {
     title: { required: true },
     selected: { default: false },

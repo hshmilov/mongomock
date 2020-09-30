@@ -64,7 +64,6 @@
 import { mapState, mapActions, mapMutations } from 'vuex';
 import _invert from 'lodash/invert';
 import _get from 'lodash/get';
-import XIcon from '@axons/icons/Icon';
 import { REMOVE_TOASTER } from '@store/mutations';
 import XNav from '../../axons/menus/Nav.vue';
 import XNavItem from '../../axons/menus/NavItem.vue';
@@ -73,7 +72,7 @@ import { LOGOUT } from '../../../store/modules/auth';
 
 export default {
   name: 'XSideBar',
-  components: { XNav, XNavItem, XIcon },
+  components: { XNav, XNavItem },
   computed: {
     ...mapState({
       featureFlags(state) {

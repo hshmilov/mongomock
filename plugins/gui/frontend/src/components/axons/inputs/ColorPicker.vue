@@ -35,7 +35,6 @@
 
 <script>
 import { Sketch as SketchPicker } from 'vue-color';
-import XIcon from '@axons/icons/Icon';
 import { clickOutside } from '@directives/events';
 import defaultChartsColors from '../../../constants/colors';
 
@@ -43,7 +42,6 @@ export default {
   name: 'XColorPicker',
   components: {
     SketchPicker,
-    XIcon,
   },
   directives: {
     'click-outside': clickOutside,

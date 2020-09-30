@@ -26,14 +26,12 @@ import { mapState, mapMutations } from 'vuex';
 import _get from 'lodash/get';
 import _snakeCase from 'lodash/snakeCase';
 import _isEmpty from 'lodash/isEmpty';
-import XButton from '@axons/inputs/Button.vue';
 import { SHOW_TOASTER_MESSAGE, UPDATE_DATA_VIEW } from '@store/mutations';
 
 export default {
   name: 'XEditUserColumnsModal',
   components: {
     XEditColumnsModal,
-    XButton,
   },
   props: {
     module: {

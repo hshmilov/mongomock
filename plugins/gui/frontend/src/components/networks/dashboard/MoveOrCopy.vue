@@ -62,7 +62,6 @@ import { Modal, Checkbox, Select } from 'ant-design-vue';
 import _some from 'lodash/some';
 import _flow from 'lodash/flow';
 import _get from 'lodash/get';
-import XButton from '../../axons/inputs/Button.vue';
 import viewsMixin from '../../../mixins/views';
 import { MOVE_PANEL, COPY_PANEL } from '../../../store/modules/dashboard';
 import { ChartViewGetter } from '../../../constants/utils';
@@ -75,7 +74,6 @@ export default {
     ACheckbox: Checkbox,
     ASelect: Select,
     ASelectOption: Select.Option,
-    XButton,
   },
   mixins: [viewsMixin],
   props: {

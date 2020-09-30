@@ -33,12 +33,11 @@
 </template>
 
 <script>
-  import XIcon from '@axons/icons/Icon';
   import xSelect from '../../axons/inputs/select/Select.vue'
 
   export default {
     name: 'XSelectSymbol',
-    components: { xSelect, XIcon },
+    components: { xSelect },
     props: {
       readOnly: {
         type: Boolean,

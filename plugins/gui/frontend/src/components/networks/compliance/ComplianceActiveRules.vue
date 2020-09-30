@@ -45,14 +45,12 @@
 
 <script>
 import { Modal } from 'ant-design-vue';
-import XButton from '@axons/inputs/Button.vue';
 import XCombobox from '@axons/inputs/combobox/index.vue';
 
 export default {
   name: 'XComplianceActiveRules',
   components: {
     AModal: Modal,
-    XButton,
     XCombobox,
   },
   props: {

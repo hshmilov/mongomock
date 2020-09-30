@@ -41,7 +41,6 @@
 
 <script>
 import _isFunction from 'lodash/isFunction';
-import XIcon from '@axons/icons/Icon';
 import xCheckbox from '../inputs/Checkbox.vue';
 import { validateClassName } from '../../../constants/utils';
 
@@ -49,7 +48,6 @@ export default {
   name: 'XTableRow',
   components: {
     xCheckbox,
-    XIcon,
   },
   props: {
     data: {

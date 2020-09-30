@@ -40,8 +40,6 @@
 
 <script>
 import { Menu, Dropdown } from 'ant-design-vue';
-import XIcon from '@axons/icons/Icon';
-import XButton from '@axons/inputs/Button.vue';
 
 export default {
   name: 'XSpaceOptionsMenu',
@@ -49,8 +47,6 @@ export default {
     ADropdown: Dropdown,
     AMenu: Menu,
     AMenuItem: Menu.Item,
-    XButton,
-    XIcon,
   },
   props: {
     supportedActions: {

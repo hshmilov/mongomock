@@ -96,7 +96,6 @@ import XSelectSymbol from '../../neurons/inputs/SelectSymbol.vue';
 import XSearchInput from '../../neurons/inputs/SearchInput.vue';
 import XCheckboxList from '../../neurons/inputs/CheckboxList.vue';
 import XTitle from '../../axons/layout/Title.vue';
-import XButton from '../../axons/inputs/Button.vue';
 import {
   GET_MODULE_SCHEMA,
   GET_DATA_SCHEMA_BY_NAME,
@@ -112,7 +111,6 @@ export default {
     XSearchInput,
     XCheckboxList,
     XTitle,
-    XButton,
   },
   props: {
     title: {

@@ -50,8 +50,6 @@
 import { mapState } from 'vuex';
 import _get from 'lodash/get';
 import { Dropdown, Menu } from 'ant-design-vue';
-import XIcon from '@axons/icons/Icon';
-import XButton from '@axons/inputs/Button.vue';
 import {
   generateCSRAction, importCertAndKeyAction, importCSRAction, resetSystemDefaultsAction,
 } from '../../../constants/settings';
@@ -59,11 +57,9 @@ import {
 export default {
   name: 'XCertificateActions',
   components: {
-    XButton,
     ADropdown: Dropdown,
     AMenu: Menu,
     AMenuItem: Menu.Item,
-    XIcon,
   },
   computed: {
     ...mapState({

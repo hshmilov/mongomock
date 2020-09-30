@@ -86,7 +86,6 @@
 
 <script>
 import { Pagination } from 'ant-design-vue';
-import XIcon from '@axons/icons/Icon';
 import PaginatorFastNavWrapper from '@axons/layout/PaginatorFastNavWrapper.vue';
 import { getTotalResultsTitle } from '@/helpers/dashboard';
 
@@ -94,7 +93,6 @@ export default {
   name: 'XChartFooter',
   components: {
     APagination: Pagination,
-    XIcon,
     PaginatorFastNavWrapper,
   },
   props: {

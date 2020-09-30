@@ -61,13 +61,11 @@
 </template>
 
 <script>
-import XIcon from '@axons/icons/Icon';
-import XButton from '../../axons/inputs/Button.vue';
 import { GettingStartedPubSub } from '../../App.vue';
 import XTransitionExpand from '../../transitions/TransitionExpand.vue';
 
 export default {
-  components: { XButton, XTransitionExpand, XIcon },
+  components: { XTransitionExpand },
   props: {
     completed: {
       type: Boolean,

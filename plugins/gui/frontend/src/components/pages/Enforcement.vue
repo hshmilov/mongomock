@@ -102,7 +102,6 @@ import _cloneDeep from 'lodash/cloneDeep';
 import _isEmpty from 'lodash/isEmpty';
 import XPage from '@axons/layout/Page.vue';
 import XSplitBox from '@axons/layout/SplitBox.vue';
-import XButton from '@axons/inputs/Button.vue';
 import XTrigger from '@networks/enforcement/Trigger.vue';
 import XAction from '@networks/enforcement/Action.vue';
 import XActionGroup from '@networks/enforcement/ActionGroup.vue';
@@ -132,7 +131,6 @@ export default {
   components: {
     XPage,
     XSplitBox,
-    XButton,
     XTrigger,
     XAction,
     XActionGroup,

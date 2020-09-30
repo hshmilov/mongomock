@@ -115,7 +115,6 @@ import XPage from '../axons/layout/Page.vue';
 import XTabs from '../axons/tabs/Tabs.vue';
 import XTab from '../axons/tabs/Tab.vue';
 import XForm from '../neurons/schema/Form.vue';
-import XButton from '../axons/inputs/Button.vue';
 import XModal from '../axons/popover/Modal/index.vue';
 import XToast from '../axons/popover/Toast.vue';
 
@@ -126,7 +125,7 @@ import { SHOW_TOASTER_MESSAGE } from '../../store/mutations';
 export default {
   name: 'XAccount',
   components: {
-    XPage, XTabs, XTab, XForm, XButton, XModal, XToast,
+    XPage, XTabs, XTab, XForm, XModal, XToast,
   },
   data() {
     return {

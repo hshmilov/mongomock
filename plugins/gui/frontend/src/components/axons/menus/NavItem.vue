@@ -29,10 +29,8 @@
 </template>
 
 <script>
-    import XIcon from '../icons/Icon';
     export default {
         name: 'XNavItem',
-        components: { XIcon },
 		props: [ 'name', 'path', 'title', 'icon', 'exact', 'disabled', 'id', 'clickHandler' ],
         computed: {
             link() {

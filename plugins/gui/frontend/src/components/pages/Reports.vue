@@ -37,13 +37,12 @@
 import { mapState, mapActions } from 'vuex';
 import XPage from '../axons/layout/Page.vue';
 import XTable from '../neurons/data/Table.vue';
-import XButton from '../axons/inputs/Button.vue';
 
 import { REMOVE_REPORTS, FETCH_REPORT } from '../../store/modules/reports';
 
 export default {
   name: 'XReports',
-  components: { XPage, XTable, XButton },
+  components: { XPage, XTable },
   data() {
     return {
       selection: {

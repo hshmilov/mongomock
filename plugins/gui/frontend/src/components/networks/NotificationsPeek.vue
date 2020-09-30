@@ -78,8 +78,6 @@
 
 <script>
 import { mapState, mapActions } from 'vuex';
-import XIcon from '@axons/icons/Icon';
-import XButton from '../axons/inputs/Button.vue';
 import XDropdown from '../axons/popover/Dropdown.vue';
 
 import {
@@ -91,7 +89,7 @@ import {
 
 export default {
   name: 'XNotificationPeek',
-  components: { XButton, XDropdown, XIcon },
+  components: { XDropdown },
   computed: {
     ...mapState({
       notificationUnseenCount(state) {

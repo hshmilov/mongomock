@@ -87,7 +87,6 @@
 <script>
 import _take from 'lodash/take';
 import XColorPicker from '@axons/inputs/ColorPicker.vue';
-import XButton from '../../../axons/inputs/Button.vue';
 import XSelect from '../../../axons/inputs/select/Select.vue';
 import XSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue';
 import chartMixin from './chart';
@@ -96,7 +95,7 @@ import defaultChartsColors from '../../../../constants/colors';
 export default {
   name: 'XChartIntersect',
   components: {
-    XButton, XSelect, XSelectSymbol, XColorPicker,
+    XSelect, XSelectSymbol, XColorPicker,
   },
   mixins: [chartMixin],
   data() {

@@ -43,7 +43,6 @@ import { mapState, mapActions } from 'vuex';
 import _get from 'lodash/get';
 import XEnforcementActionResult from '@networks/entities/EnforcementActionResult.vue';
 import XSidePanel from '@networks/side-panel/SidePanel.vue';
-import XButton from '@axons/inputs/Button.vue';
 import XEnforcementActionConfig from '@networks/enforcement/EnforcementActionConfig.vue';
 import { ENFORCEMENT_EXECUTED } from '@constants/getting-started';
 import { FETCH_SAVED_ENFORCEMENTS, SAVE_ENFORCEMENT } from '@store/modules/enforcements';
@@ -54,7 +53,6 @@ export default {
   name: 'XEnforcementPanel',
   components: {
     XSidePanel,
-    XButton,
     XEnforcementActionResult,
     XEnforcementActionConfig,
   },

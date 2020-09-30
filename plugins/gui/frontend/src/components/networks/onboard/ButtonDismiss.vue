@@ -5,11 +5,9 @@
 </template>
 
 <script>
-import XButton from '../../axons/inputs/Button.vue';
 
 export default {
   name: 'XButtonDismiss',
-  components: { XButton },
 };
 </script>
 

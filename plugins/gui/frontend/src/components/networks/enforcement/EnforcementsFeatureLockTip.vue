@@ -49,12 +49,11 @@ import { mapState } from 'vuex';
 
 import { mdiArrowRight } from '@mdi/js';
 import { Modal } from 'ant-design-vue';
-import XButton from '../../axons/inputs/Button.vue';
 
 export default {
   name: 'XEnforcementsFeatureLockTip',
   components: {
-    AModal: Modal, XButton,
+    AModal: Modal,
   },
   props: {
     enabled: {

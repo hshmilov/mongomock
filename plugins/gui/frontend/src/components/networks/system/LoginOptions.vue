@@ -53,7 +53,6 @@
 <script>
 import { mapState, mapActions } from 'vuex';
 import XForm from '../../neurons/schema/Form.vue';
-import XButton from '../../axons/inputs/Button.vue';
 import XModal from '../../axons/popover/Modal/index.vue';
 
 import { LDAP_LOGIN } from '../../../store/modules/auth';
@@ -61,7 +60,7 @@ import { LDAP_LOGIN } from '../../../store/modules/auth';
 export default {
   name: 'XLoginOptions',
   components: {
-    XForm, XButton, XModal,
+    XForm, XModal,
   },
   props: {
     settings: {

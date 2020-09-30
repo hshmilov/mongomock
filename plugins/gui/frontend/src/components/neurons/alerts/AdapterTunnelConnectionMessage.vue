@@ -64,12 +64,9 @@
 
 <script>
 import { tunnelConnectionStatuses } from '@constants/settings';
-import XIcon from '@axons/icons/Icon';
-import XButton from '@axons/inputs/Button.vue';
 
 export default {
   name: 'XAdapterTunnelConnectionMessage',
-  components: { XButton, XIcon },
   props: {
     status: {
       type: String,

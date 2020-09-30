@@ -105,9 +105,7 @@ import _isEqual from 'lodash/isEqual';
 import { mapState, mapMutations, mapActions } from 'vuex';
 import _debounce from 'lodash/debounce';
 import { defaultViewForReset, getEntityPermissionCategory } from '@constants/entities';
-import XButton from '@axons/inputs/Button.vue';
 import { Menu, Dropdown } from 'ant-design-vue';
-import XIcon from '@axons/icons/Icon';
 import XHistoricalDate from '@neurons/inputs/HistoricalDate.vue';
 import XSaveModal from '../../saved-queries/SavedQueryModal.vue';
 
@@ -118,13 +116,11 @@ import { SAVE_DATA_VIEW } from '../../../../store/actions';
 export default {
   name: 'XQueryState',
   components: {
-    XButton,
     XHistoricalDate,
     XSaveModal,
     ADropDown: Dropdown,
     AMenu: Menu,
     AMenuItem: Menu.Item,
-    XIcon,
   },
   props: {
     module: {

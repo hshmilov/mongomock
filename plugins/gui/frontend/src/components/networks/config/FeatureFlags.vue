@@ -20,14 +20,13 @@
 
 <script>
   import xForm from '../../neurons/schema/Form.vue'
-  import xButton from '../../axons/inputs/Button.vue'
   import actionsMixin from '../../../mixins/actions'
   import {actionsMeta} from '../../../constants/enforcement'
 
   export default {
     name: 'XFeatureFlags',
     components: {
-      xForm, xButton
+      xForm,
     },
     mixins: [actionsMixin],
     props: {

@@ -43,7 +43,6 @@
 import { mapGetters, mapState, mapActions } from 'vuex';
 import XTable from '@axons/tables/Table.vue';
 import XTableWrapper from '@axons/tables/TableWrapper.vue';
-import XButton from '@axons/inputs/Button.vue';
 import _find from 'lodash/find';
 import _cloneDeep from 'lodash/cloneDeep';
 import {
@@ -58,7 +57,7 @@ import XRolePanel from './panels/RolePanel';
 export default {
   name: 'XRolesTable',
   components: {
-    XTable, XButton, XTableWrapper, XRolePanel,
+    XTable, XTableWrapper, XRolePanel,
   },
   data() {
     return {

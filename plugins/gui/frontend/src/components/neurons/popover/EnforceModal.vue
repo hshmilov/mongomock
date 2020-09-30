@@ -48,7 +48,6 @@ import XEnforcementActionResult from '@networks/entities/EnforcementActionResult
 import { Modal } from 'ant-design-vue';
 import { ENFORCE_DATA, FETCH_DATA_CONTENT } from '@store/actions';
 import XSelect from '@axons/inputs/select/Select.vue';
-import XButton from '@axons/inputs/Button.vue';
 
 export default {
   name: 'XEnforceModal',
@@ -56,7 +55,6 @@ export default {
     XSelect,
     XEnforcementActionResult,
     AModal: Modal,
-    XButton,
   },
   mixins: [actionModal],
   data() {

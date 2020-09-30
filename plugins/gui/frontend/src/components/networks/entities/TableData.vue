@@ -81,7 +81,6 @@ import _extend from 'lodash/extend';
 import { mapState, mapGetters } from 'vuex';
 import { pluginMeta } from '@constants/plugin_meta';
 import { GET_CONNECTION_LABEL } from '@store/getters';
-import XIcon from '@axons/icons/Icon';
 import XTable from '@axons/tables/Table.vue';
 import XTableData from '@neurons/data/TableData';
 import { Popover } from 'ant-design-vue';
@@ -92,7 +91,6 @@ export default {
   components: {
     XTable,
     XTableData,
-    XIcon,
     XTooltip,
     APopover: Popover,
   },

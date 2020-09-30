@@ -37,12 +37,10 @@
 </template>
 
 <script>
-import XButton from '@axons/inputs/Button.vue';
 import { fetchAssignableRolesList } from '@api/roles';
 
 export default {
   name: 'XModalAssignRole',
-  components: { XButton },
   props: {
     value: {
       type: Boolean,

@@ -33,13 +33,12 @@
 
 <script>
 import { getEntityPermissionCategory } from '@constants/entities';
-import XButton from '../../../axons/inputs/Button.vue';
 import XTagModal from '../../../neurons/popover/TagModal.vue';
 
 export default {
   name: 'XEntityTags',
   components: {
-    XButton, XTagModal,
+    XTagModal,
   },
   props: {
     module: {

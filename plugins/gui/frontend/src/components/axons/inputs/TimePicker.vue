@@ -42,7 +42,6 @@
 
 <script>
 import dayjs from 'dayjs';
-import XIcon from '@axons/icons/Icon';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import primitiveMixin from '../../../mixins/primitive';
 
@@ -50,7 +49,6 @@ dayjs.extend(customParseFormat);
 
 export default {
   name: 'XTimePicker',
-  components: { XIcon },
   mixins: [primitiveMixin],
   props: {
     value: {

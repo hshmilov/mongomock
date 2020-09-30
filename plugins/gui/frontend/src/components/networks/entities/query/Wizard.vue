@@ -64,13 +64,12 @@ import _debounce from 'lodash/debounce';
 import _isEmpty from 'lodash/isEmpty';
 
 import XDropdown from '../../../axons/popover/Dropdown.vue';
-import XButton from '../../../axons/inputs/Button.vue';
 import XFilter from '../../../neurons/schema/query/Filter.vue';
 
 export default {
   name: 'XQueryWizard',
   components: {
-    XDropdown, XButton, XFilter,
+    XDropdown, XFilter,
   },
   props: {
     module: {

@@ -200,7 +200,6 @@ import XRolesTable from '../networks/settings-tabs/roles-management/index.vue';
 import XPage from '../axons/layout/Page.vue';
 import XTabs from '../axons/tabs/Tabs.vue';
 import XTab from '../axons/tabs/Tab.vue';
-import XButton from '../axons/inputs/Button.vue';
 import XToast from '../axons/popover/Toast.vue';
 import XForm from '../neurons/schema/Form.vue';
 import XCustom from '../neurons/schema/Custom.vue';
@@ -216,7 +215,6 @@ export default {
     XPage,
     XTabs,
     XTab,
-    XButton,
     XToast,
     XForm,
     XCustom,

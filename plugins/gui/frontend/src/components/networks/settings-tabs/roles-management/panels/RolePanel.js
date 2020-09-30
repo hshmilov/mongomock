@@ -6,7 +6,6 @@ import _set from 'lodash/set';
 import _cloneDeep from 'lodash/cloneDeep';
 import { required } from 'vuelidate/lib/validators';
 
-import XButton from '@axons/inputs/Button.vue';
 import XSidePanel from '@networks/side-panel/SidePanel.vue';
 import { xActionItem, xActionsGroup } from '@networks/side-panel/PanelActions';
 import XCheckbox from '@axons/inputs/Checkbox.vue';
@@ -51,7 +50,6 @@ function uniqueRoleName(value) {
 export default {
   name: 'xRolePanel',
   components: {
-    XButton,
     XSidePanel,
     xActionItem,
     xActionsGroup,
@@ -411,14 +409,14 @@ export default {
           <div slot="panelContent" class="body">
             {this.genNameMarkup()}
             <div class="collapse-expand-buttons">
-              <XButton
+              <x-button
                 type="link"
                 onClick={this.expandAll}
-              >Expand All</XButton>
-              <XButton
+              >Expand All</x-button>
+              <x-button
                 type="link"
                 onClick={this.collapseAll}
-              >Collapse All</XButton>
+              >Collapse All</x-button>
             </div>
             <v-expansion-panels
               value={this.expandedCategories}
@@ -440,16 +438,16 @@ export default {
                   <div className="buttons">
                     {
                       this.mode === FormMode.EditRole ? (
-                        <XButton
+                        <x-button
                           type="link"
-                          onClick={this.toggleEditMode}>Cancel</XButton>
+                          onClick={this.toggleEditMode}>Cancel</x-button>
                       ) : null
                     }
-                    <XButton
+                    <x-button
                       type="primary"
                       onClick={this.saveRole}
                       disabled={this.isFormInvalid}
-                    >Save</XButton>
+                    >Save</x-button>
                   </div>
                 </div>) : null
           }

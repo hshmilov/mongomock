@@ -57,7 +57,6 @@
 import { Spin, Icon } from 'ant-design-vue';
 import XTriggerConfig from '@networks/enforcement/TriggerConfig.vue';
 import XSidePanel from '@networks/side-panel/SidePanel.vue';
-import XButton from '@axons/inputs/Button.vue';
 import {
   createdToastMessages,
   updatedToastMessages,
@@ -71,7 +70,6 @@ export default {
     XTriggerConfig,
     XSidePanel,
     XEnforcementPanelHeader,
-    XButton,
     ASpin: Spin,
     AIcon: Icon,
   },

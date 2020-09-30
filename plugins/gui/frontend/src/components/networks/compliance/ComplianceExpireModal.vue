@@ -39,15 +39,11 @@ import { mapState } from 'vuex';
 
 import { mdiArrowRight } from '@mdi/js';
 import { Modal } from 'ant-design-vue';
-import XIcon from '@axons/icons/Icon';
-import XButton from '@axons/inputs/Button.vue';
 
 export default {
   name: 'XComplianceExpireModal',
   components: {
     AModal: Modal,
-    XIcon,
-    XButton,
   },
   data() {
     return {

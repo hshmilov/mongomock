@@ -92,7 +92,6 @@ import _get from 'lodash/get';
 import _take from 'lodash/take';
 import _uniq from 'lodash/uniq';
 import XColorPicker from '@axons/inputs/ColorPicker.vue';
-import XButton from '../../../axons/inputs/Button.vue';
 import XSelect from '../../../axons/inputs/select/Select.vue';
 import XSelectSymbol from '../../../neurons/inputs/SelectSymbol.vue';
 import chartMixin from './chart';
@@ -107,7 +106,7 @@ import {
 export default {
   name: 'XChartMatrix',
   components: {
-    XButton, XSelect, XSelectSymbol, XChartSortSelector, XColorPicker,
+    XSelect, XSelectSymbol, XChartSortSelector, XColorPicker,
   },
   mixins: [chartMixin],
   data() {

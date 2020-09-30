@@ -153,8 +153,6 @@ import { FETCH_DATA_CONTENT } from '@store/actions';
 import {
   Icon, Tooltip, Dropdown, Menu,
 } from 'ant-design-vue';
-import XIcon from '@axons/icons/Icon';
-import XButton from '@axons/inputs/Button.vue';
 import XLinkModal from '@neurons/popover/LinkModal.vue';
 import XUnlinkModal from '@neurons/popover/UnlinkModal.vue';
 import XEnforceModal from '@neurons/popover/EnforceModal.vue';
@@ -169,14 +167,12 @@ import XEnforcementPanel from './panels/EnforcementPanel.vue';
 export default {
   name: 'XEntitiesActionMenu',
   components: {
-    XButton,
     AIcon: Icon,
     ATooltip: Tooltip,
     ADropdown: Dropdown,
     AMenu: Menu,
     AMenuItem: Menu.Item,
     ASubMenu: Menu.SubMenu,
-    XIcon,
     XLinkModal,
     XUnlinkModal,
     XEnforceModal,

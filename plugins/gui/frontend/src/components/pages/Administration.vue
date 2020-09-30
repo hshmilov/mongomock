@@ -41,7 +41,6 @@
 import vueFilePond, { setOptions } from 'vue-filepond';
 import 'filepond/dist/filepond.min.css';
 import XPage from '@axons/layout/Page.vue';
-import XButton from '@axons/inputs/Button.vue';
 import { executeFile, processFileUploadInChunks } from '@api/execute-configuration';
 import { mapMutations, mapState } from 'vuex';
 import _get from 'lodash/get';
@@ -62,7 +61,7 @@ setOptions({
 
 export default {
   name: 'XAdministration',
-  components: { XButton, XPage, FilePond },
+  components: { XPage, FilePond },
   data() {
     return {
       uploaded: false,

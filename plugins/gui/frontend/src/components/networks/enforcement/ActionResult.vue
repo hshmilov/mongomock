@@ -38,7 +38,6 @@
 </template>
 
 <script>
-import XIcon from '@axons/icons/Icon';
 import XSummary from '../../axons/charts/Summary.vue';
 import XArrayView from '../../neurons/schema/types/array/ArrayView.vue';
 import actionsMixin from '../../../mixins/actions';
@@ -46,7 +45,7 @@ import actionsMixin from '../../../mixins/actions';
 export default {
   name: 'XActionResult',
   components: {
-    XArrayView, XSummary, XIcon,
+    XArrayView, XSummary,
   },
   mixins: [actionsMixin],
   props: {

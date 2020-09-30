@@ -147,7 +147,6 @@ import { mapState, mapActions, mapGetters } from 'vuex';
 import { formatDate, getTimeZoneDiff } from '@constants/utils';
 import { DATE_FORMAT } from '../../../store/getters';
 import XCheckbox from '../../axons/inputs/Checkbox.vue';
-import XButton from '../../axons/inputs/Button.vue';
 import XModal from '../../axons/popover/Modal/index.vue';
 
 import {
@@ -158,7 +157,7 @@ import { validateNumber } from '../../../constants/validations';
 
 export default {
   name: 'XMaintenance',
-  components: { XCheckbox, XButton, XModal },
+  components: { XCheckbox, XModal },
   props: {
     readOnly: {
       type: Boolean, default: false,

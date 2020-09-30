@@ -44,12 +44,11 @@ import { Icon } from 'ant-design-vue';
 import XTableSearchFilters from '@neurons/inputs/TableSearchFilters.vue';
 import XPage from '@axons/layout/Page.vue';
 import XTable from '@neurons/data/Table.vue';
-import XButton from '@axons/inputs/Button.vue';
 
 export default {
   name: 'XAudit',
   components: {
-    XPage, XTable, XButton, AIcon: Icon, XTableSearchFilters,
+    XPage, XTable, AIcon: Icon, XTableSearchFilters,
   },
   data() {
     return {

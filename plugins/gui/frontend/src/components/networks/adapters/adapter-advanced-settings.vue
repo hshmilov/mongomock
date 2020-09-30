@@ -35,7 +35,6 @@
 <script>
 import XTabs from '@axons/tabs/Tabs.vue';
 import XTab from '@axons/tabs/Tab.vue';
-import XButton from '@axons/inputs/Button.vue';
 import XForm from '@neurons/schema/Form.vue';
 
 import { fetchAdapterAdvancedSettings } from '@api/adapters';
@@ -45,7 +44,6 @@ export default {
   components: {
     XTabs,
     XTab,
-    XButton,
     XForm,
   },
   props: {

@@ -43,7 +43,6 @@ import { AUTO_QUERY, GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL } from '@store/gett
 import { UPDATE_DATA_VIEW } from '@store/mutations';
 import { expression } from '@constants/filter';
 
-import XButton from '@axons/inputs/Button.vue';
 import XQueryState from './State.vue';
 import XQuerySearchInput from './SearchInput.vue';
 import XQueryWizard from './Wizard.vue';
@@ -52,7 +51,7 @@ import QueryBuilder from '../../../../logic/query_builder';
 export default {
   name: 'XQuery',
   components: {
-    XQueryState, XQuerySearchInput, XQueryWizard, XButton,
+    XQueryState, XQuerySearchInput, XQueryWizard,
   },
   props: {
     module: {

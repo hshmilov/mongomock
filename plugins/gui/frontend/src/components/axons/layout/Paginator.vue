@@ -53,11 +53,9 @@
   </div>
 </template>
 <script>
-import XButton from '../inputs/Button.vue';
 
 export default {
   name: 'XPaginator',
-  components: { XButton },
   props: {
     limit: {
       type: Number,

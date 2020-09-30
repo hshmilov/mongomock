@@ -57,14 +57,13 @@ import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
 import { SET_MERGED_DATA_BY_ID } from '@store/modules/devices';
 import XTableData from '@networks/entities/TableData.vue';
 import XTableSearchFilters from '@neurons/inputs/TableSearchFilters.vue';
-import XButton from '@axons/inputs/Button.vue';
 import XTable from '../../../neurons/data/Table.vue';
 import mergedData from '../../../../logic/mergeData';
 
 export default {
   name: 'XEntityAdvanced',
   components: {
-    XTable, XButton, PulseLoader, XTableData, XTableSearchFilters,
+    XTable, PulseLoader, XTableData, XTableSearchFilters,
   },
   props: {
     index: {

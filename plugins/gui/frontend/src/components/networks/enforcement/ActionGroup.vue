@@ -33,14 +33,13 @@
 </template>
 
 <script>
-import XIcon from '@axons/icons/Icon';
 import XTextBox from '../../axons/layout/TextBox.vue';
 import XAction from './Action.vue';
 
 export default {
   name: 'XActionGroup',
   components: {
-    XTextBox, XAction, XIcon,
+    XTextBox, XAction,
   },
   props: {
     id: String,

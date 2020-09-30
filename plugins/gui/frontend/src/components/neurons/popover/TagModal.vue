@@ -36,7 +36,6 @@ import _uniq from 'lodash/uniq';
 import _intersection from 'lodash/intersection';
 import { mapState, mapActions } from 'vuex';
 import actionModal from '@mixins/action_modal';
-import XIcon from '@axons/icons/Icon';
 import XCombobox from '@axons/inputs/combobox/index.vue';
 import {
   FETCH_DATA_LABELS,
@@ -49,7 +48,7 @@ import XFeedbackModal from './FeedbackModal.vue';
 
 export default {
   name: 'XTagModal',
-  components: { XFeedbackModal, XCombobox, XIcon },
+  components: { XFeedbackModal, XCombobox },
   mixins: [actionModal],
   props: {
     value: {

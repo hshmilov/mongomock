@@ -68,8 +68,6 @@
 
 <script>
 import { Modal, Spin, Icon } from 'ant-design-vue';
-import XIcon from '@axons/icons/Icon';
-import XButton from '@axons/inputs/Button.vue';
 
 export default {
   name: 'XEnforcementActionResult',
@@ -77,8 +75,6 @@ export default {
     AModal: Modal,
     ASpin: Spin,
     AIcon: Icon,
-    XButton,
-    XIcon,
   },
   props: {
     enforcementActionToRun: {

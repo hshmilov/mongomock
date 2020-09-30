@@ -87,7 +87,6 @@ import { mapMutations, mapActions, mapState } from 'vuex';
 import { DiscoveryStatusEnum } from '@constants/discovery';
 import { FETCH_DISCOVERY_DATA } from '@store/modules/dashboard';
 import { UPDATE_DATA_VIEW } from '@store/mutations';
-import XIcon from '@axons/icons/Icon';
 import XHistogram from '@axons/charts/Histogram.vue';
 import { Pagination as APagination } from 'ant-design-vue';
 import PaginatorFastNavWrapper from '@axons/layout/PaginatorFastNavWrapper.vue';
@@ -96,7 +95,7 @@ import { getTotalResultsTitle } from '@/helpers/dashboard';
 export default {
   name: 'XDiscoveryCard',
   components: {
-    XHistogram, XIcon, APagination, PaginatorFastNavWrapper,
+    XHistogram, APagination, PaginatorFastNavWrapper,
   },
   props: {
     entity: {

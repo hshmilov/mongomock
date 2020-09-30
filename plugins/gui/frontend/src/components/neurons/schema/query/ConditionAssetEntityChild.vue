@@ -37,14 +37,13 @@ import _isEqual from 'lodash/isEqual';
 import XStringView from '../types/string/StringView.vue';
 import XSelect from '../../../axons/inputs/select/Select.vue';
 import XConditionFunction from './ConditionFunction.vue';
-import XButton from '../../../axons/inputs/Button.vue';
 import { getUpdatedValueAfterFieldChange, getValueSchema } from '../../../../logic/condition';
 
 
 export default {
   name: 'XConditionAssetEntityChild',
   components: {
-    XStringView, XSelect, XConditionFunction, XButton,
+    XStringView, XSelect, XConditionFunction,
   },
   model: {
     prop: 'condition',

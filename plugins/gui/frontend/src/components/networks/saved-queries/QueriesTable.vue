@@ -83,7 +83,6 @@ import { mdiFilter } from '@mdi/js';
 import _debounce from 'lodash/debounce';
 import XSearch from '@neurons/inputs/SearchInput.vue';
 import XTable from '@neurons/data/Table.vue';
-import XButton from '@axons/inputs/Button.vue';
 import XSwitch from '@axons/inputs/Switch.vue';
 import XSavedQueriesPanel from '@networks/saved-queries/SavedQueryPanel';
 import XCombobox from '@axons/inputs/combobox/index.vue';
@@ -98,7 +97,7 @@ import _get from 'lodash/get';
 export default {
   name: 'XQueriesTable',
   components: {
-    XSearch, XTable, XButton, XSavedQueriesPanel, XCombobox, XEnforcementsFeatureLockTip, XSwitch,
+    XSearch, XTable, XSavedQueriesPanel, XCombobox, XEnforcementsFeatureLockTip, XSwitch,
   },
   props: {
     namespace: {

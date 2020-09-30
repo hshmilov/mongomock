@@ -1,5 +1,4 @@
 import xSidePanel from '@networks/side-panel/SidePanel.vue';
-import XButton from '@axons/inputs/Button.vue';
 
 import './compliance-panel.scss';
 import { UPDATE_DATA_VIEW } from '@store/mutations';
@@ -38,7 +37,6 @@ export default {
   name: 'xCompliancePanel',
   components: {
     xSidePanel,
-    XButton,
     XStringView,
     ComplianceComments,
   },
@@ -212,7 +210,7 @@ export default {
               // conditionally render action button in footer
               this.data.status !== 'No data' && this.data.entities_results_query
                 ? [
-                  <XButton
+                  <x-button
                     type="primary"
                     disabled={!this.canViewEntities}
                     onClick={this.runQueryOnAffectedEntities}
@@ -220,7 +218,7 @@ export default {
                     Show Affected {
                     _capitalize(this.data.entities_results_query.type)
                   }
-                  </XButton>,
+                  </x-button>,
                 ]
                 : ''
             }

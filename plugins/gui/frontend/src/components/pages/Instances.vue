@@ -65,7 +65,6 @@ import XInstanceSidePanel from '@networks/instances/InstanceSidePanel.vue';
 import XPage from '../axons/layout/Page.vue';
 import XTableWrapper from '../axons/tables/TableWrapper.vue';
 import XTable from '../axons/tables/Table.vue';
-import XButton from '../axons/inputs/Button.vue';
 import XModal from '../axons/popover/Modal/index.vue';
 
 import { REQUEST_API } from '../../store/actions';
@@ -74,7 +73,7 @@ import { SHOW_TOASTER_MESSAGE, UPDATE_FOOTER_MESSAGE } from '../../store/mutatio
 export default {
   name: 'XInstances',
   components: {
-    XPage, XTableWrapper, XTable, XButton, XModal, XInstanceSidePanel,
+    XPage, XTableWrapper, XTable, XModal, XInstanceSidePanel,
   },
   data() {
     return {

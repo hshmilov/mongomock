@@ -19,12 +19,11 @@
 
 <script>
 import XSelect from '../../../axons/inputs/select/Select.vue';
-import XButton from '../../../axons/inputs/Button.vue';
 
 export default {
   name: 'XFilterExpressionContains',
   components: {
-    XSelect, XButton,
+    XSelect,
   },
   props: {
     value: {

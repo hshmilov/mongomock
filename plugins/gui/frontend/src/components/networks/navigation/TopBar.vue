@@ -154,7 +154,6 @@ import _get from 'lodash/get';
 import {
   mapState, mapGetters, mapMutations, mapActions,
 } from 'vuex';
-import XIcon from '@axons/icons/Icon';
 import XNotificationPeek from '../NotificationsPeek.vue';
 import XTipInfo from '../onboard/TipInfo.vue';
 import XTrialBanner from '../onboard/TrialBanner.vue';
@@ -170,7 +169,7 @@ import { entities } from '../../../constants/entities';
 export default {
   name: 'XTopBar',
   components: {
-    XNotificationPeek, XTipInfo, XTrialBanner, XContractBanner, XIcon,
+    XNotificationPeek, XTipInfo, XTrialBanner, XContractBanner,
   },
   data() {
     return {

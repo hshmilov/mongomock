@@ -72,17 +72,13 @@
 import {
   Icon, Tooltip, Dropdown, Menu,
 } from 'ant-design-vue';
-import XButton from '@axons/inputs/Button.vue';
 import XComplianceActiveRules from './ComplianceActiveRules.vue';
-import XIcon from '../../axons/icons/Icon';
 
 export default {
   name: 'XComplianceScore',
   components: {
-    XIcon,
     ATooltip: Tooltip,
     AIcon: Icon,
-    XButton,
     XComplianceActiveRules,
     ADropdown: Dropdown,
     AMenu: Menu,

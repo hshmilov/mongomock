@@ -58,7 +58,6 @@ import XEnforcementsFeatureLockTip from '@networks/enforcement/EnforcementsFeatu
 import XPage from '@axons/layout/Page.vue';
 import XSearch from '@neurons/inputs/SearchInput.vue';
 import XTable from '@neurons/data/Table.vue';
-import XButton from '@axons/inputs/Button.vue';
 import { actionsMeta } from '@constants/enforcement';
 import { UPDATE_DATA_VIEW } from '@store/mutations';
 import { REMOVE_ENFORCEMENTS, SET_ENFORCEMENT } from '@store/modules/enforcements';
@@ -66,7 +65,7 @@ import { REMOVE_ENFORCEMENTS, SET_ENFORCEMENT } from '@store/modules/enforcement
 export default {
   name: 'XEnforcements',
   components: {
-    XPage, XSearch, XTable, XButton, XEnforcementsFeatureLockTip,
+    XPage, XSearch, XTable, XEnforcementsFeatureLockTip,
   },
   data() {
     return {

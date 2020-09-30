@@ -110,14 +110,12 @@
 <script>
 import { mapActions, mapGetters } from 'vuex';
 import { Modal, Input, Select } from 'ant-design-vue';
-import XButton from '@axons/inputs/Button.vue';
 import { FETCH_ADAPTERS } from '@store/modules/adapters';
 import _cloneDeep from 'lodash/cloneDeep';
 
 export default {
   name: 'XColumnFilter',
   components: {
-    XButton,
     AInput: Input,
     AModal: Modal,
     ASelect: Select,

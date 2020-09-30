@@ -63,14 +63,13 @@ import { mapGetters } from 'vuex';
 
 import XSelect from '../../../axons/inputs/select/Select.vue';
 import XCondition from './Condition.vue';
-import XButton from '../../../axons/inputs/Button.vue';
 
 import { AUTO_QUERY } from '../../../../store/getters';
 
 export default {
   name: 'XExpression',
   components: {
-    XSelect, XCondition, XButton,
+    XSelect, XCondition,
   },
   model: {
     prop: 'expression',

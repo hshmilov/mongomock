@@ -33,7 +33,6 @@ import _get from 'lodash/get';
 import XPage from '../axons/layout/Page.vue';
 import XSearchInsights from '../neurons/inputs/SearchInsights.vue';
 import XTable from '../networks/entities/Table.vue';
-import XButton from '../axons/inputs/Button.vue';
 import { entities, defaultFieldsExplorer } from '../../constants/entities';
 import { EXACT_SEARCH } from '../../store/getters';
 import { UPDATE_DATA_VIEW } from '../../store/mutations';
@@ -41,7 +40,7 @@ import { UPDATE_DATA_VIEW } from '../../store/mutations';
 export default {
   name: 'XDashboardExplorer',
   components: {
-    XPage, XSearchInsights, XTable, XButton,
+    XPage, XSearchInsights, XTable,
   },
   data() {
     return {

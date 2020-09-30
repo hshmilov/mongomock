@@ -195,7 +195,6 @@ import {
   Menu as AMenu,
   Dropdown as ADropdown,
 } from 'ant-design-vue';
-import XIcon from '@axons/icons/Icon';
 
 import {
   ChartSortTypeEnum,
@@ -210,7 +209,6 @@ export default {
     AMenuItem: AMenu.Item,
     ASubMenu: AMenu.SubMenu,
     ADropdown,
-    XIcon,
   },
   props: {
     chart: {

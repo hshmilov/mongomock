@@ -84,7 +84,6 @@ import {
 import { mapState } from 'vuex';
 import _get from 'lodash/get';
 import XEnforcementsFeatureLockTip from '@networks/enforcement/EnforcementsFeatureLockTip.vue';
-import XButton from '../../axons/inputs/Button.vue';
 import XComplianceEmailDialog from './ComplianceEmailDialog.vue';
 import XComplianceJiraDialog from './ComplianceJiraDialog.vue';
 import configMixin from '../../../mixins/config';
@@ -92,7 +91,6 @@ import configMixin from '../../../mixins/config';
 export default {
   name: 'XEnforcementMenu',
   components: {
-    XButton,
     ADropdown: Dropdown,
     AMenu: Menu,
     AMenuItem: Menu.Item,

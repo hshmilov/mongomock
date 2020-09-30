@@ -20,7 +20,6 @@
 
 <script>
 import XArrayView from './types/array/ArrayView.vue';
-import XButton from '../../axons/inputs/Button.vue';
 
 /*
       Dynamically built list of nested data, structured according to given schema, filled with given value.
@@ -29,7 +28,7 @@ import XButton from '../../axons/inputs/Button.vue';
    */
 export default {
   name: 'XList',
-  components: { XArrayView, XButton },
+  components: { XArrayView },
   props: {
     data: {
       required: true,

@@ -65,15 +65,11 @@
 <script>
 import _sortBy from 'lodash/sortBy';
 import { updateComplianceComments } from '@api/compliance';
-import XIcon from '@axons/icons/Icon';
-import XButton from '@axons/inputs/Button.vue';
 import EditComment from './EditComment.vue';
 
 export default {
   name: 'XComplianceComments',
   components: {
-    XIcon,
-    XButton,
     EditComment,
   },
   props: {

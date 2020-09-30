@@ -141,7 +141,6 @@ import {
   Checkbox, Divider, Input,
 } from 'ant-design-vue';
 import XSidePanel from '@networks/side-panel/SidePanel.vue';
-import XButton from '@axons/inputs/Button.vue';
 import XStringView from '@neurons/schema/types/string/StringView.vue';
 
 export default {
@@ -151,7 +150,6 @@ export default {
     AInput: Input,
     ACheckbox: Checkbox,
     ADivider: Divider,
-    XButton,
     XStringView,
   },
   props: {

@@ -40,8 +40,6 @@
 </template>
 
 <script>
-import XIcon from '@axons/icons/Icon';
-import XButton from '@axons/inputs/Button.vue';
 import { Modal } from 'ant-design-vue';
 import { mapMutations, mapState } from 'vuex';
 import { TOGGLE_TUNNEL_CONNECTION_MODAL } from '@store/modules/dashboard';
@@ -50,8 +48,6 @@ export default {
   name: 'XTunnelConnectionModal',
   components: {
     AModal: Modal,
-    XIcon,
-    XButton,
   },
   computed: {
     ...mapState({

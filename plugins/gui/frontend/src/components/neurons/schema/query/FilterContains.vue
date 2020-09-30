@@ -17,14 +17,13 @@
 </template>
 
 <script>
-import XButton from '../../../axons/inputs/Button.vue';
 import XExpressionContains from './ExpressionContains.vue';
 
 const fieldFilterEmpty = { name: '', value: '' };
 export default {
   name: 'XFilterContains',
   components: {
-    XButton, XExpressionContains,
+    XExpressionContains,
   },
   props: {
     value: {

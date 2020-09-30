@@ -35,9 +35,7 @@
 <script>
 import { mapActions } from 'vuex';
 import XTableSearchFilters from '@neurons/inputs/TableSearchFilters.vue';
-import XIcon from '@axons/icons/Icon';
 import XTable from '@neurons/data/Table.vue';
-import XButton from '@axons/inputs/Button.vue';
 
 import { actionsMeta } from '@constants/enforcement';
 import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
@@ -45,7 +43,7 @@ import { FETCH_DATA_CONTENT_CSV } from '@store/actions';
 export default {
   name: 'XEntityTasks',
   components: {
-    XTable, XButton, XTableSearchFilters, XIcon,
+    XTable, XTableSearchFilters,
   },
   props: {
     entityType: {

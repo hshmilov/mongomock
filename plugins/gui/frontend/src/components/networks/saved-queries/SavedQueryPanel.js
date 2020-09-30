@@ -9,7 +9,6 @@ import _isEmpty from 'lodash/isEmpty';
 
 import xFilter from '@neurons/schema/query/Filter.vue';
 import xStringView from '@neurons/schema/types/string/StringView.vue';
-import xButton from '@axons/inputs/Button.vue';
 import xSelectBox from '@axons/inputs/select/SelectBox.vue';
 import xSidePanel from '@networks/side-panel/SidePanel.vue';
 import { xActionItem, xActionsGroup } from '@networks/side-panel/PanelActions';
@@ -40,7 +39,6 @@ export default {
   components: {
     xFilter,
     xStringView,
-    xButton,
     xSidePanel,
     xActionItem,
     xActionsGroup,
