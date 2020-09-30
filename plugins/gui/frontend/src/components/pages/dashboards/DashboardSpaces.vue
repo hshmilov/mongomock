@@ -229,11 +229,15 @@ export default {
         this.repeatedlyFetchSpaces();
       }, 30000);
     },
-    repeatedlyFetchActiveSpace(spaceId, calledFirstTime = true) {
+    async repeatedlyFetchActiveSpace(spaceId, calledFirstTime = true) {
       if (!spaceId) return;
 
       if (calledFirstTime) {
-        this.fetchActiveSpaceData(spaceId);
+        try {
+          await this.fetchActiveSpaceData(spaceId);
+        } catch (ex) {
+          this.$router.push({ name: 'Dashboard' });
+        }
       }
       if (this.fetchAcativeSpaceInterval) {
         // clear previous space's scheduled fetch cycle
@@ -242,7 +246,11 @@ export default {
 
       this.fetchAcativeSpaceInterval = setTimeout(async () => {
         if (this._isDestroyed) return;
-        await this.fetchActiveSpaceData(spaceId, true);
+        try {
+          await this.fetchActiveSpaceData(spaceId, true);
+        } catch (ex) {
+          this.$router.push({ name: 'Dashboard' });
+        }
         this.repeatedlyFetchActiveSpace(spaceId, false);
       }, 30000);
     },

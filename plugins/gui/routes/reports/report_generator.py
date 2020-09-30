@@ -292,7 +292,7 @@ class ReportGenerator:
                 charts_content.append(chart_content)
             spaces_content.append(self.templates['report_charts'].render({
                 'title': space['name'],
-                'link_start': f'<a href="https://{self.host}#{space_id}" class="c-blue">',
+                'link_start': f'<a href="https://{self.host}/{space_id}" class="c-blue">',
                 'link_title': 'View full Dashboard',
                 'link_end': '</a>',
                 'content': '\n'.join(charts_content)
