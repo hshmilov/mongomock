@@ -37,6 +37,7 @@ import {
   GET_TUNNEL_PROXY_SETTINGS, getTunnelProxySettings,
   SAVE_TUNNEL_PROXY_SETTINGS, saveTunnelProxySettings,
   SAVE_SYSTEM_DEFAULT_COLUMNS, saveSystemDefaultColumns,
+  FETCH_QUERY_INVALID_REFERENCES, fetchInvalidReferences,
 } from './actions';
 import {
   TOGGLE_SIDEBAR, toggleSidebar,
@@ -68,6 +69,8 @@ import {
   UPDATE_FOOTER_MESSAGE, updateFooterMessage,
   REMOVE_TOASTER, removeToaster,
   UPDATE_SYSTEM_DEFAULT_COLUMNS, updateSystemDefaultColumns,
+  UPDATE_QUERY_INVALID_REFERENCES, updateQueryInvalidReferences,
+  UPDATE_QUERY_ERROR, updateQueryError
 } from './mutations';
 import {
   GET_MODULE_SCHEMA, getModuleSchema,
@@ -85,6 +88,7 @@ import {
   GET_FOOTER_MESSAGE, getFooterMessage,
   FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES, fillUserFieldsGroupsFromTemplates,
   GET_SYSTEM_COLUMNS, getSystemColumns,
+  GET_SAVED_QUERY_BY_NAME, getSavedQueryByName,
 } from './getters';
 
 import { adapters } from './modules/adapters';
@@ -145,6 +149,7 @@ export default new Vuex.Store({
     [GET_FOOTER_MESSAGE]: getFooterMessage,
     [FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES]: fillUserFieldsGroupsFromTemplates,
     [GET_SYSTEM_COLUMNS]: getSystemColumns,
+    [GET_SAVED_QUERY_BY_NAME]: getSavedQueryByName,
   },
   mutations: {
     [TOGGLE_SIDEBAR]: toggleSidebar,
@@ -176,6 +181,8 @@ export default new Vuex.Store({
     [REMOVE_TOASTER]: removeToaster,
     [UPDATE_FOOTER_MESSAGE]: updateFooterMessage,
     [UPDATE_SYSTEM_DEFAULT_COLUMNS]: updateSystemDefaultColumns,
+    [UPDATE_QUERY_INVALID_REFERENCES]: updateQueryInvalidReferences,
+    [UPDATE_QUERY_ERROR]: updateQueryError,
   },
   actions: {
     [REQUEST_API]: requestApi,
@@ -213,6 +220,7 @@ export default new Vuex.Store({
     [GET_TUNNEL_PROXY_SETTINGS]: getTunnelProxySettings,
     [SAVE_TUNNEL_PROXY_SETTINGS]: saveTunnelProxySettings,
     [SAVE_SYSTEM_DEFAULT_COLUMNS]: saveSystemDefaultColumns,
+    [FETCH_QUERY_INVALID_REFERENCES]: fetchInvalidReferences,
   },
   modules: {
     /*

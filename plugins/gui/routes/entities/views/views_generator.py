@@ -39,6 +39,16 @@ def views_generator(base_permission_category: PermissionCategory):
                     number_of_assets=self._get_views_count(mongo_filter))
                 page_meta['size'] = len(assets)
                 return jsonify({'page': page_meta, 'assets': assets})
+
+            if query_type == 'saved':
+                for view in views:
+                    if self.gui_dbs.entity_saved_queries_indirect[self.entity_type].count_documents({
+                            'target': view.get('uuid', '')
+                    }):
+                        view['is_referenced'] = True
+                    else:
+                        view['is_referenced'] = False
+
             return jsonify(
                 views)
 
@@ -96,8 +106,8 @@ def views_generator(base_permission_category: PermissionCategory):
             if no_access and not request.get_json().get('private'):
                 return return_error('You are lacking some permissions for this request', 401)
 
-            self._update_entity_views(self.entity_type, query_id)
-            return ''
+            error = self._update_entity_views(self.entity_type, query_id)
+            return return_error(error, 400) if error else ''
 
         @gui_route_logged_in('<query_id>/publish', methods=['POST'], required_permission=PermissionValue.get(
             PermissionAction.Add, base_permission_category, PermissionCategory.SavedQueries))
@@ -106,8 +116,8 @@ def views_generator(base_permission_category: PermissionCategory):
             Sets private view to public
             :return:
             """
-            self._update_entity_views(self.entity_type, query_id)
-            return ''
+            error = self._update_entity_views(self.entity_type, query_id)
+            return return_error(error, 400) if error else ''
 
         @gui_route_logged_in('tags', methods=['GET'], required_permission=PermissionValue.get(
             PermissionAction.View, base_permission_category))
@@ -138,5 +148,15 @@ def views_generator(base_permission_category: PermissionCategory):
             if m:
                 return EntityType(m.group(1))
             return None
+
+        @gui_route_logged_in('references/<query_id>', methods=['GET'], required_permission=PermissionValue.get(
+            PermissionAction.View, base_permission_category))
+        def get_query_references(self, query_id):
+            """
+            return the invalid references that the <query_id> cannot reference (use as a saved_query in the wizard)
+            due to circular dependency.
+            :return:
+            """
+            return jsonify(self._get_saved_query_invalid_references(self.entity_type, query_id))
 
     return Views

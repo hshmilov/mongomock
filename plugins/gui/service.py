@@ -51,7 +51,8 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        USERS_TOKENS_COLLECTION, USERS_TOKENS_COLLECTION_TTL_INDEX_NAME,
                                        LATEST_VERSION_URL, INSTALLED_VERISON_KEY, FeatureFlagsNames,
                                        IDENTITY_PROVIDERS_CONFIG, NO_ACCESS_ROLE,
-                                       DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES, IS_API_USER, Signup)
+                                       DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES, IS_API_USER, Signup,
+                                       PREDEFINED_SAVED_QUERY_REF_REGEX, UPDATED_BY_FIELD)
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           ADMIN_USER_NAME,
@@ -529,10 +530,15 @@ class GuiService(Triggerable,
                     # ConfigParser always has a fake DEFAULT key, skip it
                     continue
                 try:
+                    query_view = data['view']
+                    if data.get('should_replace_query_names', False):
+                        logger.debug(f'replacing query names with ids for: {name}')
+                        query_view = self._replace_predefined_query_references(
+                            self.gui_dbs.entity_query_views_db_map[entity_type], data['view'])
                     self._insert_view(
                         self.gui_dbs.entity_query_views_db_map[entity_type],
                         name,
-                        json.loads(data['view']),
+                        json.loads(query_view),
                         data.get('description', ''),
                         json.loads(data.get('tags', '[]')),
                         data.get('type', 'saved'))
@@ -564,6 +570,26 @@ class GuiService(Triggerable,
             logger.exception(f'Error comparing versions. installed version: {installed_version}, '
                              f'available version: {self.latest_version}')
         return False
+
+    @staticmethod
+    def _replace_predefined_query_references(views_collection, query_view: str):
+        matches = re.findall(PREDEFINED_SAVED_QUERY_REF_REGEX, query_view)
+        for match in matches:
+            existing_view = views_collection.find_one({
+                'name': {
+                    '$regex': match,
+                    '$options': 'i'
+                },
+                PREDEFINED_FIELD: True,
+                UPDATED_BY_FIELD: '*'
+            })
+            if not existing_view:
+                logger.error(f'Unable to find {match} in views.')
+                continue
+            found_query_id = str(existing_view['_id'])
+            logger.debug(f'replacing predefined reference {match} with {found_query_id}')
+            query_view = query_view.replace(f'<QUERY_NAME={match}>', found_query_id)
+        return query_view
 
     def get_latest_version(self):
         """

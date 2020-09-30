@@ -157,7 +157,6 @@ const QueryBuilder = (schema, expressions, meta, prevExpressionsQuery) => {
         bracketWeights.push(expression.bracketWeight);
       }
     });
-
     let filter = '';
     let onlyExpressionsFilter = filters.join(' ');
 

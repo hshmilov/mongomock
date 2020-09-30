@@ -6,11 +6,13 @@ from threading import Lock
 from typing import List
 
 import cachetools
+from bson import ObjectId
 from bson.json_util import default
 from frozendict import frozendict
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, \
     ADAPTERS_META, SPECIFIC_DATA_CONNECTION_LABEL, \
-    SPECIFIC_DATA_CLIENT_USED, CORRELATION_REASONS, HAS_NOTES, SPECIFIC_DATA_PLUGIN_UNIQUE_NAME
+    SPECIFIC_DATA_CLIENT_USED, CORRELATION_REASONS, HAS_NOTES, SPECIFIC_DATA_PLUGIN_UNIQUE_NAME,\
+    SAVED_QUERY_PLACEHOLDER_REGEX
 from axonius.consts.plugin_consts import PLUGIN_NAME, ADAPTERS_LIST_LENGTH
 from axonius.consts.system_consts import MULTI_COMPARE_MAGIC_STRING, COMPARE_MAGIC_STRING
 from axonius.utils.datetime import parse_date
@@ -704,11 +706,12 @@ def translate_from_connection_labels(filter_str: str) -> str:
     return filter_str
 
 
-def parse_filter(filter_str: str, history_date=None) -> dict:
+def parse_filter(filter_str: str, history_date=None, entity=None) -> dict:
     """
     If given filter contains the keyword NOW, meaning it needs a calculation relative to current date,
     it must be recalculated, instead of using the cached result
     """
+    filter_str = replace_saved_queries_ids(filter_str, entity)
     if filter_str and SPECIFIC_DATA_CONNECTION_LABEL in filter_str:
         return dict(parse_filter_uncached(translate_from_connection_labels(filter_str), history_date))
     if filter_str and 'NOW' in filter_str:
@@ -926,3 +929,42 @@ def parse_filter_non_entities(filter_str: str, history_date=None):
     filter_str = process_filter(filter_str, history_date)
     res = translate_filter_not(axonius.pql.find(filter_str)) if filter_str else {}
     return res
+
+
+def replace_saved_queries_ids(aql_filter: str, entity_type) -> str:
+    """
+    This method receives a filter as string, and replace all saved queries ids with the
+    actual aql if needed. Iterate the filter until no matches found - instead of iterating
+    it recursively.
+    :param aql_filter: filter as string
+    :param entity_type:
+    :return: replaces filter, or the same one.
+    """
+
+    # This prevents some looping imports
+    from axonius.plugin_base import PluginBase
+
+    if bool(aql_filter) and entity_type:
+        collection = PluginBase.Instance.gui_dbs.entity_query_views_db_map[entity_type]
+        matches = re.findall(SAVED_QUERY_PLACEHOLDER_REGEX, aql_filter)
+        already_replaced_matches = {}
+        while matches:
+            for query_id in matches:
+                value = None
+                if query_id in already_replaced_matches:
+                    value = already_replaced_matches[query_id]
+                else:
+                    query = collection.find_one({
+                        '_id': ObjectId(query_id)
+                    }, projection={'view.query.filter': True})
+                    if query:
+                        value = query.get('view', {}).get('query', {}).get('filter', '')
+                if value:
+                    aql_filter = aql_filter.replace(f'{{{{QueryID={query_id}}}}}', value)
+                    if query_id not in already_replaced_matches:
+                        already_replaced_matches[query_id] = value
+                else:
+                    logger.error(f'ERROR: Unable to find match for query {query_id}')
+                    return aql_filter
+            matches = re.findall(SAVED_QUERY_PLACEHOLDER_REGEX, aql_filter)
+    return aql_filter

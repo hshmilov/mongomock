@@ -343,7 +343,8 @@ def return_error(error_message, http_status=500, additional_data=None, non_prod_
 
 
 # entity_query_views_db_map   - map between EntityType and views collection from the GUI (e.g. user_views)
-GuiDB = namedtuple('GuiDB', ['entity_query_views_db_map'])
+GuiDB = namedtuple('GuiDB', ['entity_query_views_db_map', 'entity_saved_queries_direct',
+                             'entity_saved_queries_indirect'])
 
 
 def recalculate_adapter_oldness(adapter_list: list, entity_type: EntityType):
@@ -663,6 +664,12 @@ class PluginBase(Configurable, Feature, ABC):
         self.gui_dbs = GuiDB({
             EntityType.Users: gui_db_connection['user_views'],
             EntityType.Devices: gui_db_connection['device_views'],
+        }, {
+            EntityType.Users: gui_db_connection['user_views_direct'],
+            EntityType.Devices: gui_db_connection['device_views_direct'],
+        }, {
+            EntityType.Users: gui_db_connection['user_views_indirect'],
+            EntityType.Devices: gui_db_connection['device_views_indirect'],
         })
         del gui_db_connection
 

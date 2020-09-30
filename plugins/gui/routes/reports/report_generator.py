@@ -701,7 +701,7 @@ class ReportGenerator:
                         field_filters = view.get('colFilters', {})
                         excluded_adapters = view.get('colExcludedAdapters', {})
                         count = self.report_params['saved_view_count_func'](
-                            entity, parse_filter(filter_query), None, False)
+                            entity, parse_filter(filter_query, entity=entity), None, False)
                         projection = {field: 1 for field in view.get('fields', []) if field_to_title.get(field)
                                       and field != 'specific_data.data.image'}
                         views_data[entity.name].append({
@@ -711,7 +711,7 @@ class ReportGenerator:
                             'data': list(get_entities(limit=view.get('pageSize',
                                                                      20 if not attach_views_csvs else 5),
                                                       skip=0,
-                                                      view_filter=parse_filter(filter_query),
+                                                      view_filter=parse_filter(filter_query, entity=entity),
                                                       sort=get_sort(view),
                                                       run_over_projection=False,
                                                       projection=projection,
@@ -722,7 +722,7 @@ class ReportGenerator:
                             'count': count,
                             'csv':
                                 get_csv_file_from_heavy_lifting_plugin(view_doc.get('name'),
-                                                                       parse_filter(filter_query),
+                                                                       parse_filter(filter_query, entity=entity),
                                                                        get_sort(view),
                                                                        projection,
                                                                        None,

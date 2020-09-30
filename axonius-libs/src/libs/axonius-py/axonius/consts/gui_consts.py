@@ -464,3 +464,13 @@ class TunnelStatuses:
     never_connected = 'never_connected'  # this is a saas machine, never connected to tunnel
     connected = 'connected'  # this is a saas machine, connected to tunnel
     disconnected = 'disconnected'  # this is a saas machine, disconnected from tunnel
+
+
+# Saved Queries
+DEVICES_DIRECT_REFERENCES_COLLECTION = 'device_views_direct'
+USERS_DIRECT_REFERENCES_COLLECTION = 'user_views_direct'
+DEVICES_INDIRECT_REFERENCES_COLLECTION = 'device_views_indirect'
+USERS_INDIRECT_REFERENCES_COLLECTION = 'user_views_indirect'
+# pylint: disable=anomalous-backslash-in-string
+SAVED_QUERY_PLACEHOLDER_REGEX = '{{QueryID=(\w+)}}'
+PREDEFINED_SAVED_QUERY_REF_REGEX = '{{QueryID=<QUERY_NAME=([a-zA-Z0-9_\-\s]+)>}}'

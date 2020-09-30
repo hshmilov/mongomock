@@ -511,3 +511,21 @@ export const updateSystemDefaultColumns = (state, payload) => {
     };
   }
 };
+
+export const UPDATE_QUERY_INVALID_REFERENCES = 'UPDATE_QUERY_INVALID_REFERENCES';
+export const updateQueryInvalidReferences = (state, payload) => {
+  state[payload.module].view = {
+    ...state[payload.module].view,
+    validReferences: {
+      [payload.uuid]: payload.validReferences,
+    },
+  };
+};
+
+export const UPDATE_QUERY_ERROR = 'UPDATE_QUERY_ERROR';
+export const updateQueryError = (state, payload) => {
+  const module = getModule(state, payload);
+  if (!module) return;
+  const { content } = module;
+  content.error = payload.error;
+};

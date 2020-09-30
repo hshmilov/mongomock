@@ -83,7 +83,7 @@ import _isEmpty from 'lodash/isEmpty';
 
 import XModal from '@axons/popover/Modal/index.vue';
 
-import { SAVE_DATA_VIEW } from '@store/actions';
+import { SAVE_DATA_VIEW, FETCH_QUERY_INVALID_REFERENCES } from '@store/actions';
 import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '@store/modules/onboarding';
 import { SAVE_QUERY } from '@constants/getting-started';
 
@@ -227,6 +227,7 @@ export default {
     ...mapActions({
       saveView: SAVE_DATA_VIEW,
       milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION,
+      fetchInvalidReferences: FETCH_QUERY_INVALID_REFERENCES,
     }),
     onClose() {
       this.resetForm();
@@ -254,13 +255,20 @@ export default {
       this.$v.queryFormProxies.$touch();
 
       if (this.hasFormDataChanged() && this.$v.$invalid) return;
-      await this.saveView({
+      const uuid = await this.saveView({
         module: this.namespace,
         name: this.name,
         description: this.description,
         private: this.isPrivate,
         uuid: this.isEdit ? this.view.uuid : null,
       });
+
+      if (uuid) {
+        await this.fetchInvalidReferences({
+          module: this.namespace,
+          uuid,
+        });
+      }
 
       if (this.namespace === 'devices') {
         this.milestoneCompleted({ milestoneName: SAVE_QUERY });

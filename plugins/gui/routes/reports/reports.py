@@ -423,7 +423,7 @@ class Reports:
                     view_filter = find_filter_by_name(entity, query['name'])
                     if view_filter:
                         query_filter = view_filter['query']['filter']
-                        view_parsed = parse_filter(query_filter)
+                        view_parsed = parse_filter(query_filter, entity=entity)
                         views.append({
                             **query,
                             'count': self._entity_db_map[entity].count_documents(view_parsed)

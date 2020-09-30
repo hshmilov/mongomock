@@ -147,6 +147,12 @@ const savedQueries = (state, namespace) => {
 
 export const getSavedQueryById = (state) => (id, namespace) => savedQueries(state, namespace).find((q) => id === q.uuid);
 
+export const GET_SAVED_QUERY_BY_NAME = 'getSavedQueryByName';
+export const getSavedQueryByName = (state) => (name, namespace) => {
+  const result = savedQueries(state, namespace).find((q) => name === q.name);
+  return result ? result.uuid : '';
+}
+
 export const GET_FOOTER_MESSAGE = 'GET_FOOTER_MESSAGE';
 export const getFooterMessage = (state) => state.footer.message;
 

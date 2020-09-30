@@ -88,7 +88,9 @@ import XSavedQueriesPanel from '@networks/saved-queries/SavedQueryPanel';
 import XCombobox from '@axons/inputs/combobox/index.vue';
 import XEnforcementsFeatureLockTip from '@networks/enforcement/EnforcementsFeatureLockTip.vue';
 import { UPDATE_DATA_VIEW } from '@store/mutations';
-import { DELETE_DATA, SAVE_VIEW, DELETE_VIEW_DATA, PUBLISH_VIEW } from '@store/actions';
+import {
+  DELETE_DATA, SAVE_VIEW, DELETE_VIEW_DATA, PUBLISH_VIEW, FETCH_QUERY_INVALID_REFERENCES,
+} from '@store/actions';
 import { SET_ENFORCEMENT, initTrigger } from '@store/modules/enforcements';
 import { fetchEntityTags } from '@api/saved-queries';
 import { getEntityPermissionCategory } from '@constants/entities';
@@ -237,8 +239,14 @@ export default {
         console.warn('featch tags failed');
       }
     },
-    runQuery(viewId) {
+    async runQuery(viewId) {
       const selectedView = this.savedQueries.find((view) => view.uuid === viewId);
+
+      await this.fetchInvalidReferences({
+        module: this.namespace,
+        uuid: viewId,
+      });
+
       this.updateView({
         module: this.namespace,
         view: { ...selectedView.view, enforcement: null },
@@ -285,11 +293,13 @@ export default {
         1 : single selection from panel
         1 < : multiple selection
       */
-      const isSingularSelection = this.numberOfSelections === 1
+      const isSingularSelection = this.numberOfSelections === 1;
       this.$safeguard.show({
         text: `
             The selected Saved ${isSingularSelection ? 'Query' : 'Queries'} will be completely deleted from the
-            system and no other user will be able to use it.
+            system and no other user will be able to use it. ${this.getReferencedSavedQueryText(
+      queryId || this.selection.ids, isSingularSelection,
+            )}
             <br />
             Deleting the Saved ${isSingularSelection ? 'Query' : 'Queries'} is an irreversible action.
             <br />Do you wish to continue?
@@ -368,6 +378,7 @@ export default {
       removeDrawerData: DELETE_VIEW_DATA,
       updateQuery: SAVE_VIEW,
       publishQuery: PUBLISH_VIEW,
+      fetchInvalidReferences: FETCH_QUERY_INVALID_REFERENCES,
     }),
     resetSearchAndFilters() {
       this.searchValue = '';
@@ -406,6 +417,27 @@ export default {
     togglePrivateSwitch() {
       this.showPrivateOnly = !this.showPrivateOnly;
       this.applySearchAndFilter();
+    },
+    isQueryReferenced(queryId) {
+      const selectedQuery = this.savedQueries.find((query) => query.uuid === queryId);
+      return selectedQuery ? selectedQuery.is_referenced : false;
+    },
+    getReferencedSavedQueryText(selection, isSingularSelection) {
+      const text = isSingularSelection ? 'This saved query is also referenced by another saved query.'
+        : 'At least one of these saved queries is referenced by another saved query.'
+
+      if (isSingularSelection || !Array.isArray(selection)) {
+        return this.isQueryReferenced(Array.isArray(selection) ? selection[0] : selection) ? text : '';
+      }
+
+      let referenced = false;
+      for (let i = 0; i < selection.length; i++) {
+        if (this.isQueryReferenced(selection[i])) {
+          referenced = true;
+          break;
+        }
+      }
+      return referenced ? text : '';
     },
   },
 };

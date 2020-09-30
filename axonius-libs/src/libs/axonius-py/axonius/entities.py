@@ -91,7 +91,7 @@ class EntitiesNamespace:
         if internal_axon_id is not None:
             final_mongo_filter = {'internal_axon_id': internal_axon_id}
         elif axonius_query_language is not None:
-            final_mongo_filter = parse_filter(axonius_query_language)
+            final_mongo_filter = parse_filter(axonius_query_language, entity=self.entity)
         else:
             raise ValueError('None of the query methods were provided, can\'t query {self.entity}')
 

@@ -3,7 +3,7 @@ import logging
 import os
 from datetime import datetime
 from multiprocessing.pool import ThreadPool
-from typing import Dict
+from typing import Dict, List
 
 import pymongo
 from bson import ObjectId
@@ -29,7 +29,8 @@ from gui.logic.db_helpers import beautify_db_entry
 from gui.logic.entity_data import entity_tasks
 from gui.logic.filter_utils import filter_archived
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
-from gui.logic.views_data import get_views
+from gui.logic.views_data import get_views   # , get_saved_query
+from gui.logic.saved_queries import update_references, validate_circular_dependency
 from gui.routes.entities.entity_generator import entity_generator
 # pylint: disable=no-member,inconsistent-return-statements
 
@@ -159,6 +160,56 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
                 for entry
                 in get_views(entity_type, limit, skip, mongo_filter, mongo_sort)]
 
+    @staticmethod
+    def _get_saved_queries_references(query):
+        expressions = query.get('view', {}).get('query', {}).get('expressions', [])
+        saved_queries_references = []
+        for expression in expressions:
+            if expression.get('field', '') == 'saved_query':
+                saved_queries_references.append(expression.get('value'))
+        return saved_queries_references
+
+    def _get_saved_queries_references_diff(self, view_data: Dict, entity_views_collection):
+        """
+        return the removed and the added saved queries references.
+        :return:
+        """
+        query_id = None
+        existing_query = entity_views_collection.find_one({
+            'name': view_data.get('name', '')
+        })
+
+        previous_saved_queries_references = []
+        if existing_query:
+            query_id = str(existing_query.get('_id'))
+            previous_saved_queries_references = self._get_saved_queries_references(existing_query)
+
+        new_saved_queries_references = self._get_saved_queries_references(view_data)
+
+        # find removed queries
+        removed_saved_queries = []
+        if previous_saved_queries_references:
+            removed_saved_queries = list(set(previous_saved_queries_references)
+                                         .difference(new_saved_queries_references))
+            new_saved_queries = list(set(new_saved_queries_references).difference(previous_saved_queries_references))
+        else:
+            new_saved_queries = new_saved_queries_references
+
+        return query_id, new_saved_queries, removed_saved_queries
+
+    def _update_saved_queries_references(self, entity_type, origin: str, new_saved_queries: List[str],
+                                         removed_saved_queries: List[str]):
+        """
+        Check if update is needed after new query was saved or existing query was updated.
+        :param new_queries:
+        :param removed_saved_queries:
+        :return:
+        """
+        if removed_saved_queries or new_saved_queries:
+            update_references(entity_type, origin, new_saved_queries, removed_saved_queries,
+                              self.gui_dbs.entity_saved_queries_direct[entity_type],
+                              self.gui_dbs.entity_saved_queries_indirect[entity_type])
+
     def _add_entity_view(self, entity_type: EntityType):
         """
         Save or fetch views over the entities db
@@ -172,6 +223,10 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
             return return_error(f'Name is required in order to save a view', 400)
         if not view_data.get('view'):
             return return_error(f'View data is required in order to save one', 400)
+
+        query_id, new_saved_queries, removed_saved_queries = \
+            self._get_saved_queries_references_diff(view_data, entity_views_collection)
+
         is_private = view_data.get('private', False)
         view_to_update = {
             'name': view_data['name'],
@@ -193,6 +248,9 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         }, {
             '$set': view_to_update
         }, upsert=True, return_document=pymongo.ReturnDocument.AFTER)
+
+        self._update_saved_queries_references(entity_type, str(update_result['_id']), new_saved_queries,
+                                              removed_saved_queries)
 
         return str(update_result['_id'])
 
@@ -231,6 +289,14 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         view_data = self.get_request_data_as_object()
         if not view_data.get('name'):
             return return_error(f'Name is required in order to save a view', 400)
+
+        entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
+        _, new_saved_queries, removed_saved_queries = \
+            self._get_saved_queries_references_diff(view_data, entity_views_collection)
+        valid, error = validate_circular_dependency(entity_type, query_id, new_saved_queries)
+        if not valid:
+            return error
+
         view_set_data = {
             'name': view_data['name'],
             'view': view_data['view'],
@@ -244,11 +310,13 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         if not self.is_axonius_user():
             view_set_data[LAST_UPDATED_FIELD] = datetime.now()
             view_set_data[UPDATED_BY_FIELD] = get_connected_user_id()
-        self.gui_dbs.entity_query_views_db_map[entity_type].update_one({
+        entity_views_collection.update_one({
             '_id': ObjectId(query_id)
         }, {
             '$set': view_set_data
         })
+
+        self._update_saved_queries_references(entity_type, query_id, new_saved_queries, removed_saved_queries)
 
     def _get_queries_tags_by_entity(self, entity_type):
         """
@@ -691,3 +759,16 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
 
         self._insert_indexes_entity(entity_type=entity_type)
         return jsonify(return_doc)
+
+    def _get_saved_query_invalid_references(self, entity_type: EntityType, query_id: str):
+        results = []
+        references = self.gui_dbs.entity_saved_queries_indirect[entity_type].find({
+            'target': query_id
+        })
+        for reference in references:
+            results.append(reference.get('origin'))
+
+        # Can't references to itself as well.
+        results.append(query_id)
+
+        return results

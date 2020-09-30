@@ -419,3 +419,12 @@ class DevicesPage(EntitiesPage):
 
     def get_host_name_aggregated_value(self):
         return [item.text for item in self.driver.find_elements_by_css_selector(self.HOST_NAME_AGGREGATED_FIELD_CSS)]
+
+    def add_saved_query_reference(self, query_name):
+        self.add_query_expression()
+        expressions = self.find_expressions()
+        self.select_query_logic_op(LOGIC_AND, parent=expressions[1])
+        self.select_query_field(self.FIELD_SAVED_QUERY, parent=expressions[0])
+        self.select_query_value(query_name, parent=expressions[0])
+        self.wait_for_table_to_load()
+        self.close_dropdown()

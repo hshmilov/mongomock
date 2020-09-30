@@ -18,7 +18,7 @@ from axonius.consts.gui_consts import MAX_SORTED_FIELDS, MIN_SORTED_FIELDS
 from axonius.utils.get_plugin_base_instance import plugin_base_instance
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH
 from axonius.utils.axonius_query_language import convert_db_entity_to_view_entity, parse_filter, \
-    convert_db_projection_to_view
+    convert_db_projection_to_view, replace_saved_queries_ids
 from axonius.utils.gui_helpers import parse_entity_fields, get_historized_filter, \
     FIELDS_TO_PROJECT, FIELDS_TO_PROJECT_FOR_GUI, get_sort, nongui_beautify_db_entry, get_entities_count
 from axonius.entities import EntityType
@@ -395,7 +395,8 @@ def perform_axonius_query(entity: EntityType,
     :param sort: additional parameter
     :return: an iterator for all the devices as they would been seen in the DB
     """
-    return _get_entities_raw(entity, parse_filter(query), db_projection=projection, limit=limit, skip=skip, sort=sort)
+    return _get_entities_raw(entity, parse_filter(query, entity=entity), db_projection=projection,
+                             limit=limit, skip=skip, sort=sort)
 
 
 def iterate_axonius_entities(entity: EntityType,
@@ -426,7 +427,7 @@ def perform_saved_view(entity: EntityType, saved_view: dict, **kwargs) -> Iterat
     :param kwargs: additional parameters to "find"
     :return: an iterator for all the devices as they would been seen in the DB
     """
-    parsed_query_filter = saved_view['view']['query']['filter']
+    parsed_query_filter = replace_saved_queries_ids(saved_view['view']['query']['filter'], entity)
     mongo_sort = get_sort(saved_view['view'])
 
     return perform_axonius_query(entity, parsed_query_filter,

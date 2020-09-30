@@ -54,6 +54,7 @@ class EntitiesPage(Page):
     EXP2_INPUT_CSS = '.x-condition-function .argument .content.expand .x-search-input.x-select-search .input-value'
     QUERY_ADAPTER_DROPDOWN_SECONDARY_OPTIONS_CSS = 'div.x-select-options > .x-secondary-select-content >' \
                                                    '.x-select-options'
+    SAVED_QUERY_OPTIONS_CSS = '.x-condition-function .argument .x-select-options .x-select-option'
 
     QUERY_SEARCH_DROPDOWN_XPATH = '//div[@id=\'query_select\']//div[contains(text(),\'{query_name_text}\')]'
     QUERY_SEARCH_EVERYWHERE_CSS = 'div.x-menu>div>.item-content'
@@ -255,6 +256,8 @@ class EntitiesPage(Page):
 
     SCHEDULE_TRIGGER_DROPDOWN_OPTIONS_CSS = '.x-select-content .x-select-option'
     SCHEDULE_TRIGGER_DROPDOWN_CSS = '.item_conditional .x-select .x-select-trigger'
+
+    SAVE_QUERY_APPROVE_TEXT = 'Yes, Save'
 
     @property
     def url(self):
@@ -1112,8 +1115,10 @@ class EntitiesPage(Page):
         self.click_save_query_save_button()
 
     def save_existing_query(self):
+        self.open_actions_query()
         el = self.driver.find_element_by_id(self.SAVE_AS_DROPDOWN_SAVE_CHANGES_ID)
         el.click()
+        self.safeguard_click_confirm(self.SAVE_QUERY_APPROVE_TEXT)
 
     def create_private_query(self, query_name):
         self.switch_to_page()
@@ -1865,3 +1870,56 @@ class EntitiesPage(Page):
     def wait_for_csv_to_update_cache():
         # wait for heavy lifting to clear its 60 seconds cache
         time.sleep(61)
+
+    def get_saved_query_value(self, parent):
+        if parent:
+            el = parent.find_element_by_css_selector(self.QUERY_VALUE_COMPONENT_CSS)
+        else:
+            el = self.wait_for_element_present_by_css(self.QUERY_VALUE_COMPONENT_CSS)
+        return el.get_attribute('innerText')
+
+    def create_saved_query_with_reference(self, origin_name, targets):
+        for index, target_name in enumerate(targets):
+            self.click_query_wizard()
+            if index > 0:
+                self.add_query_expression()
+            expressions = self.find_expressions()
+            assert len(expressions) == index + 1
+            self.select_query_field(self.FIELD_SAVED_QUERY, parent=expressions[index])
+            self.select_saved_query_reference(target_name, parent=expressions[index])
+        self.save_query_as(origin_name)
+        self.reset_query()
+
+    def select_saved_query_reference(self, target_name, parent):
+        self.select_query_value(target_name, parent=parent)
+        self.wait_for_table_to_be_responsive()
+        self.close_dropdown()
+
+    def create_base_query_for_reference(self, query_name):
+        self.click_query_wizard()
+        expressions = self.find_expressions()
+        assert len(expressions) == 1
+        self.select_query_field(self.FIELD_ASSET_NAME, parent=expressions[0])
+        self.select_query_comp_op(COMP_CONTAINS, parent=expressions[0])
+        self.fill_query_string_value('CB 1', parent=expressions[0])
+        self.wait_for_table_to_be_responsive()
+        self.close_dropdown()
+        self.save_query_as(query_name)
+        self.reset_query()
+
+    def execute_and_assert_query_reference(self, origin_name, targets):
+        self.execute_saved_query(origin_name)
+        self.wait_for_table_to_be_responsive()
+        assert self.get_table_count() == 1
+        self.click_query_wizard()
+        expressions = self.find_expressions()
+        assert len(expressions) == len(targets)
+        for index, target_name in enumerate(targets):
+            assert self.get_saved_query_value(parent=expressions[index]) == target_name
+        self.close_dropdown()
+
+    def get_saved_queries_options(self, parent):
+        parent.find_element_by_css_selector(self.QUERY_VALUE_COMPONENT_CSS).click()
+        time.sleep(0.5)
+        options = parent.find_elements_by_css_selector(self.SAVED_QUERY_OPTIONS_CSS)
+        return [option.text for option in options]

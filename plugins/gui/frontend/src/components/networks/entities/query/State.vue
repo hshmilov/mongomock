@@ -107,10 +107,10 @@ import _debounce from 'lodash/debounce';
 import { defaultViewForReset, getEntityPermissionCategory } from '@constants/entities';
 import { Menu, Dropdown } from 'ant-design-vue';
 import XHistoricalDate from '@neurons/inputs/HistoricalDate.vue';
-import XSaveModal from '../../saved-queries/SavedQueryModal.vue';
+import XSaveModal from '@networks/saved-queries/SavedQueryModal.vue';
 
-import { UPDATE_DATA_VIEW } from '../../../../store/mutations';
-import { SAVE_DATA_VIEW } from '../../../../store/actions';
+import { UPDATE_DATA_VIEW } from '@store/mutations';
+import { FETCH_QUERY_INVALID_REFERENCES, SAVE_DATA_VIEW } from '@store/actions';
 
 
 export default {
@@ -226,6 +226,7 @@ export default {
     }),
     ...mapActions({
       saveView: SAVE_DATA_VIEW,
+      fetchInvalidReferences: FETCH_QUERY_INVALID_REFERENCES,
     }),
 
     resetQuery: _debounce(function resetQuery() {
@@ -250,14 +251,20 @@ export default {
         private: this.selectedView.private,
       };
     },
-    saveSelectedView() {
+    async saveSelectedView() {
       if (!this.selectedView || !this.selectedView.uuid) return;
-
-      this.saveView({
+      await this.saveView({
         module: this.module,
         name: this.selectedView.name,
         uuid: this.selectedView.uuid,
       });
+
+      if (this.selectedView.uuid) {
+        await this.fetchInvalidReferences({
+          module: this.module,
+          uuid: this.selectedView.uuid,
+        });
+      }
     },
     reloadSelectedView() {
       this.updateView({

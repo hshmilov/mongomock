@@ -39,7 +39,7 @@
 import { mapState, mapGetters, mapMutations } from 'vuex';
 import _isEmpty from 'lodash/isEmpty';
 
-import { AUTO_QUERY, GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL } from '@store/getters';
+import { AUTO_QUERY, GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL, GET_SAVED_QUERY_BY_NAME } from '@store/getters';
 import { UPDATE_DATA_VIEW } from '@store/mutations';
 import { expression } from '@constants/filter';
 
@@ -93,6 +93,7 @@ export default {
     ...mapGetters({
       autoQuery: AUTO_QUERY,
       getModuleSchemaWithConnectionLabel: GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL,
+      getSavedQueryById: 'getSavedQueryById'
     }),
     query: {
       get() {
@@ -159,8 +160,7 @@ export default {
         resultFilters.resultFilter = '';
       } else {
         try {
-          const queryBuilder = QueryBuilder(this.schema,
-            query.expressions, queryMeta, query.onlyExpressionsFilter);
+          const queryBuilder = QueryBuilder(this.schema, query.expressions, queryMeta, query.onlyExpressionsFilter);
           resultFilters = queryBuilder.compileQuery();
           this.error = queryBuilder.getError();
           this.filterValid = !this.error;

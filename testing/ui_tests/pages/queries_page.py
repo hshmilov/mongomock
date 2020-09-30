@@ -28,6 +28,9 @@ class QueriesPage(EntitiesPage):
     SELECT_VIEW_ENTITY_CSS = '.x-select-symbol .x-select-trigger'
     SELECT_QUERY_NAME_CSS = '.query-name .x-select-trigger'
     SELECT_VIEW_NAME_CSS = '.view-name .x-select-trigger'
+    SAVED_QUERY_SAFEGUARD_CSS = '.v-card__text'
+    SINGLE_SAVED_QUERY_SAFEGUARD = 'This saved query is also referenced by another saved query.'
+    MULTIPLE_SAVED_QUERY_SAFEGUARD = 'At least one of these saved queries is referenced by another saved query.'
 
     @property
     def url(self):
@@ -73,11 +76,33 @@ class QueriesPage(EntitiesPage):
         row = self.find_query_row_by_name(query_name)
         row.find_element_by_css_selector(self.CHECKBOX_CSS).click()
 
+    def check_queries_by_name(self, names):
+        for name in names:
+            row = self.find_query_row_by_name(name)
+            row.find_element_by_css_selector(self.CHECKBOX_CSS).click()
+
     def remove_selected_queries(self, confirm=False):
         if confirm:
             self.remove_selected_with_safeguard(self.SAFEGUARD_REMOVE_BUTTON_SINGLE, self.SAFEGUARD_REMOVE_BUTTON_MULTI)
         else:
             self.remove_selected_with_safeguard()
+
+    def click_delete_button(self):
+        self.click_button(self.DELETE_BUTTON)
+        # Opening animation
+        time.sleep(0.5)
+
+    def remove_single_saved_query_with_safeguard(self):
+        self.click_delete_button()
+        text = self.driver.find_element_by_css_selector(self.SAVED_QUERY_SAFEGUARD_CSS).get_attribute('innerText')
+        assert self.SINGLE_SAVED_QUERY_SAFEGUARD in text
+        self.safeguard_click_confirm(self.SAFEGUARD_REMOVE_BUTTON_SINGLE)
+
+    def remove_multiple_saved_query_with_safeguard(self):
+        self.click_delete_button()
+        text = self.driver.find_element_by_css_selector(self.SAVED_QUERY_SAFEGUARD_CSS).get_attribute('innerText')
+        assert self.MULTIPLE_SAVED_QUERY_SAFEGUARD in text
+        self.safeguard_click_confirm(self.SAFEGUARD_REMOVE_BUTTON_MULTI)
 
     def enforce_selected_query(self):
         self.wait_for_save_query_panel()

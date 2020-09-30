@@ -118,7 +118,7 @@ class ActionTypeAlert(ActionTypeBase, ABC):
         :return: A mongo query object valid for the entities collection
         """
         if self.trigger_view_config.get('query'):
-            return parse_filter(self.trigger_view_config['query']['filter'])
+            return parse_filter(self.trigger_view_config['query']['filter'], entity=self._entity_type)
         return self._create_query(self._internal_axon_ids)
 
     def _generate_query_link(self):

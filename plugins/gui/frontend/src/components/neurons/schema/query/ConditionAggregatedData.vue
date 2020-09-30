@@ -63,8 +63,16 @@ export default {
   },
   computed: {
     ...mapState({
+      selectedView(state) {
+        return state[this.module].selectedView;
+      },
       savedViews(state) {
-        return state[this.module].views.saved.content.data;
+        const { uuid } = this.selectedView || {};
+        let invalidReferences = [];
+        if (!this.readOnly && uuid) {
+          invalidReferences = _get(state, `${this.module}.view.validReferences.${uuid}`, []);
+        }
+        return state[this.module].views.saved.content.data.filter((item) => !invalidReferences.includes(item.uuid));
       },
     }),
     ...mapGetters({
@@ -93,7 +101,7 @@ export default {
           enum: this.savedViews.reduce((filtered, view) => {
             if (view && !view.private) {
               filtered.push({
-                name: _get(view, 'view.query.filter', ''),
+                name: view ? view.uuid : '',
                 title: view ? view.name : '',
               });
             }

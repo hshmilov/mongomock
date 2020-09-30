@@ -40,6 +40,7 @@ from axonius.utils.dict_utils import is_filter_in_value, make_hash
 from axonius.utils import serial_csv
 from axonius.plugin_exceptions import SessionInvalid
 
+
 # pylint: disable=keyword-arg-before-vararg
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -255,7 +256,14 @@ def filtered_entities():
                 content = self.get_request_data_as_object() if request.method == 'POST' else request.args
                 filter_expr = content.get('filter')
                 history_date = content.get('history')
-                filter_obj = parse_filter(filter_expr, history_date)
+
+                path_parts = request.path.strip('/').split('/')
+                if 'devices' in path_parts:
+                    entity_type = EntityType.Devices
+                elif 'users' in path_parts:
+                    entity_type = EntityType.Users
+
+                filter_obj = parse_filter(filter_expr, history_date, entity_type)
             except Exception as e:
                 logger.warning(f'Failed in mongo filter on {func} on \'{filter_expr}\'', exc_info=True)
                 return return_error(f'Could not create mongo filter. Details: {e}'

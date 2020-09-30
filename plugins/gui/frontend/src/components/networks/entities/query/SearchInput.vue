@@ -106,7 +106,7 @@
 </template>
 
 <script>
-import { mapState, mapMutations, mapGetters } from 'vuex';
+import { mapState, mapMutations, mapGetters, mapActions } from 'vuex';
 import _debounce from 'lodash/debounce';
 import _get from 'lodash/get';
 import _find from 'lodash/find';
@@ -123,6 +123,7 @@ import { EXACT_SEARCH, GET_SYSTEM_COLUMNS } from '@store/getters';
 import { mdiClose } from '@mdi/js';
 import { defaultViewForReset, entities } from '@constants/entities';
 import viewsMixin from '../../../../mixins/views';
+import { FETCH_QUERY_INVALID_REFERENCES } from '@store/actions';
 
 export default {
   name: 'XQuerySearchInput',
@@ -311,6 +312,9 @@ export default {
     ...mapMutations({
       updateView: UPDATE_DATA_VIEW,
     }),
+    ...mapActions({
+      fetchInvalidReferences: FETCH_QUERY_INVALID_REFERENCES,
+    }),
     removeSearchTemplate() {
       const resetView = defaultViewForReset(this.module, this.userFieldsGroups.default);
       this.updateView(resetView);
@@ -328,7 +332,7 @@ export default {
         }
       }
     },
-    selectQuery({ view, uuid }) {
+    async selectQuery({ view, uuid }) {
       /* Load given view by settings current filter and expressions to it */
       let userDefinedFields = false;
       const viewToUpdateSearchTemplate = _get(view, 'query.meta.searchTemplate', false);
@@ -340,6 +344,11 @@ export default {
         }
         this.searchValue = '';
       }
+
+      await this.fetchInvalidReferences({
+        module: this.module,
+        uuid,
+      });
 
       this.updateView({
         module: this.module,

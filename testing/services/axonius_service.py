@@ -10,7 +10,8 @@ from multiprocessing.pool import ThreadPool
 
 import pytest
 
-from axonius.consts.gui_consts import GUI_CONFIG_NAME
+from axonius.consts.gui_consts import GUI_CONFIG_NAME, DEVICES_DIRECT_REFERENCES_COLLECTION, \
+    DEVICES_INDIRECT_REFERENCES_COLLECTION, USERS_DIRECT_REFERENCES_COLLECTION, USERS_INDIRECT_REFERENCES_COLLECTION
 from axonius.utils.debug import redprint
 from axonius.utils.json import from_json
 from conf_tools import TUNNELED_ADAPTERS
@@ -18,7 +19,8 @@ from scripts.instances.instances_modes import get_instance_mode, InstancesModes
 from scripts.instances.network_utils import (get_encryption_key,
                                              restore_master_connection, get_weave_subnet_ip_range,
                                              get_docker_subnet_ip_range, DOCKER_BRIDGE_INTERFACE_NAME)
-from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, GUI_SYSTEM_CONFIG_COLLECTION)
+from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, GUI_SYSTEM_CONFIG_COLLECTION,
+                                          USER_VIEWS, DEVICE_VIEWS)
 from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           NODE_MARKER_PATH,
@@ -97,6 +99,21 @@ class AxoniusService:
         # No instance control on windows
         if 'linux' in sys.platform.lower():
             self.axonius_services.append(self.instance_control)
+
+        self.entity_views = {
+            EntityType.Devices: self.db.get_collection(self.gui.plugin_name, DEVICE_VIEWS),
+            EntityType.Users: self.db.get_collection(self.gui.plugin_name, USER_VIEWS)
+        }
+
+        self.entity_views_direct_references = {
+            EntityType.Devices: self.db.get_collection(self.gui.plugin_name, DEVICES_DIRECT_REFERENCES_COLLECTION),
+            EntityType.Users: self.db.get_collection(self.gui.plugin_name, USERS_DIRECT_REFERENCES_COLLECTION)
+        }
+
+        self.entity_views_indirect_references = {
+            EntityType.Devices: self.db.get_collection(self.gui.plugin_name, DEVICES_INDIRECT_REFERENCES_COLLECTION),
+            EntityType.Users: self.db.get_collection(self.gui.plugin_name, USERS_INDIRECT_REFERENCES_COLLECTION)
+        }
 
     @classmethod
     def get_is_docker_network_exists(cls):
@@ -785,5 +802,12 @@ class AxoniusService:
         )
 
     def set_system_server_name(self, server_name):
-        system_settings = self.db.get_collection(self.gui.unique_name, GUI_SYSTEM_CONFIG_COLLECTION)
+        system_settings = self.db.get_collection(self.gui.plugin_name, GUI_SYSTEM_CONFIG_COLLECTION)
         system_settings.replace_one({'type': 'server'}, {'type': 'server', 'server_name': server_name}, upsert=True)
+
+    def clear_direct_references_collection(self, entity: EntityType):
+        if entity == EntityType.Devices:
+            return self.db.get_collection(self.gui.plugin_name, DEVICES_DIRECT_REFERENCES_COLLECTION).delete_many({})
+        if entity == EntityType.Users:
+            return self.db.get_collection(self.gui.plugin_name, USERS_DIRECT_REFERENCES_COLLECTION).delete_many({})
+        return None

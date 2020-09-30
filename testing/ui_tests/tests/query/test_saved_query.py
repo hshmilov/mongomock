@@ -86,9 +86,7 @@ class TestSavedQuery(TestBase):
         self.devices_page.edit_columns(remove_col_names=[self.devices_page.FIELD_HOSTNAME_TITLE])
         assert self.devices_page.FIELD_HOSTNAME_TITLE not in self.devices_page.get_columns_header_text()
         assert self.devices_page.find_query_status_text() == self.EDITED_QUERY_STATUS
-        self.devices_page.open_actions_query()
         self.devices_page.save_existing_query()
-        self.devices_page.safeguard_click_confirm(self.SAVE_QUERY_APPROVE_TEXT)
         wait_until(lambda: self.devices_page.find_query_status_text() == '')
         self.devices_page.reset_query()
         self.devices_page.wait_for_table_to_load()
@@ -326,9 +324,7 @@ class TestSavedQuery(TestBase):
         self.devices_queries_page.run_query()
         self.devices_page.wait_for_table_to_load()
         self.devices_page.fill_enter_table_search('test')
-        self.devices_page.open_actions_query()
         self.devices_page.save_existing_query()
-        self.devices_page.safeguard_click_confirm(self.SAVE_QUERY_APPROVE_TEXT)
         self._check_saved_query(self.CUSTOM_QUERY_SAVE_NAME_2, today_str, self.username, self.ADMIN_NAME)
 
     def test_saved_query_with_entity_asset(self):

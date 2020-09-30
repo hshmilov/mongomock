@@ -5,13 +5,28 @@ import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
 import { INIT_USER } from './modules/auth';
 import {
-  UPDATE_DATA, UPDATE_DATA_CONTENT, UPDATE_DATA_COUNT, UPDATE_DATA_COUNT_QUICK,
-  ADD_DATA_VIEW, CHANGE_DATA_VIEW, UPDATE_DATA_FIELDS,
-  UPDATE_DATA_LABELS, UPDATE_ADDED_DATA_LABELS, UPDATE_REMOVED_DATA_LABELS,
-  SELECT_DATA_CURRENT, UPDATE_DATA_CURRENT,
-  UPDATE_SAVED_DATA_NOTE, UPDATE_REMOVED_DATA_NOTE,
-  UPDATE_SYSTEM_CONFIG, UPDATE_SYSTEM_EXPIRED, UPDATE_DATA_HYPERLINKS, UPDATE_CUSTOM_DATA,
-  UPDATE_DATA_VIEW, UPDATE_SYSTEM_DEFAULT_COLUMNS
+  UPDATE_DATA,
+  UPDATE_DATA_CONTENT,
+  UPDATE_DATA_COUNT,
+  UPDATE_DATA_COUNT_QUICK,
+  ADD_DATA_VIEW,
+  CHANGE_DATA_VIEW,
+  UPDATE_DATA_FIELDS,
+  UPDATE_DATA_LABELS,
+  UPDATE_ADDED_DATA_LABELS,
+  UPDATE_REMOVED_DATA_LABELS,
+  SELECT_DATA_CURRENT,
+  UPDATE_DATA_CURRENT,
+  UPDATE_SAVED_DATA_NOTE,
+  UPDATE_REMOVED_DATA_NOTE,
+  UPDATE_SYSTEM_CONFIG,
+  UPDATE_SYSTEM_EXPIRED,
+  UPDATE_DATA_HYPERLINKS,
+  UPDATE_CUSTOM_DATA,
+  UPDATE_DATA_VIEW,
+  UPDATE_SYSTEM_DEFAULT_COLUMNS,
+  UPDATE_QUERY_INVALID_REFERENCES,
+  UPDATE_QUERY_ERROR,
 } from './mutations';
 
 
@@ -305,14 +320,12 @@ export const fetchDataContent = async ({ state, dispatch }, payload) => {
       type: UPDATE_DATA_CONTENT,
       payload,
     });
-  } else {
-    return await dispatch(REQUEST_API, {
-      rule: `${path}?${createContentRequest(state, payload)}`,
-      type: UPDATE_DATA_CONTENT,
-      payload,
-    });
   }
-
+  return await dispatch(REQUEST_API, {
+    rule: `${path}?${createContentRequest(state, payload)}`,
+    type: UPDATE_DATA_CONTENT,
+    payload,
+  });
 };
 
 export const downloadFile = (fileType, response, objName, objSource) => {
@@ -404,6 +417,11 @@ export const saveView = ({ dispatch, commit }, payload) => {
       data,
     }).then(() => {
       commit(CHANGE_DATA_VIEW, payload);
+    }).catch((error) => {
+      const errorMessage = _get(error, 'response.data.message', '');
+      commit(UPDATE_QUERY_ERROR, {
+        module, error: errorMessage,
+      });
     });
   }
   return dispatch(REQUEST_API, {
@@ -703,46 +721,36 @@ export const getEnvironmentName = ({ dispatch }) => dispatch(REQUEST_API, {
 });
 
 export const GET_TUNNEL_STATUS = 'GET_TUNNEL_STATUS';
-export const getTunnelStatus = ({ dispatch }) => {
-    return dispatch(REQUEST_API, {
-    rule: 'tunnel/get_status',
-    method: 'GET',
-  });
-}
+export const getTunnelStatus = ({ dispatch }) => dispatch(REQUEST_API, {
+  rule: 'tunnel/get_status',
+  method: 'GET',
+});
 
 export const GET_TUNNEL_EMAILS_LIST = 'GET_TUNNEL_EMAILS_LIST';
-export const getTunnelEmailsList = ({ dispatch }) => {
-    return dispatch(REQUEST_API, {
-    rule: 'tunnel/emails_list',
-    method: 'GET',
-  });
-}
+export const getTunnelEmailsList = ({ dispatch }) => dispatch(REQUEST_API, {
+  rule: 'tunnel/emails_list',
+  method: 'GET',
+});
 
 export const SAVE_TUNNEL_EMAILS_LIST = 'SAVE_TUNNEL_EMAILS_LIST';
-export const saveTunnelEmailsList = ({ state, dispatch }, payload) => {
-  return dispatch(REQUEST_API, {
-    rule: `tunnel/emails_list`,
-    method: 'POST',
-    data: payload,
-  });
-};
+export const saveTunnelEmailsList = ({ state, dispatch }, payload) => dispatch(REQUEST_API, {
+  rule: 'tunnel/emails_list',
+  method: 'POST',
+  data: payload,
+});
 
 export const GET_TUNNEL_PROXY_SETTINGS = 'GET_TUNNEL_PROXY_SETTINGS';
-export const getTunnelProxySettings = ({ dispatch }) => {
-    return dispatch(REQUEST_API, {
-    rule: 'tunnel/proxy_settings',
-    method: 'GET',
-  });
-}
+export const getTunnelProxySettings = ({ dispatch }) => dispatch(REQUEST_API, {
+  rule: 'tunnel/proxy_settings',
+  method: 'GET',
+});
 
 export const SAVE_TUNNEL_PROXY_SETTINGS = 'SAVE_TUNNEL_PROXY_SETTINGS';
-export const saveTunnelProxySettings = ({ state, dispatch }, payload) => {
-  return dispatch(REQUEST_API, {
-    rule: `tunnel/proxy_settings`,
-    method: 'POST',
-    data: payload,
-  });
-};
+export const saveTunnelProxySettings = ({ state, dispatch }, payload) => dispatch(REQUEST_API, {
+  rule: 'tunnel/proxy_settings',
+  method: 'POST',
+  data: payload,
+});
 
 export const SAVE_SYSTEM_DEFAULT_COLUMNS = 'SAVE_SYSTEM_DEFAULT_COLUMNS';
 export const saveSystemDefaultColumns = ({ dispatch, commit }, payload) => {
@@ -759,5 +767,25 @@ export const saveSystemDefaultColumns = ({ dispatch, commit }, payload) => {
     data,
   }).then(() => {
     commit(UPDATE_SYSTEM_DEFAULT_COLUMNS, payload);
+  });
+};
+
+export const FETCH_QUERY_INVALID_REFERENCES = 'FETCH_QUERY_INVALID_REFERENCES';
+export const fetchInvalidReferences = ({ state, dispatch, commit }, payload) => {
+  if (!getModule(state, payload)) return;
+
+  const rule = `${payload.module}/views/references/${payload.uuid}`;
+  return dispatch(REQUEST_API, {
+    rule,
+  }).then((res) => {
+    let references = [];
+    if (res && res.status === 200) {
+      references = res.data;
+    }
+    commit(UPDATE_QUERY_INVALID_REFERENCES, {
+      module: payload.module,
+      uuid: payload.uuid,
+      validReferences: references,
+    });
   });
 };

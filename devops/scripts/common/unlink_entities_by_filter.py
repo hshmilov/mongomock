@@ -6,6 +6,7 @@ import funcy
 
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
 from axonius.utils.axonius_query_language import parse_filter
+from axonius.entities import EntityType
 from testing.services.plugins.gui_service import GuiService
 
 ENTITIES_TO_UNLINK_CHUNKS = 15
@@ -22,6 +23,15 @@ def main():
         print('Entity must be devices/users')
         return -1
 
+    if entity == 'users':
+        entity_type = EntityType.Users
+        db = gui.db.get_collection(AGGREGATOR_PLUGIN_NAME, 'users_db')
+        unlink = gui.unlink_users
+    elif entity == 'devices':
+        entity_type = EntityType.Devices
+        db = gui.db.get_collection(AGGREGATOR_PLUGIN_NAME, 'devices_db')
+        unlink = gui.unlink_devices
+
     password = getpass(f'Enter password for local user {username!r}: ')
 
     gui = GuiService()
@@ -32,19 +42,9 @@ def main():
     aql = input('Enter AQL:')
 
     try:
-        query = parse_filter(aql)
+        query = parse_filter(aql, entity=entity_type)
     except Exception:
         print(f'Invalid query, please try again: {aql!r}')
-        return -1
-
-    if entity == 'devices':
-        db = gui.db.get_collection(AGGREGATOR_PLUGIN_NAME, 'devices_db')
-        unlink = gui.unlink_devices
-    elif entity == 'users':
-        db = gui.db.get_collection(AGGREGATOR_PLUGIN_NAME, 'users_db')
-        unlink = gui.unlink_users
-    else:
-        print(f'Error: entity must be devices or users')
         return -1
 
     print(f'Calculating number of entities by query "{aql}"..')

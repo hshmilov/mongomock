@@ -105,7 +105,7 @@ def fetch_chart_compare(chart_view: ChartViews, views: List, sort,
         if for_date:
             data_item['accurate_for_datetime'] = for_date
         entity_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
-        query_filter = [parse_filter(view_dict['view']['query']['filter'], for_date)]
+        query_filter = [parse_filter(view_dict['view']['query']['filter'], for_date, entity)]
         # if we have a date and we don't have an historical collection, count using filter on all historical_col
         if for_date and is_date_filter_required:
             query_filter.append({'accurate_for_datetime': for_date})
@@ -163,7 +163,7 @@ def fetch_chart_intersect(
             return None
         base_view = base_from_db['view']
         base_name = base_from_db.get('name', '')
-        base_queries = [parse_filter(base_view['query']['filter'], for_date)]
+        base_queries = [parse_filter(base_view['query']['filter'], for_date, entity)]
 
     # If we have a date and this isn't an historical collection add a filter
     if for_date and is_date_filter_required:
@@ -191,7 +191,7 @@ def fetch_chart_intersect(
     child1_view = child1_from_db['view']
     child1_name = child1_from_db.get('name', '')
     child1_filter = child1_view['query']['filter']
-    child1_query = parse_filter(child1_filter, for_date)
+    child1_query = parse_filter(child1_filter, for_date, entity)
     base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
     child2_filter = ''
     if len(intersecting) == 1:
@@ -220,7 +220,7 @@ def fetch_chart_intersect(
         child2_view = child2_from_db['view']
         child2_name = child2_from_db.get('name', '')
         child2_filter = child2_view['query']['filter']
-        child2_query = parse_filter(child2_filter, for_date)
+        child2_query = parse_filter(child2_filter, for_date, entity)
 
         # Child1 + Parent - Intersection
         child1_view['query']['filter'] = f'{base_filter}({child1_filter}) and not ({child2_filter})'
@@ -340,7 +340,7 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
         base_view = find_view_config_by_id(entity, view)
         if not base_view or not base_view.get('query'):
             return None, None
-        base_queries.append(parse_filter(base_view['query']['filter'], for_date))
+        base_queries.append(parse_filter(base_view['query']['filter'], for_date, entity))
     data_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
     if for_date and is_date_filter_required:
         base_queries.append({'accurate_for_datetime': for_date})
@@ -845,7 +845,7 @@ def _query_chart_abstract_results(field: dict, entity: EntityType, view_from_db,
             return None, None
         base_query = {
             '$and': [
-                parse_filter(base_view['query']['filter'], for_date),
+                parse_filter(base_view['query']['filter'], for_date, entity),
                 base_query
             ]
         }
@@ -1065,7 +1065,7 @@ def _fetch_timeline_points(entity_type: EntityType, match_filter: str, date_rang
         for historical_group in historical_in_range:
             group_date = historical_group['_id']
             collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(group_date, entity_type)
-            base_filter = parse_filter(match_filter, group_date)
+            base_filter = parse_filter(match_filter, group_date, entity_type)
             if is_date_filter_required:
                 if is_where_count_query(base_filter) or is_where_count_query(group_date):
                     historical_counts[group_date] = collection.count(
@@ -1199,7 +1199,7 @@ def fetch_chart_matrix(
         else:
             base_query_name = f'All {entity.value}'
 
-        base_queries = [parse_filter(base_view['query']['filter'], for_date)]
+        base_queries = [parse_filter(base_view['query']['filter'], for_date, entity)]
         if for_date and is_date_filter_required:
             base_queries.append({'accurate_for_datetime': for_date})
         base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
@@ -1213,7 +1213,7 @@ def fetch_chart_matrix(
             if not child_view or not child_view.get('query'):
                 continue
             child_filter = child_view['query']['filter']
-            child_query = parse_filter(child_filter, for_date)
+            child_query = parse_filter(child_filter, for_date, entity)
             child_view['query']['filter'] = f'{base_filter}({child_filter})'
             child_view['query']['expressions'] = []
             numeric_value = data_collection.count_documents({
@@ -1281,7 +1281,7 @@ def fetch_chart_adapter_segment(chart_view: ChartViews, entity: EntityType, sele
         view_query_config = view.get('view')
         if not view_query_config or not view_query_config.get('query'):
             return None
-        base_queries = [parse_filter(view_query_config['query']['filter'], for_date)]
+        base_queries = [parse_filter(view_query_config['query']['filter'], for_date, entity)]
 
     # If we have a date and this isn't an historical collection add a filter
     if for_date and is_date_filter_required:

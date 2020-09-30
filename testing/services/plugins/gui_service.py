@@ -5,7 +5,7 @@ import re
 import secrets
 from collections import defaultdict
 from datetime import datetime
-from typing import List
+from typing import List, Tuple
 from funcy import chunks
 from bson import ObjectId
 import requests
@@ -33,7 +33,11 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           LIBS_PATH,
                                           AXONIUS_USER_NAME,
                                           ADMIN_USER_NAME,
-                                          CONFIGURABLE_CONFIGS_LEGACY_COLLECTION)
+                                          CONFIGURABLE_CONFIGS_LEGACY_COLLECTION,
+                                          DEVICE_VIEWS_INDIRECT_REFERENCES,
+                                          DEVICE_VIEWS_DIRECT_REFERENCES,
+                                          USER_VIEWS_DIRECT_REFERENCES,
+                                          USER_VIEWS_INDIRECT_REFERENCES)
 from axonius.db_migrations import db_migration
 from axonius.entities import EntityType
 from axonius.utils.gui_helpers import (PermissionLevel, PermissionType,
@@ -43,7 +47,9 @@ from axonius.utils.permissions_helper import (PermissionCategory, PermissionActi
                                               get_admin_permissions, get_permissions_structure,
                                               get_viewer_permissions, get_restricted_permissions,
                                               serialize_db_permissions)
+from axonius.saved_queries.saved_queries_migration import handle_existing_saved_queries
 from gui.logic.filter_utils import filter_archived
+from gui.logic.saved_queries import update_direct_references, generate_indirect_references
 from services.plugin_service import PluginService
 from services.system_service import SystemService
 from services.updatable_service import UpdatablePluginMixin
@@ -1468,6 +1474,40 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
 
         if len(bulk_updates) > 0:
             roles_collection.bulk_write(bulk_updates)
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_47(self):
+        print('Upgrade to schema 47 - saved queries references')
+
+        user_view = self.db.get_collection('gui', USER_VIEWS)
+        device_view = self.db.get_collection('gui', DEVICE_VIEWS)
+
+        device_view_direct = self.db.get_collection('gui', DEVICE_VIEWS_DIRECT_REFERENCES)
+        device_view_indirect = self.db.get_collection('gui', DEVICE_VIEWS_INDIRECT_REFERENCES)
+        user_view_direct = self.db.get_collection('gui', USER_VIEWS_DIRECT_REFERENCES)
+        user_view_indirect = self.db.get_collection('gui', USER_VIEWS_INDIRECT_REFERENCES)
+
+        devices_references: List[Tuple[str, List[str]]] = handle_existing_saved_queries(device_view)
+        users_references: List[Tuple[str, List[str]]] = handle_existing_saved_queries(user_view)
+
+        print(devices_references)
+        print(users_references)
+        if devices_references:
+            self.db.client[self.plugin_name].drop_collection(DEVICE_VIEWS_DIRECT_REFERENCES)
+            self.db.client[self.plugin_name].drop_collection(DEVICE_VIEWS_INDIRECT_REFERENCES)
+            for origin_id, references in devices_references:
+                print(f'updating direct ref for: {origin_id} and {references}')
+                update_direct_references(origin_id, references, [], device_view_direct)
+            generate_indirect_references(EntityType.Devices, device_view_direct, device_view_indirect,
+                                         drop_collection=False)
+
+        if users_references:
+            self.db.client[self.plugin_name].drop_collection(USER_VIEWS_DIRECT_REFERENCES)
+            self.db.client[self.plugin_name].drop_collection(USER_VIEWS_INDIRECT_REFERENCES)
+            for origin_id, references in users_references:
+                update_direct_references(origin_id, references, [], user_view_direct)
+            generate_indirect_references(EntityType.Users, user_view_direct, user_view_indirect,
+                                         drop_collection=False)
 
     def _update_default_locked_actions_legacy(self, new_actions):
         """
