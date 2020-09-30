@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timedelta
 
+from flask import current_app, app as flask_app
 from flask.sessions import SessionInterface, SessionMixin
 from werkzeug.datastructures import CallbackDict
 
@@ -17,12 +18,47 @@ class DBSession(CallbackDict, SessionMixin):
         self.new = new
         self.modified = False
 
+    def destroy(self):
+        for k in list(self.keys()):
+            del self[k]
+
+        if getattr(self, 'sid', None):
+            try:
+                current_app.kvsession_store.pop(self.sid)
+            except KeyError:
+                pass
+            self.sid = None
+
+        self.modified = False
+        self.new = False
+
+    @staticmethod
+    def __generate_sid():
+        return uuid.uuid4().hex
+
+    def regenerate(self):
+        self.modified = True
+
+        if getattr(self, 'sid', None):
+            # delete old session
+            try:
+                current_app.kvsession_store.pop(self.sid)
+            except KeyError:
+                pass
+
+            # remove sid_s, set modified
+            self.sid = self.__generate_sid()
+            self.modified = True
+
+            # save_session() will take care of saving the session now
+
 
 class CachedSessionInterface(SessionInterface):
     session_class = DBSession
 
     def __init__(self, all_sessions):
         self.__data = all_sessions
+        flask_app.kvsession_store = all_sessions
 
     def open_session(self, app, request):
         sid = request.cookies.get(app.session_cookie_name)

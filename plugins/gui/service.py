@@ -235,6 +235,7 @@ class GuiService(Triggerable,
         self.wsgi_app.config['SESSION_COOKIE_SECURE'] = True
         self.wsgi_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
         self.wsgi_app.session_interface = CachedSessionInterface(self.__all_sessions)
+        self.wsgi_app.kvsession_store = self.__all_sessions
 
         self._users_collection = self._get_collection(USERS_COLLECTION)
         self._roles_collection = self._get_collection(ROLES_COLLECTION)
