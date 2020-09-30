@@ -1,9 +1,9 @@
 import logging
 
 from axonius.utils.dynamic_fields import put_dynamic_field
-from axonius.utils.parsing import format_ip, format_ip_raw, normalize_var_name
+from axonius.utils.parsing import format_ip, format_ip_raw, normalize_var_name, parse_bool_from_raw, float_or_none
 
-from axonius.fields import Field, JsonStringFormat
+from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
@@ -22,13 +22,20 @@ class NetbrainAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         netbrain_hostname = Field(str, 'Netbrain Name')
         mgmt_ip = Field(str, 'Management IP', converter=format_ip, json_format=JsonStringFormat.ip)
-        mgmt_ip_raw = Field(str, converter=format_ip_raw, hidden=True)
+        mgmt_ip_raw = ListField(str, converter=format_ip_raw, hidden=True)
         mgmt_if = Field(str, 'Management Interface')
         oid = Field(str, 'SNMP System OID')
         switch_iface = Field(str, 'Connected Switch Interface',
                              description='Interface of the device that the endsystem connected to.')
         switch_host = Field(str, 'Connected Switch Hostname',
                             description='Hostname of the device that the endsystem connected to.')
+        site = Field(str, 'Site')
+        has_bgp_conf = Field(bool, 'Has BGP Config')
+        has_ospf_cof = Field(bool, 'Has OSPF Config')
+        has_eigrp_conf = Field(bool, 'Has EIGRP Config')
+        has_isis_conf = Field(bool, 'Has ISIS Config')
+        has_multicast_conf = Field(bool, 'Has Multicast Config')
+        driver_name = Field(str, 'Driver Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -156,11 +163,21 @@ class NetbrainAdapter(AdapterBase):
             'type': 'array'
         }
 
-    # pylint: disable=too-many-statements
+    @staticmethod
+    def _get_device_id(device_raw):
+        if device_raw.get('id'):
+            return device_raw.get('id')
+        name = device_raw.get('name')
+        serial = device_raw.get('sn')
+        if name and serial:
+            return f'{name}_{serial}'
+        return None
+
+    # pylint: disable=too-many-statements, too-many-branches
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
-            device_id = device_raw.get('id')
+            device_id = self._get_device_id(device_raw)
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
@@ -183,29 +200,59 @@ class NetbrainAdapter(AdapterBase):
             device.description = device_raw.get('deviceTypeName')
             # set first and last seen if possible
             first_seen = parse_date(device_raw.get('firstDiscoverTime'))
+            if not first_seen:
+                try:
+                    first_seen = parse_date(device_raw.get('fDiscoveryTime'))  # fixed
+                except Exception:
+                    logger.debug(f'Failed to parse date.', exc_info=True)
+
             last_seen = parse_date(device_raw.get('lastDiscoverTime'))
-            device.first_seen = parse_date(first_seen)
-            device.last_seen = parse_date(last_seen)
+            if not last_seen:
+                try:
+                    last_seen = parse_date(device_raw.get('lDiscoveryTime'))  # fixed
+                except Exception:
+                    logger.debug(f'Failed to parse date.', exc_info=True)
+
+            device.first_seen = first_seen
+            device.last_seen = last_seen
             # add ip
-            try:
-                device.add_ips_and_macs(ips=device_raw.get('mgmtIP'))
-                device.mgmt_ip = device_raw.get('mgmtIP')
-                device.mgmt_ip_raw = device_raw.get('mgmtIP')
-            except Exception as e:
-                message = f'No IP for {device_raw}'
-                logger.exception(message)
-                # Silence exception
+            mgmt_ip = device_raw.get('mgmtIP')
+            if mgmt_ip and isinstance(mgmt_ip, str):
+                mgmt_ip = [mgmt_ip]
+            # Should only be only mgmt ip, but use a list to be safe
+            if mgmt_ip and isinstance(mgmt_ip, list):
+                try:
+                    device.add_nic(ips=mgmt_ip,
+                                   name=device_raw.get('mgmtIntf'))
+                    device.mgmt_ip = mgmt_ip[0]  # Should be only one IP
+                    device.mgmt_ip_raw = mgmt_ip
+                except Exception:
+                    message = f'No IP for {device_raw}'
+                    logger.exception(message)
+                    # Silence exception
             device.device_manufacturer = device_raw.get('vendor')
             device.device_model = device_raw.get('model')
-            try:
+            mem = float_or_none(device_raw.get('mem'))
+            if mem:
                 gb = 1024 * 1024 * 1024  # from bytes
-                device.total_physical_memory = float(device_raw.get('mem', 0)) / gb or None
-            except Exception as e:
-                logger.warning(f'Failed to parse device physical memory for {hostname}')
-                # continue to other stuff
+                try:
+                    device.total_physical_memory = mem / gb or None  # do not set total_physical_memory to 0
+                except Exception:
+                    logger.warning(f'Failed to parse device physical memory for {device_id}')
+            # continue to other stuff
             device.device_serial = device_raw.get('sn')
+
             # specific stuff
+
+            device.mgmt_if = device_raw.get('mgmtIntf')
             device.oid = device_raw.get('oid')
+            device.site = device_raw.get('site')
+            device.has_bgp_conf = parse_bool_from_raw(device_raw.get('hasBGPConfig'))
+            device.has_ospf_cof = parse_bool_from_raw(device_raw.get('hasOSPFConfig'))
+            device.has_eigrp_conf = parse_bool_from_raw(device_raw.get('hasEIGRPConfig'))
+            device.has_isis_conf = parse_bool_from_raw(device_raw.get('hasISISConfig'))
+            device.has_multicast_conf = parse_bool_from_raw(device_raw.get('hasMulticastConfig'))
+            device.driver_name = device_raw.get('driverName')
             # connected switch stuff
             if isinstance(device_raw.get('x_connected_switch'), dict):
                 conn_switch = device_raw.get('x_connected_switch')
