@@ -790,7 +790,7 @@
   },
   "twistlock_adapter": {
     "title": "Twistlock",
-    "link": "",
+    "link": "https://docs.axonius.com/docs/twistlock",
     "description": "Twistlock provides container and cloud native cybersecurity for teams using Docker, Kubernetes, serverless, and other cloud native technologies."
   },
   "hp_ilo_adapter": {
@@ -1186,7 +1186,7 @@
   "uptycs_adapter": {
     "title": "Uptycs",
     "link": "https://docs.axonius.com/docs/uptycs",
-    "description": "Uptycs is an osquery-powered security analytics platform pairs universal agent with an analytics platform for fleet visibility, intrusion detection, incident investigation, vulnerability management & compliance across Linux, macOS, Windows, containers, and cloud workloads."
+    "description": "Uptycs is an osquery-powered security analytics platform pairs a universal agent with analytics for fleet visibility, intrusion detection, incident investigation, vulnerability management & compliance for Linux, macOS, Windows, containers, and cloud workloads."
   },
   "tenable_io_adapter": {
     "title": "Tenable.io",
@@ -1330,7 +1330,7 @@
   },
   "openstack_adapter": {
     "title": "OpenStack",
-    "link": "",
+    "link": "https://docs.axonius.com/docs//openstack",
     "description": "OpenStack is an open source software solution for creating private and public clouds."
   },
   "tanium_adapter": {
@@ -1474,7 +1474,7 @@
   },
   "limacharlie_adapter": {
     "title": "LimaCharlie",
-    "description": "LimaCharlie provides endpoint-driven information security tools and to run an MSSP or SOC as well as providing API’s that allow users to build and monetize their own products.",
+    "description": "LimaCharlie provides endpoint-driven information security tools to run an MSSP or SOC,  as well as APIs that allow users to build and monetize their own products.",
     "link": "https://docs.axonius.com/docs/limacharlie"
   },
   "next_think_adapter": {
@@ -1510,7 +1510,7 @@
   "thycotic_adapter": {
     "title": "Thycotic Secret Server",
     "link": "https://docs.axonius.com/docs/thycotic-secret-server",
-    "description": "Thycotic Secret Server is a Privileged Access Management (PAM) solution for protecting your priviledged accounts, available both on premise or in the cloud."
+    "description": "Thycotic Secret Server is a Privileged Access Management (PAM) solution for protecting your privileged accounts, available both on premise or in the cloud."
   },
   "hyper_v_adapter": {
     "title": "Microsoft Hyper-V",

@@ -2021,48 +2021,97 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 {
                     'name': 'last_seen_threshold_hours',
                     'title': 'Ignore devices that have not been seen by the source in the last X hours',
+                    'description': (
+                        'If supplied, all connections for the adapter will only fetch device information if that'
+                        ' device asset entity has been seen by the adapter connection (Last Seen field) within in the'
+                        ' last specified number of hours. If not supplied, all connections for the adapter will always'
+                        ' fetch device information. Example: if 24, only a device asset entity seen in the last 24'
+                        ' hours will be pulled into Axonius.'),
                     'type': 'number',
                 },
                 {
                     'name': 'last_fetched_threshold_hours',
                     'title': 'Delete devices that have not been returned from the source in the last X hours',
+                    'description': (
+                        'If supplied, all connections for the adapter will delete the device data fetched from the'
+                        ' source if the device asset entity has not been fetched from that adapter connection (source)'
+                        ' in the last specified number of hours. Only the information fetched from that source will be'
+                        ' deleted. If not supplied, all connections for the adapter will never delete device'
+                        ' information. Example: if 48, a device asset entity will be deleted if it has not been'
+                        ' fetched from it source in last 48 hours.'),
                     'type': 'number',
                 },
                 {
                     'name': 'user_last_seen_threshold_hours',
                     'title': 'Ignore users that have not been seen by the source in the last X hours',
+                    'description': (
+                        'If supplied, all connections for the adapter will only fetch user information if that'
+                        ' user asset entity has been seen by the adapter connection (Last Seen field) within in the'
+                        ' last specified number of hours. If not supplied, all connections for the adapter will always'
+                        ' fetch user information. Example: if 24, only a user asset entity seen in the last 24'
+                        ' hours will be pulled into Axonius.'),
                     'type': 'number',
                 },
                 {
                     'name': 'user_last_fetched_threshold_hours',
                     'title': 'Delete users that have not been returned from the source in the last X hours',
+                    'description': (
+                        'If supplied, all connections for the adapter will delete the user data fetched from the'
+                        ' source if the user asset entity has not been fetched from that adapter connection (source)'
+                        ' in the last specified number of hours. Only the information fetched from that source will be'
+                        ' deleted. If not supplied, all connections for the adapter will never delete user'
+                        ' information. Example: if 48, a user asset entity will be deleted if it has not been'
+                        ' fetched from it source in last 48 hours.'),
                     'type': 'number',
                 },
                 {
                     'name': 'minimum_time_until_next_fetch',
                     'title': 'Override the global discovery schedule for this adapter to wait X hours before fetching',
+                    'description': (
+                        'If supplied, Axonius will wait for the minimum number of hours specified before initiating'
+                        ' the next adapter discovery cycle. If not supplied, the adapter discovery cycle will be always'
+                        ' part of the global discovery. Example: if 2 and the global discovery starts every 1 hour,'
+                        ' then Axonius will pull data from the adapter every 2 hours instead of every 1 hour.'),
                     'type': 'number',
                 },
                 {
                     'name': 'connect_client_timeout',
                     'title': 'Wait for a connection to the source for up to X seconds',
+                    'description': (
+                        ' If supplied, all connections for the adapter will wait for the specified number of seconds'
+                        ' before the attempt to connect to the adapter connection is considered to be timed out.'
+                        ' If not supplied, all connections for the adapter will not have any connection'
+                        ' timeout.'),
                     'type': 'number',
                 },
                 {
                     'name': 'fetching_timeout',
                     'title': 'Wait for a response from the source for up to X seconds',
+                    'description': (
+                        'If supplied, all connections for the adapter will wait for the specified number of seconds'
+                        ' passed from the last data fetched during the discovery cycle. If not supplied, all'
+                        ' connections for the adapter will not have any timeout.'),
                     'type': 'number',
                 },
                 {
                     'name': 'last_seen_prioritized',
                     'title': 'Ignore matching assets from the source if a subsequent asset was seen by the source '
                              'before the previously fetched asset',
+                    'description': (
+                        'If enabled, all connections for the adapter will ignore older device or user data (based on'
+                        ' fetched Last Seen field) when data for a specific device or user is received from connections'
+                        ' of the same adapter type. If disabled, all connections for the adapter will not ignore any'
+                        ' device or user data, even if fetched from connections of the same adapter type.'),
                     'type': 'bool',
                 },
                 {
                     'name': 'realtime_adapter',
                     'title': 'Enable real-time adapter (Ignores all discovery cycle settings and continuously '
                              'repeats fetches from the source)',
+                    'description': (
+                        'If enabled, Axonius will pull information from the adapter constantly. Once Axonius completes'
+                        ' the discovery cycle for the adapter connection, it will initiate another cycle immediately.'
+                        ' If disabled, Axonius will not pull information from the adapter constantly.'),
                     'type': 'bool',
                 }
             ],
