@@ -78,7 +78,7 @@ class Reports:
 
     def _generate_and_schedule_report(self, report):
         run_and_forget(lambda: self._generate_and_save_report(report))
-        if report.get('period'):
+        if report.get('add_scheduling', False):
             self._schedule_exec_report(report)
 
     @paginated()
@@ -204,19 +204,13 @@ class Reports:
         return 'Success'
 
     def _generate_and_save_report(self, report):
-        # generate_report() renders the report html
-        generated_date = datetime.now(tz.tzlocal())
-        report_html, attachments = self.generate_report(generated_date, report)
-
         exec_report_generate_pdf_thread_id = EXEC_REPORT_GENERATE_PDF_THREAD_ID.format(report['name'])
         exec_report_generate_pdf_job = self._job_scheduler.get_job(exec_report_generate_pdf_thread_id)
-        # If job doesn't exist generate it
         if exec_report_generate_pdf_job is None:
-            self._job_scheduler.add_job(func=self._convert_to_pdf_and_save_report,
-                                        kwargs={'report': report,
-                                                'report_html': report_html,
-                                                'generated_date': generated_date,
-                                                'attachments': attachments},
+            self._job_scheduler.add_job(func=self._generate_and_save_report_job,
+                                        kwargs={
+                                            'report': report
+                                        },
                                         trigger='date',
                                         next_run_time=datetime.now(),
                                         name=exec_report_generate_pdf_thread_id,
@@ -226,7 +220,10 @@ class Reports:
         else:
             self._job_scheduler.reschedule_job(exec_report_generate_pdf_thread_id, next_run_time=datetime.now())
 
-    def _convert_to_pdf_and_save_report(self, report, report_html, generated_date, attachments):
+    def _generate_and_save_report_job(self, report):
+        generated_date = datetime.now(tz.tzlocal())
+        report_html, attachments = self.generate_report(generated_date, report)
+
         # Writes the report pdf to a file-like object and use seek() to point to the beginning of the stream
         name = report['name']
         try:
@@ -455,8 +452,15 @@ class Reports:
             return return_error(f'Problem testing report by email: {repr(e)}', 400)
 
     def _get_exec_report_settings(self, exec_reports_settings_collection):
-        settings_objects = exec_reports_settings_collection.find(
-            {'period': {'$exists': True}, 'mail_properties': {'$exists': True}})
+        settings_objects = exec_reports_settings_collection.find({
+            'add_scheduling': True,
+            'period': {
+                '$exists': True
+            },
+            'mail_properties': {
+                '$exists': True
+            }
+        })
         return settings_objects
 
     def _schedule_exec_report(self, exec_report_data):
