@@ -36,7 +36,7 @@ import XConditionFunctionFieldComparison from './ConditionFunctionFieldCompariso
 
 import {
   GET_DATA_SCHEMA_BY_NAME,
-  GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL,
+  GET_MODULE_SCHEMA,
 } from '../../../../store/getters';
 
 export default {
@@ -74,7 +74,7 @@ export default {
       },
     }),
     ...mapGetters({
-      getModuleSchemaWithConnectionLabel: GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL, getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME,
+      getModuleSchema: GET_MODULE_SCHEMA, getDataSchemaByName: GET_DATA_SCHEMA_BY_NAME,
     }),
     field() {
       return this.condition.field;
@@ -84,7 +84,7 @@ export default {
     },
     filteredOptions() {
       // Filter second field options according to the first field type and format
-      const tmpSchema = this.getModuleSchemaWithConnectionLabel(this.module, false, true).slice(1);
+      const tmpSchema = this.getModuleSchema(this.module, false, true).slice(1);
       const fieldType = this.getFieldSchema(this.field).type;
       const fieldFormat = this.getFieldSchema(this.field).format;
       if (fieldFormat !== undefined) {
@@ -100,7 +100,7 @@ export default {
     },
     schema() {
       // The slice is in order to filter the Aggregated (axonius) adapter...
-      const schema = this.getModuleSchemaWithConnectionLabel(this.module, false, true).slice(1);
+      const schema = this.getModuleSchema(this.module, false, true).slice(1);
       if (_isEmpty(schema)) {
         return [];
       }

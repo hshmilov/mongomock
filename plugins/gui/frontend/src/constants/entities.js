@@ -21,6 +21,16 @@ export const EntitiesEnum = {
   users: 'users',
 };
 
+// These are special fields that aren't formally defined for the schemas
+export const specialFields = {
+  devices: [
+    'saved_query', 'connection_label',
+  ],
+  users: [
+    'saved_query', 'connection_label',
+  ],
+};
+
 export const defaultFields = {
   devices: [
     'adapters', 'specific_data.data.name', 'specific_data.data.hostname', 'specific_data.data.last_seen',

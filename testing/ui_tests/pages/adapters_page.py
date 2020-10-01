@@ -499,7 +499,7 @@ class AdaptersPage(EntitiesPage):
         self.remove_server(CLIENT_DETAILS_EXTRA, JSON_ADAPTER_NAME, adapter_search_field=(FILE_NAME, 'Name'),
                            expected_left=1)
 
-    def edit_server_conn_label(self, adapter_name, connection_label):
+    def edit_server_conn_label(self, adapter_name, connection_label, save_and_fetch=True):
         self.wait_for_adapter(adapter_name)
         self.click_adapter(adapter_name)
         self.wait_for_spinner_to_end()
@@ -507,7 +507,10 @@ class AdaptersPage(EntitiesPage):
         self.click_edit_server()
         self.wait_for_element_present_by_id(element_id='connectionLabel', retries=3)
         self.fill_creds(connectionLabel=connection_label)
-        self.click_save_and_fetch()
+        if save_and_fetch:
+            self.click_save_and_fetch()
+        else:
+            self.click_save_without_fetch()
 
     def upload_csv(self, csv_file_name, csv_data, is_user_file=False, wait_for_toaster=False, save_and_fetch=True):
         self.open_add_edit_server(CSV_NAME)

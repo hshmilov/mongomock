@@ -20,7 +20,7 @@ import { mdiPencil, mdiDelete, mdiEyeOutline } from '@mdi/js';
 import './saved-query-panel.scss';
 
 import { fetchEntityTags, fetchEntitySavedQueriesNames } from '@api/saved-queries';
-import { getEntityPermissionCategory, EntitiesEnum as Entities } from '@constants/entities';
+import { getEntityPermissionCategory, EntitiesEnum as Entities, specialFields } from '@constants/entities';
 import { isEmptyExpression } from '@/logic/expression';
 
 /**
@@ -176,9 +176,7 @@ export default {
       return !this.isPredefined;
     },
     adaptersEntityFields() {
-      /* adding connection label attribute so we can handle save query with connection label   */
-      return this.configuredAdaptersFields(this.namespace,
-        ['saved_query', 'specific_data.connection_label']);
+      return this.configuredAdaptersFields(this.namespace);
     },
   },
   methods: {
@@ -229,9 +227,14 @@ export default {
          * The query is valid, but not supported in the current system.
          * The query contains fields of some non-connected adapter
          */
+
+      // Special fields should be supported as well for the query
+      const isSpecialField = (fieldName) => specialFields[this.namespace]
+        .some((field) => fieldName.endsWith(field));
+
       const isFieldNotSupported = (expression) => {
         const { field } = expression;
-        return field && !this.adaptersEntityFields.has(field);
+        return field && !isSpecialField(field) && !this.adaptersEntityFields.has(field);
       };
       return this.expressions.some(isFieldNotSupported);
     },

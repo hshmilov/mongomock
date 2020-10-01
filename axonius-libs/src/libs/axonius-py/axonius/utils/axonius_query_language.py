@@ -10,7 +10,7 @@ from bson import ObjectId
 from bson.json_util import default
 from frozendict import frozendict
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, \
-    ADAPTERS_META, SPECIFIC_DATA_CONNECTION_LABEL, \
+    ADAPTERS_META, CLIENT_USED, PLUGIN_UNIQUE_NAME, \
     SPECIFIC_DATA_CLIENT_USED, CORRELATION_REASONS, HAS_NOTES, SPECIFIC_DATA_PLUGIN_UNIQUE_NAME,\
     SAVED_QUERY_PLACEHOLDER_REGEX
 from axonius.consts.plugin_consts import PLUGIN_NAME, ADAPTERS_LIST_LENGTH
@@ -622,14 +622,21 @@ def parse_filter_cached(filter_str: str, history_date=None) -> frozendict:
     return parse_filter_uncached(filter_str, history_date)
 
 
-def translate_from_connection_labels(filter_str: str) -> str:
+def translate_connection_label_in_string(filter_str: str, match_adapter_name: str, client_labels: list, ) -> str:
+    """
+    This method finds the connection label parts in the given filter string and translates it
+    :param filter_str: The filter string to translate
+    :param match_adapter_name: Adapter name of the match filter (The chosen adapter for asset entity filter)
+    :param client_labels: List of all the client labels
+    :return:
+    """
 
     # This prevents some looping imports
-    from axonius.plugin_base import PluginBase
+    from axonius.consts.adapter_consts import CONNECTION_LABEL
 
-    query_connection_label_equal = f'({SPECIFIC_DATA_CONNECTION_LABEL} =='
-    query_connection_label_exist = f'(({SPECIFIC_DATA_CONNECTION_LABEL} == ({{"$exists":true,"$ne":""}})))'
-    query_connection_label_in = f'({SPECIFIC_DATA_CONNECTION_LABEL} in'
+    query_connection_label_equal = f'{CONNECTION_LABEL} =='
+    query_connection_label_exist = f'{CONNECTION_LABEL} == ({{"$exists":true,"$ne":""}})))'
+    query_connection_label_in = f'{CONNECTION_LABEL} in'
 
     def create_client_id_and_plugin_name_condition(client_id, plugin_unique_name) -> str:
         """
@@ -641,9 +648,11 @@ def translate_from_connection_labels(filter_str: str) -> str:
         :param plugin_unique_name: adapter unique name
         :return: transform filter string
         """
+        client_used_field = CLIENT_USED if match_adapter_name else SPECIFIC_DATA_CLIENT_USED
+        plugin_unique_name_field = PLUGIN_UNIQUE_NAME if match_adapter_name else SPECIFIC_DATA_PLUGIN_UNIQUE_NAME
 
-        return f'({SPECIFIC_DATA_CLIENT_USED} == "{client_id}" ' \
-               f'and {SPECIFIC_DATA_PLUGIN_UNIQUE_NAME} == "{plugin_unique_name}" )'
+        return f'({client_used_field} == "{client_id}" ' \
+               f'and {plugin_unique_name_field} == "{plugin_unique_name}" )'
 
     def create_or_separated_condition(label_conditions: list) -> str:
         """
@@ -657,53 +666,131 @@ def translate_from_connection_labels(filter_str: str) -> str:
             return None
         return f'({" or ".join(label_conditions)})'
 
-    def create_label_condition(label: str) -> str:
+    def create_label_condition(adapter_filter: str, label: str) -> str:
         """
         A Label can match multiple clients .
         client_info  = ( <client_id> , <plugin_unique_name> )
 
+        :param adapter_filter: The adapter name for which the connection label filter is applied
         :param label: a AQL adapter connection label
         :return: AQL filter string compatible
         """
+        # if adapter name provided, we fetch only its relevant labels, otherwise we get all labels
+        relevant_labels = [client for client in client_labels.get(label, [])
+                           if client and len(client) > 1 and client[1].startswith(adapter_filter)]
         labels_info = [create_client_id_and_plugin_name_condition(client_id, name) for (client_id, name) in
-                       client_labels.get(label, [])]
+                       relevant_labels]
         if labels_info:
             return create_or_separated_condition(labels_info)
         return f'{SPECIFIC_DATA_CLIENT_USED} == []'
 
-    client_labels = PluginBase.Instance.clients_labels()
+    def extract_adapter_name(filter_string: str):
+        """
+        Get the adapter name from the filter string.
+        For example: If the input is '(adapters_data.json_file_adapter.connection_label == "some value")',
+        The output will be 'json_file_adapter'.
+        If no adapter data exists, an empty string is returned.
+        :param filter_string: The current filter string to search from
+        :return: The adapter name for which the connection label filter is applied
+        """
+        extracted_adapter_name = ''
+        adapter_name_matcher = re.search(fr'{ADAPTERS_DATA}\.(\w+)', filter_string)
+        if adapter_name_matcher:
+            extracted_adapter_name = adapter_name_matcher.group(1)
+        return extracted_adapter_name
 
-    # transform operator exists with compound condition of all labels
+    # transform operator exists with compound condition of all labels filtered by selected adapter name (if selected)
     if query_connection_label_exist in filter_str:
-        client_labels_ids = client_labels.values()
-        client_details = [create_client_id_and_plugin_name_condition(client_id, name) for ids in client_labels_ids
-                          for client_id, name in ids]
-        all_connection_labels_condition = create_or_separated_condition(client_details)
-        if all_connection_labels_condition:
-            filter_str = filter_str.replace(query_connection_label_exist, all_connection_labels_condition)
-
-    # transform operator 'in' with new compound condition per client in OR logic
-    if query_connection_label_in in filter_str:
-        matcher = re.search(f'{SPECIFIC_DATA_CONNECTION_LABEL}' + r' in \[(.+?)\]', filter_str)
+        exists_regexp = re.escape('({"$exists":true,"$ne":""})))')
+        matcher = re.search(fr'\(\(\w+.\w+\.{CONNECTION_LABEL} == {exists_regexp}', filter_str)
         while matcher:
+            adapter_name = match_adapter_name if match_adapter_name else extract_adapter_name(matcher.group(0))
+            client_labels_ids = client_labels.values()
+            client_details = [create_client_id_and_plugin_name_condition(client_id, name) for ids in client_labels_ids
+                              for client_id, name in ids if name.startswith(adapter_name)]
+            # If no client details were found, we send empty client details to the query so no matches will be found
+            if not client_details:
+                client_details = [create_client_id_and_plugin_name_condition('', '')]
+            all_connection_labels_condition = create_or_separated_condition(client_details)
+            filter_str = filter_str.replace(matcher.group(0), all_connection_labels_condition)
+            matcher = re.search(fr'\(\(\w+.\w+\.{CONNECTION_LABEL} == {exists_regexp}', filter_str)
+
+    # # transform operator 'in' with new compound condition per client in OR logic
+    if query_connection_label_in in filter_str:
+        matcher = re.search(fr'\w+.\w+\.{CONNECTION_LABEL}' + r' in \[(.+?)\]', filter_str)
+        while matcher:
+            adapter_name = match_adapter_name if match_adapter_name else extract_adapter_name(matcher.group(0))
             filter_labels = matcher.group(1)
             labels_list = [label.strip('"') for label in filter_labels.split(',')]
-
-            label_attributes = [create_label_condition(label) for label in labels_list]
-            replace_str = create_or_separated_condition(label_attributes)
-            filter_str = filter_str.replace(matcher.group(0), replace_str)
+            label_attributes = [create_label_condition(adapter_name, label) for label in labels_list]
+            filter_str = filter_str.replace(matcher.group(0), create_or_separated_condition(label_attributes))
 
             # in case of complex conditions
-            matcher = re.search(f'{SPECIFIC_DATA_CONNECTION_LABEL}' + r' in \[(.+?)\]', filter_str)
+            matcher = re.search(fr'\w+.\w+\.{CONNECTION_LABEL}' + r' in \[(.+?)\]', filter_str)
 
     # transform operator equal with compound condition to match (client_id,plugin_unique_name) tuple
     if query_connection_label_equal in filter_str:
-        matcher = re.search(f'{SPECIFIC_DATA_CONNECTION_LABEL} == \"(.+?)\"', filter_str)
+        matcher = re.search(fr'\w+.\w+\.{CONNECTION_LABEL} == \"(.+?)\"', filter_str)
         while matcher:
-            filter_str = filter_str.replace(matcher.group(0), create_label_condition(matcher.group(1)))
-            matcher = re.search(f'{SPECIFIC_DATA_CONNECTION_LABEL} == \"(.+?)\"', filter_str)
+            adapter_name = match_adapter_name if match_adapter_name else extract_adapter_name(matcher.group(0))
+            filter_str = filter_str.replace(matcher.group(0), create_label_condition(adapter_name, matcher.group(1)))
+            matcher = re.search(fr'\w+.\w+\.{CONNECTION_LABEL} == \"(.+?)\"', filter_str)
 
     return filter_str
+
+
+def translate_from_connection_labels(filter_str: str) -> str:
+    # This prevents some looping imports
+    from axonius.plugin_base import PluginBase
+
+    def extract_adapter_name_from_match(match_string):
+        pattern = r'plugin_name == \'(.+?)\''
+        match = re.search(pattern, match_string)
+        if match:
+            return match.group(1)
+        return ''
+
+    def get_match_filter_strings(filter_string: str):
+        """
+        Returns a list of match filter string from the entire given filter string.
+        For example: If the input is 'specific_data == match([plugin_name == 'active_directory_adapter'
+        and (data.connection_label == "or ad")]) and (specific_data.data.name == regex("D", "i"))
+        and specific_data == match([plugin_name == 'json_file_adapter' and (data.hostname == "H")])'
+        The returned list would be:
+        [([plugin_name == 'active_directory_adapter' and (data.connection_label == "or ad")]),
+         ([plugin_name == 'json_file_adapter' and (data.hostname == "H")])]
+        :param filter_string: The entire filter string to search from
+        :return: List of match filter strings
+        """
+        match_filters_strings = []
+        for m in re.finditer('match', filter_string):
+            match_filter_string = '('
+            index = m.end() + 1
+            parentheses_weight = 1
+            while parentheses_weight:
+                current_character = filter_string[index]
+                match_filter_string += current_character
+                if current_character == '(':
+                    parentheses_weight += 1
+                elif current_character == ')':
+                    parentheses_weight -= 1
+                index += 1
+            match_filters_strings.append(match_filter_string)
+        return match_filters_strings
+
+    # Get all the client labels
+    client_labels = PluginBase.Instance.clients_labels()
+
+    # First of all, we need to process any connection labels that exists inside a match filter (asset entity filter)
+    match_filters = get_match_filter_strings(filter_str)
+
+    # For each match filter, we translate every connection label filter if it appears there
+    for match_filter in match_filters:
+        adapter_name = extract_adapter_name_from_match(match_filter)
+        translated_match_filter = translate_connection_label_in_string(match_filter, adapter_name, client_labels)
+        filter_str = filter_str.replace(match_filter, translated_match_filter)
+
+    return translate_connection_label_in_string(filter_str, '', client_labels)
 
 
 def parse_filter(filter_str: str, history_date=None, entity=None) -> dict:
@@ -711,8 +798,11 @@ def parse_filter(filter_str: str, history_date=None, entity=None) -> dict:
     If given filter contains the keyword NOW, meaning it needs a calculation relative to current date,
     it must be recalculated, instead of using the cached result
     """
+    # prevents looping imports
+    from axonius.consts.adapter_consts import CONNECTION_LABEL
+
     filter_str = replace_saved_queries_ids(filter_str, entity)
-    if filter_str and SPECIFIC_DATA_CONNECTION_LABEL in filter_str:
+    if filter_str and CONNECTION_LABEL in filter_str:
         return dict(parse_filter_uncached(translate_from_connection_labels(filter_str), history_date))
     if filter_str and 'NOW' in filter_str:
         return dict(parse_filter_uncached(filter_str, history_date))

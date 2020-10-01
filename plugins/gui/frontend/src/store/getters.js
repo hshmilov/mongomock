@@ -19,7 +19,23 @@ function sortPlugins(first, second) {
   return 0;
 }
 
-function getModuleSchemaFields(fieldsSpecific, fieldsGeneric, fieldsSchema, objectView, filterPlugins) {
+function getConnectionLabelSchema(fieldPrefix) {
+  return {
+    name: `${fieldPrefix}.connection_label`,
+    title: 'Adapter Connection Label',
+    type: 'string',
+    enum: [],
+    source: {
+      key: 'all-connection-labels',
+      options: {
+        'allow-custom-option': false,
+      },
+    },
+  };
+}
+
+function getModuleSchemaFields(fieldsSpecific, fieldsGeneric, fieldsSchema,
+  objectView, filterPlugins, includeConnectionLabel) {
   if (_isEmpty(fieldsGeneric) || (objectView && _isEmpty(fieldsSchema))) {
     return [];
   }
@@ -34,35 +50,24 @@ function getModuleSchemaFields(fieldsSpecific, fieldsGeneric, fieldsSchema, obje
   const aggregated = {
     name: 'axonius',
     title: 'Aggregated',
-    fields: selectFields(fieldsGeneric, objectView),
+    fields: selectFields([...(includeConnectionLabel
+      ? [getConnectionLabelSchema('specific_data')] : []), ...fieldsGeneric], objectView),
   };
   if (filterPlugins) {
     aggregated.plugins = plugins.sort(sortPlugins);
   }
   const sortedPluginFields = plugins.map((plugin) => ({
     ...plugin,
-    fields: selectFields(fieldsSpecific[plugin.name], objectView),
+    fields: selectFields([...(includeConnectionLabel
+      ? [getConnectionLabelSchema(`adapters_data.${plugin.name}`)] : []), ...fieldsSpecific[plugin.name]], objectView),
   })).sort(sortPlugins);
   return [aggregated, ...sortedPluginFields];
 }
 
-export const CONNECTION_LABEL_SCHEMA = {
-  name: 'specific_data.connection_label',
-  title: 'Adapter Connection Label',
-  type: 'string',
-  enum: [],
-  source: {
-    key: 'all-connection-labels',
-    options: {
-      'allow-custom-option': false,
-    },
-  },
-};
-
 export const GET_MODULE_SCHEMA = 'GET_MODULE_SCHEMA';
 export const getModuleSchema = (state) => (module, objectView = false, filterPlugins = false) => {
   const fields = _get(state[module], 'fields.data', {});
-  return getModuleSchemaFields(fields.specific, fields.generic, fields.schema, objectView, filterPlugins);
+  return getModuleSchemaFields(fields.specific, fields.generic, fields.schema, objectView, filterPlugins, false);
 };
 
 export const GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL = 'GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL';
@@ -71,8 +76,7 @@ export const getModuleSchemaWithConnectionLabel = (state) => (module, objectView
   const specific = _get(state[module], 'fields.data.specific', []);
   const schema = _get(state[module], 'fields.data.schema', {});
 
-  return getModuleSchemaFields(specific, [CONNECTION_LABEL_SCHEMA,
-    ...generic], schema, objectView, filterPlugins);
+  return getModuleSchemaFields(specific, generic, schema, objectView, filterPlugins, true);
 };
 
 export const GET_DATA_SCHEMA_LIST = 'GET_DATA_SCHEMA_LIST';
@@ -80,14 +84,15 @@ export const getDataSchemaList = (state) => (module) => {
   const fields = state[module].fields.data;
   if (!fields.generic || !fields.generic.length) return [];
 
-  const genericFieldsList = [CONNECTION_LABEL_SCHEMA, ...fields.generic];
+  const genericFieldsList = [getConnectionLabelSchema('specific_data'), ...fields.generic];
   if (!fields.specific) {
     return genericFieldsList;
   }
   const addFieldLogo = (logo) => (field) => ({ ...field, logo });
   return Object.entries(fields.specific)
     .reduce((fieldsList, [specificName, currentList]) => fieldsList
-      .concat(currentList.map(addFieldLogo(specificName))), genericFieldsList);
+      .concat([getConnectionLabelSchema(`adapters_data.${specificName}`), ...currentList]
+        .map(addFieldLogo(specificName))), genericFieldsList);
 };
 
 export const GET_DATA_SCHEMA_BY_NAME = 'GET_DATA_SCHEMA_BY_NAME';
@@ -156,7 +161,7 @@ export const getSavedQueryByName = (state) => (name, namespace) => {
 export const GET_FOOTER_MESSAGE = 'GET_FOOTER_MESSAGE';
 export const getFooterMessage = (state) => state.footer.message;
 
-export const configuredAdaptersFields = (state) => (entity, customFieldsToInclude = []) => {
+export const configuredAdaptersFields = (state) => (entity) => {
   // entity can be 'devices' either 'users'
   const entityState = state[entity];
 
@@ -170,7 +175,7 @@ export const configuredAdaptersFields = (state) => (entity, customFieldsToInclud
     ...currentAdaptersFields.map((field) => field.name),
   ], Object.keys(adaptersSpecificFields));
 
-  return new Set([...genericFields, ...specificFields, ...customFieldsToInclude]);
+  return new Set([...genericFields, ...specificFields]);
 };
 
 export const FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES = 'FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES';

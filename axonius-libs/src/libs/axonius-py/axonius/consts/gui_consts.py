@@ -1,6 +1,6 @@
 from enum import Enum, auto
 
-from axonius.consts.plugin_consts import AXONIUS_SETTINGS_PATH
+from axonius.consts.plugin_consts import AXONIUS_SETTINGS_PATH, PLUGIN_UNIQUE_NAME
 
 
 class ChartMetrics(Enum):
@@ -236,8 +236,9 @@ PROXY_ERROR_MESSAGE = 'Bad proxy settings or no internet connection'
 
 GETTING_STARTED_CHECKLIST_SETTING = 'getting_started_checklist'
 SPECIFIC_DATA_CONNECTION_LABEL = f'{SPECIFIC_DATA}.connection_label'
-SPECIFIC_DATA_CLIENT_USED = f'{SPECIFIC_DATA}.client_used'
-SPECIFIC_DATA_PLUGIN_UNIQUE_NAME = f'{SPECIFIC_DATA}.plugin_unique_name'
+CLIENT_USED = 'client_used'
+SPECIFIC_DATA_CLIENT_USED = f'{SPECIFIC_DATA}.{CLIENT_USED}'
+SPECIFIC_DATA_PLUGIN_UNIQUE_NAME = f'{SPECIFIC_DATA}.{PLUGIN_UNIQUE_NAME}'
 
 
 class FeatureFlagsNames:

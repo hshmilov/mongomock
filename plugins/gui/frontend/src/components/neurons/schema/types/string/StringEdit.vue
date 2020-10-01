@@ -73,7 +73,7 @@ import XSelect from '@axons/inputs/select/Select.vue';
 import {
   XTagSelect,
   XInstancesSelect,
-  XClientConnectionSelect,
+  clientConnectionSelectGenerator,
   XRolesSelect,
 } from '@axons/inputs/dynamicSelects';
 import XTimePicker from '@axons/inputs/TimePicker.vue';
@@ -89,7 +89,6 @@ export default {
     XTagSelect,
     XInstancesSelect,
     XTimePicker,
-    XClientConnectionSelect,
     XRolesSelect,
   },
   mixins: [primitiveMixin],
@@ -149,7 +148,7 @@ export default {
         case 'all-instances':
           return 'XInstancesSelect';
         case 'all-connection-labels':
-          return 'XClientConnectionSelect';
+          return clientConnectionSelectGenerator(this.schema.name);
         case 'all-roles':
           return 'XRolesSelect';
         default:

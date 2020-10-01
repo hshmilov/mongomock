@@ -1742,7 +1742,6 @@ class EntitiesPage(Page):
             self.select_query_value_without_search(value, parent=expressions[0])
         elif operator == COMP_IN:
             self.fill_query_string_value(value, parent=expressions[0])
-        self.wait_for_table_to_be_responsive()
 
     def select_query_with_adapter(self, adapter_name='JSON', attribute='',  operator='', value=''):
         expressions = self.find_expressions()

@@ -32,8 +32,7 @@ import { mapGetters } from 'vuex';
 import _keyBy from 'lodash/keyBy';
 import xSelectSymbol from '../../inputs/SelectSymbol.vue';
 import xConditionAssetEntityChild from './ConditionAssetEntityChild.vue';
-
-import { GET_MODULE_SCHEMA } from '../../../../store/getters';
+import { GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL } from '../../../../store/getters';
 
 
 export default {
@@ -57,7 +56,7 @@ export default {
   },
   computed: {
     ...mapGetters({
-      getModuleSchema: GET_MODULE_SCHEMA,
+      getModuleSchemaWithConnectionLabel: GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL,
     }),
     field: {
       get() {
@@ -73,7 +72,7 @@ export default {
       return this.condition.children;
     },
     schema() {
-      return this.getModuleSchema(this.module).slice(1);
+      return this.getModuleSchemaWithConnectionLabel(this.module).slice(1);
     },
     schemaByName() {
       return _keyBy(this.schema, (field) => field.name);

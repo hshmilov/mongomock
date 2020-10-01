@@ -8,7 +8,8 @@ from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD, ActionCategory,
 from axonius.utils.wait import wait_until
 
 from ui_tests.pages.entities_page import EntitiesPage
-from ui_tests.tests.ui_consts import CSV_ADAPTER_FILTER, AWS_ADAPTER_FILTER, COMP_DAYS, COMP_NEXT_DAYS, LOGIC_AND
+from ui_tests.tests.ui_consts import (CSV_ADAPTER_FILTER, AWS_ADAPTER_FILTER, COMP_DAYS, COMP_NEXT_DAYS, LOGIC_AND,
+                                      COMP_EQUALS, COMP_IN)
 
 
 class DevicesPage(EntitiesPage):
@@ -385,17 +386,21 @@ class DevicesPage(EntitiesPage):
         self.run_filter_query(AWS_ADAPTER_FILTER)
         return self.count_entities()
 
-    def get_device_count_by_connection_label(self, operator: str = '', value: str = '') -> int:
+    def get_device_count_by_connection_label(self, adapter: str = '', operator: str = '', value: str = '') -> int:
         self.switch_to_page()
-        self.wait_for_table_to_load()
+        self.wait_for_table_to_be_responsive()
         self.click_query_wizard()
-        self.select_query_filter(attribute=self.FIELD_ADAPTER_CONNECTION_LABEL,
-                                 operator=operator,
-                                 value=value,
-                                 clear_filter=True)
-        self.wait_for_table_to_load()
+        self.set_connection_label_query(adapter, operator, value)
         self.close_dropdown()
         return self.count_entities()
+
+    def set_connection_label_query(self, adapter: str = '', operator: str = '', value: str = ''):
+        adapter_to_select = adapter if adapter else self.VALUE_ADAPTERS_GENERAL
+        self.select_query_adapter(adapter_to_select)
+        self.select_query_filter(attribute=self.FIELD_ADAPTER_CONNECTION_LABEL,
+                                 operator=operator,
+                                 value=value)
+        self.wait_for_table_to_be_responsive()
 
     def check_connection_label_removed(self, label: str = ''):
         self.switch_to_page()
@@ -416,6 +421,18 @@ class DevicesPage(EntitiesPage):
         self.close_dropdown()
         self.clear_query_wizard()
         self.click_search()
+
+    def build_connection_label_asset_entity_query(self, adapter_name, connection_label, operator, expression_index=0):
+        expression = self.find_expressions()[expression_index]
+        self.select_context_ent(expression)
+        self.select_asset_entity_adapter(expression, adapter_name)
+        children = self.get_asset_entity_children(expression)
+        self.select_asset_entity_field(children[0], self.FIELD_ADAPTER_CONNECTION_LABEL)
+        self.select_query_comp_op(operator, children[0])
+        if operator == COMP_EQUALS:
+            self.select_query_value_without_search(connection_label, parent=children[0])
+        elif operator == COMP_IN:
+            self.fill_query_string_value(connection_label, parent=children[0])
 
     def get_host_name_aggregated_value(self):
         return [item.text for item in self.driver.find_elements_by_css_selector(self.HOST_NAME_AGGREGATED_FIELD_CSS)]

@@ -6,7 +6,7 @@ import _get from 'lodash/get';
 import _property from 'lodash/property';
 import { FETCH_DATA_LABELS } from '@store/actions';
 import { GET_ALL_ROLES } from '@store/modules/auth';
-import {FETCH_ADAPTERS_CLIENT_LABELS, LAZY_FETCH_SELECTABLE_INSTANCES} from '@store/modules/adapters';
+import { FETCH_ADAPTERS_CLIENT_LABELS, LAZY_FETCH_SELECTABLE_INSTANCES } from '@store/modules/adapters';
 import XSelect from './select/Select.vue';
 
 // eslint-disable-next-line max-len
@@ -36,6 +36,8 @@ const defaultParams = {
   // in case the data in the state object wont have name and title keys
   // a function to normalize the data can be passed here
   optionsNormalizer: (item) => item,
+  // in case the data received from the state needs to be filtered
+  optionsFilter: () => true,
   // keep the default label to missing items ( usually is 'deleted' )
   missingItemsLabel: '',
   // the name of the object parameter representing the name of the option
@@ -82,7 +84,8 @@ const withDynamicData = (params) => {
               acc.push(...newModuleItems);
               return acc;
             }, []);
-            return _uniqBy(newItems, _property(mergedParams.propertyName)).sort();
+            const filteredNewItems = newItems.filter(mergedParams.optionsFilter);
+            return _uniqBy(filteredNewItems, _property(mergedParams.propertyName)).sort();
           }
           // this variable uses 2 states
           // 1: false for no data and this signal fetch data
@@ -172,12 +175,19 @@ export const XInstancesSelect = withDynamicData({
   propertyName: 'node_name',
 });
 
-export const XClientConnectionSelect = withDynamicData({
+export const clientConnectionSelectGenerator = (schemaName) => withDynamicData({
   id: 'connectionLabelSelect',
   action: FETCH_ADAPTERS_CLIENT_LABELS,
   modules: [{ name: 'adapters', dataPath: '' }],
   moduleAttributeName: 'connectionLabels',
-  optionsNormalizer: (item) => ({ name: item.label, title: item.label }),
+  optionsNormalizer: (item) => (
+    {
+      name: item.label,
+      title: item.label,
+      plugin_name: item.plugin_name,
+    }),
+  optionsFilter: (item) => (schemaName.startsWith('adapters_data')
+        && item.plugin_name === schemaName.split('.')[1]) || schemaName.startsWith('specific_data'),
   propertyName: 'label',
 });
 
