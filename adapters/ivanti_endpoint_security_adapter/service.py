@@ -145,6 +145,7 @@ class IvantiEndpointSecurityAdapter(AdapterBase):
 
             device.name = device_raw.get('Name')
             device.hostname = device_raw.get('Name')
+            device.domain = device_raw.get('Suffix')
             device.uuid = device_raw.get('Guid')
             device_enabled = parse_bool_from_raw(device_raw.get('Enabled'))
             if isinstance(device_enabled, bool):

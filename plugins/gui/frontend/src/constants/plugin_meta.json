@@ -754,7 +754,7 @@
     "description": "Dynatrace is a software intelligence platform providing application performance management and cloud infrastructure monitoring."
   },
   "ivanti_endpoint_security_adapter": {
-    "title": "Ivanti Endpoint Security - BETA",
+    "title": "Ivanti Endpoint Security",
     "link": "https://docs.axonius.com/docs/ivanti-endpoint-security",
     "description": "Ivanti Endpoint Security, powered by Heat, provides application control, antivirus, patch management, and device control to protect endpoints."
   },
