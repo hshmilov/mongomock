@@ -5,6 +5,7 @@ import time
 
 from typing import List
 
+from axonius.clients.aws.aws_clients import parse_aws_advanced_config
 from axonius.consts.plugin_consts import COMPLIANCE_PLUGIN_NAME
 from axonius.plugin_base import PluginBase
 from compliance.aws_cis.aws_cis_account_report import generate_report_for_aws_account
@@ -58,6 +59,21 @@ class AWSCISGenerator:
                 'get_all_regions': aws_client_config.get('get_all_regions'),
                 'use_attached_iam_role': aws_client_config.get('use_attached_iam_role')
             }
+
+            if aws_client_config.get('advanced_config'):
+                advanced_config_file_raw = self.plugin_base._grab_file_contents(
+                    aws_client_config.get('advanced_config')).decode('utf-8')
+
+                try:
+                    advanced_config = parse_aws_advanced_config(advanced_config_file_raw)
+                except Exception as err:
+                    logger.exception(f'Unable to parse the advanced config: '
+                                     f'{str(err)}')
+                    advanced_config = {}
+            else:
+                advanced_config = {}
+
+            client_config_template['advanced_config'] = advanced_config
 
             client_config_accounts = []
             iam_client_config = client_config_template.copy()
