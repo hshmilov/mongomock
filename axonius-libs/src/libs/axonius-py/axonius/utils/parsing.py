@@ -27,9 +27,8 @@ from axonius.devices.msft_versions import parse_msft_release_version
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-osx_version_fallback = re.compile(r'[^\w](\d+\.\d+.\d+)')
-osx_version = re.compile(r'[^\w](\d+\.\d+.\d+)[^\w]')
-osx_version_full = re.compile(r'[^\w](\d+\.\d+.\d+)\s*(\(\w+\))')
+osx_version = re.compile(r'[^\w](\d+(?:\.\d+)+)[^\w]?')
+osx_version_full = re.compile(r'[^\w](\d+(?:\.\d+)+)\s*(\(\w+\))')
 # match any of: (Ubuntu / ubuntu / UbuntuServer / ubuntuserver / Ubuntuserver) + version number
 ubuntu_full = re.compile(r'([Uu]buntu(?:[Ss]erver)? \d\d\.\d\d(?:\.\d+)?)')
 mobile_version = re.compile(r'(\d+\.\d+.\d+)')
@@ -352,10 +351,6 @@ def figure_out_os(s):
             version = osx_version.findall(s)
             if len(version) > 0:
                 distribution = version[0]
-            else:
-                version = osx_version_fallback.findall(s)
-                if len(version) > 0:
-                    distribution = version[0]
     elif any(x in s for x in ios_names):
         os_type = 'iOS'
         version = mobile_version.findall(s)
