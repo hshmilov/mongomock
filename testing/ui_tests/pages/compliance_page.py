@@ -24,8 +24,8 @@ class CompliancePage(Page):
     CATEGORIES_FILTER_DROPDOWN_CSS = '.categories-filter .x-combobox'
     ACCOUNTS_FILTER_DROPDOWN_CSS = '.accounts-filter .x-combobox'
     ACCOUNTS_FILTER_OPTIONS_CSS = '.v-select-list .v-list-item'
-    FAILED_ONLY_FILTER_CSS = 'button[label=\'Failed only\']'
-    AGGREGATED_VIEW_FILTER_CSS = 'button[label=\'Aggregated view\']'
+    FAILED_ONLY_FILTER_CSS = '.failed-only .ant-switch'
+    AGGREGATED_VIEW_FILTER_CSS = '.cross-account .ant-switch'
 
     FILTER_ROW_XPATH = '//div[contains(@class, \'v-select-list\')]//div[contains(@class, \'v-list\')]//' \
                        'div[contains(@class, \'v-list-item\')]//' \

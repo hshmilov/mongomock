@@ -187,6 +187,17 @@ $colors: (
   }
 }
 
+@mixin x-switch {
+  display: flex;
+  align-items: center;
+  .ant-switch-checked {
+    background-color: $theme-black;
+  }
+  .x-switch-label {
+    margin-left: 10px;
+  }
+}
+
 /* Animations */
 
 @keyframes rotating {

@@ -32,7 +32,7 @@ class DashboardPage(BasePage):
     QUERY_SEARCH_INPUT_CSS = '.x-search-insights input'
     SEARCH_INSIGHTS_CSS = '.x-search-insights'
     CHART_WIZARD_DATEPICKER_CSS = '.x-chart-wizard'
-    CHART_WIZARD_TYPE_SWITCH_CSS = '.x-chart-wizard .md-switch-container + label'
+    CHART_WIZARD_TYPE_SWITCH_CSS = '.x-chart-wizard .timeline-query-type .ant-switch'
     PIE_SLICE_CSS = 'g[class^="slice-"]'
     PIE_SLICE_TEXT_BY_POSITION = 'svg > g.slice-{index} > text'
     UNCOVERED_PIE_SLICE_CSS = 'svg > g.slice-0 > text.scaling'

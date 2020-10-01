@@ -95,6 +95,10 @@ class AdaptersPage(EntitiesPage):
     CONNECTION_SUCCESS_ICON_CSS = '.x-table-row .icon-success'
     CONNECTION_INACTIVE_ICON_CSS = '.x-table-row .icon-inactive'
 
+    ADAPTERS_SWITCH_LABEL_CSS = '.adapters-search .x-switch-label'
+    ADAPTERS_SWITCH_BUTTON_CSS = '.adapters-search .ant-switch'
+    ADAPTERS_SWITCH_CLASS_NAME = 'connection-status'
+
     @property
     def url(self):
         return f'{self.base_url}/adapters'
@@ -180,7 +184,7 @@ class AdaptersPage(EntitiesPage):
         self.click_specific_row_by_field_value('Name', name)
 
     def toggle_active_connection(self, toggle=True):
-        self.toggle_switch_button(label='Active connection', make_yes=toggle)
+        self.toggle_switch_button(switch_class=self.ADAPTERS_SWITCH_CLASS_NAME, make_yes=toggle)
 
     def click_advanced_settings(self):
         self.get_button(self.ADVANCED_SETTINGS_BUTTON_TEXT).click()
@@ -426,7 +430,7 @@ class AdaptersPage(EntitiesPage):
         return len(adapters)
 
     def click_configured_adapters_filter_switch(self):
-        element = self.wait_for_element_present_by_css('.adapters-search .md-switch-thumb')
+        element = self.wait_for_element_present_by_css(self.ADAPTERS_SWITCH_BUTTON_CSS)
         element.click()
 
     def find_password_vault_button(self):
@@ -442,7 +446,7 @@ class AdaptersPage(EntitiesPage):
     def get_configured_adapters_count_from_switch_label(self):
         pattern = r'configured only \((\d)\)'
 
-        element = self.wait_for_element_present_by_css('.adapters-search .md-switch-label')
+        element = self.wait_for_element_present_by_css(self.ADAPTERS_SWITCH_LABEL_CSS)
         element_text = element.text
 
         match_object = re.match(pattern, element_text, re.I | re.M)

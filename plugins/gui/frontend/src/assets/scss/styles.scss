@@ -464,22 +464,6 @@ table {
   }
 
 }
-.md-switch {
-  .md-switch-container {
-    background-color: rgba($grey-4,.4);
-    .md-switch-thumb {
-      background-color: $theme-white;
-    }
-  }
-  &.md-checked {
-    .md-switch-container {
-      background-color: $theme-black;
-      .md-switch-thumb {
-        background-color: $theme-white;
-      }
-    }
-  }
-}
 .md-select-menu {
   background: $theme-white;
 }

@@ -7,8 +7,8 @@
     :align-agile="false"
     size="xl"
     :arrow="false"
-    @activated="$emit('activated')"
     :no-border-radius="true"
+    @activated="$emit('activated')"
   >
     <XButton
       id="query_wizard"
@@ -36,11 +36,16 @@
           @click="removeFilterOutExpression"
         >Clear</XButton>
       </div>
-      <MdSwitch
+      <div
         v-if="module === 'not_entities'"
-        v-model="isUniqueAdapters"
-        :disabled="!value.filter"
-      >Include outdated Adapter {{ prettyModule }} in query</MdSwitch>
+        class="unique-adapters-switch"
+      >
+        <ASwitch
+          :disabled="!value.filter"
+          v-model="isUniqueAdapters"
+        />
+        <span class="x-switch-label">{{ switchLabel }}</span>
+      </div>
       <div class="place-right">
         <XButton
           type="link"
@@ -63,13 +68,14 @@ import { mapState } from 'vuex';
 import _debounce from 'lodash/debounce';
 import _isEmpty from 'lodash/isEmpty';
 
+import { Switch as ASwitch } from 'ant-design-vue';
 import XDropdown from '../../../axons/popover/Dropdown.vue';
 import XFilter from '../../../neurons/schema/query/Filter.vue';
 
 export default {
   name: 'XQueryWizard',
   components: {
-    XDropdown, XFilter,
+    XDropdown, XFilter, ASwitch,
   },
   props: {
     module: {
@@ -119,6 +125,9 @@ export default {
     },
     searchDisabled() {
       return !_isEmpty(this.error);
+    },
+    switchLabel() {
+      return `Include outdated Adapter ${this.prettyModule} in query`;
     },
   },
   methods: {
@@ -181,6 +190,11 @@ export default {
         .ant-btn-link {
           padding-left: 4px;
         }
+      }
+
+      .unique-adapters-switch {
+        @include x-switch;
+        margin-top: 10px;
       }
     }
   }

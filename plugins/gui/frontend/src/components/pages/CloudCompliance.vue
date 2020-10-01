@@ -66,18 +66,20 @@
               @change="fetchAllData"
             />
           </div>
-          <XSwitch
-            :checked="failedOnly"
-            class="failed-only"
-            label="Failed only"
-            @change="toggleFailedSwitch"
-          />
-          <XSwitch
-            :checked="aggregatedView"
-            class="cross-account"
-            label="Aggregated view"
-            @change="toggleCrossAccountsSwitch"
-          />
+          <div class="failed-only">
+            <ASwitch
+              v-model="failedOnly"
+              @change="toggleFailedSwitch"
+            />
+            <span class="x-switch-label">Failed only</span>
+          </div>
+          <div class="cross-account">
+            <ASwitch
+              v-model="aggregatedView"
+              @change="toggleCrossAccountsSwitch"
+            />
+            <span class="x-switch-label">Aggregated view</span>
+          </div>
           <XButton
             class="search__reset"
             type="link"
@@ -129,7 +131,7 @@ import { UPDATE_COMPLIANCE_FILTERS, UPDATE_COMPLIANCE_VIEW } from '@store/module
 
 import XPage from '@axons/layout/Page.vue';
 import XCombobox from '@axons/inputs/combobox/index.vue';
-import XSwitch from '@axons/inputs/Switch.vue';
+import { Switch as ASwitch } from 'ant-design-vue';
 import XComplianceTable from '@components/networks/compliance/ComplianceTable.vue';
 import XComplianceTip from '@components/networks/compliance/ComplianceTip.vue';
 import XComplianceExpireModal from '@components/networks/compliance/ComplianceExpireModal.vue';
@@ -149,7 +151,7 @@ export default {
     XCombobox,
     XComplianceScore,
     XComplianceSelect,
-    XSwitch,
+    ASwitch,
     XComplianceExpireModal,
   },
   data() {
@@ -343,15 +345,10 @@ export default {
       this.accounts = [];
       this.fetchAllData();
     },
-    isRuleFailed(status) {
-      return status === 'Failed' || status === 'No Data';
-    },
     toggleFailedSwitch() {
-      this.failedOnly = !this.failedOnly;
       this.fetchAllData();
     },
     toggleCrossAccountsSwitch() {
-      this.aggregatedView = !this.aggregatedView;
       this.fetchAllData();
     },
     async updateComplianceFilters(value, filterName) {
@@ -479,9 +476,11 @@ export default {
             width: 85px;
           }
           .failed-only {
+            @include x-switch;
             margin-left: 20px;
           }
           .cross-account {
+            @include x-switch;
             margin-left: 20px;
           }
         }

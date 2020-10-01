@@ -242,7 +242,7 @@ class Page:
     DISCOVERY_SCHEDULE_INTERVAL_INPUT_CSS = '#system_research_rate'
     MODAL_CONFIRM = '.ant-modal-confirm'
 
-    BUTTON_SWITCH_CSS = '.x-switch button[label=\'{switch_label}\']'
+    BUTTON_SWITCH_CSS = '.{switch_class} .ant-switch'
 
     def __init__(self, driver, base_url, test_base, local_browser: bool):
         self.driver = driver
@@ -715,8 +715,8 @@ class Page:
         assert self.is_toggle_selected(toggle) == make_yes
         return False
 
-    def toggle_switch_button(self, label, make_yes=True):
-        button = self.driver.find_element_by_css_selector(self.BUTTON_SWITCH_CSS.format(switch_label=label))
+    def toggle_switch_button(self, switch_class, make_yes=True):
+        button = self.driver.find_element_by_css_selector(self.BUTTON_SWITCH_CSS.format(switch_class=switch_class))
         is_active = self.is_toggle_active(button)
 
         if (make_yes and not is_active) or (not make_yes and is_active):

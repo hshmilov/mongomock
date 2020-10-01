@@ -165,11 +165,12 @@
             </div>
 
             <div class="modal-footer__bottom">
-              <XSwitch
-                :checked="serverModal.active"
-                label="Active connection"
-                @change="setActiveSwitch"
-              />
+              <div class="connection-status">
+                <ASwitch
+                  v-model="serverModal.active"
+                />
+                <span class="x-switch-label">Active connection</span>
+              </div>
               <div class="modal-footer__bottom_left">
                 <XButton
                   id="save"
@@ -225,7 +226,6 @@ import XPage from '@axons/layout/Page.vue';
 import XTableWrapper from '@axons/tables/TableWrapper.vue';
 import XTable from '@axons/tables/Table.vue';
 import XModal from '@axons/popover/Modal/index.vue';
-import XSwitch from '@axons/inputs/Switch.vue';
 import XTitle from '@axons/layout/Title.vue';
 import XToast from '@axons/popover/Toast.vue';
 import XAdapterTunnelConnectionMessage from '@neurons/alerts/AdapterTunnelConnectionMessage.vue';
@@ -243,7 +243,7 @@ import {
 } from '@store/modules/adapters';
 import XForm from '@neurons/schema/Form.vue';
 import XAdapterAdvancedSettings from '@networks/adapters/adapter-advanced-settings.vue';
-import { Icon, Tabs as ATabs } from 'ant-design-vue';
+import { Icon, Tabs as ATabs, Switch as ASwitch } from 'ant-design-vue';
 
 import { tunnelConnectionStatuses } from '@constants/settings';
 import XAdapterClientConnection from '@networks/adapters/adapter-client-connection.vue';
@@ -267,7 +267,7 @@ export default {
     ATabs,
     TabPane: ATabs.TabPane,
     XAdapterClientConnection,
-    XSwitch,
+    ASwitch,
   },
   data() {
     return {
@@ -675,9 +675,6 @@ export default {
           || !this.connectionLabelValid
           || (withActive && !this.serverModal.active);
     },
-    setActiveSwitch(value) {
-      this.serverModal.active = value;
-    },
   },
 };
 </script>
@@ -806,6 +803,11 @@ export default {
             }
           }
           &__bottom {
+
+            .connection-status {
+              @include x-switch;
+            }
+
             display: flex;
             justify-content: space-between;
             align-items: center;

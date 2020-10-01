@@ -9,10 +9,12 @@
         class="adapters-search_input"
         placeholder="Search Adapters..."
       />
-      <MdSwitch
-        v-model="showOnlyConfigured"
-        class="md-primary"
-      >Configured only ({{ configuredAdaptersCount }})</MdSwitch>
+      <div class="adapters-search-switch">
+        <ASwitch
+          v-model="showOnlyConfigured"
+        />
+        <span class="x-switch-label">{{ configuredSwitchLabel }}</span>
+      </div>
     </div>
     <div
       v-if="!adaptersData.length && adaptersFetching"
@@ -60,7 +62,7 @@
                     {{ item.successClients }}
                   </p>
                 </div>
-                <div  v-if="item.errorClients">
+                <div v-if="item.errorClients">
                   <XIcon
                     family="symbol"
                     type="error"
@@ -101,14 +103,18 @@
 
 <script>
 import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
-import { mapState, mapMutations, mapActions, mapGetters } from 'vuex';
-import XPage from '../axons/layout/Page.vue';
-import XTitle from '../axons/layout/Title.vue';
-import XSearchInput from '../neurons/inputs/SearchInput.vue';
+import {
+  mapState, mapMutations, mapActions, mapGetters,
+} from 'vuex';
+import XPage from '@axons/layout/Page.vue';
+import XTitle from '@axons/layout/Title.vue';
+import XSearchInput from '@neurons/inputs/SearchInput.vue';
+import { Switch as ASwitch } from 'ant-design-vue';
 
-import { FETCH_ADAPTERS } from '../../store/modules/adapters';
-import { CONNECT_ADAPTERS } from '../../constants/getting-started';
-import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../store/modules/onboarding';
+
+import { FETCH_ADAPTERS } from '@store/modules/adapters';
+import { CONNECT_ADAPTERS } from '@constants/getting-started';
+import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '@store/modules/onboarding';
 
 function getConnectedAdapters(adapter) {
   return adapter.successClients;
@@ -117,7 +123,7 @@ function getConnectedAdapters(adapter) {
 export default {
   name: 'XAdapters',
   components: {
-    XPage, XTitle, XSearchInput, PulseLoader,
+    XPage, XTitle, XSearchInput, PulseLoader, ASwitch,
   },
   computed: {
     ...mapState({
@@ -159,7 +165,7 @@ export default {
       },
     },
     showOnlyConfigured: {
-      get () {
+      get() {
         return this.tableFilter.showOnlyConfigured;
       },
       set(showOnlyConfigured) {
@@ -168,14 +174,17 @@ export default {
         });
       },
     },
+    configuredSwitchLabel() {
+      return `Configured only (${this.configuredAdaptersCount})`;
+    },
   },
   methods: {
     ...mapMutations({
-      setAdaptersTableFilter: 'setAdaptersTableFilter'
+      setAdaptersTableFilter: 'setAdaptersTableFilter',
     }),
     ...mapActions({
       fetchAdapters: FETCH_ADAPTERS,
-      milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION
+      milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION,
     }),
     configAdapter(adapterId) {
       /*
@@ -211,6 +220,7 @@ export default {
       margin-bottom: 12px;
       display: flex;
       justify-content: center;
+      align-items: center;
 
       &_input {
         width: 50%;
@@ -221,6 +231,10 @@ export default {
         margin: 0;
         width: 20%;
         padding: 5px 0;
+      }
+
+      .adapters-search-switch {
+        @include x-switch;
       }
     }
     .adapters-loader {

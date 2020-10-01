@@ -4,7 +4,6 @@ import VueWorker from 'vue-worker';
 import VueCookies from 'vue-cookies';
 import Vuelidate from 'vuelidate';
 import {
-  MdSwitch,
   MdField,
   MdButton,
   MdDialog,
@@ -32,7 +31,6 @@ import store from './store/index';
 
 Vue.use(antInputDirective);
 Vue.use(Vuelidate);
-Vue.use(MdSwitch);
 Vue.use(MdField);
 Vue.use(MdDialog);
 Vue.use(MdCard);

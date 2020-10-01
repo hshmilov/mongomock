@@ -1,11 +1,12 @@
 <template>
   <div class="x-chart-timeline">
-    <MdSwitch
-      v-model="intersection"
-      class="md-primary"
-      @change="updateIntersection"
-    >{{ intersection? 'Intersection' : 'Comparison' }}
-    </MdSwitch>
+    <div class="timeline-query-type">
+      <ASwitch
+        v-model="intersection"
+        @change="updateIntersection"
+      />
+      <span class="x-switch-label">{{ intersection ? 'Intersection' : 'Comparison' }}</span>
+    </div>
     <h5 class="mb-1">
       <template v-if="intersection">
         Select a base query and another one to intersect with it:
@@ -33,10 +34,11 @@
 
 <script>
 import { TimelineTimeframesTypesEnum, TimelineTimeframesUnitsEnum } from '@constants/charts';
-import xSelectViews from '../../../neurons/inputs/SelectViews.vue';
-import xSelectTimeframe from '../../../neurons/inputs/SelectTimeframe.vue';
+import xSelectViews from '@neurons/inputs/SelectViews.vue';
+import xSelectTimeframe from '@neurons/inputs/SelectTimeframe.vue';
 import chartMixin from './chart';
-import defaultChartsColors from '../../../../constants/colors';
+import defaultChartsColors from '@constants/colors';
+import { Switch as ASwitch } from 'ant-design-vue';
 
 const dashboardView = { name: '', entity: '', chart_color: '' };
 export default {
@@ -44,6 +46,7 @@ export default {
   components: {
     XSelectViews: xSelectViews,
     XSelectTimeframe: xSelectTimeframe,
+    ASwitch,
   },
   mixins: [chartMixin],
   props: {
@@ -120,5 +123,11 @@ export default {
 </script>
 
 <style lang="scss">
-
+  .x-chart-timeline {
+    .timeline-query-type {
+      @include x-switch;
+      margin-bottom: 16px;
+      margin-top: 16px;
+    }
+  }
 </style>

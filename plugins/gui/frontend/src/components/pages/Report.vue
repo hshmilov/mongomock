@@ -860,10 +860,6 @@ export default {
                     flex: 1 0 auto;
                 }
             }
-
-            .md-switch {
-                margin: 4px 0;
-            }
         }
 
         .vm-select {

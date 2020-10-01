@@ -23,12 +23,13 @@
             @change="applySearchAndFilter"
           />
         </div>
-        <XSwitch
-          :checked="showPrivateOnly"
-          class="private-switch"
-          label="Private queries only"
-          @change="togglePrivateSwitch"
-        />
+        <div class="private-switch">
+          <ASwitch
+            v-model="showPrivateOnly"
+            @change="togglePrivateSwitch"
+          />
+          <span class="x-switch-label">Private queries only</span>
+        </div>
         <XButton
           class="search__reset"
           type="link"
@@ -83,7 +84,7 @@ import { mdiFilter } from '@mdi/js';
 import _debounce from 'lodash/debounce';
 import XSearch from '@neurons/inputs/SearchInput.vue';
 import XTable from '@neurons/data/Table.vue';
-import XSwitch from '@axons/inputs/Switch.vue';
+import { Switch as ASwitch } from 'ant-design-vue';
 import XSavedQueriesPanel from '@networks/saved-queries/SavedQueryPanel';
 import XCombobox from '@axons/inputs/combobox/index.vue';
 import XEnforcementsFeatureLockTip from '@networks/enforcement/EnforcementsFeatureLockTip.vue';
@@ -99,7 +100,7 @@ import _get from 'lodash/get';
 export default {
   name: 'XQueriesTable',
   components: {
-    XSearch, XTable, XSavedQueriesPanel, XCombobox, XEnforcementsFeatureLockTip, XSwitch,
+    XSearch, XTable, XSavedQueriesPanel, XCombobox, XEnforcementsFeatureLockTip, ASwitch,
   },
   props: {
     namespace: {
@@ -415,7 +416,6 @@ export default {
       this.showEnforcementsLockTip = false;
     },
     togglePrivateSwitch() {
-      this.showPrivateOnly = !this.showPrivateOnly;
       this.applySearchAndFilter();
     },
     isQueryReferenced(queryId) {
@@ -492,6 +492,7 @@ export default {
         align-self: center;
       }
       .private-switch {
+        @include x-switch;
         margin-left: 36px;
         align-self: center;
       }

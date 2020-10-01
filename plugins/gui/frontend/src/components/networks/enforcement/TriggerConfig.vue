@@ -33,28 +33,37 @@
         label="Run on added entities only"
       />
     </div>
-    <h4 class="trigger-title">Custom Scheduling</h4>
-    <XSwitch
-      :checked="showScheduling"
-      label="Enable custom scheduling"
-      :read-only="readOnly"
-      @change="showScheduling = !showScheduling"
-    />
+    <h4 class="trigger-title">
+      Custom Scheduling
+    </h4>
+    <div class="custom-scheduling-switch">
+      <ASwitch
+        v-model="showScheduling"
+        :disabled="readOnly"
+      />
+      <span class="x-switch-label">Enable custom scheduling</span>
+    </div>
     <template v-if="showScheduling">
-      <h5 class="trigger-subtitle">Custom Schedule Settings</h5>
+      <h5 class="trigger-subtitle">
+        Custom Schedule Settings
+      </h5>
       <XForm
         v-model="periodData"
         :schema="periodSchema"
         :read-only="readOnly"
         @validate="onPeriodValidate"
       />
-      <h5 class="trigger-subtitle">Additional Conditions</h5>
-      <XSwitch
-        :checked="showConditions"
-        label="Apply additional enforcement execution conditions"
-        :read-only="readOnly"
-        @change="toggleConditions"
-      />
+      <h5 class="trigger-subtitle">
+        Additional Conditions
+      </h5>
+      <div class="additional-conditions-switch">
+        <ASwitch
+          v-model="showConditions"
+          :disabled="readOnly"
+          @change="toggleConditions"
+        />
+        <span class="x-switch-label">Apply additional enforcement execution conditions</span>
+      </div>
       <div
         v-if="showConditions"
         class="config"
@@ -106,7 +115,7 @@
 
 <script>
 import { mapState } from 'vuex';
-import XSwitch from '@axons/inputs/Switch.vue';
+import { Switch as ASwitch } from 'ant-design-vue';
 import XSelect from '@axons/inputs/select/Select.vue';
 import XCheckbox from '@axons/inputs/Checkbox.vue';
 import XSelectSymbol from '@neurons/inputs/SelectSymbol.vue';
@@ -119,7 +128,7 @@ import { weekDays, monthDays } from '../../../constants/utils';
 export default {
   name: 'XTriggerConfig',
   components: {
-    XSelect, XCheckbox, XSelectSymbol, XSwitch, XForm,
+    XSelect, XCheckbox, XSelectSymbol, ASwitch, XForm,
   },
   mixins: [viewsMixin],
   props: {
@@ -352,7 +361,6 @@ export default {
       this.showScheduling = !this.showScheduling;
     },
     toggleConditions() {
-      this.showConditions = !this.showConditions;
       if (!this.showConditions) {
         this.config.conditions = {
           new_entities: false,
@@ -446,6 +454,14 @@ export default {
       .form-error {
         margin-top: 0;
       }
+    }
+
+    .custom-scheduling-switch {
+      @include x-switch;
+    }
+
+    .additional-conditions-switch {
+      @include x-switch;
     }
   }
 </style>
