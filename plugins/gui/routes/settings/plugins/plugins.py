@@ -221,7 +221,7 @@ class Plugins:
                     return return_error(message, 400)
 
             proxy_settings = config_to_set.get(PROXY_SETTINGS)
-            if not self.is_proxy_allows_web(proxy_settings):
+            if proxy_settings and not self.is_proxy_allows_web(proxy_settings):
                 return return_error(PROXY_ERROR_MESSAGE, 400)
 
             try:
