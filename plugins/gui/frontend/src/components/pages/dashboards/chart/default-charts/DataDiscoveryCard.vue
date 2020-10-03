@@ -187,8 +187,8 @@ export default {
       fetchDiscoveryData: FETCH_DISCOVERY_DATA,
     }),
     runAdaptersFilter(index) {
-      if (!this.dataCounters || !this.dataCounters[index]) return;
-      const filter = `adapters == '${this.dataCounters[index].name}'`;
+      if (!this.pageData || !this.pageData[index]) return;
+      const filter = `adapters == '${this.pageData[index].name}'`;
       if (!this.$canViewEntity(this.entity)) return;
       this.updateView({
         module: this.entity,
