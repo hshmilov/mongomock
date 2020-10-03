@@ -1,10 +1,7 @@
 <template>
   <th
     class="x-table-head"
-    :class="{ sortable }"
     nowrap
-    @click="emitClick"
-    @keyup.enter.stop="emitClick"
     @mouseenter="enterCol"
     @mouseleave="leaveCol"
   >
@@ -16,10 +13,16 @@
         height="20"
         :alt="logo"
         :title="logo"
-      >{{ title }}<div
+      >{{ title }}
+      <div
         v-if="sortable"
-        :class="`sort ${sortClass}`"
-      />
+        class="sort-container"
+        @click.stop="toggleColSort"
+      >
+        <div
+          :class="`sort ${sortClass}`"
+        />
+      </div>
       <div
         class="filter"
         @click.stop="toggleColFilter"
@@ -116,9 +119,6 @@ export default {
     },
   },
   methods: {
-    emitClick() {
-      this.$emit('click', this.name);
-    },
     enterCol() {
       if (this.filterable && this.filterableType) {
         this.filterVisible = true;
@@ -126,6 +126,9 @@ export default {
     },
     leaveCol() {
       this.filterVisible = false;
+    },
+    toggleColSort() {
+      this.$emit('toggleColumnSort', this.name);
     },
     toggleColFilter() {
       if (!this.filterable) {
@@ -177,8 +180,9 @@ export default {
       margin-right: 4px;
     }
 
-    &.sortable {
+    .sort-container {
       cursor: pointer;
+      display: flex;
 
       .sort {
         position: relative;
@@ -197,18 +201,18 @@ export default {
           top: 4px;
         }
       }
+    }
 
-      &:hover .sort {
+    &:hover .sort {
 
-        &.down:before {
-          @include triangle('up', $color: rgba($grey-4, 0.6));
-          top: -2px;
-        }
+      &.down:before {
+        @include triangle('up', $color: rgba($grey-4, 0.6));
+        top: -2px;
+      }
 
-        &:not(.down):not(.up):after {
-          @include triangle('down', $color: rgba($grey-4, 0.6));
-          top: 4px;
-        }
+      &:not(.down):not(.up):after {
+        @include triangle('down', $color: rgba($grey-4, 0.6));
+        top: 4px;
       }
     }
   }

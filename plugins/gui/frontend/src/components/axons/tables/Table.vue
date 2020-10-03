@@ -24,11 +24,11 @@
             :key="field.name"
             :field="field"
             :sort="sort"
-            :sortable="sortable(field)"
+            :sortable="sortable"
             :has-filter="hasFilter(field.name)"
             :filterable="filterable"
             :filter-column-name="filterColumnName"
-            @click="clickCol"
+            @toggleColumnSort="(fieldName) => toggleColumnSort(fieldName)"
             @toggleColumnFilter="(fieldName) => toggleColumnFilter(fieldName)"
           />
         </tr>
@@ -193,6 +193,9 @@ export default {
     allSelected() {
       return Boolean(this.value && this.value.length && this.value.length === this.data.length);
     },
+    sortable() {
+      return (this.onClickCol !== undefined);
+    },
   },
   methods: {
     clickRow(id) {
@@ -200,11 +203,6 @@ export default {
       if (!document.getSelection().isCollapsed) return;
 
       this.onClickRow(id);
-    },
-    clickCol(name) {
-      if (!this.onClickCol) return;
-
-      this.onClickCol(name);
     },
     onSelect(id, isSelected) {
       if (isSelected) {
@@ -244,8 +242,8 @@ export default {
         return false;
       }
     },
-    sortable(field) {
-      return (this.onClickCol !== undefined);
+    toggleColumnSort(fieldName) {
+      this.onClickCol(fieldName);
     },
     toggleColumnFilter(fieldName) {
       this.filterColumnName = fieldName;
