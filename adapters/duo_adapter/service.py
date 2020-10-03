@@ -7,6 +7,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.utils.files import get_local_config_file
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import parse_bool_from_raw
 from axonius.smart_json_class import SmartJsonClass
 from axonius.fields import Field, ListField
 from axonius.clients.rest.connection import RESTConnection
@@ -17,6 +18,22 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 USERS_PER_PAGE = 100
 MAX_USERS = 1000000
+
+
+class DuoPhone(SmartJsonClass):
+    activated = Field(bool, 'Activated')
+    capabilities = ListField(str, 'Capabilities')
+    extension = Field(str, 'Extension')
+    last_seen = Field(datetime, 'Last Seen')
+    model = Field(str, 'Model')
+    name = Field(str, 'Name')
+    number = Field(str, 'Number')
+    phone_id = Field(str, 'Phone ID')
+    platform = Field(str, 'Platform')
+    postdelay = Field(str, 'Post Delay')
+    predelay = Field(str, 'Pre Delay')
+    sms_passcodes_sent = Field(bool, 'SMS Passcodes Sent')
+    type = Field(str, 'Type')
 
 
 class DuoGroup(SmartJsonClass):
@@ -34,6 +51,7 @@ class DuoAdapter(AdapterBase):
         notes = Field(str, 'Notes')
         is_enrolled = Field(bool, 'Is Enrolled')
         duo_groups = ListField(DuoGroup, 'Duo Groups')
+        phones_data = ListField(DuoPhone, 'Phones Data')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -121,6 +139,27 @@ class DuoAdapter(AdapterBase):
         if isinstance(phones_raw, list) and phones_raw:
             if isinstance(phones_raw[0], dict):
                 user.user_telephone_number = phones_raw[0].get('number')
+            for phone_raw in phones_raw:
+                try:
+                    capabilities = phone_raw.get('capabilities')
+                    if not isinstance(capabilities, list):
+                        capabilities = None
+                    sms_passcodes_sent = parse_bool_from_raw(phone_raw.get('sms_passcodes_sent'))
+                    user.phones_data.append(DuoPhone(activated=parse_bool_from_raw(phone_raw.get('activated')),
+                                                     capabilities=capabilities,
+                                                     extension=phone_raw.get('extension'),
+                                                     last_seen=parse_date(phone_raw.get('last_seen')),
+                                                     model=phone_raw.get('model'),
+                                                     name=phone_raw.get('name'),
+                                                     number=phone_raw.get('number'),
+                                                     phone_id=phone_raw.get('phone_id'),
+                                                     platform=phone_raw.get('platform'),
+                                                     postdelay=phone_raw.get('postdelay'),
+                                                     predelay=phone_raw.get('predelay'),
+                                                     sms_passcodes_sent=sms_passcodes_sent,
+                                                     type=phone_raw.get('type')))
+                except Exception:
+                    logger.exception(f'Problem with phone {phone_raw}')
         groups_raw = raw_user_data.get('groups')
         if not isinstance(groups_raw, list):
             groups_raw = []

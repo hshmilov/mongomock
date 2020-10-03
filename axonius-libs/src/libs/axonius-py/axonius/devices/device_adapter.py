@@ -388,7 +388,7 @@ class DeviceAdapterSecurityPatch(SmartJsonClass):
     """ A definition for installed security patch on this device"""
 
     security_patch_id = Field(str, "Security Patch Name")
-    installed_on = Field(datetime.datetime)
+    installed_on = Field(datetime.datetime, 'Installed On')
     patch_description = Field(str, 'Patch Description')
     classification = Field(str, 'Classification')
     state = Field(str, 'State')

@@ -124,6 +124,7 @@ class DynatraceAdapter(AdapterBase):
             device.id = device_id + '_' + (device_raw.get('displayName') or '')
             device.name = device_raw.get('displayName')
             device.discoverd_name = device_raw.get('discoveredName')
+            device.hostname = device_raw.get('discoveredName')
             try:
                 if device_raw.get('lastSeenTimestamp') and isinstance(device_raw.get('lastSeenTimestamp'), int):
                     device.last_seen = parse_unix_timestamp(device_raw.get('lastSeenTimestamp'))

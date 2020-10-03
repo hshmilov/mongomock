@@ -633,6 +633,10 @@
     "link": "https://docs.axonius.com/docs/zscaler-web-security",
     "description": "Zscaler Web Security is a secure Internet and web gateway service that stops malware, advanced threats, phishing, browser exploits, malicious URLs, botnets, and more."
   },
+  "zscaler_splunk_adapter": {
+    "title": "Splunk - Zscaler Web Security",
+    "description": "Zscaler Web Security is a secure Internet and web gateway service that stops malware, advanced threats, phishing, browser exploits, malicious URLs, botnets, and more."
+  },
   "wsus_adapter": {
     "title": "Windows Server Update Services (WSUS)",
     "link": "https://docs.axonius.com/docs/windows-server-update-services-wsus",

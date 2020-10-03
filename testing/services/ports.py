@@ -231,6 +231,7 @@ DOCKER_PORTS = {
     'malwarebytes-cloud-adapter':       6692,
     'bigid-adapter':                    6693,
     'panorays-adapter':                 6694,
+    'zscaler-splunk-adapter':           6695,
     'websocket-proxy':                  8886,  # reserved
     'chisel':                           8887,  # reserved
     'master-proxy':                     8888,  # reserved
