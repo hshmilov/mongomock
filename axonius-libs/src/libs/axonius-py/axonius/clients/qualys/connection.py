@@ -408,7 +408,9 @@ class QualysScansConnection(RESTConnection):
                                             continue
                                         asset_group_ids = host.get('ASSET_GROUP_IDS')
                                         host['extra_asset_groups'] = []
-                                        if isinstance(asset_group_ids, str):
+                                        if isinstance(asset_group_ids, str) and ',' in asset_group_ids:
+                                            asset_group_ids = asset_group_ids.split(',')
+                                        elif isinstance(asset_group_ids, str):
                                             asset_group_ids = [asset_group_ids]
 
                                         if not isinstance(asset_group_ids, list):
