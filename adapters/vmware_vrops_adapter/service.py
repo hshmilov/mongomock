@@ -167,7 +167,7 @@ class VmwareVropsAdapter(AdapterBase):
                                 identifier_type_raw.get('isPartOfUniqueness'))
 
                         if identifier_type_raw.get('name') == 'VMEntityInstanceUUID':
-                            device.esx_id = resource_identifier_raw.get('value')
+                            device.cloud_id = resource_identifier_raw.get('value')
 
                         resource_key.resource_identifiers.append(resource_identifier)
 
@@ -372,7 +372,7 @@ class VmwareVropsAdapter(AdapterBase):
 
                 if isinstance(properties_raw.get('config|network|dnsserver'), list):
                     device.dns_servers = [properties_raw.get('config|network|dnsserver')[0]]
-                else:
+                elif properties_raw.get('config|network|dnsserver') is not None:
                     device.dns_servers = [properties_raw.get('config|network|dnsserver')]
 
                 if isinstance(properties_raw.get('hardware|biosVersion'), list):
@@ -391,12 +391,12 @@ class VmwareVropsAdapter(AdapterBase):
                     device.device_model = properties_raw.get('hardware|vendorModel')
 
                 if isinstance(properties_raw.get('summary|hostuuid'), list):
-                    device.uuid = properties_raw.get('summary|hostuuid')[0]
+                    device.cloud_id = properties_raw.get('summary|hostuuid')[0]
                 else:
-                    device.uuid = properties_raw.get('summary|hostuuid')
+                    device.cloud_id = properties_raw.get('summary|hostuuid')
 
             self._fill_vmware_vrops_device_fields(device_raw, device)
-
+            device.cloud_provider = 'VMWare'
             device.set_raw(device_raw)
             return device
         except Exception:
