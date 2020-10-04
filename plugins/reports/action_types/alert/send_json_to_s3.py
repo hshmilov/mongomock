@@ -169,14 +169,14 @@ class SendJsonToS3(ActionTypeAlert):
             data_dict = {
                 'parent_tag_name': parent_tag_name,
                 'account_id_for_upload': self._config.get(AWS_ACCESS_KEY_ID),
-                'secret_key_for_upload': self._config.get(AWS_SECRET_ACCESS_KEY),
-                'region_name': self._config.get(AWS_REGION_NAME),
+                'data': entities_json,
                 'bucket_name': self._config.get(AWS_S3_BUCKET_NAME),
                 'key_name': key_name,
-                'append_datetime': self._config.get('append_datetime'),
                 'overwrite_existing_file': self._config.get(
                     'overwrite_existing_file') or False,
-                'data': entities_json
+                'append_datetime': self._config.get('append_datetime'),
+                # 'secret_key_for_upload': self._config.get(AWS_SECRET_ACCESS_KEY),
+                # 'region_name': self._config.get(AWS_REGION_NAME),
             }
 
             # make the call to send_json_to_s3 in aws_adapter/service.py
@@ -194,15 +194,18 @@ class SendJsonToS3(ActionTypeAlert):
                         raise ValueError(f'Failed communicating with adapter')
 
                     if response.status_code != 200:
-                        return AlertActionResult(False, 'Failed to write to S3')
-
+                        return AlertActionResult(False,
+                                                 f'Failed to write to S3. '
+                                                 f'{str(response.text)}')
                 except Exception as err:
-                    logger.exception(f'Unable to connect to the AWS adapter: '
-                                     f'{str(err)}')
-                    raise
+                    message = f'Unable to connect to the AWS adapter: ' \
+                              f'{str(err)}'
+                    logger.exception(message)
+                    return AlertActionResult(False, message)
 
-                logger.info(f'Finished sending JSON to S3 (Adapter Mode)')
-                return AlertActionResult(True, 'Successful write to S3')
+                message = f'Finished sending JSON to S3 (Adapter Mode)'
+                logger.info(message)
+                return AlertActionResult(True, message)
 
             # old skool, enter the creds in the EC and run normally
             else:
@@ -215,26 +218,36 @@ class SendJsonToS3(ActionTypeAlert):
                         region=self._config.get(AWS_REGION_NAME)
                     )
                 except Exception as err:
-                    logger.exception(f'Unable to create S3 client: {str(err)}')
-                    raise
+                    message = f'Unable to create S3 client: {str(err)}'
+                    logger.exception(message)
+                    return AlertActionResult(False, message)
 
                 try:
                     if isinstance(client, S3Client):
-                        client.send_data_to_s3(data=data_dict, data_type='json')
-                        logger.info(f'Finished sending JSON to S3 (EC Mode)')
-                        return AlertActionResult(True, 'Successful write to S3')
+                        try:
+                            client.send_data_to_s3(data=data_dict,
+                                                   data_type='json')
+                        except Exception as err:
+                            message = f'Unable to upload data to S3 (EC Mode): ' \
+                                      f'{str(err)}'
+                            logger.exception(message)
+                            return AlertActionResult(False, message)
+
+                        message = f'Finished sending JSON to S3 (EC Mode)'
+                        logger.info(message)
+                        return AlertActionResult(True, message)
                     else:
-                        logger.warning(f'Improperly created S3Client object. '
-                                       f'Expected an S3Client, got a '
-                                       f'{type(client)}: {str(client)}')
-                        raise Exception(f'Unable to create the connection to '
-                                        f'AWS. Please contact Axonius Support.')
+                        message = f'Improperly created S3Client object. ' \
+                                  f'Expected an S3Client, got a ' \
+                                  f'{type(client)}: {str(client)}'
+                        logger.warning(message)
+                        return AlertActionResult(False, message)
                 except Exception as err:
                     logger.exception(f'Unable to send data to S3: {str(err)}')
                     raise
 
         except Exception as err:
-            logger.exception(f'Unable to upload Enforcement Center data to '
-                             f'{self._config.get(AWS_ACCESS_KEY_ID)}')
-            return AlertActionResult(False,
-                                     f'Failed writing JSON to S3: {str(err)}')
+            message = f'Unable to upload Enforcement Center data to ' \
+                      f'{self._config.get(AWS_ACCESS_KEY_ID)}: {str(err)}'
+            logger.exception(message)
+            return AlertActionResult(False, message)

@@ -833,8 +833,6 @@ class AwsAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-return-statements, inconsistent-return-statements, no-else-return
     @add_rule('send_json_to_s3', methods=['POST'])
     def send_json_to_s3(self):
-        ec_error_msg = 'Failure'
-
         if self.get_method() != 'POST':
             return return_error(
                 f'Method not allowed: {self.get_method()}', 405)
@@ -843,10 +841,11 @@ class AwsAdapter(AdapterBase, Configurable):
         try:
             ec_data = self.get_request_data_as_object()
             if not isinstance(ec_data, dict):
-                return ec_error_msg, 400
+                return f'Unexpected data type. Contact Axonius Support', 400
         except Exception as err:
-            logger.exception(f'Unable to get enforcement center data: {str(err)}')
-            return ec_error_msg, 400
+            message = f'Unable to get enforcement center data: {str(err)}'
+            logger.exception(message)
+            return message, 400
 
         for client_id, client_config in self._clients.items():
             # setup the s3 client with the adapter credentials
@@ -861,8 +860,9 @@ class AwsAdapter(AdapterBase, Configurable):
                     region=client_config.get('region_name')
                 )
             except Exception as err:
-                logger.exception(f'Unable to create an S3 client: {str(err)}')
-                return ec_error_msg, 400
+                message = f'Unable to create an S3 client: {str(err)}'
+                logger.exception(message)
+                return message, 400
 
             try:
                 if isinstance(client, S3Client):
@@ -870,16 +870,21 @@ class AwsAdapter(AdapterBase, Configurable):
                         client.send_data_to_s3(data=ec_data, data_type='json')
                         return 'Success', 200
                     except Exception as err:
-                        logger.exception(f'Unable to send Enforcement Center '
-                                         f'data to S3 using {client.access_key}')
-                        raise
+                        message = f'Unable to send Enforcement Center ' \
+                                  f'data to S3 using {client.access_key}: ' \
+                                  f'{str(err)}'
+                        logger.exception(message)
+                        return message, 400
                 else:
-                    logger.warning(f'Improperly formed S3 client. Expected '
-                                   f'an S3Client, got {type(client)}: '
-                                   f'{str(client)}')
+                    message = f'Improperly formed S3 client. Expected ' \
+                              f'an S3Client, got {type(client)}: ' \
+                              f'{str(client)}'
+                    logger.warning(message)
+                    return message, 400
             except Exception as err:
-                logger.exception(f'Unable to send data to S3.')
-                return ec_error_msg, 400
+                message = f'Unable to send data to S3: {str(err)}'
+                logger.exception(message)
+                return message, 400
 
     def _on_config_update(self, config):
         logger.info(f'Loading AWS config: {config}')
