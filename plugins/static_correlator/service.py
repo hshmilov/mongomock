@@ -103,7 +103,9 @@ class StaticCorrelatorService(CorrelatorBase):
                                                                       'allow_service_now_by_name_only':
                                                                           self._allow_service_now_by_name_only,
                                                                       'correlate_snow_no_dash':
-                                                                          self._correlate_snow_no_dash})
+                                                                          self._correlate_snow_no_dash,
+                                                                      'correlate_snow_serial_only':
+                                                                          self._correlate_snow_serial_only})
 
     # pylint: enable=arguments-differ
 
