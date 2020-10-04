@@ -1655,7 +1655,7 @@ def get_normalized_ip(adapter_device):
     return adapter_device.get(NORMALIZED_IPS)
 
 
-def normalize_adapter_devices(devices):
+def normalize_adapter_devices(devices, correlate_snow_serial_only=False):
     """
     in order to save a lot of time later - we normalize the adapter devices.
         every adapter_device with an ip or mac is given a corresponding set in the root of the adapter_device.
@@ -1666,7 +1666,7 @@ def normalize_adapter_devices(devices):
     """
     for device in devices:
         for adapter_device in device['adapters']:
-            yield normalize_adapter_device(adapter_device)
+            yield normalize_adapter_device(adapter_device, correlate_snow_serial_only)
         for tag in device.get('tags', []):
             if tag.get('entity') == EntityType.Devices.value and \
                     tag.get('type') == 'adapterdata' and \
@@ -1678,7 +1678,7 @@ def normalize_adapter_devices(devices):
 BAD_CLOUD_MANUFATURER_STRINGS = ['apple']
 
 
-def normalize_adapter_device(adapter_device):
+def normalize_adapter_device(adapter_device, correlate_snow_serial_only=False):
     """
     See normalize_adapter_devices
     """
@@ -1687,6 +1687,9 @@ def normalize_adapter_device(adapter_device):
     if has_mac_or_ip(adapter_data):
         ips = set(extract_all_ips(adapter_data[NETWORK_INTERFACES_FIELD]))
         macs = set(extract_all_macs(adapter_data[NETWORK_INTERFACES_FIELD]))
+        if correlate_snow_serial_only and is_snow_adapter(adapter_device) and ips \
+                and not macs and adapter_data.get('device_serial'):
+            ips = set()
         adapter_device[NORMALIZED_IPS] = ips if len(ips) > 0 else None
         if len(ips) > 0:
             adapter_device[NORMALIZED_IPS_4] = set([ip for ip in ips if is_valid_ipv4(ip)])

@@ -79,7 +79,7 @@ from axonius.consts.plugin_consts import (
     CORRELATE_BY_AZURE_AD_NAME_ONLY, CORRELATE_BY_EMAIL_PREFIX,
     CORRELATE_BY_SNOW_MAC, CORRELATE_SNOW_NO_DASH, CORRELATE_BY_USERNAME_DOMAIN_ONLY,
     CORRELATE_GLOBALY_ON_HOSTNAME, CORRELATION_SCHEDULE, CORRELATION_SCHEDULE_ENABLED,
-    CORRELATION_SCHEDULE_HOURS_INTERVAL, CORRELATION_SETTINGS,
+    CORRELATION_SCHEDULE_HOURS_INTERVAL, CORRELATION_SETTINGS, CORRELATE_SNOW_ON_SERIALS_ONLY,
     CORRELATE_PUBLIC_IP_ONLY, CSV_FULL_HOSTNAME, DB_KEY_ENV_VAR_NAME,
     DEFAULT_SOCKET_READ_TIMEOUT, DEFAULT_SOCKET_RECV_TIMEOUT,
     EXECUTION_PLUGIN_NAME, FETCH_EMPTY_VENDOR_SOFTWARE_VULNERABILITES,
@@ -3271,6 +3271,7 @@ class PluginBase(Configurable, Feature, ABC):
         self._allow_service_now_by_name_only = config[CORRELATION_SETTINGS].get(ALLOW_SERVICE_NOW_BY_NAME_ONLY, False)
         self._ips_correlation_only_on_public = config[CORRELATION_SETTINGS].get(IPS_CORRELATION_ON_PUBLIC_ONLY, False)
         self._global_hostname_correlation = config[CORRELATION_SETTINGS].get(CORRELATE_GLOBALY_ON_HOSTNAME, False)
+        self._correlate_snow_serial_only = config[CORRELATION_SETTINGS].get(CORRELATE_SNOW_ON_SERIALS_ONLY, False)
         self._jira_settings = config['jira_settings']
         self._opsgenie_settings = config.get('opsgenie_settings')
         self._proxy_settings = config[PROXY_SETTINGS]
@@ -4196,6 +4197,11 @@ class PluginBase(Configurable, Feature, ABC):
                             'name': CORRELATE_GLOBALY_ON_HOSTNAME,
                             'type': 'bool',
                             'title': 'Correlate Globally based on Hostname only'
+                        },
+                        {
+                            'name': CORRELATE_SNOW_ON_SERIALS_ONLY,
+                            'type': 'bool',
+                            'title': 'Correlate ServiceNow based on serial number only'
                         }
                     ],
                     'name': CORRELATION_SETTINGS,
@@ -4205,6 +4211,7 @@ class PluginBase(Configurable, Feature, ABC):
                                  CORRELATE_AD_SCCM, CSV_FULL_HOSTNAME, CORRELATE_BY_AZURE_AD_NAME_ONLY,
                                  CORRELATE_SNOW_NO_DASH, CORRELATE_AWS_USERNAME, IPS_CORRELATION_ON_PUBLIC_ONLY,
                                  CORRELATE_GLOBALY_ON_HOSTNAME, ALLOW_SERVICE_NOW_BY_NAME_ONLY,
+                                 CORRELATE_SNOW_ON_SERIALS_ONLY,
                                  CORRELATE_BY_SNOW_MAC, CORRELATE_BY_USERNAME_DOMAIN_ONLY]
                 },
                 {
@@ -4621,7 +4628,8 @@ class PluginBase(Configurable, Feature, ABC):
                 CORRELATE_PUBLIC_IP_ONLY: False,
                 ALLOW_SERVICE_NOW_BY_NAME_ONLY: False,
                 IPS_CORRELATION_ON_PUBLIC_ONLY: False,
-                CORRELATE_GLOBALY_ON_HOSTNAME: False
+                CORRELATE_GLOBALY_ON_HOSTNAME: False,
+                CORRELATE_SNOW_ON_SERIALS_ONLY: False,
             },
             CORRELATION_SCHEDULE: {
                 CORRELATION_SCHEDULE_ENABLED: False,

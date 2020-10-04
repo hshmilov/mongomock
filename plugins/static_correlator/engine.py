@@ -1626,7 +1626,9 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # 3. splitting the hostname into a list in order to be able to compare hostnames without depending on the domain
         _refresh_domain_to_dns_dict()
         _refresh_ad_client_count()
-        adapters_to_correlate = list(normalize_adapter_devices(entities))
+        correlate_snow_serial_only = bool(self._correlation_config and
+                                          self._correlation_config.get('correlate_snow_serial_only') is True)
+        adapters_to_correlate = list(normalize_adapter_devices(entities, correlate_snow_serial_only))
 
         correlate_by_snow_mac = bool(self._correlation_config and
                                      self._correlation_config.get('correlate_by_snow_mac') is True)
@@ -1638,6 +1640,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         global ALLOW_SERVICE_NOW_BY_NAME_ONLY
         ALLOW_SERVICE_NOW_BY_NAME_ONLY = (self._correlation_config and
                                           self._correlation_config.get('allow_service_now_by_name_only') is True)
+
         correlate_snow_no_dash = bool(self._correlation_config and
                                       self._correlation_config.get('correlate_snow_no_dash') is True)
         if correlate_snow_no_dash:
