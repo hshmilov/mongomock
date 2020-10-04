@@ -363,15 +363,19 @@ class S3Client:  # pylint: disable=too-many-instance-attributes
                         Tagging=default_tags
                     )
                 except Exception as err:
-                    logger.exception(f'Unable to upload {object_name} to S3 '
-                                     f'bucket ({bucket_name}) using '
-                                     f'{self.access_key}: {str(err)}')
+                    message = f'Unable to upload {object_name} to S3 ' \
+                              f'bucket ({bucket_name}) using ' \
+                              f'{self.access_key}: {str(err)}'
+                    logger.exception(message)
+                    raise Exception(message)
                 finally:
                     if hasattr(body, 'close'):
                         body.close()
             except Exception as err:
-                logger.exception(f'Unable to upload {object_name} to {bucket_name}: '
-                                 f'{str(err)}')
+                message = f'Unable to upload {object_name} to {bucket_name}: ' \
+                          f'{str(err)}'
+                logger.exception(message)
+                raise Exception(message)
         else:
             logger.warning(f'S3 bucket ({bucket_name}) does not exist')
 
@@ -457,23 +461,31 @@ class S3Client:  # pylint: disable=too-many-instance-attributes
     # pylint: disable=too-many-branches
     def send_data_to_s3(self, data: dict, data_type: str = 'json'):
         if not isinstance(data, dict):
-            raise ValueError(f'Malformed data. Expected a dict, got {type(data)}: '
-                             f'{str(data)}')
+            message = f'Malformed data. Expected a dict, got {type(data)}: ' \
+                      f'{str(data)}'
+            logger.warning(message)
+            raise ValueError(message)
 
         if not isinstance(data_type, str):
-            raise ValueError(f'Malformed data type. Cannot send to S3. Expected '
-                             f'a str, got {type(data_type)}: {str(data_type)}')
+            message = f'Malformed data type. Cannot send to S3. Expected ' \
+                      f'a str, got {type(data_type)}: {str(data_type)}'
+            logger.warning(message)
+            raise ValueError(message)
 
         # prepare the bucket, we assume that the bucket exists
         bucket_name = data.get('bucket_name')
         if isinstance(bucket_name, str):
             bucket_name = self.prepare_name(name=bucket_name)
         else:
-            logger.warning(f'Malformed S3 bucket name. Expected a string, '
-                           f'got {type(bucket_name)}: {str(bucket_name)}')
+            message = f'Malformed S3 bucket name. Expected a string, ' \
+                      f'got {type(bucket_name)}: {str(bucket_name)}'
+            logger.warning(message)
+            raise ValueError(message)
 
         if not self.bucket_exists(bucket_name=bucket_name):
-            raise ValueError(f'S3 bucket ({bucket_name}) does not exist')
+            message = f'S3 bucket ({bucket_name}) does not exist'
+            logger.warning(message)
+            raise ValueError(message)
 
         # prepare the key name
         key_name = data.get('key_name')
@@ -491,11 +503,11 @@ class S3Client:  # pylint: disable=too-many-instance-attributes
             # Do not overwrite existing
             if self.object_exists(bucket_name=bucket_name,
                                   object_name=key_name):
-                logger.warning(
-                    f'File ({key_name}) already exists in {bucket_name} on '
-                    f'account {self.access_key} and "Overwrite Existing '
-                    f'File" is not enabled in settings')
-
+                message = f'File ({key_name}) already exists in S3 bucket ' \
+                          f'{bucket_name} in account {self.access_key} and ' \
+                          f'"Overwrite Existing File" is not enabled in settings'
+                logger.warning(message)
+                raise Exception(message)
         try:
             self.upload_object(
                 object_name=key_name,
@@ -503,5 +515,7 @@ class S3Client:  # pylint: disable=too-many-instance-attributes
                 body=data
             )
         except Exception as err:
-            logger.exception(f'Unable to upload {key_name} to {bucket_name} '
-                             f'using {self.access_key}: {str(err)}')
+            message = f'Unable to upload {key_name} to {bucket_name} ' \
+                      f'using {self.access_key}: {str(err)}'
+            logger.warning(message)
+            raise Exception(message)
