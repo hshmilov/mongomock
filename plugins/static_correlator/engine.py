@@ -56,7 +56,7 @@ USERS_CORRELATION_ADAPTERS = ['illusive_adapter', 'carbonblack_protection_adapte
 ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_adapter', 'nessus_adapter',
                       'nessus_csv_adapter', 'tenable_io_adapter', 'qualys_scans_adapter', 'airwave_adapter',
                       'counter_act_adapter', 'tanium_discover_adapter', 'infoblox_adapter', 'aws_adapter',
-                      'airwatch_adapter']
+                      'airwatch_adapter', 'iboss_cloud_adapter']
 DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'counter_act_adapter',
                       'infoblox_adapter', 'azure_ad_adapter', 'tanium_discover_adapter',
                       'solarwinds_orion_adapter', 'mssql_adapter']
@@ -427,7 +427,7 @@ def is_aws_or_chef_adapter(adapter_device):
 def is_asset_ok_hostname_no_adapters(adapter_device):
     if is_service_now_and_no_other(adapter_device):
         return True
-    return adapter_device.get('plugin_name') in ['aws_adapter', 'chef_adapter', 'jamf_adapter',
+    return adapter_device.get('plugin_name') in ['aws_adapter', 'chef_adapter', 'jamf_adapter', 'iboss_cloud_adapter',
                                                  'epo_adapter', 'esx_adapter', 'active_directory_adapter']
 
 

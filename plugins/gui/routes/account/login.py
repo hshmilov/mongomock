@@ -95,6 +95,7 @@ class Login:
         log_in_data = self.get_request_data_as_object()
         if log_in_data is None:
             return return_error('No login data provided', 400)
+        session.regenerate()
         user_name = log_in_data.get('user_name')
         password = log_in_data.get('password')
         remember_me = log_in_data.get('remember_me', False)
@@ -304,7 +305,7 @@ class Login:
                 oidc.claims.get('family_name', ''),
                 oidc.claims['email']
             )
-
+        session.regenerate()
         redirect_response = redirect('/', code=302)
         self._add_expiration_timeout_cookie(redirect_response)
         return redirect_response
@@ -418,6 +419,7 @@ class Login:
                                              image or self.DEFAULT_AVATAR_PIC,
                                              False,
                                              rules_data=ldap_groups)
+            session.regenerate()
             response = Response('')
             self._add_expiration_timeout_cookie(response)
             return response
@@ -533,7 +535,7 @@ class Login:
             return return_error('SAML-Based login is disabled', 400)
 
         auth = self.__get_saml_auth_object(request, saml_settings, True)
-
+        session.regenerate()
         # set path to redirect to once user has successfully logged in
         if not session.get('target_path'):
             session['target_path'] = request.args.get('path', '/')
@@ -613,4 +615,5 @@ class Login:
         self.set_session_user(None)
         session['csrf-token'] = None
         session.clear()
+        session.destroy()
         return redirect('/', code=302)

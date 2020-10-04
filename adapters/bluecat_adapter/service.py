@@ -341,10 +341,16 @@ class BluecatAdapter(ScannerAdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Could not parse network information')
                 try:
-                    if expire_time:
-                        device.last_seen = expire_time
-                    else:
-                        device.last_seen = lease_time
+                    last_seen_test = None
+                    try:
+                        last_seen_test = device.last_seen
+                    except Exception:
+                        pass
+                    if not last_seen_test:
+                        if expire_time:
+                            device.last_seen = expire_time
+                        else:
+                            device.last_seen = lease_time
                 except Exception:
                     logger.exception(f'Problwm with last seen')
                 try:

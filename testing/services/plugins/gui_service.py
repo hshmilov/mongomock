@@ -1430,8 +1430,9 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
                 '$exists': True
             }
         })
-        # insert a single personal space
-        self.db.gui_dashboard_spaces_collection.bulk_write(bulk_insert)
+        if bulk_insert:
+            # insert all personal space at once
+            self.db.gui_dashboard_spaces_collection.bulk_write(bulk_insert)
 
     @staticmethod
     def _get_personal_space_db_filter(user_id):
@@ -1523,6 +1524,10 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
                 }
             }
         })
+
+    @property
+    def mongo_maxpoolsize(self):
+        return 1000
 
     @property
     def exposed_ports(self):

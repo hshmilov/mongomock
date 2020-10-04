@@ -236,6 +236,7 @@ class GuiService(Triggerable,
         self.wsgi_app.config['SESSION_COOKIE_SECURE'] = True
         self.wsgi_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
         self.wsgi_app.session_interface = CachedSessionInterface(self.__all_sessions)
+        self.wsgi_app.kvsession_store = self.__all_sessions
 
         self._users_collection = self._get_collection(USERS_COLLECTION)
         self._roles_collection = self._get_collection(ROLES_COLLECTION)
@@ -438,7 +439,7 @@ class GuiService(Triggerable,
             'contactEmail': saas_params.get('EMAIL_FOR_SIGNUP', 'unknown@email.com'),
             'userName': 'admin'
         }
-        self._process_signup(return_api_keys=False, manual_signup=signup_data)
+        self._process_signup(manual_signup=signup_data)
 
         # Generate reset password link and send it to AWS
         admin_user_id = self._users_collection.find_one({'user_name': 'admin'}, projection=['_id'])['_id']

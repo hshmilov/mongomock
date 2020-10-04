@@ -605,10 +605,18 @@ class ReportGenerator:
                     if field.get('Adapters'):
                         value = self._create_adapters_cell(value)
                     else:
+                        list_limit = 20
+                        list_delimiter = ', '
+                        if value and isinstance(value[0], dict):
+                            list_limit = 5
+                            list_delimiter = '<br>'
+                        if len(value) > list_limit:
+                            # Cutting the list and stating the remaining count
+                            value = value[:list_limit] + [f'+ {len(value) - list_limit}']
                         canonized_value = [x.strftime('%Y-%m-%d %H:%M:%S') if isinstance(x, datetime) else str(x)
                                            for x in value]
-                        value = ', '.join(canonized_value)
-                if isinstance(value, datetime):
+                        value = list_delimiter.join(canonized_value)
+                elif isinstance(value, datetime):
                     value = value.strftime('%Y-%m-%d %H:%M:%S')
                 item_values.append(self.templates['data'].render({'content': value}))
             rows.append(self.templates['row'].render({'content': '\n'.join(item_values)}))

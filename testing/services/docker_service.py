@@ -92,6 +92,10 @@ class DockerService(AxonService):
         return False
 
     @property
+    def mongo_maxpoolsize(self):
+        return 100
+
+    @property
     def exposed_ports(self):
         """
         :return: list of pairs (exposed_port, inner_port)
@@ -282,6 +286,7 @@ class DockerService(AxonService):
         env_variables.extend(['--env', f'SERVICE_CLASS_NAME={self.service_class_name}'])
         env_variables.extend(['--env', f'UWSGI_THREADS={self.get_max_uwsgi_threads}'])
         env_variables.extend(['--env', f'UWSGI_PROCESSES={self.get_max_uwsgi_processes}'])
+        env_variables.extend(['--env', f'MONGO_MAXPOOLSIZE={self.mongo_maxpoolsize}'])
         if self.get_min_uwsgi_processes:
             env_variables.extend(['--env', f'UWSGI_CHEAPER={self.get_min_uwsgi_processes}'])
         if mode == 'prod':

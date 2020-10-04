@@ -48,3 +48,12 @@ class ServiceNowAkanaConnection(ServiceNowConnection):
         # all checks are performed in set_new_token
         self._set_new_token()
         self._get('cmdb_ci_computer', url_params={'sysparm_limit': 1})
+
+    # pylint: disable=arguments-differ
+    def _async_get(self, *args, **kwargs):
+        """
+        From docs provided for Akana integration, It appears that token can be quite short-lived.
+        We inject a (potential) token refresh for every "chunk" handled.
+        """
+        self._refresh_token()
+        return super()._async_get(*args, **kwargs)

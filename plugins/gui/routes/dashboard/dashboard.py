@@ -134,6 +134,9 @@ class Dashboard(Charts, Notifications):
         }
         all_public_spaces_filter = {'type': {'$ne': DASHBOARD_SPACE_TYPE_PERSONAL}}
         spaces_filter = filter_archived({
+            'name': {
+                '$exists': True
+            },
             '$or': [
                 personal_space_filter,
                 public_spaces_with_roles_filter if not self.is_admin_user() else all_public_spaces_filter
@@ -354,9 +357,11 @@ class Dashboard(Charts, Notifications):
                 }):
             try:
                 dashboard_sort_config = dashboard['config'].get('sort', {}) or {}
+                # pylint: disable=unexpected-keyword-arg
                 generate_dashboard(dashboard['_id'],
                                    sort_by=dashboard_sort_config.get('sort_by', None),
-                                   sort_order=dashboard_sort_config.get('sort_order', None))
+                                   sort_order=dashboard_sort_config.get('sort_order', None),
+                                   use_semaphore=True)
             except NoCacheException:
                 logger.debug(f'dashboard {dashboard["_id"]} is not ready')
             except Exception:

@@ -486,9 +486,8 @@ class AggregatorService(Triggerable, PluginBase):
                     except Exception:
                         logger.exception('An exception was raised while trying to get a result.')
             if synchronic_requests:
-                for unique_adapter in synchronic_requests:
-                    self._request_clean_db_from_adapter(unique_adapter)
-                    logger.info(f'Finished with synchronic adapter: {unique_adapter}')
+                self._request_clean_db_from_adapter(synchronic_requests)
+                logger.info(f'Finished with synchronic adapters: {synchronic_requests}')
             logger.info('Finished cleaning all device data.')
 
         except Exception as e:

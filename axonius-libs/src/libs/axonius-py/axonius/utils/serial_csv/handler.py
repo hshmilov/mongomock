@@ -19,13 +19,14 @@ from .constants import (
     MAX_ROWS_STR,
 )
 
-from .tools import listify, build_selected_map
+from .tools import build_selected_map
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
 def handle_entities(stream: io.StringIO, entity_fields: dict, selected: Union[dict, List[str]], entities: List[dict],
-                    excluded: List[str] = None, cell_joiner: str = None, max_rows: int = None) -> Iterable[str]:
+                    excluded: List[str] = None, cell_joiner: str = None, max_rows: int = None,
+                    null_value: str = '') -> Iterable[str]:
     """Return an iterator of csv lines.
 
     - Will get predicted headers from selected_map from build_selected_map.
@@ -68,7 +69,7 @@ def handle_entities(stream: io.StringIO, entity_fields: dict, selected: Union[di
             yield writer.writerow({headers[0]: MAX_ROWS_STR.format(MAX_ROWS_LEN=max_rows)})
             break
 
-        row = process_entity(entity, selected_map, cell_joiner)
+        row = process_entity(entity=entity, selected_map=selected_map, cell_joiner=cell_joiner, null_value=null_value)
         if row:
             # Delete fields that dont exists in csv header
             # pylint: disable=expression-not-assigned
@@ -78,7 +79,7 @@ def handle_entities(stream: io.StringIO, entity_fields: dict, selected: Union[di
         # yield writer.writerow(process_entity(entity, selected_map, cell_joiner))
 
 
-def process_entity(entity: dict, selected_map: dict, cell_joiner: str) -> dict:
+def process_entity(entity: dict, selected_map: dict, cell_joiner: str, null_value: str = '') -> dict:
     """Process an entity.
 
     - Changes the key of a field to the header defined in selected_map.
@@ -99,7 +100,7 @@ def process_entity(entity: dict, selected_map: dict, cell_joiner: str) -> dict:
         value = entity.pop(field_name)
 
         if processor == PROCESS_COMPLEX:
-            entity.update(process_complex(value=value, field=field, cell_joiner=cell_joiner))
+            entity.update(process_complex(value=value, field=field, cell_joiner=cell_joiner, null_value=null_value))
         elif processor == PROCESS_TOO_COMPLEX:
             entity[header] = TOO_COMPLEX_STR
         else:
@@ -107,31 +108,36 @@ def process_entity(entity: dict, selected_map: dict, cell_joiner: str) -> dict:
     return entity
 
 
-def process_complex(value: list, field: dict, cell_joiner: str) -> dict:
+def process_complex(value: list, field: dict, cell_joiner: str, null_value: str = '') -> dict:
     """Process a complex field.
 
     - Will remove the complex field raw name
     - Will add new fields for each sub field, with values index correlated to other sub fields
     """
-    values = {}
+    new_value = {}
 
-    item_fields = field['items']['items']
+    # get the schemas of the sub-fields for this complex field
+    schemas = field['items']['items']  # item_fields
 
-    for item in value:
-        for item_name in list(item):
-            if item_name not in item_fields:
-                # this happens with items ending with _raw, don't care about those
-                continue
+    for schema_name, schema in schemas.items():
+        # get the header to use for this sub-field
+        header = schema['header']
 
-            item_field = item_fields[item_name]
-            header = item_field['header']
+        # add the header as a key to new_value
+        new_value[header] = []
 
-            values[header] = values.get(header, [])
-            values[header] += listify(item.pop(item_name))
+        # for each row in the complex field
+        for item in value:
+            # get the value for this sub-field from the current row, defaulting to null_value
+            item_value = item.pop(schema_name, null_value)
+            # coerce the value into a list
+            item_value = item_value if isinstance(item_value, (tuple, list)) else [item_value]
+            # add the value to the key for this schemas header in new values
+            new_value[header] += item_value
 
-    for k, v in values.items():
-        values[k] = process_simple(value=v, field=field, cell_joiner=cell_joiner)
-    return values
+    # join the list values using the same logic as simple fields use
+    new_value = {k: process_simple(value=v, field=field, cell_joiner=cell_joiner) for k, v in new_value.items()}
+    return new_value
 
 
 def process_simple(value: Union[str, int, float, datetime, list, tuple], field: dict, cell_joiner: str) -> str:

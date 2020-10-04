@@ -223,7 +223,7 @@ class APIMixin:
 
         :return: dict
         """
-        return self._process_signup(return_api_keys=True)
+        return self._process_signup()
 
     ##########
     # SYSTEM #

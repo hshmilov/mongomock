@@ -71,7 +71,7 @@ class ServiceNowAdapterBase(AdapterBase):
         },
         {
             'name': 'use_ci_table_for_install_status',
-            'title': 'Use CMDB_CI table instead of ALM ASSET table for install status',
+            'title': 'Use \'cmdb_ci\' table instead of \'alm_asset\' table for install status',
             'type': 'bool'
         },
         {
@@ -129,6 +129,11 @@ class ServiceNowAdapterBase(AdapterBase):
             'type': 'bool',
             'title': 'RAM from source in GB'
         },
+        {
+            'name': 'fetch_business_unit_table',
+            'type': 'bool',
+            'title': 'Fetch business unit from \'business_unit\' table'
+        },
     ]
     SERVICE_NOW_DB_CONFIG_SCHEMA_REQUIRED = [
         'fetch_users',
@@ -145,6 +150,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'fetch_compliance_exceptions',
         'use_exclusion_field',
         'is_ram_in_gb',
+        'fetch_business_unit_table',
     ]
     SERVICE_NOW_DB_CONFIG_DEFAULT = {
         'fetch_users': True,
@@ -164,6 +170,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'fetch_compliance_exceptions': False,
         'use_exclusion_field': False,
         'is_ram_in_gb': False,
+        'fetch_business_unit_table': False,
     }
 
     @abstractmethod
@@ -224,6 +231,7 @@ class ServiceNowAdapterBase(AdapterBase):
                            snow_logicalci_dict=None,
                            operational_status_dict=None,
                            u_division_dict=None,
+                           business_unit_dict=None,
                            snow_compliance_exception_ids_dict=None,
                            snow_compliance_exception_data_dict=None):
         got_nic = False
@@ -268,6 +276,8 @@ class ServiceNowAdapterBase(AdapterBase):
             snow_logicalci_dict = dict()
         if u_division_dict is None:
             u_division_dict = dict()
+        if business_unit_dict is None:
+            business_unit_dict = dict()
         if snow_compliance_exception_ids_dict is None:
             snow_compliance_exception_ids_dict = dict()
         if snow_compliance_exception_data_dict is None:
@@ -665,8 +675,12 @@ class ServiceNowAdapterBase(AdapterBase):
                 if assigned_to:
                     device.email = assigned_to.get('email')
                     device.assigned_to_country = assigned_to.get('country')
-                    device.assigned_to_division = assigned_to.get('u_division')
                     try:
+                        device.assigned_to_division = (
+                            # u_division[assigned_to.u_division].name
+                            self._parse_optional_reference_value(
+                                assigned_to, 'u_division', u_division_dict, 'name') or
+                            assigned_to.get('u_division'))
                         assigned_to_business_unit = (
                             # departments[assigned_to.u_business_unit].name
                             self._parse_optional_reference_value(assigned_to, 'u_business_unit',
@@ -674,6 +688,9 @@ class ServiceNowAdapterBase(AdapterBase):
                             # companies[assigned_to.u_business_unit].name
                             self._parse_optional_reference_value(assigned_to, 'u_business_unit',
                                                                  companies_table_dict, 'name') or
+                            # business_unit[assigned_to.u_business_unit].name
+                            self._parse_optional_reference_value(assigned_to, 'u_business_unit',
+                                                                 business_unit_dict, 'name') or
                             # assigned_to.u_business_unit
                             assigned_to.get('u_business_unit'))
                         if isinstance(assigned_to_business_unit, str):
@@ -1011,6 +1028,7 @@ class ServiceNowAdapterBase(AdapterBase):
             for device_raw in connection.get_device_list(
                     fetch_users_info_for_devices=self.__fetch_users_info_for_devices,
                     fetch_ci_relations=self.__fetch_ci_relations,
+                    fetch_business_unit_dict=self._fetch_business_unit_dict,
                     fetch_compliance_exceptions=self._fetch_compliance_exceptions,
                     parallel_requests=self.__parallel_requests):
                 yield device_raw, install_status_dict, operational_status_dict
@@ -1203,6 +1221,7 @@ class ServiceNowAdapterBase(AdapterBase):
             model_dict = table_devices_data.get(consts.MODEL_TABLE)
             snow_logicalci_dict = table_devices_data.get(consts.LOGICALCI_TABLE)
             u_division_dict = table_devices_data.get(consts.U_DIVISION_TABLE)
+            business_unit_dict = table_devices_data.get(consts.BUSINESS_UNIT_TABLE)
             snow_compliance_exc_ids_dict = table_devices_data.get(consts.COMPLIANCE_EXCEPTION_TO_ASSET_TABLE)
             snow_compliance_exc_data_dict = table_devices_data.get(consts.COMPLIANCE_EXCEPTION_DATA_TABLE)
 
@@ -1230,6 +1249,7 @@ class ServiceNowAdapterBase(AdapterBase):
                                                  snow_logicalci_dict=snow_logicalci_dict,
                                                  operational_status_dict=operational_status_dict,
                                                  u_division_dict=u_division_dict,
+                                                 business_unit_dict=business_unit_dict,
                                                  snow_compliance_exception_ids_dict=snow_compliance_exc_ids_dict,
                                                  snow_compliance_exception_data_dict=snow_compliance_exc_data_dict)
                 if device:
@@ -1268,5 +1288,6 @@ class ServiceNowAdapterBase(AdapterBase):
         self._fetch_compliance_exceptions = config['fetch_compliance_exceptions']
         self._use_exclusion_field = config['use_exclusion_field']
         self._is_ram_in_gb = config.get('is_ram_in_gb') or False
+        self._fetch_business_unit_dict = config.get('fetch_business_unit_dict') or False
 
         self.__parallel_requests = config.get('parallel_requests') or consts.DEFAULT_ASYNC_CHUNK_SIZE

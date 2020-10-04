@@ -97,7 +97,7 @@ class EntitiesPage(Page):
     NAME_ADAPTERS_AD = 'active_directory_adapter'
     VALUE_ADAPTERS_GENERAL = 'Aggregated'
     TABLE_HEADER_CELLS_XPATH = '//th[child::img[contains(@class, \'logo\')]]'
-    TABLE_HEADER_SORT_XPATH = '//th[contains(@class, \'sortable\') and contains(., \'{col_name_text}\')]'
+    TABLE_HEADER_BY_NAME_XPATH = '//th[contains(@class, \'x-table-head\') and contains(., \'{col_name_text}\')]'
 
     TABLE_DATA_SLICER_TYPE_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'x-slice\']/div'
     TABLE_DATA_EXPAND_ROW_XPATH = f'{Page.TABLE_DATA_XPATH}//div[@class=\'details-list-container\']'
@@ -258,6 +258,8 @@ class EntitiesPage(Page):
     SCHEDULE_TRIGGER_DROPDOWN_CSS = '.item_conditional .x-select .x-select-trigger'
 
     SAVE_QUERY_APPROVE_TEXT = 'Yes, Save'
+
+    COLUMN_SORT_CONTAINER_CSS = '.sort-container'
 
     @property
     def url(self):
@@ -734,15 +736,17 @@ class EntitiesPage(Page):
         return self.driver.find_element_by_xpath(self.TABLE_PAGE_ACTIVE_XPATH).text
 
     def click_sort_column(self, col_name):
-        self.driver.find_element_by_xpath(self.TABLE_HEADER_SORT_XPATH.format(col_name_text=col_name)).click()
+        header = self.driver.find_element_by_xpath(self.TABLE_HEADER_BY_NAME_XPATH.format(col_name_text=col_name))
+        ActionChains(self.driver).move_to_element(header).perform()
+        header.find_element_by_css_selector(self.COLUMN_SORT_CONTAINER_CSS).click()
 
     def check_sort_column(self, col_name, desc=True):
-        header = self.driver.find_element_by_xpath(self.TABLE_HEADER_SORT_XPATH.format(col_name_text=col_name))
+        header = self.driver.find_element_by_xpath(self.TABLE_HEADER_BY_NAME_XPATH.format(col_name_text=col_name))
         sort = header.find_element_by_css_selector('.sort')
         assert sort.get_attribute('class') == ('sort down' if desc else 'sort up')
 
     def open_column_filter_modal(self, col_name):
-        header = self.driver.find_element_by_xpath(self.TABLE_HEADER_SORT_XPATH.format(col_name_text=col_name))
+        header = self.driver.find_element_by_xpath(self.TABLE_HEADER_BY_NAME_XPATH.format(col_name_text=col_name))
         ActionChains(self.driver).move_to_element(header).perform()
         header.find_element_by_css_selector('.filter').click()
         self.wait_for_element_present_by_css(self.COLUMN_FILTER_MODAL)

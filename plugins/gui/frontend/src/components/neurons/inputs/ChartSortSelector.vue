@@ -94,7 +94,7 @@ export default {
 </script>
 
 <style lang="scss">
-  .sort-container {
+  .x-chart-metric.sort-container {
     margin-top: 16px;
   }
 </style>
