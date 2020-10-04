@@ -890,6 +890,27 @@ def compare_cp_esx_csv(adapter_device1, adapter_device2):
     return False
 
 
+def get_esx_id(adapter_device):
+    if adapter_device.get('plugin_name') not in ['vmware_vrops_adapter', 'esx_adapter']:
+        return None
+    uuid = None
+    if adapter_device.get('plugin_name') == 'esx_adapter':
+        uuid = get_uuid(adapter_device)
+    if adapter_device.get('plugin_name') == 'vmware_vrops_adapter':
+        uuid = adapter_device['data'].get('esx_id')
+    if not uuid:
+        return None
+    return uuid.lower()
+
+
+def compare_esx_id(adapter_device1, adapter_device2):
+    asset1 = get_esx_id(adapter_device1)
+    asset2 = get_esx_id(adapter_device2)
+    if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
+
+
 def esx_and_csv(adapter_device1, adapter_device2):
     if adapter_device1.get('plugin_name') == 'csv_adapter' and adapter_device2.get('plugin_name') == 'esx_adapter':
         return True
@@ -972,6 +993,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [is_snow_adapter],
                                       [one_is_not_snow],
                                       {'Reason': 'They have the same host without v dash'},
+                                      CorrelationReason.StaticAnalysis)
+
+    def _correlate_esx_id(self, adapters_to_correlate):
+        logger.info('Starting to esx id')
+        filtered_adapters_list = filter(get_esx_id, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_esx_id],
+                                      [compare_esx_id],
+                                      [],
+                                      [],
+                                      {'Reason': 'They have the same esx id'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_cp_esx_csv(self, adapters_to_correlate):
@@ -1612,6 +1644,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
             yield from self._correlate_v_dash_name(adapters_to_correlate)
             yield from self._correlate_alias_hostname(adapters_to_correlate)
         yield from self._correlate_cp_esx_csv(adapters_to_correlate)
+        yield from self._correlate_esx_id(adapters_to_correlate)
+
         # let's find devices by, hostname, and ip:
         yield from self._correlate_hostname_ip(adapters_to_correlate)
         yield from self._correlate_hostname_fqdn_ip(adapters_to_correlate)
