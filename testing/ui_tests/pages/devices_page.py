@@ -94,6 +94,8 @@ class DevicesPage(EntitiesPage):
     BACK_TO_ACTION_LIBRARY_BUTTON_CSS = '.back-button'
     ENFORCEMENT_PANEL_FOOTER_ERROR_CSS = '.error-text'
     ENFORCEMENT_TASK_SUCCESS_MESSAGE = 'Enforcement task has been created successfully'
+    ENFORCEMENT_RESULT_LINK_XPATH = '//div[contains(@class, \'navigate-task-link\')]' \
+                                    '/a[normalize-space(text())=\'Enforcement task has been created successfully\']'
 
     PartialState = {
         'PARTIAL': 'mixed',
@@ -143,7 +145,7 @@ class DevicesPage(EntitiesPage):
         self.driver.find_element_by_css_selector(self.BACK_TO_ACTION_LIBRARY_BUTTON_CSS).click()
 
     def get_enforcement_result_link(self):
-        return self.find_element_by_text(self.ENFORCEMENT_TASK_SUCCESS_MESSAGE)
+        return self.find_element_by_xpath(self.ENFORCEMENT_RESULT_LINK_XPATH)
 
     def get_save_and_run_enforcement_button(self):
         return self.get_button(self.SAVE_AND_RUN_ENFORCEMENT_BUTTON)
@@ -262,6 +264,8 @@ class DevicesPage(EntitiesPage):
                                           text=enforcement_name)
         self.click_button('Run')
         self.wait_for_element_present_by_text(self.ENFORCEMENT_TASK_SUCCESS_MESSAGE)
+        # wait for the enforcement success modal animation to end.
+        time.sleep(0.5)
         if close_result_modal:
             self.click_button('Close')
             self.wait_for_modal_close()

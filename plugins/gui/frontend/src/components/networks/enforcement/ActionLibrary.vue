@@ -55,6 +55,7 @@
       </MdListItem>
     </MdList>
     <XActionLibraryTip
+      v-if="actionToTip"
       :action="actionToTip"
       @close="actionToTip = null"
     />

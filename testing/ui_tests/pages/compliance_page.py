@@ -1,8 +1,6 @@
 import time
 import pytest
 from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.common.action_chains import ActionChains
-
 from ui_tests.pages.page import Page
 
 
@@ -16,9 +14,9 @@ class CompliancePage(Page):
     SCORE_VALUE_CSS = 'span.score-value'
     ENFORCE_MENU_BUTTON = 'Enforce'
     ENFORCE_BY_MAIL_BUTTON_ID = 'cis_send_mail'
-    ENFORCEMENTS_FEATURE_LOCK_TIP_CSS = '.x-enforcements-feature-lock-tip'
+    ENFORCEMENTS_FEATURE_LOCK_TIP_CSS = '.x-enforcements-feature-lock-tip.ant-modal'
     ENFORCE_MENU_DROPDOWN_CSS = '.x-enforcement-menu'
-    SCORE_RULES_MODAL_CSS = '.x-compliance-active-rules'
+    SCORE_RULES_MODAL_CSS = '.x-compliance-active-rules.ant-modal'
 
     RULES_FILTER_DROPDOWN_CSS = '.rules-filter .x-combobox'
     CATEGORIES_FILTER_DROPDOWN_CSS = '.categories-filter .x-combobox'
@@ -110,8 +108,7 @@ class CompliancePage(Page):
 
     def close_feature_lock_tip(self):
         modal = self.get_feature_lock_tip()
-        ActionChains(self.driver).move_to_element_with_offset(modal, -1, -1).click().perform()
-        time.sleep(0.5)  # wait for enforce lock tip to close. (clicking outside the modal)
+        self.close_ant_modal(modal=modal)
 
     def is_enforcement_lock_modal_visible(self):
         return self.wait_for_element_present_by_css(self.ENFORCEMENTS_FEATURE_LOCK_TIP_CSS).is_displayed()
@@ -158,8 +155,7 @@ class CompliancePage(Page):
 
     def close_without_save_rules_dialog(self):
         modal = self.get_rules_dialog_modal()
-        ActionChains(self.driver).move_to_element_with_offset(modal, -1, -1).click().perform()
-        time.sleep(0.5)  # wait for enforce lock tip to close. (clicking outside the modal)
+        self.close_ant_modal(modal=modal)
 
     def is_score_rules_modal_visible(self):
         return self.get_rules_dialog_modal().is_displayed()

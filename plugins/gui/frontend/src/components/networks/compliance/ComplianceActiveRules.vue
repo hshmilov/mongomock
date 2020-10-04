@@ -1,7 +1,6 @@
 <template>
   <AModal
-    class="x-compliance-active-rules"
-    id="cis_active_rules"
+    dialog-class="x-compliance-active-rules"
     :visible="visible"
     :closable="false"
     width="700px"

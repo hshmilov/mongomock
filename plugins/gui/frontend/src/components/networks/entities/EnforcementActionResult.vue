@@ -2,16 +2,12 @@
   <AModal
     id="enforcement_action_result"
     :visible="true"
-    :cancel-button-props="{ props: { type: 'link' } }"
     :closable="false"
     :centered="true"
     @cancel="onClose"
   >
     <div
-      ref="wrapper_div"
       class="enforcement-action-body"
-      :tabindex="-1"
-      @keyup.enter.stop.prevent="onClose"
     >
       <template v-if="isDataLoading">
         <ASpin
@@ -106,7 +102,6 @@ export default {
     },
   },
   mounted() {
-    this.$refs.wrapper_div.focus();
     this.status.processing = true;
     this.enforcementActionToRun().then((currentEnforcementId) => {
       this.currentEnforcementId = currentEnforcementId;

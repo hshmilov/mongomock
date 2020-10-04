@@ -746,6 +746,8 @@ class EntitiesPage(Page):
         ActionChains(self.driver).move_to_element(header).perform()
         header.find_element_by_css_selector('.filter').click()
         self.wait_for_element_present_by_css(self.COLUMN_FILTER_MODAL)
+        # wait for modal animation to end
+        time.sleep(0.5)
 
     def toggle_exclude_adapters_combobox(self, displayed=True):
         self.driver.find_element_by_css_selector(self.EXCLUDE_ADAPTER_FILTER_COMBOBOX).click()
@@ -934,6 +936,8 @@ class EntitiesPage(Page):
             self.EDIT_SYSTEM_COLUMNS_BUTTON_ID if system_default else self.EDIT_USER_COLUMN_BUTTON_ID
         ).click()
         self.wait_for_element_present_by_css(self.EDIT_COLUMNS_MODAL)
+        # wait for modal open animation to end
+        time.sleep(0.5)
 
     def select_column_adapter(self, adapter_title):
         self.select_option(self.EDIT_COLUMNS_ADAPTER_DROPDOWN_CSS,
