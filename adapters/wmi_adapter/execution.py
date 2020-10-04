@@ -366,7 +366,7 @@ class WmiExecutionMixIn(Triggerable):
                 if adapter_data.hostname:
                     queries = [{
                         'hostname': adapter_data.hostname,
-                        'nameservers': dns_servers
+                        'nameservers': [x.strip() for x in dns_servers.split(',') if x] if dns_servers else []
                     }]
                     result = async_query_dns_list(queries, DNS_TIMEOUT)[0]
 
