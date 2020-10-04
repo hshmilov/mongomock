@@ -127,6 +127,7 @@ class TestDevicesSpecificSearch(TestBase):
         self.base_page.wait_for_run_research()
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_be_responsive()
         self.devices_page.search(self.REGULAR_SEARCH_VALUE)
         self._check_input_value_and_results_count(8, self.REGULAR_SEARCH_VALUE)
         self.devices_page.search('wind')
@@ -148,12 +149,14 @@ class TestDevicesSpecificSearch(TestBase):
         self._check_input_value_and_results_count(10, self.TEST_QUERY_EXPRESSION_WIN)
         self.users_page.switch_to_page()
         self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_be_responsive()
         self._check_input_value_and_results_count(10, self.TEST_QUERY_EXPRESSION_WIN)
         self._reset_search()
         self.devices_page.search(self.REGULAR_SEARCH_VALUE)
         self._check_input_value_and_results_count(8, self.REGULAR_SEARCH_VALUE)
         self.users_page.switch_to_page()
         self.devices_page.switch_to_page()
+        self.devices_page.wait_for_table_to_be_responsive()
         self._check_input_value_and_results_count(8, self.REGULAR_SEARCH_VALUE)
 
     def _check_input_value_and_results_count(self, count=25, value=''):
