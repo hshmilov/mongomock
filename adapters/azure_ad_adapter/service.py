@@ -48,6 +48,8 @@ class AzureAdAdapter(AdapterBase, Configurable):
                                        client_secret=client_config[AZURE_CLIENT_SECRET],
                                        tenant_id=tenant_id,
                                        https_proxy=client_config.get(AZURE_HTTPS_PROXY),
+                                       proxy_username=client_config.get('proxy_username'),
+                                       proxy_password=client_config.get('proxy_password'),
                                        verify_ssl=client_config.get(AZURE_VERIFY_SSL),
                                        is_azure_ad_b2c=client_config.get(AZURE_IS_AZURE_AD_B2C),
                                        azure_region=client_config.get(AZURE_AD_CLOUD_ENVIRONMENT),
@@ -204,6 +206,17 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     'name': AZURE_HTTPS_PROXY,
                     'title': 'HTTPS Proxy',
                     'type': 'string'
+                },
+                {
+                    'name': 'proxy_username',
+                    'title': 'HTTPS Proxy User Name',
+                    'type': 'string'
+                },
+                {
+                    'name': 'proxy_password',
+                    'title': 'HTTPS Proxy Password',
+                    'type': 'string',
+                    'format': 'password'
                 }
             ],
             'required': [

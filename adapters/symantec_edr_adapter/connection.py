@@ -95,6 +95,7 @@ class SymantecEdrConnection(RESTConnection):
                 'limit': DEVICE_PER_PAGE,
                 'keep_alive_secs': RESOURCE_TTL
             }
+            nexts_list = []
 
             while count_fetched_results < max_count and next_resource:
                 if next_resource != WHITE_SPACE:
@@ -109,16 +110,18 @@ class SymantecEdrConnection(RESTConnection):
 
                 # Release last fetched resource
                 if next_resource and next_resource != WHITE_SPACE:
-                    try:
-                        self._delete(f'{ENTITIES_RELEASE_URL}/{next_resource}')
-                    except Exception:
-                        logger.exception(f'Could not release resource: {next_resource}')
-
+                    nexts_list.append(next_resource)
                 next_resource = response.get('next')
                 yield from response.get('result')
         except Exception:
             logger.exception(f'Invalid request made while paginating devices.')
             raise
+
+        for next_resource in nexts_list:
+            try:
+                self._delete(f'{ENTITIES_RELEASE_URL}/{next_resource}', use_json_in_response=False)
+            except Exception:
+                logger.exception(f'Could not release resource: {next_resource}')
 
     def get_device_list(self):
         try:

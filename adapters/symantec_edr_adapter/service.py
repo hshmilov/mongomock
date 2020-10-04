@@ -185,10 +185,8 @@ class SymantecEdrAdapter(AdapterBase):
                     os_name = operating_system.get('osfullname')
                     os_arch = '64 bit' if is_64_arch else '32 bit'
                     device.figure_os(f'{os_name} {os_arch}')
-                else:
-                    logger.warning(f'Unexpected os object, expected to get a dict: {str(operating_system)}')
             except Exception:
-                logger.warning(f'Failed to figure out os: {os_name} {os_arch}')
+                logger.warning(f'Failed to figure out os')
 
             try:
                 device.add_agent_version(agent=AGENT_NAMES.symantec_edr, version=agent_version)
@@ -199,7 +197,6 @@ class SymantecEdrAdapter(AdapterBase):
                 if isinstance(ip_addresses, str):
                     ip_addresses = [ip_addresses]  # Wrap a single string to list.
                 if not isinstance(ip_addresses, list):
-                    logger.warning(f'IP addresses field is neither list nor string!  {str(ip_addresses)}')
                     ip_addresses = []
 
                 if device_ip not in ip_addresses:
@@ -210,7 +207,6 @@ class SymantecEdrAdapter(AdapterBase):
                 elif isinstance(mac_addresses, str):
                     device.add_nic(mac=mac_addresses, ips=ip_addresses)
                 else:
-                    logger.warning(f'MAC addresses field is neither list nor string!  {mac_addresses}')
                     device.add_ips_and_macs(ips=ip_addresses)
             except Exception as ex:
                 logger.warning(f'Could not add ip/mac addresses, Error:{str(ex)}  , Raw Device:{device_raw}')

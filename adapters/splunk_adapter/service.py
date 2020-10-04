@@ -7,12 +7,10 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.dynamic_fields import put_dynamic_field
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
-from axonius.utils.parsing import normalize_var_name
 from axonius.consts.csv_consts import get_csv_field_names
-from axonius.adapter_exceptions import GetDevicesError
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
-from splunk_adapter.connection import SplunkConnection
+from axonius.clients.splunk.connection import SplunkConnection
 
 logger = logging.getLogger(f'axonius.{__name__}')
 

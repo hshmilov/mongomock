@@ -71,11 +71,11 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
                 print_state('Downloading upgrader on remote mongo node')
                 remote_mongo_node_id = find_mongo_instance(node_instances)
                 print_state(f'remote mongo node id: {remote_mongo_node_id.get("node_id")}')
-                download_upgrader_on_nodes([remote_mongo_node_id, ], installer_path)
                 print_state('Upgrading remote mongo node')
                 httpd_service = HttpdService()
                 httpd_service.take_process_ownership()
                 httpd_service.start(allow_restart=True, show_print=False, mode='prod')
+                download_upgrader_on_nodes([remote_mongo_node_id, ], installer_path)
                 upgrade_nodes(node_instances)
                 node_instances = [node for node in node_instances
                                   if node.get('node_id') != remote_mongo_node_id.get('node_id')]

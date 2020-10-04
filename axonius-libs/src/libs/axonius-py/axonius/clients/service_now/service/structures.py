@@ -89,7 +89,7 @@ class SnowDeviceAdapter(DeviceAdapter):
     install_status = Field(str, 'Install Status')
     assigned_to_location = Field(str, 'Assigned To Location')
     assigned_to_country = Field(str, 'Assigned To Country')
-    assigned_to_division = Field(str, 'Assigned To Business')
+    assigned_to_division = Field(str, 'Assigned To Division')
     assigned_to_business_unit = Field(str, 'Assigned To Business Unit')
     manager_email = Field(str, 'Manager Email')
     u_business_unit = Field(str, 'Business Unit')

@@ -3,6 +3,11 @@ import time
 import re
 
 from axonius.utils.parsing import format_ip, format_mac
+import sys
+import os
+
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'external')))
 from splunklib.client import Service, connect
 from splunklib.results import ResultsReader, Message
 
@@ -334,6 +339,15 @@ class SplunkConnection(object):
 
     def get_devices(self, earliest, maximum_records_per_search, fetch_plugins_dict,
                     splunk_macros_list, splunk_sw_macros_list):
+        if fetch_plugins_dict.get('fetch_zscaler_only'):
+            macro_str = splunk_macros_list[0]
+            yield from self.fetch(f'search `{macro_str}`',
+                                  SplunkConnection.general_macro,
+                                  earliest,
+                                  maximum_records_per_search,
+                                  f'General Macro {macro_str}',
+                                  send_object_to_raw=True)
+            return
         fetch_cisco = fetch_plugins_dict.get('fetch_plugins_dict')
         if splunk_macros_list:
             for macro_str in splunk_macros_list:

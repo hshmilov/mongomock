@@ -71,11 +71,22 @@ class ServiceNowComputerAction(ActionTypeBase):
                     'name': 'identifyreconcile_endpoint',
                     'type': 'string',
                     'title': 'Use IdentifyReconcile API endpoint to create computer'
+                },
+                {
+                    'name': 'use_first_ip_only',
+                    'title': 'Use first IP only',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'ips_delimiter',
+                    'title': 'IPs delimiter',
+                    'type': 'string'
                 }
             ],
             'required': [
                 'use_adapter',
-                'verify_ssl'
+                'verify_ssl',
+                'use_first_ip_only'
             ],
             'type': 'array'
         }
@@ -93,7 +104,9 @@ class ServiceNowComputerAction(ActionTypeBase):
             'cmdb_ci_table': 'cmdb_ci_computer',
             'extra_fields': None,
             'verify_ssl': True,
-            'identifyreconcile_endpoint': None
+            'identifyreconcile_endpoint': None,
+            'ips_delimiter': '/',
+            'use_first_ip_only': False
         })
 
     # pylint: disable=too-many-arguments,too-many-branches
@@ -248,7 +261,10 @@ class ServiceNowComputerAction(ActionTypeBase):
                     for ip in ip_address_raw:
                         if ip not in ['127.0.0.1']:
                             ip_address_raw_list.append(ip)
-                    ip_address_raw = '/'.join(ip_address_raw_list)
+                            if self._config.get('use_first_ip_only'):
+                                break
+                    ips_delimiter = self._config.get('ips_delimiter') or '/'
+                    ip_address_raw = ips_delimiter.join(ip_address_raw_list)
                 if name_raw is None and asset_name_raw is None:
                     results.append(EntityResult(entry['internal_axon_id'], False, 'Device With No Name'))
                     continue

@@ -494,6 +494,11 @@
     "title": "HP Network Node Manager i (NNMi)",
     "description": "HP Network Node Manager i (NNMi) is a network health and performance monitoring software with scalability and device support.\n"
   },
+  "vmware_vrops_adapter": {
+    "title": "VMware vRealize Operations (vROps)",
+    "link": "https://docs.axonius.com/docs/vmware-vrops",
+    "description": "VMware vRealize Operations (vROps) delivers an IT operations management platform for private, hybrid, and multi-cloud environments that covers the physical, virtual and cloud infrastructure, including VMs and containers."
+  },
   "kaspersky_sc_adapter": {
     "title": "Kaspersky Security Center",
     "link": "https://docs.axonius.com/docs/kaspersky-security-center",
@@ -628,6 +633,10 @@
     "link": "https://docs.axonius.com/docs/zscaler-web-security",
     "description": "Zscaler Web Security is a secure Internet and web gateway service that stops malware, advanced threats, phishing, browser exploits, malicious URLs, botnets, and more."
   },
+  "zscaler_splunk_adapter": {
+    "title": "Splunk - Zscaler Web Security",
+    "description": "Zscaler Web Security is a secure Internet and web gateway service that stops malware, advanced threats, phishing, browser exploits, malicious URLs, botnets, and more."
+  },
   "wsus_adapter": {
     "title": "Windows Server Update Services (WSUS)",
     "link": "https://docs.axonius.com/docs/windows-server-update-services-wsus",
@@ -679,7 +688,7 @@
     "description": "The UniFi Controller is a wireless network management software solution for managing multiple wireless networks using a web browser."
   },
   "net_app_adapter": {
-    "title": "NetApp - BETA",
+    "title": "NetApp",
     "link": "https://docs.axonius.com/docs/netapp",
     "description": "NetApp offers hybrid cloud data services for management of applications and data across cloud and on-premises environments."
   },

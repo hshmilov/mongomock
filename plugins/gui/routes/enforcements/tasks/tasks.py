@@ -7,8 +7,7 @@ from flask import (jsonify)
 from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD,
                                           ACTIONS_SUCCESS_FIELD,
                                           NOT_RAN_STATE, TRIGGER_RESULT_VIEW_NAME_FIELD,
-                                          ACTION_TYPE_DB_FIELD, ACTION_NAME, ACTION_NAME_FIELD,
-                                          ACTION_FIELD, STARTED_AT_FIELD,
+                                          ACTION_NAME_FIELD, ACTION_FIELD, STARTED_AT_FIELD,
                                           TRIGGER_RESULT_PERIOD_FIELD)
 from axonius.plugin_base import EntityType
 from axonius.consts.report_consts import (ACTIONS_MAIN_FIELD)
@@ -67,13 +66,6 @@ class Tasks:
         return {
             '$and': query_segments
         }
-
-    def _get_action_type(self, action_name):
-        return self.enforcements_saved_actions_collection.find_one({
-            ACTION_NAME: action_name
-        }, {
-            ACTION_TYPE_DB_FIELD: 1
-        }).get(ACTION_FIELD, {}).get(ACTION_NAME_FIELD, '')
 
     @paginated()
     @filtered()
@@ -201,9 +193,8 @@ class Tasks:
                 trigger_view = trigger['view']
                 trigger_view_name = find_view_name_by_id(EntityType(trigger_view['entity']), trigger_view['id'])
 
-            main_action_name = result.get('main', {}).get('name', '')
-            main_action_type = self._get_action_type(main_action_name)
-
+            main_action = result.get(ACTIONS_MAIN_FIELD, {})
+            main_action_type = main_action.get(ACTION_FIELD, {}).get(ACTION_NAME_FIELD)
             return beautify_db_entry({
                 '_id': task.get('_id'),
                 'result.metadata.success_rate': success_rate,
@@ -211,7 +202,7 @@ class Tasks:
                     get_task_full_name(task.get('post_json', {}).get('report_name', ''),
                                        result.get('metadata', {}).get('pretty_id', '')),
                 'status': status,
-                f'result.{ACTIONS_MAIN_FIELD}.name': main_action_name,
+                f'result.{ACTIONS_MAIN_FIELD}.name': main_action.get('name', ''),
                 f'result.{ACTIONS_MAIN_FIELD}.type': main_action_type,
                 TRIGGER_RESULT_VIEW_NAME_FIELD: trigger_view_name,
                 TRIGGER_RESULT_PERIOD_FIELD: task_metadata.get('triggered_reason', ''),

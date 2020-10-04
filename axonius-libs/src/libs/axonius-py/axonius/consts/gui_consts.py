@@ -158,7 +158,7 @@ EXEC_REPORT_FILE_NAME = 'Axonius Report {}.pdf'
 EXEC_REPORT_EMAIL_CONTENT = '''Hello,
 
 this is a periodic report sent to you by axonius.
-To change the intervals in which the report is being sent or remove yourself from the recipients of this email please 
+To change the intervals in which the report is being sent or remove yourself from the recipients of this email please
 enter reporting in Axonius.'''
 
 TEMP_MAINTENANCE_THREAD_ID = 'support_access_thread'
@@ -295,6 +295,8 @@ class Signup:
     CompanyField = 'companyName'  # do not change this const!
     ContactEmailField = 'contactEmail'  # do not change this const!
     UserName = 'userName'
+    ApiKeysField = 'api_keys'
+
 
 
 # DO NOT MOVE THESE CREDS FROM THIS FILE. we need the in test AND prod AND inside the docker!

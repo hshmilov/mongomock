@@ -23,8 +23,16 @@ class GigamonFmConnection(RESTConnection):
 
         try:
             response = self._get(VERSION_URL_SUFFIX, do_basic_auth=True)
-            if not isinstance(response, dict):
-                raise Exception(f'Unexpected format of the API version: {str(response)}')
+            if not (isinstance(response, dict) and isinstance(response.get('apiVersion'), str)):
+                raise Exception(f'Could not fetch API version: {str(response)}')
+
+            api_version = response.get('apiVersion')
+            response = self._get(NODES_URL_SUFFIX.format(api_version), do_basic_auth=True)
+            if not (isinstance(response, dict) and isinstance(response.get('nodes'), list)):
+                raise Exception(f'Could not fetch devices from the server: {str(response)}')
+
+            if len(response.get('nodes')) == 0:
+                raise Exception(f'The server returned 0 devices.')
         except Exception as e:
             raise ValueError(f'Error: Invalid response from server, please check domain or credentials. {str(e)}')
 

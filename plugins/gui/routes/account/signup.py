@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from typing import Optional
 
 from flask import (jsonify,
                    request)
@@ -19,21 +18,12 @@ from gui.logic.login_helper import has_customer_login_happened
 class Signup:
     @gui_route_logged_in(methods=['POST', 'GET'], enforce_session=False)
     def process_signup(self):
-        """Process initial signup.
-
-        JEO: 04/23/2020: Moved the meat of this to _process_signup to allow the public API to use this as well.
-        """
-        return self._process_signup(return_api_keys=False)
+        """Process initial signup."""
+        return self._process_signup()
 
     # pylint: disable=dangerous-default-value
-    def _process_signup(self, return_api_keys: Optional[bool] = False, manual_signup: dict = {}):
-        """Process initial signup.
-
-        Args:
-            return_api_keys: At end of signup, return the api_key and api_secret for the admin account.
-                Added for public API to allow for full automation of deployment, standup, configuration, and use of a
-                new instance.
-        """
+    def _process_signup(self, manual_signup: dict = {}):
+        """Process initial signup."""
         signup_collection = self._get_collection(gui_consts.Signup.SignupCollection)
         signup = signup_collection.find_one({})
 
@@ -97,7 +87,8 @@ class Signup:
             return True
 
         result = {}
-        if return_api_keys:
+        api_keys = signup_data.get(gui_consts.Signup.ApiKeysField)
+        if api_keys:
             user_from_db = self._users_collection.find_one({'user_name': 'admin'})
             result['api_key'] = user_from_db['api_key']
             result['api_secret'] = user_from_db['api_secret']

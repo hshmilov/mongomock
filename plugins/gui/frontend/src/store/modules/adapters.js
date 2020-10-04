@@ -351,7 +351,7 @@ export const adapters = {
         method: 'post',
         data: {
           connection: payload.serverData.client_config,
-          instance: payload.instanceName,
+          instance: payload.instanceId,
           adapter: payload.adapterId,
         },
       });

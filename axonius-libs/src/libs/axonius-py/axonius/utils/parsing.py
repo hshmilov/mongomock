@@ -1542,7 +1542,7 @@ def serials_do_not_contradict(adapter_device1, adapter_device2):
 
 
 def is_hostname_condradict_ok_adapter(adapter_device):
-    return adapter_device.get('plugin_name') in ['fresh_service_adapter', 'snipeit_adapter']
+    return adapter_device.get('plugin_name') in ['fresh_service_adapter', 'snipeit_adapter', 'iboss_cloud_adapter']
 
 
 def hostnames_do_not_contradict(adapter_device1, adapter_device2):

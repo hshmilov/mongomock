@@ -118,7 +118,7 @@ class PureStorageFlashArrayAdapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('name') or '')
+            device.id = str(device_id) + '_' + (device_raw.get('name') or '')
 
             device.name = device_raw.get('name')
             device.figure_os(os_string=device_raw.get('os'))

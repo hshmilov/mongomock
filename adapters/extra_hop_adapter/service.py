@@ -136,7 +136,7 @@ class ExtraHopAdapter(AdapterBase):
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             name = device_raw.get('default_name') or device_raw.get('custom_name') or device_raw.get('display_name')
-            device.id = device_id + '_' + (name or '')
+            device.id = str(device_id) + '_' + (name or '')
             device.name = name
 
             device.device_model = device_raw.get('model')

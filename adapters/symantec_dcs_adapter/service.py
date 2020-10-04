@@ -152,6 +152,7 @@ class SymantecDcsAdapter(AdapterBase):
             device.category_name = device_raw.get('categoryname')
             device.manager_name = device_raw.get('managername')
             device.agent_status = device_raw.get('agentstatus')
+            device.agent_state = device_raw.get('agentstate')
             device.guid = device_raw.get('guid')
             device.element_type = device_raw.get('elementtype')
 

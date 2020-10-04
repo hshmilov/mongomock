@@ -9,6 +9,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
+from axonius.utils.datetime import parse_date
 from cycognito_adapter.connection import CycognitoConnection
 from cycognito_adapter.client_id import get_client_id
 from cycognito_adapter.consts import DEFAULT_DOMAIN
@@ -158,6 +159,7 @@ class CycognitoAdapter(ScannerAdapterBase):
             device.at_risk = bool(device_raw.get('at-risk'))
             device.owned_by = device_raw.get('owned-by')
             device.scan_status = device_raw.get('scan-status')
+            device.last_seen = parse_date(device_raw.get('last-seen'))
             device.set_raw(device_raw)
             return device
         except Exception:

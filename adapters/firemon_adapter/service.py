@@ -146,7 +146,7 @@ class FiremonAdapter(AdapterBase, Configurable):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('name') or '')
+            device.id = str(device_id) + '_' + (device_raw.get('name') or '')
 
             device.name = device_raw.get('name')
             device.description = device_raw.get('description')

@@ -19,5 +19,6 @@ class SymantecDcsDeviceInstance(DeviceAdapter):
     security_group = Field(SecurityGroup, 'Security Group')
     manager_name = Field(str, 'Manager Name')
     agent_status = Field(str, 'Agent Status')
+    agent_state = Field(str, 'Agent State')
     guid = Field(str, 'GUID')
     element_type = Field(str, 'Element Type')

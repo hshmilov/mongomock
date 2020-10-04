@@ -16,7 +16,8 @@ from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_FIELD,
                                           LAST_TRIGGERED_FIELD,
                                           TIMES_TRIGGERED_FIELD,
                                           TRIGGERS_FIELD, ACTION_CONFIG_FIELD, ACTION_FIELD, TRIGGER_VIEW_NAME_FIELD,
-                                          TRIGGER_RESULT_VIEW_NAME_FIELD, TRIGGER_PERIOD_FIELD)
+                                          TRIGGER_RESULT_VIEW_NAME_FIELD, TRIGGER_PERIOD_FIELD, ACTION_NAME,
+                                          ACTION_TYPE_DB_FIELD, ACTION_NAME_FIELD)
 
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils.gui_helpers import (get_connected_user_id, paginated,
@@ -51,7 +52,6 @@ class Enforcements(Tasks):
                 trigger_view_name = find_view_name_by_id(EntityType(trigger_view['entity']), trigger_view['id'])
 
             main_action_type = self._get_action_type(actions[ACTIONS_MAIN_FIELD])
-
             return beautify_db_entry({
                 '_id': enforcement['_id'], 'name': enforcement['name'],
                 f'{ACTIONS_FIELD}.{ACTIONS_MAIN_FIELD}': actions[ACTIONS_MAIN_FIELD],
@@ -423,3 +423,14 @@ class Enforcements(Tasks):
     @gui_route_logged_in('actions/upload_file', methods=['POST'], skip_activity=True)
     def actions_upload_file(self):
         return self._upload_file(DEVICE_CONTROL_PLUGIN_NAME)
+
+    def _get_action_type(self, action_name):
+        action = self.enforcements_saved_actions_collection.find_one({
+            ACTION_NAME: action_name
+        }, {
+            ACTION_TYPE_DB_FIELD: 1
+        })
+        if not action:
+            logger.info(f'Requested action {action_name} not found')
+            return ''
+        return action.get(ACTION_FIELD, {}).get(ACTION_NAME_FIELD, '')
