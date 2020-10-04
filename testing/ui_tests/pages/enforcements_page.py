@@ -132,7 +132,7 @@ class EnforcementsPage(EntitiesPage):
     RESULT_CSS = '.result-container'
     QUERY_TITLE_CSS = '.query-title'
 
-    ENFORCEMENT_LOCK_MODAL_CSS = '#enforcement_feature_lock'
+    ENFORCEMENT_LOCK_MODAL_CSS = '.x-enforcements-feature-lock-tip.ant-modal'
 
     FIELD_COMPLETED = 'Completed'
     FIELD_STATUS = 'Status'

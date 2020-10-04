@@ -1428,6 +1428,10 @@ class Page:
         else:
             raise RuntimeError('Invalid discovery schedule mode ')
 
+    def close_ant_modal(self, modal):
+        ActionChains(self.driver).move_to_element_with_offset(modal, -1, -1).click().perform()
+        time.sleep(0.5)  # wait for enforce lock tip to close. (clicking outside the modal)
+
     def _find_discovery_mode_dropdown(self, discovery_mode_class):
         self.wait_for_element_present_by_css(discovery_mode_class)
         return self.driver.find_element_by_css_selector(discovery_mode_class)

@@ -18,6 +18,7 @@ import {
 import XButton from '@axons/inputs/Button.vue';
 import XIcon from '@axons/icons/Icon';
 import antInputDirective from 'ant-design-vue/es/_util/antInputDirective';
+import portalDirective from 'ant-design-vue/es/_util/portalDirective';
 import App from './components/App.vue';
 
 import { createVuetifyConfigObject } from './plugins/vuetify';
@@ -28,8 +29,8 @@ import MessageModalPlugin from '@/plugins/message-modal';
 import router from './router/index';
 import store from './store/index';
 
-
 Vue.use(antInputDirective);
+Vue.use(portalDirective);
 Vue.use(Vuelidate);
 Vue.use(MdField);
 Vue.use(MdDialog);

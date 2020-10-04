@@ -1,13 +1,12 @@
 <template>
   <AModal
-    id="enforcement_feature_lock"
+    centered
     :mask-style="{left: modelCollapsePosition}"
     :visible="enabled"
-    class="x-enforcements-feature-lock-tip"
+    dialog-class="x-enforcements-feature-lock-tip"
     :cancel-button-props="{ props: { type: 'link' } }"
     :closable="false"
     :width="null"
-    :centered="true"
     :wrap-class-name="collapseSidebar ? 'modal-wrap-collapse' : 'modal-wrap-uncollapse'"
     @cancel="onCancel"
   >
@@ -104,7 +103,7 @@ export default {
 </script>
 
 <style lang="scss">
-      #enforcement_feature_lock {
+      .x-enforcements-feature-lock-tip {
         .ant-modal-content {
           padding: unset;
           border-radius: 10px;
@@ -157,11 +156,11 @@ export default {
             background-color: $theme-orange;
           }
         }
-        .modal-wrap-collapse {
-          left: 60px;
-        }
-        .modal-wrap-uncollapse {
-          left: 240px;
-        }
+      }
+      .modal-wrap-collapse {
+        left: 60px;
+      }
+      .modal-wrap-uncollapse {
+        left: 240px;
       }
 </style>

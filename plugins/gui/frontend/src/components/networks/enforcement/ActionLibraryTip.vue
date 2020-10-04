@@ -1,12 +1,12 @@
 <template>
-  <x-modal
-    v-if="action"
-    size="lg"
-    class="x-action-library-tip"
-    @close="$emit('close')"
+  <AModal
+    visible
+    centered
+    :closable="false"
+    dialog-class="x-action-library-tip"
+    @cancel="$emit('close')"
   >
     <div
-      slot="body"
       class="body"
     >
       <div class="content">
@@ -22,26 +22,29 @@
       </div>
     </div>
     <div slot="footer">
-      <x-button type="primary" @click="$emit('close')">OK</x-button>
+      <XButton
+        type="primary"
+        @click="$emit('close')"
+      >OK</XButton>
     </div>
-  </x-modal>
+  </AModal>
 </template>
 
 <script>
-  import xModal from '../../axons/popover/Modal/index.vue'
+import { Modal } from 'ant-design-vue';
 
-  export default {
-    name: 'XActionLibraryTip',
-    components: {
-      xModal
+export default {
+  name: 'XActionLibraryTip',
+  components: {
+    AModal: Modal,
+  },
+  props: {
+    action: {
+      type: Object,
+      default: () => ({}),
     },
-    props: {
-      action: {
-        type: Object,
-        default: () => {}
-      }
-    }
-  }
+  },
+};
 </script>
 
 <style lang="scss">
