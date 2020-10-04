@@ -4,7 +4,9 @@
     class="x-trial-banner"
   >
     <template v-if="isExpired || trialDaysRemaining < 1">
-      <XBanner severity="error">Axonius evaluation period has expired. Please reach out to your Account Manager.</XBanner>
+      <XBanner severity="error">
+        Your Axonius evaluation period has ended. Please contact <a href="mailto:support@axonius.com?subject=Axonius trial has expired&amp;body=Please contact me for contract options"><u style="color: white;">Axonius support</u></a>
+      </XBanner>
       <div
         v-if="withOverlay"
         class="banner-overlay"

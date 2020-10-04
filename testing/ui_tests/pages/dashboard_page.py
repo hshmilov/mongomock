@@ -1129,9 +1129,9 @@ class DashboardPage(BasePage):
         assert Color.from_string(banner.value_of_css_property('background-color')).hex.upper() == color.upper()
         return banner
 
-    def find_trial_expired_banner(self):
-        return self.wait_for_element_present_by_text(
-            'Axonius evaluation period has expired. Please reach out to your Account Manager.')
+    def verify_trial_expired_banner(self):
+        expired_banner = self.wait_for_element_present_by_text('Your Axonius evaluation period has ended.')
+        assert expired_banner.text == 'Your Axonius evaluation period has ended. Please contact Axonius support'
 
     def find_contract_expired_banner(self):
         return self.wait_for_element_present_by_css(self.BANNER_BY_CSS).text.\
