@@ -1,3 +1,6 @@
+from selenium.common.exceptions import NoSuchElementException
+
+from axonius.utils.wait import wait_until
 from services.adapters.cisco_service import CiscoService
 from services.adapters.esx_service import EsxService
 from test_credentials.test_cisco_credentials import cisco_creds
@@ -39,7 +42,9 @@ class TestAdaptersParallelFetch(TestBase):
 
             self.base_page.run_discovery()
             self.devices_page.switch_to_page()
-            assert self.devices_page.get_table_count() > 0
+            self.devices_page.wait_for_table_to_be_responsive()
+            wait_until(lambda: self.devices_page.get_table_count() > 0,
+                       tolerated_exceptions_list=[NoSuchElementException])
             self.adapters_page.clean_adapter_servers(CISCO_NAME)
         self.wait_for_adapter_down(CISCO_PLUGIN_NAME)
         self._toggle_parallel_fetch(False)
