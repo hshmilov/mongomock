@@ -1292,6 +1292,11 @@
     "link": "https://docs.axonius.com/docs/microsoft-kms",
     "description": "Microsoft Key Management Service (KMS) is an activation service that allows organizations to activate systems within their own network, eliminating the need for individual computers to connect to Microsoft for product activation."
   },
+  "intrigue_adapter": {
+    "title": "Intrigue",
+    "link": "https://docs.axonius.com/docs/intrigue",
+    "description": "Intrigue enables IT and Security teams with a complete and always up to date view of Cloud and Internet-exposed assets and exposures."
+  },
   "opendcim_adapter": {
     "title": "openDCIM",
     "link": "https://docs.axonius.com/docs/opendcim",

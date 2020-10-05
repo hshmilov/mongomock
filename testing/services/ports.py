@@ -191,6 +191,7 @@ DOCKER_PORTS = {
     'landesk-adapter':                  6076,
     'pingone-adapter':                  6077,
     'pivotal-cloud-foundry-adapter':    6078,
+    'intrigue-adapter':                 6079,
     'paloalto-xdr-adapter':             6123,
     'sqlite-adapter':                   6124,
     'ibm-qradar-adapter':               6125,
