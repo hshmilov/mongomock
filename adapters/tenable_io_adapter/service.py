@@ -42,6 +42,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         last_scanned = Field(datetime.datetime, 'Last Scanned')
         linked_on = Field(datetime.datetime, 'Linked On')
         last_scan_time = Field(datetime.datetime, 'Last Scan Time')
+        asset_uuid = Field(str, 'Asset UUID')
         agent_uuid = Field(str, 'Agent UUID')
         risk_factor = Field(str, 'Risk Factor')
         scans_data = ListField(ScanData, 'Scans Data')
@@ -74,6 +75,28 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     logger.exception(f'Could not connect to {client_id}')
         except Exception as e:
             logger.exception('Got exception while adding to taget group')
+            return str(e), 400
+        return 'Failure', 400
+
+    @add_rule('tag_assets', methods=['POST'])
+    def tag_assets(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+        tenable_io_dict = self.get_request_data_as_object()
+        success = False
+        try:
+            for client_id in self._clients:
+                try:
+                    conn = self.get_connection(self._get_client_config_by_client_id(client_id))
+                    with conn:
+                        result_status = conn.tag_assets(tenable_io_dict)
+                        success = success or result_status
+                        if success is True:
+                            return '', 200
+                except Exception:
+                    logger.exception(f'Could not connect to {client_id}')
+        except Exception as e:
+            logger.exception('Got exception while adding tags')
             return str(e), 400
         return 'Failure', 400
 
@@ -242,6 +265,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
     def _parse_export_device(self, device_id, device_raw, client_data, uuid_to_id_scans_dict):
         device = self._new_device_adapter()
         device.id = device_id
+        device.asset_uuid = device_id
         device.has_agent = bool(device_raw.get('has_agent'))
         device.last_seen = parse_date(device_raw.get('last_seen'))
         device.risk_factor = device_raw.get('risk_factor')

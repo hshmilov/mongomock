@@ -64,6 +64,47 @@ class TenableIoConnection(RESTConnection):
                                 'source': 'Axonius'})
         return True
 
+    def get_tags_value_to_uuid(self):
+        try:
+            response = self._get('tags/values', url_params={'offset': 0,
+                                                            'limit': AGENTS_PER_PAGE})
+            total = response['pagination']['total']
+            logger.info(f'Got {total} number of tags values.')
+            yield from response['values']
+            offset = AGENTS_PER_PAGE
+            while offset < min(total, MAX_AGENTS):
+                try:
+                    yield from self._get('tags/values',
+                                         url_params={'offset': offset,
+                                                     'limit': AGENTS_PER_PAGE})['values']
+                except Exception:
+                    logger.exception(f'Problem with offset {offset}')
+                offset += AGENTS_PER_PAGE
+        except Exception:
+            logger.exception(f'Problem getting tags value to uuid')
+
+    def tag_assets(self, tenable_io_dict):
+        assets = tenable_io_dict.get('assets')
+        tags = tenable_io_dict.get('tags')
+        action = tenable_io_dict.get('action')
+        if action not in ['add', 'remove']:
+            raise RESTException(f'Bad action name: {action}')
+        tags_raw = []
+        for tag_data in self.get_tags_value_to_uuid():
+            try:
+                tag_value = tag_data.get('value')
+                tag_uuid = tag_data.get('uuid')
+                if not tag_value or not tag_uuid:
+                    continue
+                if tag_value in tags:
+                    tags_raw.append(tag_uuid)
+            except Exception:
+                logger.exception(f'problem with tag: {tag_data}')
+        self._post('tags/assets/assignments', body_params={'action': action,
+                                                           'assets': assets,
+                                                           'tags': tags_raw})
+        return True
+
     def add_ips_to_scans(self, tenable_io_dict):
         scan_name = tenable_io_dict.get('scan_name')
         ips = tenable_io_dict.get('ips')

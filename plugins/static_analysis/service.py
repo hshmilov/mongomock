@@ -637,6 +637,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
                 'specific_data.data.users == exists(true) or specific_data.data.last_used_users == exists(true) or '
                 'specific_data.data.assigned_to == exists(true) or '
                 'specific_data.data.top_user == exists(true) or '
+                'specific_data.data.current_logged_user == exists(true) or '
                 'adapters_data.azure_ad_adapter.user_principal_name == ({"$exists":true,"$ne":""}) or '
                 'specific_data.data.email == ({"$exists":true,"$ne":""})'),
             batch_size=10
@@ -709,6 +710,8 @@ class StaticAnalysisService(Triggerable, PluginBase):
                     sd_last_used_users_list.append([d['data']['assigned_to']])
                 if isinstance(d['data'], dict) and isinstance(d['data'].get('top_user'), str):
                     sd_last_used_users_list.append([d['data']['top_user']])
+                if isinstance(d['data'], dict) and isinstance(d['data'].get('current_logged_user'), str):
+                    sd_last_used_users_list.append([d['data']['current_logged_user']])
                 if isinstance(d['data'], dict) and isinstance(d['data'].get('email'), str):
                     sd_last_used_users_list.append([d['data']['email']])
 

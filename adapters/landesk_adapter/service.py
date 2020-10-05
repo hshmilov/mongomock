@@ -81,7 +81,7 @@ class LandeskAdapter(AdapterBase):
                                                                 '</Columns>')
                     device_raw['bios_serial'] = bios_serial['MachineData']['ValuePair'][0]['Value']
                 except Exception:
-                    logger.exception(f'Problem with bios')
+                    logger.debug(f'Problem with bios', exc_info=True)
                 try:
                     device_raw['sw_raw'] = []
                     sw_raw = client.service.GetMachineData(device_id,
