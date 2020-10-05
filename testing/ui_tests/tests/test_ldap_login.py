@@ -35,6 +35,7 @@ class TestLDAPLogin(PermissionsTestBase):
         self.login_page.login(username=DEFAULT_USER['user_name'], password=DEFAULT_USER['password'])
         self.settings_page.switch_to_page()
         self.settings_page.click_manage_users_settings()
+        self.settings_page.wait_for_table_to_be_responsive()
         self.settings_page.edit_user_wait_done(username,
                                                role_name=self.settings_page.RESTRICTED_ROLE)
         self._logout_and_login_with_ldap(username,
