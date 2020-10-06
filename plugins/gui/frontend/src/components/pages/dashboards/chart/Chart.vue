@@ -328,12 +328,22 @@ export default {
       this.fetchData();
     },
     // update chart data
-    async fetchTrendChartData(refresh = undefined) {
+    async fetchTrendChartData(refresh = undefined, refetch = undefined) {
       try {
         const trendChartId = this.chart.linked_dashboard;
-        const { data, status } = await fetchChartData({ uuid: trendChartId, limit: 1000, refresh });
+        const { data, status } = await fetchChartData({
+          uuid: trendChartId,
+          limit: 1000,
+          refresh,
+          refetch,
+        });
         if (status !== 200) {
           throw new Error();
+        }
+
+        if (data.calculatingChart) {
+          this.fetchTrendChartData(undefined /* refresh */, true /* refetch */);
+          return;
         }
         this.trendChartData = {
           content: data.data,
@@ -379,8 +389,13 @@ export default {
         }
 
         const {
-          data: head, data_tail: tail, count,
+          data: head, data_tail: tail, count, calculatingChart,
         } = data;
+
+        if (calculatingChart) {
+          this.fetchData({ ...params, refresh: undefined, refetch: true });
+          return;
+        }
         let chartData = {};
         if (this.pagination) {
           chartData = this.getPaginatedDataObject(head, tail, count, this.currentPage, this.chartData.content);
@@ -444,7 +459,7 @@ export default {
       // fetch data
       this.fetchData({ refresh: true });
       if (this.trend) {
-        this.fetchTrendChartData(true);
+        this.fetchTrendChartData(true /* refresh */);
       }
     },
     // actions-menu events callbacks

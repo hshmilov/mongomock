@@ -276,6 +276,8 @@ class Charts:
         """
         is_refresh = request.args.get('refresh', False) == 'true'
         is_blocking = request.args.get('blocking', False) == 'true'
+        is_refetch = request.args.get('refetch', False) == 'true'
+
         got_from_db_cache = False
         panel_id = ObjectId(panel_id)
         if is_refresh:
@@ -297,6 +299,10 @@ class Charts:
                                                                             wait_time=REQUEST_MAX_WAIT_TIME)
                 elif is_blocking:
                     if not generate_dashboard.has_cache(panel_id, sort_by=sort_by, sort_order=sort_order):
+                        if is_refetch:
+                            return jsonify({
+                                'calculatingChart': True
+                            })
                         try:
                             generated_dashboard = self._get_db_cached_data(panel_id)
                         except Exception:
@@ -314,7 +320,9 @@ class Charts:
             except (TimeoutError, NoCacheException):
                 # the dashboard is still being calculated
                 logger.debug(f'Dashboard {panel_id} is not ready')
-                generated_dashboard = {}
+                return jsonify({
+                    'calculatingChart': True
+                })
 
         error = generated_dashboard.get('error', None)
         if error is not None:

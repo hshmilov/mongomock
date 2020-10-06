@@ -1,4 +1,6 @@
 import qs from 'qs';
+import _mapKeys from 'lodash/mapKeys';
+import _snakeCase from 'lodash/snakeCase';
 import createRequest from './create-request';
 
 export const isEmptySystem = async () => {
@@ -25,23 +27,20 @@ export const getCurrentSpaceData = async (spaceId) => {
   return res.data;
 };
 
+function pythonizeKeys(value, key) {
+  return _snakeCase(key);
+}
+
 export const fetchChartData = async (params) => {
   const {
-    uuid, historical, skip, limit, search, refresh, sortBy, sortOrder, blocking,
+    uuid,
+    ...restParams
   } = params;
 
   const uri = `/dashboard/charts/${uuid}`;
-  const qsParams = {
-    to_date: historical,
-    from_date: historical,
-    skip,
-    limit,
-    search,
-    refresh,
-    blocking,
-    sort_by: sortBy,
-    sort_order: sortOrder,
-  };
+
+  const qsParams = _mapKeys(restParams, pythonizeKeys);
+
   const querystring = qs.stringify(qsParams, { addQueryPrefix: true, skipNulls: true });
   const request = createRequest(uri + querystring);
   const requestOptions = {
