@@ -137,7 +137,7 @@ class HpIloAdapter(AdapterBase):
 
             if isinstance(device_raw.get('HostCorrelation'), dict):
                 device.add_ips_and_macs(ips=device_raw.get('HostCorrelation').get('IPAddress'),
-                                        mac=device_raw.get('HostCorrelation').get('HostMACAddress'))
+                                        macs=device_raw.get('HostCorrelation').get('HostMACAddress'))
 
             if isinstance(device_raw.get('MemorySummary'), dict):
                 device.total_physical_memory = int_or_none(device_raw.get('MemorySummary').get('TotalSystemMemoryGiB'))
