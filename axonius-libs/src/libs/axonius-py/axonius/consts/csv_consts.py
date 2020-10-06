@@ -1,7 +1,7 @@
 # These are ordered by what we prefer if there are multiple columns (e.g. id > identifier)
 
 IDENTIFIERS = {
-    'id': ['id', 'identifier', 'serialnumber', 'assetid', 'resourceid', 'dwid'],
+    'id': ['id', 'identifier', 'serialnumber', 'assetid', 'resourceid', 'dwid', 'recid'],
     'name': ['name', 'vmname', 'displayname', 'assetname', 'machinename', 'instancename', 'samaccountname',
              'endpointname'],
     'hostname': ['host', 'fqdn', 'fullyqualifieddomainname', 'hostname', 'compname', 'computername', 'servername',
@@ -18,8 +18,9 @@ IDENTIFIERS = {
     'manufacturer': ['manufacturer', 'devicemanufacturer'],
     'total_physical_memory_gb': ['memorygb', 'totalmemorygb'],
     'cpu_speed': ['cpuspeedraw'],
-    'last_seen': ['lastmessagetime', 'lastdiscoveredtime', 'lastseen', 'endpointlfdt'],
-    'mail': ['mail', 'email', 'usermail', 'mailaddress', 'emailaddress', 'emailprimarywork', 'companyemail'],
+    'last_seen': ['lastmessagetime', 'lastdiscoveredtime', 'lastseen', 'endpointlfdt', 'lastmodifieddatetime'],
+    'mail': ['mail', 'email', 'usermail', 'mailaddress', 'emailaddress', 'emailprimarywork', 'companyemail',
+             'primaryuseremail'],
     'domain': ['domain', 'domainname', 'endpointdomain'],
     'username': ['username', 'samaccountname'],
     'first_name': ['firstname', 'givenname'],
@@ -34,7 +35,26 @@ IDENTIFIERS = {
     'cve_id': ['cve', 'cveid', 'cvelist'],
     'email': ['email', 'mail'],
     'cloud_id': ['cloudid'],
-    'cloud_provider': ['cloudprovider', 'cloudprovidor']
+    'cloud_provider': ['cloudprovider', 'cloudprovidor'],
+    'config_type_id': ['configurationitemtypeid'],
+    'config_type_name': ['configurationitemtypename'],
+    'creation_time': ['createddatetime'],
+    'created_by': ['createdby'],
+    'last_modified': ['lastmodifieddatetime'],
+    'last_modified_by': ['lastmodby'],
+    'owner_team': ['ownedbyteam'],
+    'description': ['description'],
+    'asset_tag': ['assettag'],
+    'building': ['locationbuilding'],
+    'location_floor': ['locationfloor'],
+    'asset_status': ['assetstatus'],
+    'primary_username': ['primaryusername'],
+    'asset_type': ['assettype'],
+    'last_discovery_date': ['lastdiscoverydate'],
+    'last_inventory_date': ['physicalinventorydate'],
+    'data_source': ['interfacesource'],
+    'asset_id': ['assetid'],
+    'last_logged_user': ['lastloggedinuser'],
 }
 
 # Note that fields have to be lowercase, with no spaces or - or _. we normalize this when we get data from the csv
