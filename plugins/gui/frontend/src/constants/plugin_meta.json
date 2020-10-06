@@ -1127,6 +1127,11 @@
     "link": "https://docs.axonius.com/docs/carbon-black-cb-protection",
     "description": "VMware Carbon Black App Control (formerly Carbon Black CB Protection) protects critical systems and servers to prevent unwanted changes and ensure continuous compliance with regulatory mandates."
   },
+  "dell_ome_adapter": {
+    "title": "Dell OpenManage Enterprise - BETA",
+    "link": "https://docs.axonius.com/docs/dell-openmanage-enterprise",
+    "description": "Dell OpenManage Enterprise is a one-to-many systems management console. It facilitates lifecycle management for Dell EMC PowerEdge servers in one console."
+  },
   "carbonblack_response_adapter": {
     "title": "VMware Carbon Black EDR (Carbon Black CB Response)",
     "link": "https://docs.axonius.com/docs/carbon-black-cb-response",

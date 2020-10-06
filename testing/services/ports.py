@@ -123,6 +123,7 @@ DOCKER_PORTS = {
     'bamboohr-adapter':                 5965,
     'sysaid-adapter':                   5990,
     'vmware-vrops-adapter':             5991,
+    'dell-ome-adapter':                 5992,
     'slack-adapter':                    6000,
     'cisco-adapter':                    6001,
     'scep-adapter':                     6003,
