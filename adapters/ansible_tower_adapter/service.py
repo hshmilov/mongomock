@@ -369,7 +369,8 @@ class AnsibleTowerAdapter(AdapterBase):
                 device.device_manufacturer = facts_raw.get('ansible_system_vendor')
                 ansible_users_and_groups = facts_raw.get('ansible_users_and_groups')
                 hostname = facts_raw.get('ansible_hostname')
-                device.hostname = hostname
+                if hostname:
+                    device.hostname = hostname
                 if not hostname:
                     hostname = ''
                 hostname = hostname.upper()

@@ -383,7 +383,7 @@ def is_ivanti_cm_adapter(adapter_device):
 
 
 def is_service_now_and_no_other(adapter_device):
-    if not adapter_device.get('plugin_name') == 'service_now_adapter':
+    if not is_snow_adapter(adapter_device):
         return False
     try:
         if ALLOW_SERVICE_NOW_BY_NAME_ONLY:
@@ -1036,7 +1036,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         allow_old_mac_list = ALLOW_OLD_MAC_LIST
 
         if correlate_by_snow_mac:
-            allow_old_mac_list.append('service_now_adapter')
+            allow_old_mac_list.extend(['service_now_adapter', 'service_now_sql_adapter', 'service_now_akana_adapter'])
 
         for adapter in filtered_adapters_list:
             # Don't add to the MAC comparisons devices that haven't seen for more than 30 days

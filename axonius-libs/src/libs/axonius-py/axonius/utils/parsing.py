@@ -877,7 +877,8 @@ def is_old_device(adapter_device, number_of_days=DEFAULT_NUMBER_OF_DAYS_FOR_OLD_
 
 
 def is_snow_adapter(adapter_device):
-    return adapter_device.get('plugin_name') == 'service_now_adapter'
+    return adapter_device.get('plugin_name') in ['service_now_adapter', 'service_now_sql_adapter',
+                                                 'service_now_akana_adapter']
 
 
 def is_airwtch_adapter(adapter_device):

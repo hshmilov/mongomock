@@ -242,7 +242,10 @@ class RumbleAdapter(AdapterBase):
                 return None
             device.id = device_id + '_' + str((device_raw.get('names') or ''))
             if device_raw.get('names') and isinstance(device_raw.get('names'), list):
-                device.hostname = device_raw.get('names')[0]
+                hostname = device_raw.get('names')[0]
+                if len(device_raw.get('names')) > 1 and device_raw.get('names')[1].split('.')[0] == hostname:
+                    hostname = device_raw.get('names')[1]
+                device.hostname = hostname
             device.add_ips_and_macs(ips=device_raw.get('addresses'), macs=device_raw.get('macs'))
             device.last_seen = parse_unix_timestamp(device_raw.get('last_seen'))
             device.first_seen = parse_unix_timestamp(device_raw.get('first_seen'))
