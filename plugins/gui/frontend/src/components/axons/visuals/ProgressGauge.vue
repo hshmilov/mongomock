@@ -1,5 +1,8 @@
 <template>
-  <svg :height="radius * 2" :width="radius * 2">
+  <svg
+    :height="radius * 2"
+    :width="radius * 2"
+  >
     <circle
       v-if="background"
       stroke="#f5f5f5"
@@ -26,61 +29,72 @@
       text-anchor="middle"
       fill="#000"
       dy="2"
-    >{{`${this.progress} / ${this.steps}`}}</text>
-    <text class="gauge-title" x="50%" y="55%" text-anchor="middle" fill="#000" dy="8">Completed</text>
+    >
+      {{ `${this.progress} / ${this.steps}` }}
+    </text>
+    <text
+      class="gauge-title"
+      x="50%"
+      y="55%"
+      text-anchor="middle"
+      fill="#000"
+      dy="8"
+    >
+      Completed
+    </text>
   </svg>
 </template>
 
 <script>
-    export default {
-        name: 'x-progress-gauge',
-        props: {
-            radius: {
-                type: Number,
-                default: 45,
-            },
-            color: {
-                type: String,
-                default: '#0FBC18'
-            },
-            background: {
-                type: Boolean,
-                default: true
-            },
-            steps: {
-                type: Number,
-                required: true,
-                validator: function( value) {
-                    return value > 0
-                },
-            },
-            stroke: {
-                type: Number,
-                default: 3,
-            },
-            progress: {
-                type: Number,
-                required: true,
-                validator: function( value) {
-                    return value >= 0
-                },
-            }
-        },
-        data() {
-            const normalizedRadius = this.radius - this.stroke * 2;
-            const circumference = normalizedRadius * 2 * Math.PI;
+export default {
+  name: 'XProgressGauge',
+  props: {
+    radius: {
+      type: Number,
+      default: 45,
+    },
+    color: {
+      type: String,
+      default: '#78C247',
+    },
+    background: {
+      type: Boolean,
+      default: true,
+    },
+    steps: {
+      type: Number,
+      required: true,
+      validator(value) {
+        return value > 0;
+      },
+    },
+    stroke: {
+      type: Number,
+      default: 3,
+    },
+    progress: {
+      type: Number,
+      required: true,
+      validator(value) {
+        return value >= 0;
+      },
+    },
+  },
+  data() {
+    const normalizedRadius = this.radius - this.stroke * 2;
+    const circumference = normalizedRadius * 2 * Math.PI;
 
-            return {
-            normalizedRadius,
-            circumference,
-            };
-        },
-        computed: {
-            strokeDashoffset() { 
-                return this.circumference - this.progress / this.steps * this.circumference;
-            }
-        }
-    }
+    return {
+      normalizedRadius,
+      circumference,
+    };
+  },
+  computed: {
+    strokeDashoffset() {
+      return this.circumference - this.progress / this.steps * this.circumference;
+    },
+  },
+};
 </script>
 
 <style lang="scss" scoped>

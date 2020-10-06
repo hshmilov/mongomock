@@ -281,10 +281,23 @@ export const actionsMeta = {
 };
 
 export const mainCondition = 'main';
-export const successCondition = 'success';
-export const failCondition = 'failure';
-export const postCondition = 'post';
-export const triggerCondition = 'trigger';
+
+export const successiveActionsList = ['success', 'failure', 'post'];
+
+export const enforcementConditions = {
+  main: {
+    icon: '', iconClass: '',
+  },
+  success: {
+    icon: 'check-circle', iconClass: 'icon-success',
+  },
+  failure: {
+    icon: 'close-circle', iconClass: 'icon-error',
+  },
+  post: {
+    icon: 'info-circle', iconClass: 'icon-info',
+  },
+};
 
 export const createdToastMessages = {
   main: 'Enforcement set and main action created successfully',

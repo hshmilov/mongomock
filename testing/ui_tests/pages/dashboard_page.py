@@ -1108,8 +1108,8 @@ class DashboardPage(BasePage):
     def find_trial_remainder_banner(self, remainder_count):
         msg = 'days remaining in your Axonius evaluation'
         # Expected color of the banner according UIs thresholds
-        color = '231, 76, 60' if (remainder_count <= 7) else (
-            '255, 166, 0' if remainder_count <= 14 else '52, 152, 219')
+        color = '255, 77, 78' if (remainder_count <= 7) else (
+            '255, 196, 61' if remainder_count <= 14 else '60, 145, 230')
         try:
             banner = self.wait_for_element_present_by_xpath(
                 self.BANNER_BY_TEXT_XPATH.format(banner_text=f'{remainder_count} {msg}'))

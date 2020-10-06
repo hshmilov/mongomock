@@ -6,8 +6,8 @@
     >
       <XIcon
         v-if="completed"
-        class="x-milestone-status--completed"
-        :style="{color: '#0FBC18', fontSize: '18px'}"
+        class="x-milestone-status--completed icon-success"
+        :style="{fontSize: '18px'}"
         type="check-circle"
         theme="filled"
       />

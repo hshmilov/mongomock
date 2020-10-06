@@ -43,7 +43,9 @@
 
 <script>
 import { mapActions, mapMutations, mapState } from 'vuex';
-import _get from 'lodash/get';
+import { UPDATE_DATA_VIEW } from '@store/mutations';
+import { FETCH_TASK } from '@store/modules/tasks';
+import { actionsMeta, successiveActionsList, mainCondition } from '@constants/enforcement';
 import XPage from '../axons/layout/Page.vue';
 import XSplitBox from '../axons/layout/SplitBox.vue';
 import XCard from '../axons/layout/Card.vue';
@@ -52,16 +54,6 @@ import XAction from '../networks/enforcement/Action.vue';
 import XActionGroup from '../networks/enforcement/ActionGroup.vue';
 import XActionResult from '../networks/enforcement/ActionResult.vue';
 
-import { UPDATE_DATA_VIEW } from '../../store/mutations';
-import { FETCH_TASK } from '../../store/modules/tasks';
-
-import {
-  actionsMeta,
-  failCondition,
-  mainCondition,
-  postCondition,
-  successCondition,
-} from '../../constants/enforcement';
 
 export default {
   name: 'XTask',
@@ -73,6 +65,13 @@ export default {
     XAction,
     XActionGroup,
     XActionResult,
+  },
+  data() {
+    return {
+      actionInView: {
+        position: null, definition: null,
+      },
+    };
   },
   computed: {
     ...mapState({
@@ -164,7 +163,7 @@ export default {
       };
     },
     successiveActions() {
-      return [successCondition, failCondition, postCondition].map((condition) => ({
+      return this.successiveActionsTypes.map((condition) => ({
         condition,
         items: !this.taskResult ? [] : this.taskResult[condition].map((item) => ({
           ...item,
@@ -195,19 +194,22 @@ export default {
       return this.taskResult.metadata.trigger.view;
     },
   },
-  data() {
-    return {
-      actionInView: {
-        position: null, definition: null,
-      },
-    };
-  },
   watch: {
     taskFetching() {
       if (!this.taskFetching) {
         this.initData();
       }
     },
+  },
+  created() {
+    this.successiveActionsTypes = successiveActionsList;
+  },
+  mounted() {
+    if (!this.taskFetching && (!this.taskData.name || this.taskData.uuid !== this.id)) {
+      this.fetchTask(this.id);
+    } else if (this.taskData.name) {
+      this.initData();
+    }
   },
   methods: {
     ...mapActions({
@@ -284,13 +286,6 @@ export default {
       });
       this.$router.push({ path: `/${this.triggerView.entity}` });
     },
-  },
-  mounted() {
-    if (!this.taskFetching && (!this.taskData.name || this.taskData.uuid !== this.id)) {
-      this.fetchTask(this.id);
-    } else if (this.taskData.name) {
-      this.initData();
-    }
   },
 };
 </script>

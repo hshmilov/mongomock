@@ -1,7 +1,7 @@
 <template>
   <XFeedbackModal
+    v-model="isModalActive"
     class="compliance_email_dialog"
-    v-model="isActive"
     :handle-save="sendEmail"
     :message="message"
     :approve-text="title"
@@ -103,6 +103,7 @@ export default {
         fields: [], error: '',
       },
       formValid: false,
+      isModalActive: false,
     };
   },
   computed: {
@@ -121,6 +122,12 @@ export default {
         ],
         type: 'array',
       };
+    },
+  },
+  watch: {
+    isActive: {
+      handler: 'setActive',
+      immediate: true,
     },
   },
   methods: {
@@ -146,6 +153,9 @@ export default {
         this.formValid = false;
         throw error;
       }
+    },
+    setActive(value) {
+      this.isModalActive = value;
     },
   },
 };

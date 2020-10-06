@@ -41,6 +41,9 @@
             <th class="row-data">
               Description
             </th>
+            <th class="row-data">
+              Connection Status
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -50,29 +53,7 @@
             class="table-row"
             @click="configAdapter(item['id'])"
           >
-            <td class="status">
-              <div class="summary">
-                <div v-if="item.successClients">
-                  <XIcon
-                    family="symbol"
-                    type="success"
-                    class="icon-success"
-                  />
-                  <p class="summary_count">
-                    {{ item.successClients }}
-                  </p>
-                </div>
-                <div v-if="item.errorClients">
-                  <XIcon
-                    family="symbol"
-                    type="error"
-                    class="icon-error"
-                  />
-                  <p class="summary_count">
-                    {{ item.errorClients }}
-                  </p>
-                </div>
-              </div>
+            <td class="status-column">
               <div
                 class="marker"
                 :class="`indicator-bg-${item['status'] || 'void'}`"
@@ -91,6 +72,49 @@
             <td class="row-data description">
               <div class="content">
                 {{ item.description }}
+              </div>
+            </td>
+            <td class="row-data status">
+              <div class="summary">
+                <div
+                  v-if="item.successClients"
+                  class="summary_row"
+                >
+                  <XIcon
+                    type="check-circle"
+                    theme="filled"
+                    class="icon-success"
+                  />
+                  <span class="summary_count">
+                    {{ item.successClients }}
+                  </span>
+                </div>
+                <div
+                  v-if="item.errorClients"
+                  class="summary_row"
+                >
+                  <XIcon
+                    type="close-circle"
+                    theme="filled"
+                    class="icon-error"
+                  />
+                  <span class="summary_count">
+                    {{ item.errorClients }}
+                  </span>
+                </div>
+                <div
+                  v-if="item.inactiveClients"
+                  class="summary_row"
+                >
+                  <XIcon
+                    type="pause-circle"
+                    theme="filled"
+                    class="icon-inactive"
+                  />
+                  <span class="summary_count">
+                    {{ item.inactiveClients }}
+                  </span>
+                </div>
               </div>
             </td>
           </tr>
@@ -272,7 +296,13 @@ export default {
             }
 
             &.description {
-              width: 80%
+              width: calc(80% - 150px);
+              height: 76px;
+            }
+
+            &.status {
+              width: 150px;
+              padding: 0px 12px;
             }
 
             background: $theme-white;
@@ -294,40 +324,42 @@ export default {
             }
           }
 
-          .status {
-            display: flex;
+          .status-column {
+            position: relative;
+            min-width: 35px;
+            padding: 0;
             box-shadow: none;
 
-            .summary {
-              flex: 1 0 auto;
-              text-align: center;
-              line-height: calc(3.6em + 24px);
-              margin: 0 12px;
-              display: flex;
-              flex-direction: column;
-              justify-content: center;
-
-              & > div {
-                display: flex;
-                flex-direction: column;
-                justify-content: space-around;
-              }
-              &_count {
-                margin: 0;
-                padding: 2px 0;
-                line-height: 12px;
-                font-size: 12px;
-                font-weight: 600;
-              }
-            }
-
             .marker {
+              position: absolute;
+              top: 0;
+              right: 0;
+              bottom: 0;
               width: 10px;
-              height: calc(4px + 3.6em + 24px);
-              margin: -2px -8px;
+              margin: 0;
               border-bottom-left-radius: 4px;
               border-top-left-radius: 4px;
+            }
+          }
+          .summary {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            font-size: 16px;
+            padding: 5px;
 
+            &_row {
+              display: flex;
+              align-items: center;
+              padding: 2px 0;
+            }
+
+            &_count {
+              margin: 0 0 0 5px;
+              line-height: 1.3;
+              font-size: 14px;
+              font-weight: 300;
+              color: rgba(0, 0, 0, 0.87);
             }
           }
         }

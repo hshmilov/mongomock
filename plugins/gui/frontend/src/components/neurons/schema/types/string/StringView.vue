@@ -148,25 +148,5 @@ export default {
     height: 16px;
     width: auto;
     display: flex;
-    &.icon-success {
-      &, &:hover {
-        color: $indicator-success;
-      }
-    }
-    &.icon-error {
-      &, &:hover {
-        color: $indicator-error;
-      }
-    }
-    &.icon-processing {
-      &, &:hover {
-        color: $indicator-warning;
-      }
-    }
-    &.icon-inactive {
-      &, &:hover {
-        color: $indicator-inactive;
-      }
-    }
   }
 </style>

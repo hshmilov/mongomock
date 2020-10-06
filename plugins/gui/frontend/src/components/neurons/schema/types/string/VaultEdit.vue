@@ -27,11 +27,11 @@
             class="provider-toggle__icon"
           />
           <XIcon
-            v-if="vaultStatus"
-            family="symbol"
-            :type="vaultStatus"
+            v-if="vaultStatusIcon"
+            theme="filled"
+            :type="vaultStatusIcon"
             class="provider-toggle__status"
-            :class="vaultStatus"
+            :class="vaultStatusClass"
           />
         </div>
       </template>
@@ -131,12 +131,21 @@ export default {
     vaultIcon() {
       return this.vaultProvider.name || '';
     },
-    vaultStatus() {
+    vaultStatusClass() {
       if (this.success) {
-        return 'success';
+        return 'icon-success';
       }
       if (this.error) {
-        return 'error';
+        return 'icon-error';
+      }
+      return '';
+    },
+    vaultStatusIcon() {
+      if (this.success) {
+        return 'check-circle';
+      }
+      if (this.error) {
+        return 'close-circle';
       }
       return '';
     },

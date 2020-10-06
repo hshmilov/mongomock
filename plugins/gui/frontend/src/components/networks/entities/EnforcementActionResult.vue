@@ -32,18 +32,18 @@
             <span v-else>{{ newTaskMessage }}</span>
           </div>
           <XIcon
-            class="enforcement-action-body__success-icon"
-            family="symbol"
-            type="success"
+            class="enforcement-action-body__success-icon icon-success"
+            type="check-circle"
+            theme="filled"
           />
         </div>
       </template>
       <template v-else-if="status.error">
         <div class="t-center">
           <XIcon
-            class="enforcement-action-body__error-icon"
-            family="symbol"
-            type="error"
+            class="enforcement-action-body__error-icon icon-success"
+            type="close-circle"
+            theme="filled"
           />
           <div class="mt-12">
             {{ status.error }}

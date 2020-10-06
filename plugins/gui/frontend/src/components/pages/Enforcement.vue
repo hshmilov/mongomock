@@ -117,12 +117,7 @@ import {
   RUN_ENFORCEMENT,
   SAVE_ENFORCEMENT,
 } from '@store/modules/enforcements';
-import {
-  failCondition,
-  mainCondition,
-  postCondition,
-  successCondition,
-} from '@constants/enforcement';
+import { mainCondition, successiveActionsList } from '@constants/enforcement';
 import { ENFORCEMENT_EXECUTED } from '@constants/getting-started';
 import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '@store/modules/onboarding';
 
@@ -244,9 +239,6 @@ export default {
     isMainActionUndefined() {
       return this.enforcementActions && !this.enforcementActions.main;
     },
-    successiveActionsTypes() {
-      return [successCondition, failCondition, postCondition];
-    },
     successiveActions() {
       return this.successiveActionsTypes.map((condition) => ({
         condition,
@@ -276,6 +268,7 @@ export default {
     },
   },
   created() {
+    this.successiveActionsTypes = successiveActionsList;
     if (this.enforcementFetching || this.id === 'new') {
       this.initData();
     } else {

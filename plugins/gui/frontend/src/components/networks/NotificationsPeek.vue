@@ -34,8 +34,9 @@
       >
         <div class="status">
           <XIcon
-            family="symbol"
-            :type="notification.severity"
+            theme="filled"
+            :type="severityIcon(notification.severity)"
+            :class="severityIconClass(notification.severity)"
           />
         </div>
         <div class="content">
@@ -61,8 +62,9 @@
         class="t-center"
       >
         <XIcon
-          family="symbol"
-          type="success"
+          type="check-circle"
+          theme="filled"
+          class="icon-success"
           :style="{height: '20px'}"
         />
       </div>
@@ -78,14 +80,15 @@
 
 <script>
 import { mapState, mapActions } from 'vuex';
-import XDropdown from '../axons/popover/Dropdown.vue';
+import { notificationsSeverities } from '@constants/notifications';
+import XDropdown from '@axons/popover/Dropdown.vue';
 
 import {
   FETCH_NOTIFICATIONS_UNSEEN_COUNT,
   FETCH_AGGREGATE_NOTIFICATIONS,
   UPDATE_NOTIFICATIONS_SEEN,
   FETCH_NOTIFICATION,
-} from '../../store/modules/notifications';
+} from '@store/modules/notifications';
 
 export default {
   name: 'XNotificationPeek',
@@ -147,6 +150,12 @@ export default {
     navigateNotifications() {
       this.$refs.notifications.close();
       this.$router.push({ name: 'Notifications' });
+    },
+    severityIcon(severity) {
+      return notificationsSeverities[severity].icon;
+    },
+    severityIconClass(severity) {
+      return notificationsSeverities[severity].iconClass;
     },
   },
 };

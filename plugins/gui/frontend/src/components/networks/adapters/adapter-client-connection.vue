@@ -5,8 +5,9 @@
       class="server-error"
     >
       <XIcon
-        family="symbol"
-        type="error"
+        type="close-circle"
+        theme="filled"
+        class="icon-error"
       />
       <div class="error-text">
         {{ value.error }}

@@ -1,6 +1,6 @@
 <template>
   <XFeedbackModal
-    v-model="isActive"
+    v-model="isModalActive"
     class="x-compliance-jira-dialog"
     :handle-save="createJira"
     :message="message"
@@ -108,6 +108,7 @@ export default {
       },
       formValid: false,
       actionName: 'create_jira_incident',
+      isModalActive: false,
     };
   },
   computed: {
@@ -126,6 +127,12 @@ export default {
       const items = this.actionConfig.schema.items.filter((item) => jiraFormFields.items.includes(item.name));
       const required = this.actionConfig.schema.required.filter((item) => jiraFormFields.required.includes(item));
       return { ...this.actionConfig.schema, items, required };
+    },
+  },
+  watch: {
+    isActive: {
+      handler: 'setActive',
+      immediate: true,
     },
   },
   methods: {
@@ -151,6 +158,9 @@ export default {
         this.formValid = false;
         throw error;
       }
+    },
+    setActive(value) {
+      this.isModalActive = value;
     },
   },
 };

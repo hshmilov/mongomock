@@ -1,5 +1,3 @@
-import error from './error';
-import failure from './failure';
 import funnel from './funnel';
 import histogram from './histogram';
 import info from './info';
@@ -7,7 +5,6 @@ import line from './line';
 import pie from './pie';
 import post from './post';
 import running from './running';
-import success from './success';
 import summary from './summary';
 import troffy from './troffy';
 import user from './user';
@@ -19,8 +16,6 @@ import trend from './trend';
 import chat from './chat';
 
 export default {
-  error,
-  failure,
   funnel,
   histogram,
   info,
@@ -28,7 +23,6 @@ export default {
   pie,
   post,
   running,
-  success,
   summary,
   troffy,
   user,

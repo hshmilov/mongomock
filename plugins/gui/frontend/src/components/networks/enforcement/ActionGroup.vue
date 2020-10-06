@@ -2,10 +2,9 @@
   <div class="x-action-group">
     <template v-if="isSuccessive">
       <XIcon
-        :type="condition"
-        family="symbol"
-        class="condition"
-        :class="{disabled: iconsDisabled}"
+        :type="conditionIcon"
+        theme="filled"
+        :class="iconClasses"
       />
       <div class="connection" />
     </template>
@@ -33,7 +32,8 @@
 </template>
 
 <script>
-import XTextBox from '../../axons/layout/TextBox.vue';
+import XTextBox from '@axons/layout/TextBox.vue';
+import { enforcementConditions } from '@constants/enforcement';
 import XAction from './Action.vue';
 
 export default {
@@ -64,6 +64,19 @@ export default {
     },
     empty() {
       return !this.items.length;
+    },
+    conditionIcon() {
+      return enforcementConditions[this.condition].icon;
+    },
+    conditionIconClass() {
+      return enforcementConditions[this.condition].iconClass;
+    },
+    iconClasses() {
+      return {
+        disabled: this.iconsDisabled,
+        [`${this.conditionIconClass}`]: true,
+        condition: true,
+      };
     },
   },
   methods: {
@@ -110,14 +123,6 @@ export default {
             .items-new {
                 z-index: 1;
             }
-        }
-        .disabled {
-          use {
-            fill: $grey-3;
-          }
-          g {
-            fill: $grey-3;
-          }
         }
     }
 </style>

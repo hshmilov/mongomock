@@ -18,8 +18,9 @@
       class="result-container"
     >
       <XIcon
-        :type="alertStatus"
-        family="symbol"
+        :type="alertIcon"
+        theme="filled"
+        :class="alertIconClass"
       />
       <div
         class="result"
@@ -38,9 +39,10 @@
 </template>
 
 <script>
-import XSummary from '../../axons/charts/Summary.vue';
-import XArrayView from '../../neurons/schema/types/array/ArrayView.vue';
-import actionsMixin from '../../../mixins/actions';
+import { enforcementConditions } from '@constants/enforcement';
+import XSummary from '@axons/charts/Summary.vue';
+import XArrayView from '@neurons/schema/types/array/ArrayView.vue';
+import actionsMixin from '@mixins/actions';
 
 export default {
   name: 'XActionResult',
@@ -65,7 +67,13 @@ export default {
     },
     alertStatus() {
       if (this.data.action.results.successful_entities.length > 0) return 'success';
-      return 'error';
+      return 'failure';
+    },
+    alertIcon() {
+      return enforcementConditions[this.alertStatus].icon;
+    },
+    alertIconClass() {
+      return enforcementConditions[this.alertStatus].iconClass;
     },
     alertStatusMessage() {
       return this.data.action.results.message_state;

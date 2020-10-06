@@ -254,21 +254,6 @@ export default {
           margin: 0px 6px 0px 0px;
           font-size: 20px;
           margin-right: 8px;
-          &.icon-success {
-            &, &:hover {
-              color: $indicator-success;
-            }
-          }
-          &.icon-error {
-            &, &:hover {
-              color: $indicator-error;
-            }
-          }
-          &.icon-inactive {
-            &, &:hover {
-              color: $indicator-inactive;
-            }
-          }
         }
         .quantity {
           color: rgba(0, 0, 0, 0.65);

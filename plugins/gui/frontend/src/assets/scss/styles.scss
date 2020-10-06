@@ -606,4 +606,35 @@ table {
   }
 }
 
+.x-icon {
+  &.disabled {
+    color: $grey-3;
+  }
+  &.icon-success:not(.disabled) {
+    &, &:hover {
+      color: $indicator-success;
+    }
+  }
+  &.icon-error:not(.disabled) {
+    &, &:hover {
+      color: $indicator-error;
+    }
+  }
+  &.icon-processing:not(.disabled) {
+    &, &:hover {
+      color: $indicator-warning;
+    }
+  }
+  &.icon-inactive:not(.disabled) {
+    &, &:hover {
+      color: $indicator-inactive;
+    }
+  }
+  &.icon-info:not(.disabled) {
+    &, &:hover {
+      color: $indicator-info;
+    }
+  }
+}
+
 @import './override-ant-base.scss';

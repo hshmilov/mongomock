@@ -21,9 +21,9 @@
       <template v-else-if="status.success">
         <div class="t-center">
           <XIcon
-            class="feedback-modal-body__success-icon"
-            family="symbol"
-            type="success"
+            class="feedback-modal-body__success-icon icon-success"
+            type="check-circle"
+            theme="filled"
           />
           <div class="mt-12">
             {{ message }}
@@ -33,9 +33,9 @@
       <template v-else-if="status.error">
         <div class="t-center">
           <XIcon
-            class="feedback-modal-body__error-icon"
-            family="symbol"
-            type="error"
+            class="feedback-modal-body__error-icon icon-error"
+            type="close-circle"
+            theme="filled"
           />
           <div class="mt-12">
             {{ status.error }}
