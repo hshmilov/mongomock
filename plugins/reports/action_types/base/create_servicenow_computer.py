@@ -74,12 +74,12 @@ class ServiceNowComputerAction(ActionTypeBase):
                 },
                 {
                     'name': 'use_first_ip_only',
-                    'title': 'Use first IP only',
+                    'title': 'Use first IP address only',
                     'type': 'bool'
                 },
                 {
                     'name': 'ips_delimiter',
-                    'title': 'IPs delimiter',
+                    'title': 'IP addresses delimiter',
                     'type': 'string'
                 }
             ],

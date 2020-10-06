@@ -522,7 +522,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                 },
                 {
                     'name': 'repository_name_exclude_list',
-                    'title': 'Repository Name Exclude List',
+                    'title': 'Repository name exclude list',
                     'type': 'string'
                 }
             ],

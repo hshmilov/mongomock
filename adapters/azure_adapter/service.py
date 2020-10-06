@@ -220,6 +220,12 @@ class AzureAdapter(AdapterBase, Configurable):
                     'type': 'string'
                 },
                 {
+                    'name': AZURE_VERIFY_SSL,
+                    'title': 'Verify SSL',
+                    'type': 'bool',
+                    'default': True
+                },
+                {
                     'name': AZURE_HTTPS_PROXY,
                     'title': 'HTTPS Proxy',
                     'type': 'string'
@@ -234,12 +240,6 @@ class AzureAdapter(AdapterBase, Configurable):
                     'title': 'HTTPS Proxy Password',
                     'type': 'string',
                     'format': 'password'
-                },
-                {
-                    'name': AZURE_VERIFY_SSL,
-                    'title': 'Verify SSL',
-                    'type': 'bool',
-                    'default': True
                 }
             ],
             'required': [
