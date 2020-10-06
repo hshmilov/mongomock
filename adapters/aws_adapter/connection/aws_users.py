@@ -717,14 +717,14 @@ def query_roles_by_client_for_all_sources(client_data):
         for roles_page in get_paginated_marker_api(iam_client.list_roles):
             if isinstance(roles_page, dict):
                 roles = roles_page.get('Roles')
-                if isinstance(roles, list):
+                if roles and isinstance(roles, list):
                     for role in roles:
                         if not isinstance(role, dict):
                             raise ValueError(f'Malformed role. Expected a dict,'
                                              f' got {type(role)}: {str(role)}')
 
                         role_name = role.get('RoleName')
-                        if not isinstance(role_name, str):
+                        if not (role_name and isinstance(role_name, str)):
                             raise ValueError(
                                 f'Malformed role name. Expected a str, '
                                 f'got {type(role_name)}: '
@@ -761,10 +761,10 @@ def query_roles_by_client_for_all_sources(client_data):
                                         statement_dict['condition'] = list()
                                         statement_dict['principal'] = list()
 
-                                        condition = statement.get('Condition') or {}
+                                        condition = statement.get('Condition')
                                         if isinstance(condition, dict):
                                             # only 1 operator is returned in all cases
-                                            condition_operators = list(condition.keys()) or []
+                                            condition_operators = list(condition.keys())
                                             if isinstance(condition_operators, list):
                                                 for condition_operator in condition_operators:
                                                     if isinstance(condition_operator, str):
@@ -781,27 +781,31 @@ def query_roles_by_client_for_all_sources(client_data):
                                                                      condition_key,
                                                                      condition_value))
                                                         else:
-                                                            logger.warning(f'Malformed conditions. '
-                                                                           f'Expected a dict, got '
-                                                                           f'{type(conditions)}:'
-                                                                           f'{str(conditions)}')
+                                                            if conditions is not None:
+                                                                logger.warning(f'Malformed conditions. '
+                                                                               f'Expected a dict, got '
+                                                                               f'{type(conditions)}:'
+                                                                               f'{str(conditions)}')
                                                     else:
-                                                        logger.warning(
-                                                            f'Malformed condition operator. '
-                                                            f'Expected a str, got '
-                                                            f'{type(condition_operator)}: '
-                                                            f'{str(condition_operator)}')
+                                                        if condition_operator is not None:
+                                                            logger.warning(
+                                                                f'Malformed condition operator. '
+                                                                f'Expected a str, got '
+                                                                f'{type(condition_operator)}: '
+                                                                f'{str(condition_operator)}')
                                             else:
-                                                logger.warning(
-                                                    f'Malformed condition operators. '
-                                                    f'Expected a list, got '
-                                                    f'{type(condition_operators)}: '
-                                                    f'{str(condition_operators)}')
+                                                if condition_operators is not None:
+                                                    logger.warning(
+                                                        f'Malformed condition operators. '
+                                                        f'Expected a list, got '
+                                                        f'{type(condition_operators)}: '
+                                                        f'{str(condition_operators)}')
                                         else:
-                                            logger.warning(
-                                                f'Malformed condition statement. '
-                                                f'Expected a dict, got '
-                                                f'{type(condition)}: {str(condition)}')
+                                            if condition is not None:
+                                                logger.warning(
+                                                    f'Malformed condition statement. '
+                                                    f'Expected a dict, got '
+                                                    f'{type(condition)}: {str(condition)}')
 
                                         principal = statement.get('Principal')
                                         if isinstance(principal, dict):
@@ -817,28 +821,32 @@ def query_roles_by_client_for_all_sources(client_data):
                                             assume_role_policy['statements'].append(
                                                 statement_dict)
                                         else:
-                                            logger.warning(f'Malformed principal. '
-                                                           f'Expected a dict, '
-                                                           f'got {type(principal)}:'
-                                                           f' {str(principal)}')
+                                            if principal is not None:
+                                                logger.warning(f'Malformed principal. '
+                                                               f'Expected a dict, '
+                                                               f'got {type(principal)}:'
+                                                               f' {str(principal)}')
                                     else:
-                                        logger.warning(
-                                            f'Malformed statement. Expected a '
-                                            f'dict, got {type(statement)}: '
-                                            f'{str(statement)}')
+                                        if statement is not None:
+                                            logger.warning(
+                                                f'Malformed statement. Expected a '
+                                                f'dict, got {type(statement)}: '
+                                                f'{str(statement)}')
                             else:
-                                logger.warning(
-                                    f'Malformed assume role statement. '
-                                    f'Expected a list, got {type(statements)}: '
-                                    f'{str(statements)}')
+                                if statements is not None:
+                                    logger.warning(
+                                        f'Malformed assume role statement. '
+                                        f'Expected a list, got {type(statements)}: '
+                                        f'{str(statements)}')
 
                             new_role['assume_role_policy'].append(
                                 assume_role_policy)
                         else:
-                            logger.warning(f'Malformed assume role policy '
-                                           f'document. Expected a dict, got '
-                                           f'{type(assume_role_policy_document)}: '
-                                           f'{str(assume_role_policy_document)}')
+                            if assume_role_policy_document is not None:
+                                logger.warning(f'Malformed assume role policy '
+                                               f'document. Expected a dict, got '
+                                               f'{type(assume_role_policy_document)}: '
+                                               f'{str(assume_role_policy_document)}')
 
                         # enrich the role data
                         try:
@@ -860,10 +868,11 @@ def query_roles_by_client_for_all_sources(client_data):
                                 new_role['last_activity'] = role_data.get('RoleLastUsed')
                                 new_role['tags'] = role_data.get('Tags')
                             else:
-                                logger.warning(f'Malformed raw role data. '
-                                               f'Expected a dict, got '
-                                               f'{type(role_data)}: '
-                                               f'{str(role_data)}')
+                                if role_data is not None:
+                                    logger.warning(f'Malformed raw role data. '
+                                                   f'Expected a dict, got '
+                                                   f'{type(role_data)}: '
+                                                   f'{str(role_data)}')
                         except Exception:
                             logger.warning(f'Unable to enrich the role data.')
 
@@ -883,23 +892,26 @@ def query_roles_by_client_for_all_sources(client_data):
                                                     process_attached_iam_policy(iam_client,
                                                                                 attached_policy))
                                             else:
-                                                logger.warning(
-                                                    f'Malformed attached policy. '
-                                                    f'Expected a dict, got '
-                                                    f'{type(attached_policy)}: '
-                                                    f'{str(attached_policy)}')
+                                                if attached_policy is not None:
+                                                    logger.warning(
+                                                        f'Malformed attached policy. '
+                                                        f'Expected a dict, got '
+                                                        f'{type(attached_policy)}: '
+                                                        f'{str(attached_policy)}')
                                     else:
-                                        logger.warning(
-                                            f'Malformed attached policies. '
-                                            f'Expected a list, got '
-                                            f'{type(attached_policies)}:'
-                                            f'{str(attached_policies)}')
+                                        if attached_policies is not None:
+                                            logger.warning(
+                                                f'Malformed attached policies. '
+                                                f'Expected a list, got '
+                                                f'{type(attached_policies)}:'
+                                                f'{str(attached_policies)}')
                                 else:
-                                    logger.warning(
-                                        f'Malformed role attached policies '
-                                        f'page. Expected a dict, got '
-                                        f'{type(roles_attached_policies_page)}:'
-                                        f'{str(roles_attached_policies_page)}')
+                                    if roles_attached_policies_page is not None:
+                                        logger.warning(
+                                            f'Malformed role attached policies '
+                                            f'page. Expected a dict, got '
+                                            f'{type(roles_attached_policies_page)}:'
+                                            f'{str(roles_attached_policies_page)}')
                         except Exception:
                             if 'list_attached_role_policies' not in error_logs_triggered:
                                 logger.exception(
@@ -958,10 +970,11 @@ def query_roles_by_client_for_all_sources(client_data):
                                                                     new_role['role_inline_policies'].append(
                                                                         actions_dict)
                                                                 else:
-                                                                    logger.warning(f'Malformed statement. '
-                                                                                   f'Expected dict, got '
-                                                                                   f'{type(statement)}: '
-                                                                                   f'{str(statement)}')
+                                                                    if statement is not None:
+                                                                        logger.warning(f'Malformed statement. '
+                                                                                       f'Expected dict, got '
+                                                                                       f'{type(statement)}: '
+                                                                                       f'{str(statement)}')
                                                         else:
                                                             if policy_statements is not None:
                                                                 logger.warning(
@@ -1073,10 +1086,11 @@ def parse_user_role(role: AWSUserAdapter, role_raw: dict):
                                                                      f'{str(principal)}')
                                                 continue
                                         else:
-                                            logger.warning(
-                                                f'Malformed principal. Expected '
-                                                f'a tuple, got {type(principal)}: '
-                                                f'{str(principal)}')
+                                            if principal is not None:
+                                                logger.warning(
+                                                    f'Malformed principal. Expected '
+                                                    f'a tuple, got {type(principal)}: '
+                                                    f'{str(principal)}')
                                             continue
                                 else:
                                     if policy_principal is not None:
@@ -1103,10 +1117,11 @@ def parse_user_role(role: AWSUserAdapter, role_raw: dict):
                                                                      f'{str(condition)}')
                                                 continue
                                         else:
-                                            logger.warning(f'Malformed condition. '
-                                                           f'Expected a tuple, '
-                                                           f'got {type(condition)}: '
-                                                           f'{str(condition)}')
+                                            if condition is not None:
+                                                logger.warning(f'Malformed condition. '
+                                                               f'Expected a tuple, '
+                                                               f'got {type(condition)}: '
+                                                               f'{str(condition)}')
                                             continue
                                 else:
                                     if policy_condition is not None:
@@ -1154,13 +1169,19 @@ def parse_user_role(role: AWSUserAdapter, role_raw: dict):
                                f'{str(assume_role_policies)}')
 
         # attached policies
-        attached_policies = role_raw.get('role_attached_policies') or []
+        attached_policies = role_raw.get('role_attached_policies')
         if isinstance(attached_policies, list):
             policy_permissions = list()
 
             for attached_policy in attached_policies:
                 if isinstance(attached_policy, dict):
-                    for permission in (attached_policy.get('permissions') or {}):
+                    permissions = attached_policy.get('permissions')
+                    if not (permissions and isinstance(permissions, list)):
+                        logger.warning(
+                            f'Malformed attached policy permissions. Expected '
+                            f'a list, got {type(permissions)}: {str(permissions)}')
+                        continue
+                    for permission in permissions:
                         if isinstance(permission, dict):
                             statement = AWSIAMPolicyPermission(
                                 policy_action=permission.get('actions'),
@@ -1170,10 +1191,11 @@ def parse_user_role(role: AWSUserAdapter, role_raw: dict):
                             )
                             policy_permissions.append(statement)
                         else:
-                            logger.warning(
-                                f'Malformed permission. Expected a dict, '
-                                f'got {type(permission)}: '
-                                f'{str(permission)}')
+                            if permission is not None:
+                                logger.warning(
+                                    f'Malformed permission. Expected a dict, '
+                                    f'got {type(permission)}: '
+                                    f'{str(permission)}')
 
                     attached_role_policy = AWSIAMPolicy(
                         policy_attachment_count=attached_policy.get(
@@ -1196,12 +1218,13 @@ def parse_user_role(role: AWSUserAdapter, role_raw: dict):
                                    f'dict, got {type(attached_policy)}: '
                                    f'{str(attached_policy)}')
         else:
-            logger.warning(f'Malformed attached policies. Expected a list, '
-                           f'got {type(attached_policies)}'
-                           f'{str(attached_policies)}')
+            if attached_policies is not None:
+                logger.warning(f'Malformed attached policies. Expected a list, '
+                               f'got {type(attached_policies)}'
+                               f'{str(attached_policies)}')
 
         # inline policies
-        inline_policies = role_raw.get('role_inline_policies') or []
+        inline_policies = role_raw.get('role_inline_policies')
         if isinstance(inline_policies, list):
             policy_permissions = list()
 
@@ -1233,12 +1256,14 @@ def parse_user_role(role: AWSUserAdapter, role_raw: dict):
                     logger.debug(f'Finished parsing role {role_raw.get("arn")}'
                                  f' as user')
                 else:
-                    logger.warning(f'Malformed inline policy. Expected a dict, '
-                                   f'got {type(inline_policy)}: '
-                                   f'{str(inline_policy)}')
+                    if inline_policy is not None:
+                        logger.warning(f'Malformed inline policy. Expected a dict, '
+                                       f'got {type(inline_policy)}: '
+                                       f'{str(inline_policy)}')
         else:
-            logger.warning(f'Malformed inline policies. Expected a list, got '
-                           f'{type(inline_policies)}: {str(inline_policies)}')
+            if inline_policies is not None:
+                logger.warning(f'Malformed inline policies. Expected a list, got '
+                               f'{type(inline_policies)}: {str(inline_policies)}')
     except Exception:
         logger.exception(f'Unable to parse user role')
 
@@ -1249,7 +1274,8 @@ def _parse_role_tags(role_raw: dict):
     tags = []
     raw_tags = role_raw.get('tags')
     if not isinstance(raw_tags, list):
-        logger.warning(f'Got unexpected type of role tags:{str(role_raw)}')
+        if raw_tags is not None:
+            logger.warning(f'Got unexpected type of role tags:{str(role_raw)}')
         raw_tags = []
 
     for raw_tag in raw_tags:
