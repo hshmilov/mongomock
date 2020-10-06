@@ -104,10 +104,6 @@
               @validate="updateIdentityProviders"
             />
             <div class="footer">
-              <XMaintenance
-                v-if="$refs.global && $refs.global.isActive"
-                :read-only="!canUpdateSettings"
-              />
               <XButton
                 id="identity-providers-save"
                 type="primary"
@@ -171,7 +167,7 @@
             v-if="newVersionAvailable"
             class="new-version-available"
           > <a href="mailto:support@axonius.com?subject=Request for upgrade">
-           Contact us</a> to request an update.</label>
+            Contact us</a> to request an update.</label>
         </div>
       </XTab>
     </XTabs>
@@ -196,6 +192,7 @@ import { REQUEST_API, START_RESEARCH_PHASE, STOP_RESEARCH_PHASE } from '@store/a
 import { GET_USER } from '@store/modules/auth';
 
 import XUsersManagement from '@networks/settings-tabs/users-management/index.vue';
+import { validateEmail } from '@constants/validations';
 import XRolesTable from '../networks/settings-tabs/roles-management/index.vue';
 import XPage from '../axons/layout/Page.vue';
 import XTabs from '../axons/tabs/Tabs.vue';
@@ -207,7 +204,6 @@ import XMaintenance from '../networks/config/Maintenance.vue';
 import XFeatureFlags from '../networks/config/FeatureFlags.vue';
 import XTunnel from '../networks/config/Tunnel.vue';
 import XCertificateSettings from '../networks/config/CertificateSettings.vue';
-import {validateEmail} from "@constants/validations";
 
 export default {
   name: 'XSettings',

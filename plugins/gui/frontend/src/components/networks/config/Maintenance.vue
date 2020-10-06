@@ -1,124 +1,121 @@
 <template>
-  <MdCard class="x-maintenance">
-    <MdCardExpand>
-      <MdCardExpandTrigger>
-        <XButton
-          id="maintenance_settings"
-          class="x-button"
-          type="link"
-          :disabled="readOnly"
+  <div class="x-maintenance">
+    <ACollapse
+      :bordered="false"
+      class="panel-wrapper"
+      expand-icon-position="right"
+      accordion
+    >
+      <ACollapsePanel
+        header="Advanced Settings"
+        show-arrow
+      >
+        <XCheckbox
+          ref="provision"
+          v-model="allowProvision"
+          label="Remote Support"
+        />
+        <div
+          v-if="allowProvision"
+          class="x-content"
         >
-          ADVANCED SETTINGS
-        </XButton>
-      </MdCardExpandTrigger>
-      <MdCardExpandContent>
-        <MdCardContent>
-          <XCheckbox
-            ref="provision"
-            v-model="allowProvision"
-            label="Remote Support"
-          />
-          <div
-            v-if="allowProvision"
-            class="x-content"
-          >
-            <div class="x-section">
-              <XCheckbox
-                ref="analytics"
-                v-model="allowAnalytics"
-                label="Anonymized Analytics"
-              />
-              <div v-if="allowAnalytics">
-                <div class="message-title">
-                  Warning:
-                </div>
-                <div class="content">
-                  {{ disableWarnings['analytics'] }}
-                </div>
-              </div>
-              <div
-                v-else
-                class="message-title"
-              >Turning on this feature allows Axonius to proactively detect
-                issues and notify about errors
-              </div>
-            </div>
-            <div class="x-section">
-              <XCheckbox
-                ref="troubleshooting"
-                v-model="allowTroubleshooting"
-                label="Remote Access"
-              />
-              <div v-if="allowTroubleshooting">
-                <div class="message-title">
-                  Warning:
-                </div>
-                <div class="content">
-                  {{ disableWarnings['troubleshooting'] }}
-                </div>
-              </div>
-              <div
-                v-else
-                class="message-title"
-              >Turning on this feature allows Axonius to keep the system updated
-                and speed-up issues resolution time
-              </div>
-            </div>
-          </div>
-          <div
-            v-else
-            class="x-content"
-          >
-            <div class="x-section message-title">Turning on this feature allows Axonius to keep the system updated,
-              speed-up issues resolution time and proactively detect issues and notify about errors
-            </div>
-            <div class="x-section">
+          <div class="x-section">
+            <XCheckbox
+              ref="analytics"
+              v-model="allowAnalytics"
+              label="Anonymized Analytics"
+            />
+            <div v-if="allowAnalytics">
               <div class="message-title">
-                OR
+                Warning:
               </div>
-              <div class="config">
-                <template v-if="accessEndTime">
-                  <div
-                    class="config__warning mr-12"
-                    :title="`Temporary Remote Support will end at: ${ accessEndTimeTitle }`"
-                  >
-                    Temporary Remote Support will end at: {{ accessEndTime }}
-                  </div>
-                  <XButton
-                    type="primary"
-                    @click="stopTempAccess"
-                  >
-                    Stop
-                  </XButton>
-                </template>
-                <template v-else>
-                  <div class="mr-8">
-                    Give temporary Remote Support for
-                  </div>
-                  <input
-                    id="remote-access-timer"
-                    v-model="accessDuration"
-                    type="number"
-                    class="mr-8"
-                    @keypress="validateNumber"
-                  >
-                  <div class="mr-12">
-                    Hours
-                  </div>
-                  <XButton
-                    type="inverse"
-                    :disabled="!enableStartAccess"
-                    @click="startTempAccess"
-                  >
-                    Start
-                  </XButton>
-                </template>
+              <div class="content">
+                {{ disableWarnings['analytics'] }}
               </div>
             </div>
+            <div
+              v-else
+              class="message-title"
+            >Turning on this feature allows Axonius to proactively detect
+              issues and notify about errors
+            </div>
           </div>
-        </MdCardContent>
-      </MdCardExpandContent>
-    </MdCardExpand>
+          <div class="x-section">
+            <XCheckbox
+              ref="troubleshooting"
+              v-model="allowTroubleshooting"
+              label="Remote Access"
+            />
+            <div v-if="allowTroubleshooting">
+              <div class="message-title">
+                Warning:
+              </div>
+              <div class="content">
+                {{ disableWarnings['troubleshooting'] }}
+              </div>
+            </div>
+            <div
+              v-else
+              class="message-title"
+            >Turning on this feature allows Axonius to keep the system updated
+              and speed-up issues resolution time
+            </div>
+          </div>
+        </div>
+        <div
+          v-else
+          class="x-content"
+        >
+          <div class="x-section message-title">
+            Turning on this feature allows Axonius to keep the system updated,
+            speed-up issues resolution time and proactively detect issues and notify about errors
+          </div>
+          <div class="x-section">
+            <div class="message-title">
+              OR
+            </div>
+            <div class="config">
+              <template v-if="accessEndTime">
+                <div
+                  class="config__warning mr-12"
+                  :title="`Temporary Remote Support will end at: ${ accessEndTimeTitle }`"
+                >
+                  Temporary Remote Support will end at: {{ accessEndTime }}
+                </div>
+                <XButton
+                  type="primary"
+                  @click="stopTempAccess"
+                >
+                  Stop
+                </XButton>
+              </template>
+              <template v-else>
+                <div class="mr-8">
+                  Give temporary Remote Support for
+                </div>
+                <input
+                  id="remote-access-timer"
+                  v-model="accessDuration"
+                  type="number"
+                  class="mr-8"
+                  @keypress="validateNumber"
+                >
+                <div class="mr-12">
+                  Hours
+                </div>
+                <XButton
+                  type="inverse"
+                  :disabled="!enableStartAccess"
+                  @click="startTempAccess"
+                >
+                  Start
+                </XButton>
+              </template>
+            </div>
+          </div>
+        </div>
+      </ACollapsePanel>
+    </ACollapse>
     <XModal
       v-if="disableToConfirm"
       approve-text="Confirm"
@@ -139,29 +136,46 @@
         </div>
       </div>
     </XModal>
-  </MdCard>
+  </div>
 </template>
 
 <script>
 import { mapState, mapActions, mapGetters } from 'vuex';
 import { formatDate, getTimeZoneDiff } from '@constants/utils';
+import {
+  Collapse as ACollapse,
+} from 'ant-design-vue';
 import { DATE_FORMAT } from '../../../store/getters';
 import XCheckbox from '../../axons/inputs/Checkbox.vue';
 import XModal from '../../axons/popover/Modal/index.vue';
 
 import {
-  FETCH_MAINTENANCE_CONFIG, SAVE_MAINTENANCE_CONFIG, START_MAINTENANCE_CONFIG, STOP_MAINTENANCE_CONFIG,
+  FETCH_MAINTENANCE_CONFIG,
+  SAVE_MAINTENANCE_CONFIG,
+  START_MAINTENANCE_CONFIG,
+  STOP_MAINTENANCE_CONFIG,
 } from '../../../store/modules/settings';
 
 import { validateNumber } from '../../../constants/validations';
 
 export default {
   name: 'XMaintenance',
-  components: { XCheckbox, XModal },
+  components: {
+    XCheckbox,
+    XModal,
+    ACollapse,
+    ACollapsePanel: ACollapse.Panel,
+  },
   props: {
     readOnly: {
       type: Boolean, default: false,
     },
+  },
+  data() {
+    return {
+      accessDuration: 24,
+      disableToConfirm: null,
+    };
   },
   computed: {
     ...mapState({
@@ -214,11 +228,8 @@ export default {
       return this.accessDuration > 0 && this.accessDuration < 100000000;
     },
   },
-  data() {
-    return {
-      accessDuration: 24,
-      disableToConfirm: null,
-    };
+  created() {
+    this.fetchMaintenance();
   },
   methods: {
     ...mapActions({
@@ -251,44 +262,51 @@ export default {
       this.stopMaintenance();
     },
   },
-  created() {
-    this.fetchMaintenance();
-  },
 };
 </script>
 
 <style lang="scss">
-    .x-maintenance.md-card {
-        box-shadow: none;
+    .x-maintenance {
+      box-shadow: none;
+      color: $theme-black;
 
-        .md-card-expand {
-            min-height: 36px;
-        }
+      .message-title {
+        font-weight: 400;
+        display: inline-block;
+      }
 
-        .md-card-content {
-            min-height: 240px;
-        }
+      .content {
+        margin-left: 4px;
+        display: inline;
+      }
 
-        .message-title {
+      .panel-wrapper {
+        background-color: $theme-white;
+        .ant-collapse-header {
+            font-size: 18px;
             font-weight: 400;
-            display: inline-block;
-        }
+            padding-left: 0;
+            width: 200px;
+          }
 
-        .content {
-            margin-left: 4px;
-            display: inline;
-        }
+          .ant-collapse-item {
+            border-bottom: 0;
+            color: $theme-black;
 
-        .config {
-            display: flex;
-            align-items: center;
-            &__warning {
-              font-style: italic;
+            .ant-collapse-content-box {
+              color: $theme-black;
+              padding-left: 0;
             }
-        }
-    }
 
-    #maintenance_settings {
-        z-index: 10;
+            .config {
+              display: flex;
+              align-items: center;
+
+              &__warning {
+                font-style: italic;
+              }
+            }
+          }
+      }
     }
 </style>

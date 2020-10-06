@@ -72,6 +72,7 @@ return (function(el, container){
 BUTTON_DEFAULT_TYPE = 'button'
 BUTTON_DEFAULT_CLASS = 'x-button'
 ANT_BUTTON_DEFAULT_CLASS = 'ant-btn'
+ANT_COLLAPSE_PANEL_HEADER_CLASS = 'ant-collapse-header'
 BUTTON_TYPE_A = 'a'
 PAGE_BODY = '.x-page > .body'
 TAB_BODY = '.x-tabs > .body'
@@ -146,6 +147,8 @@ class Page:
     EDIT_COLUMNS_BUTTON = 'Edit Columns'
     CONFIRM_BUTTON = 'Confirm'
     CHART_QUERY_FIELD_DEFAULT = 'FIELD...'
+    ANT_COLLAPSE_PANEL_HEADER_XPATH = './/div[contains(@class,\'ant-collapse-header\') ' \
+                                      'and text()[normalize-space()=\'{header_text}\']]'
     DISABLED_BUTTON_XPATH = './/button[contains(@class, \'x-button\') and @disabled' \
                             ' and child::span[text()=\'{button_text}\']]'
     ENABLED_BUTTON_XPATH = './/button[contains(@class, \'x-button\') and not(@disabled) ' \
@@ -404,6 +407,16 @@ class Page:
         button = self.driver.find_element_by_id(button_id)
         return self.handle_button(button, **kwargs)
 
+    @staticmethod
+    def handle_element_click(element, ignore_exc=False):
+        try:
+            element.click()
+            logger.info(f'clicked on {element}')
+        except WebDriverException:
+            logger.info(f'Failed clicking on {element}')
+            if not ignore_exc:
+                raise
+
     def handle_button(self,
                       button,
                       call_space=True,
@@ -411,18 +424,14 @@ class Page:
                       with_confirmation=False,
                       should_scroll_into_view=True,
                       scroll_into_view_container=None):
+
         if should_scroll_into_view:
             self.scroll_into_view(button, window=scroll_into_view_container)
         if call_space:
             button.send_keys(Keys.SPACE)
         else:
-            try:
-                button.click()
-                logger.info(f'Clicked on {button}')
-            except WebDriverException:
-                logger.info(f'Failed clicking on {button}')
-                if not ignore_exc:
-                    raise
+            self.handle_element_click(button, ignore_exc)
+
         if with_confirmation:
             raise NotImplementedError
         return button
@@ -439,6 +448,24 @@ class Page:
                                  context=context)
 
         return self.handle_button(button, **kwargs)
+
+    def handle_ant_panel(self,
+                         panel_header,
+                         ignore_exc=False,
+                         should_scroll_into_view=True,
+                         scroll_into_view_container=None):
+
+        if should_scroll_into_view:
+            self.scroll_into_view(panel_header, window=scroll_into_view_container)
+
+        self.handle_element_click(panel_header, ignore_exc)
+
+    def get_ant_collapse_panel_header(self, text):
+        return self.driver.find_element_by_xpath(self.ANT_COLLAPSE_PANEL_HEADER_XPATH.format(header_text=text))
+
+    def click_ant_collapse_panel_header(self, text, **kwargs):
+        header = self.get_ant_collapse_panel_header(text)
+        return self.handle_ant_panel(header, **kwargs)
 
     def click_ant_button(self, text, **kwargs):
         return self.click_button(text, button_class=ANT_BUTTON_DEFAULT_CLASS, **kwargs)
@@ -1199,7 +1226,7 @@ class Page:
         :return: xpath to the success icon element
         """
         return f'//div[@data-name=\'{name}\']/span' \
-            f'[contains(@class, \'x-milestone-status\')]/i[contains(@class, \'x-milestone-status--completed\')]'
+               f'[contains(@class, \'x-milestone-status\')]/i[contains(@class, \'x-milestone-status--completed\')]'
 
     def assert_milestone_completed(self, milestone_name):
         def _check_milestone(xpath_milestone_status):
@@ -1318,7 +1345,7 @@ class Page:
     def get_column_data(self, data_section_xpath, col_name, parent=None, generic_col=True):
         if not parent:
             parent = self.driver
-        col_position = self.count_sort_column(col_name, parent)\
+        col_position = self.count_sort_column(col_name, parent) \
             if generic_col else self.count_specific_column(col_name, parent)
         return [el.text.strip()
                 for el in parent.find_elements_by_xpath(data_section_xpath.format(data_position=col_position))
@@ -1399,7 +1426,7 @@ class Page:
     # pylint: disable=dangerous-default-value
     def set_discovery_schedule_settings(self, mode='', time_value=0, weekdays: list = [],
                                         scheduling_wrapping_class='', scheduling_repeat_selector=''):
-        mode_dropdown_selector = f'{scheduling_wrapping_class} {self.DISCOVERY_SCHEDULE_MODE_DDL}'\
+        mode_dropdown_selector = f'{scheduling_wrapping_class} {self.DISCOVERY_SCHEDULE_MODE_DDL}' \
             if scheduling_wrapping_class else self.DISCOVERY_SCHEDULE_MODE_DDL
         if mode == self.DISCOVERY_SCHEDULE_INTERVAL_TEXT:
             self._set_discovery_mode_dropdown_to_interval(mode_dropdown_selector)

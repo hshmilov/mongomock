@@ -63,6 +63,7 @@ class SettingsPage(Page):
     NOTIFY_ON_ADAPTERS_FETCH_LABEL = 'Notify on adapters fetch'
     SAML_LOGINS_LABEL = 'Allow SAML-based logins'
     TRIAL_MODE_FLAG_LABEL = 'Is trial mode'
+    GLOBAL_SETTINGS_ADVANCED_SETTINGS_LABEL = 'Advanced Settings'
     EMAIL_PORT_ID = 'smtpPort'
     EMAIL_HOST_ID = 'smtpHost'
     ERROR_TEXT_CSS = '.error-text'
@@ -789,7 +790,8 @@ class SettingsPage(Page):
         return cert, private
 
     def toggle_advanced_settings(self):
-        self.click_button('ADVANCED SETTINGS', scroll_into_view_container=self.TABS_BODY_CSS)
+        self.click_ant_collapse_panel_header(self.GLOBAL_SETTINGS_ADVANCED_SETTINGS_LABEL,
+                                             scroll_into_view_container=self.TABS_BODY_CSS)
         time.sleep(0.5)
         self.scroll_into_view(self.driver.find_element_by_css_selector('.x-maintenance .x-content'), self.TABS_BODY_CSS)
 
