@@ -503,17 +503,16 @@ export default {
 
 <style lang="scss">
 
-  $checkbox-color: rgba(0, 0, 0, 0.87) !important;
   $item-font-size: 14px;
 
   @mixin style-checkbox {
-    color: $checkbox-color;
+    color: $black-0;
     .v-input--checkbox {
       margin: 0 5px 0 0;
       padding: 0;
 
       .accent--text {
-        color: $checkbox-color;
+        color: $black-0;
       }
       .v-label {
         color: $theme-black;
@@ -525,7 +524,7 @@ export default {
     }
 
     .theme--light.v-icon {
-      color: $checkbox-color;
+      color: $black-0;
     }
   }
 
@@ -585,7 +584,7 @@ export default {
   .x-combobox_create-new-item {
     border-top: 0.5px solid;
     border-bottom: 0.5px solid;
-    border-color: $checkbox-color;
+    border-color: $black-0;
     padding: 8px 8px !important;
     cursor: pointer;
     margin-top: 10px;

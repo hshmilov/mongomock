@@ -196,6 +196,16 @@ export default {
         @include x-switch;
         margin-top: 10px;
       }
+
+      .x-date-edit {
+        .ant-calendar-picker-input {
+          color: $grey-5;
+          padding: 4px 6px;
+        }
+        .ant-calendar-picker-icon {
+          visibility: hidden;
+        }
+      }
     }
   }
 </style>

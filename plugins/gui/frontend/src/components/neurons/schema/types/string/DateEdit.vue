@@ -91,5 +91,11 @@ export default {
 </script>
 
 <style lang="scss">
-
+  .x-date-edit {
+    .ant-input-disabled {
+      color: $black-0;
+      background-color: $grey-2;
+      opacity: 0.6;
+    }
+  }
 </style>
