@@ -479,14 +479,15 @@ class AdaptersPage(EntitiesPage):
         self.switch_to_page()
 
     def add_json_server(self, server_details, position=2, run_discovery_at_last=True, instance=None):
-        self.connect_adapter(adapter_name=JSON_ADAPTER_NAME, server_details=server_details,
-                             position=position, instance=instance)
+        self.switch_to_page()
         self.click_adapter(adapter_name=JSON_ADAPTER_NAME)
         self.wait_for_table_to_be_responsive()
         self.click_advanced_settings()
         self.fill_last_seen_threshold_hours(self.LAST_SEEN_THRESHOLD_HOURS)
         self.save_advanced_settings()
         self.wait_for_spinner_to_end()
+        self.connect_adapter(adapter_name=JSON_ADAPTER_NAME, server_details=server_details,
+                             position=position, instance=instance)
         self.switch_to_page()
         if run_discovery_at_last:
             # now it is useless, but in the long future could prove useful

@@ -9,6 +9,7 @@ from test_credentials.test_aws_credentials_mock import aws_json_file_mock_device
 from test_credentials.test_csv_credentials import CSV_FIELDS
 from test_credentials.json_file_credentials import DEVICE_FIRST_NAME
 from test_helpers.file_mock_credentials import FileForCredentialsMock
+from test_helpers.file_mock_helper import FileMockHelper
 from ui_tests.tests.query.query_test_base import QueryTestBase
 from ui_tests.tests.ui_consts import (COMP_EQUALS, AD_ADAPTER_NAME, JSON_ADAPTER_NAME,
                                       LABEL_CLIENT_WITH_SAME_ID, CSV_PLUGIN_NAME, CSV_NAME,
@@ -41,23 +42,25 @@ class TestQueryConnectionLabel(QueryTestBase):
         aws_json_mock_with_label[FILE_NAME] = self.CONNECTION_LABEL
         aws_json_mock_with_label['connectionLabel'] = self.CONNECTION_LABEL
 
-        self.adapters_page.add_json_server(aws_json_mock_with_label)
+        self.adapters_page.add_json_server(aws_json_mock_with_label, run_discovery_at_last=False)
+
+        devices_count = FileMockHelper.get_mock_devices_count(aws_json_mock_with_label[DEVICES_DATA])
 
         # check equal
         wait_until(
             lambda: self.devices_page.get_device_count_by_connection_label(
                 operator=COMP_EQUALS,
-                value=self.CONNECTION_LABEL) != 0)
+                value=self.CONNECTION_LABEL) == devices_count)
 
         # check exists
         wait_until(
             lambda: self.devices_page.get_device_count_by_connection_label(
                 operator=COMP_EXISTS,
-                value=self.CONNECTION_LABEL) != 0)
+                value=self.CONNECTION_LABEL) == devices_count)
 
         # check operator in positive value
         wait_until(lambda: self.devices_page.get_device_count_by_connection_label(
-            operator=COMP_IN, value=self.CONNECTION_LABEL) != 0)
+            operator=COMP_IN, value=self.CONNECTION_LABEL) == devices_count)
 
         # update adapter client connection label
         self.adapters_page.update_json_file_server_connection_label(client_name=self.CONNECTION_LABEL,
@@ -65,12 +68,12 @@ class TestQueryConnectionLabel(QueryTestBase):
 
         # check operator in negative - previous label
         wait_until(lambda: self.devices_page.get_device_count_by_connection_label(
-            operator=COMP_IN, value=self.CONNECTION_LABEL) == 0)
+            operator=COMP_IN, value=self.CONNECTION_LABEL) != devices_count)
 
         wait_until(
             lambda: self.devices_page.get_device_count_by_connection_label(
                 operator=COMP_EQUALS,
-                value=self.CONNECTION_LABEL_UPDATED) != 0)
+                value=self.CONNECTION_LABEL_UPDATED) == devices_count)
 
         # clear adapter client connection label
         self.adapters_page.update_json_file_server_connection_label(client_name=self.CONNECTION_LABEL,
