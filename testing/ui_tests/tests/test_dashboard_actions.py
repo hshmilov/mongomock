@@ -189,7 +189,7 @@ class TestDashboardActions(TestBase):
             self.dashboard_page.toggle_comparison_intersection_switch()
             self.dashboard_page.select_chart_result_range_date()
             self.dashboard_page.select_chart_wizard_range_picker(
-                date_from=datetime.datetime.now() + datetime.timedelta(-30),
+                date_from=datetime.datetime.now() + datetime.timedelta(-25),
                 date_to=datetime.datetime.now())
             views_list = self.dashboard_page.get_views_list()
             self.dashboard_page.select_chart_wizard_module(DEVICES_MODULE, views_list[1])

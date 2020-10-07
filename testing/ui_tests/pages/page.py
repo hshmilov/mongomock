@@ -1078,7 +1078,7 @@ class Page:
             parent = self.driver
         self._find_and_click_picker(parent, self.ANTD_RANGE_PICKER_INPUT_CSS)
         # Sleep through the time it takes the date picker to open and finish animation
-        time.sleep(0.3)
+        time.sleep(0.6)
         self._fill_picker_input(self.ANTD_RANGE_PICKER_POPUP_FROM_INPUT_CSS, from_date_to_fill)
         self._fill_picker_input(self.ANTD_RANGE_PICKER_POPUP_TO_INPUT_CSS, to_date_to_fill)
         # Sleep through the time it takes the date picker to react to the filled date
