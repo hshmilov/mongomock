@@ -168,6 +168,7 @@ class TestSettingsPermissions(PermissionsTestBase):
         self.settings_page.wait_for_role_panel_present()
         self.settings_page.get_role_edit_panel_action().click()
         self.settings_page.click_save_button()
+        self.settings_page.wait_for_role_successfully_saved_toaster()
         self.settings_page.wait_for_role_panel_absent()
         self.settings_page.remove_role(new_role_name)
 

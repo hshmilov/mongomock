@@ -537,9 +537,13 @@ class SettingsPage(Page):
 
     def wait_for_role_panel_absent(self):
         self.wait_for_element_absent_by_css(self.ROLE_PANEL_ABSENT_CSS)
+        # Waiting for close animation
+        time.sleep(0.5)
 
     def wait_for_user_panel_absent(self):
         self.wait_for_element_absent_by_css(self.USER_PANEL_ABSENT_CSS)
+        # Waiting for close animation
+        time.sleep(0.5)
 
     def match_role_permissions(self, name, permissions):
         self.click_role_by_name(name)
