@@ -7,7 +7,10 @@
     @cancel="onClose"
   >
     <div
+      ref="modalContent"
       class="enforcement-action-body"
+      :tabindex="-1"
+      @keyup.enter.stop.prevent="onClose"
     >
       <template v-if="isDataLoading">
         <ASpin
@@ -102,6 +105,9 @@ export default {
     },
   },
   mounted() {
+    this.$nextTick(() => {
+      this.$refs.modalContent.focus();
+    });
     this.status.processing = true;
     this.enforcementActionToRun().then((currentEnforcementId) => {
       this.currentEnforcementId = currentEnforcementId;

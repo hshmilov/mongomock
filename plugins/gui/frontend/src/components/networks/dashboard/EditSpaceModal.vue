@@ -80,7 +80,6 @@
 import {
   Modal, Input, Radio, Form, Select,
 } from 'ant-design-vue';
-import _pick from 'lodash/pick';
 import _isEmpty from 'lodash/isEmpty';
 import _get from 'lodash/get';
 import { fetchAssignableRolesList } from '@api/roles';
@@ -144,7 +143,9 @@ export default {
     this.fillDataFromSpace(this.space);
   },
   mounted() {
-    this.focusInput();
+    this.$nextTick(() => {
+      this.$refs.nameInput.$el.focus();
+    });
   },
   methods: {
     fillDataFromSpace(space) {
@@ -156,10 +157,6 @@ export default {
     submitEdit() {
       if (!this.spaceForm.name) return;
       this.$emit('confirm', this.spaceForm);
-    },
-    focusInput() {
-      const ref = this.$refs.nameInput;
-      ref.focus();
     },
   },
 };

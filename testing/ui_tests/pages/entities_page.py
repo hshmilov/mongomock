@@ -28,6 +28,8 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 class EntitiesPage(Page):
     EXPORT_CSV_CONFIG_MODAL_ID = 'csv_export_config'
+    CSV_CONFIG_MODAL_BUTTON_XPATH = '//div[@id=\'csv_export_config\']//div[contains(@class, \'ant-modal-footer\')]' \
+        '//button[contains(@class, \'ant-btn\') and .//text()[normalize-space()=\'{button_text}\']]'
     EXPORT_CSV_DELIMITER_ID = 'csv_delimiter'
     EXPORT_CSV_MAX_ROWS_ID = 'csv_max_rows'
     EXPORT_CSV_BUTTON_TEXT = 'Export CSV'
@@ -1254,11 +1256,13 @@ class EntitiesPage(Page):
         self.fill_text_field_by_css_selector(self.NOTES_SEARCH_INUPUT_CSS, search_text)
 
     def close_csv_config_dialog(self):
-        self.get_cancel_button(self.driver.find_element_by_id(self.EXPORT_CSV_CONFIG_MODAL_ID)).click()
+        cancel_button = self.find_element_by_xpath(self.CSV_CONFIG_MODAL_BUTTON_XPATH.format(button_text='Cancel'))
+        cancel_button.click()
         self.wait_for_csv_config_dialog_to_be_absent()
 
     def confirm_csv_config_dialog(self):
-        self.get_export_button(self.driver.find_element_by_id(self.EXPORT_CSV_CONFIG_MODAL_ID)).click()
+        confirm_button = self.find_element_by_xpath(self.CSV_CONFIG_MODAL_BUTTON_XPATH.format(button_text='Export'))
+        confirm_button.click()
         self.wait_for_csv_config_dialog_to_be_absent()
 
     def get_export_button(self, context=None):

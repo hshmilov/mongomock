@@ -3,14 +3,16 @@
     id="csv_export_config"
     :visible="true"
     title="Export Data"
+    ok-text="Export"
     :cancel-button-props="{ props: { type: 'link' } }"
     :closable="false"
     :centered="true"
     :after-close="resetForm"
     @cancel="onCancel"
+    @ok="onExport"
   >
     <div
-      ref="wrapper_div"
+      ref="modalContent"
       class="form_container"
       :tabindex="-1"
       @keyup.enter.stop.prevent="submitFormOnEnter"
@@ -47,20 +49,6 @@
         </AFormItem>
       </AForm>
     </div>
-    <template slot="footer">
-      <XButton
-        type="link"
-        @click="onCancel"
-      >
-        Cancel
-      </XButton>
-      <XButton
-        type="primary"
-        @click="onExport"
-      >
-        Export
-      </XButton>
-    </template>
   </AModal>
 </template>
 
@@ -116,7 +104,9 @@ export default {
     },
   },
   mounted() {
-    this.$refs.wrapper_div.focus();
+    this.$nextTick(() => {
+      this.$refs.modalContent.focus();
+    });
   },
   methods: {
     onExport() {
