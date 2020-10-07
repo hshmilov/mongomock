@@ -79,6 +79,10 @@ export default {
      * @param sessionExpirationTimeout - the next time the cookie will expire (in seconds)
      */
     handleActiveSession(sessionExpirationTimeout) {
+      // Check the session cookie in case the computer woke after from sleep
+      if (!this.isSessionCookieValid()) {
+        this.onLogout();
+      }
       const cookieExpiration = `${sessionExpirationTimeout}s`;
       const nextCookieUpdate = (sessionExpirationTimeout * 1000) - 1000;
       // Set cookie only if session is still active
@@ -90,23 +94,22 @@ export default {
       }
     },
     handleHiddenSession(timeout) {
+      // Check the session cookie in case the computer woke after from sleep
+      if (!this.isSessionCookieValid()) {
+        this.onLogout();
+      }
       this.hiddenTimeout = setTimeout(() => {
-        if (!this.isSessionCookieValid()) {
-          this.onLogout();
-        } else {
-          this.handleHiddenSession(1000 * 60);
-        }
+        this.handleHiddenSession(1000 * 60);
       }, timeout);
     },
     handleIdleSession(timeout) {
+      // Check the expiration cookie - in case the session is still active in other tabs
+      if (!this.isSessionCookieValid()) {
+        this.onLogout();
+      }
       this.idleTimeout = setTimeout(() => {
-        // Check the expiration cookie - in case the session is still active in other tabs
-        if (!this.isSessionCookieValid()) {
-          this.onLogout();
-        } else {
-          // Check every second after the current session turns Idle
-          this.handleIdleSession(1000);
-        }
+        // Check every second after the current session turns Idle
+        this.handleIdleSession(1000);
       }, timeout);
     },
     onLogout() {
