@@ -57,8 +57,12 @@ class MobileironAdapter(AdapterBase, Configurable):
 
     @staticmethod
     def _get_connection_core(client_config):
+        if not client_config.get('no_base_path'):
+            url_base_prefix = client_config.get('url_base_path') + '/rest/api/v2/'
+        else:
+            url_base_prefix = 'api/v2'
         connection = MobileironConnection(domain=client_config['domain'],
-                                          url_base_prefix=client_config.get('url_base_path') + '/rest/api/v2/',
+                                          url_base_prefix=url_base_prefix,
                                           verify_ssl=client_config['verify_ssl'],
                                           username=client_config['username'],
                                           password=client_config['password'],
@@ -122,6 +126,11 @@ class MobileironAdapter(AdapterBase, Configurable):
                     'default': 'mifs'
                 },
                 {
+                    'name': 'no_base_path',
+                    'title': 'No URL Base Path',
+                    'type': 'bool'
+                },
+                {
                     'name': 'username',
                     'title': 'User Name',
                     'type': 'string'
@@ -144,6 +153,7 @@ class MobileironAdapter(AdapterBase, Configurable):
                 'username',
                 'password',
                 'verify_ssl',
+                'no_base_path'
             ],
             'type': 'array'
         }
