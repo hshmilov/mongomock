@@ -16,6 +16,7 @@ class ServiceNowAkanaConnection(ServiceNowConnection):
                                                         **kwargs)
         self._token_endpoint = token_endpoint
         self._session_refresh = None
+        self._token = None
 
     def _set_new_token(self):
         if not (self._username and self._password and self._token_endpoint):
@@ -32,7 +33,8 @@ class ServiceNowAkanaConnection(ServiceNowConnection):
                 response.get('expires_in')):
             raise RESTException('Invalid auth response')
 
-        self._session_headers['Authorization'] = f'Bearer {response.get("access_token")}'
+        self._token = response.get('access_token')
+        self._session_headers['Authorization'] = f'Bearer {self._token}'
 
         expires_in = int_or_none(response.get('expires_in'))
         if expires_in is None:
@@ -41,6 +43,7 @@ class ServiceNowAkanaConnection(ServiceNowConnection):
 
     def _refresh_token(self):
         if self._session_refresh and self._session_refresh > datetime.datetime.now():
+            self._session_headers['Authorization'] = f'Bearer {self._token}'
             return
         self._set_new_token()
 
@@ -57,3 +60,19 @@ class ServiceNowAkanaConnection(ServiceNowConnection):
         """
         self._refresh_token()
         return super()._async_get(*args, **kwargs)
+
+    def _get_table_async_request_params(self, table_name: str, offset: int, page_size: int,
+                                        additional_url_params=None):
+        if not additional_url_params:
+            additional_url_params = dict()
+        sysparm_query = 'ORDERBYDESCsys_created_on'
+        additional_query = additional_url_params.get('sysparm_query')
+        if isinstance(additional_query, str):
+            # Note: ^ == AND
+            sysparm_query = f'{sysparm_query}^{additional_query}'
+        return {'name': f'{self.TABLE_API_PREFIX}{str(table_name)}',
+                # See: https://hi.service-now.com/kb_view.do?sysparm_article=KB0727636
+                'url_params': {'sysparm_limit': page_size,
+                               'sysparm_offset': offset,
+                               'sysparm_query': sysparm_query,
+                               **additional_url_params}}
