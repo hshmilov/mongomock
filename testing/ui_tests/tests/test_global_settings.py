@@ -11,6 +11,7 @@ from retrying import retry
 from selenium.common.exceptions import NoSuchElementException
 
 from scripts.instances.instances_consts import PROXY_DATA_HOST_PATH
+from scripts.maintenance_tools.proxy_data_reader import read_proxy_data
 from axonius.utils.json import to_json, from_json
 from axonius.utils.wait import wait_until
 from services.plugins.gui_service import GuiService
@@ -22,10 +23,9 @@ from test_credentials.test_ad_credentials import ad_client1_details
 from test_credentials.json_file_credentials import client_details as json_file_creds
 from test_helpers.log_tester import LogTester
 from test_helpers.machines import PROXY_IP, PROXY_PORT
-from ui_tests.tests.ui_consts import GUI_LOG_PATH, SYSTEM_SCHEDULER_LOG_PATH, AD_ADAPTER_NAME, JSON_ADAPTER_NAME,\
+from ui_tests.tests.ui_consts import GUI_LOG_PATH, SYSTEM_SCHEDULER_LOG_PATH, AD_ADAPTER_NAME, JSON_ADAPTER_NAME, \
     S3_DEVICES_BACKUP_FILE_NAME, S3_USERS_BACKUP_FILE_NAME
 from ui_tests.tests.ui_test_base import TestBase
-
 
 INVALID_EMAIL_HOST = 'dada...$#@'
 AXONIUS_CI_TESTS_BUCKET = 'axonius-testing'
@@ -35,7 +35,6 @@ S3_FILES_LOCAL_DIRECTORY = 'tmp_backup_files'
 
 
 class TestGlobalSettings(TestBase):
-
     s3_passphrase = None
 
     def test_email_settings(self):
@@ -137,6 +136,10 @@ class TestGlobalSettings(TestBase):
             assert content == f'{{"creds": "{PROXY_IP}:{port}", "verify": true}}'
 
         proxy_settings_propagate()
+        proxy_data = read_proxy_data()
+        assert proxy_data['proxy_addr'] == PROXY_IP
+        assert proxy_data['proxy_port'] == PROXY_PORT
+        assert proxy_data['proxy_verify']
 
     def test_bad_proxy_settings(self):
         self.settings_page.switch_to_page()

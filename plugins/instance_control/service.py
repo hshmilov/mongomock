@@ -200,6 +200,11 @@ class InstanceControlService(Triggerable, PluginBase):
         self.upgrading_cluster_in_prog = True
         return log_file_and_return(self.__exec_system_command(f'adapter all down'))
 
+    @add_rule(InstanceControlConsts.ReadProxySettings, methods=['GET'], should_authenticate=False)
+    def read_proxy_settings(self):
+        logging.info(f'Returning proxy settings')
+        return jsonify(self._proxy_settings)
+
     @add_rule(InstanceControlConsts.PullUpgrade, methods=['GET'], should_authenticate=False)
     def pull_upgrade(self):
         logger.info(f'Starting download')

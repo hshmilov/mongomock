@@ -15,6 +15,7 @@ class InstanceControlConsts:
     PullUpgrade = 'pull_upgrade'
     TriggerUpgrade = 'trigger_upgrade'
     FileExecute = 'file_execute'
+    ReadProxySettings = 'read_proxy_settings'
 
 
 class MetricsFields:
