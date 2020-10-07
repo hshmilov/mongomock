@@ -236,19 +236,23 @@ def aggregate_reports(accounts_reports, compliance_name):
     accounts_ids = set()
     last_updated = []
     for report_doc in accounts_reports:
-        report = report_doc['last']
-        accounts_ids.add(_get_account_id(report['account_name']))
-        accounts_names.add(report['account_name'])
-        last_updated.append(report['last_updated'])
+        try:
+            report = report_doc['last']
+            accounts_ids.add(_get_account_id(report['account_name']))
+            accounts_names.add(report['account_name'])
+            last_updated.append(report['last_updated'])
 
-        report_rules = report['report'].get('rules')
-        for rule in report_rules:
-            rule_key = f'{rule.get("section")} {rule.get("rule_name")}'
-            existing_rule_object = rules_dict.get(rule_key)
-            if not existing_rule_object:
-                rules_dict[rule_key] = rule
-                continue
-            _concat_rules_results(existing_rule_object, rule)
+            report_rules = report['report'].get('rules')
+            for rule in report_rules:
+                rule_key = f'{rule.get("section")} {rule.get("rule_name")}'
+                existing_rule_object = rules_dict.get(rule_key)
+                if not existing_rule_object:
+                    rules_dict[rule_key] = rule
+                    continue
+                _concat_rules_results(existing_rule_object, rule)
+        except Exception:
+            logger.warning(f'Error while processing report: {report}')
+            continue
 
     aggregated_rules = rules_dict.values()
     _replace_entities_results_query(aggregated_rules, accounts_ids, compliance_name)
