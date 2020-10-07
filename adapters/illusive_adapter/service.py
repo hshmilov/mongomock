@@ -120,7 +120,11 @@ class IllusiveAdapter(ScannerAdapterBase):
                     device.add_nic(None, [ip])
                 except Exception:
                     device.hostname = hostname_or_ip
-                domain = convert_ldap_searchpath_to_domain_name(device_raw.get('distinguishedName'))
+                domain = None
+                try:
+                    domain = convert_ldap_searchpath_to_domain_name(device_raw.get('distinguishedName'))
+                except Exception:
+                    pass
                 if is_domain_valid(domain):
                     device.domain = domain
                 device.group_name = device_raw.get('groupName')
