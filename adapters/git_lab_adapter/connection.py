@@ -61,8 +61,8 @@ class GitLabConnection(RESTConnection):
             raise
 
     def _get_groups_by_id(self):
+        groups_by_id = {}
         try:
-            groups_by_id = {}
 
             for current_page in range(1, MAX_PAGES_GROUPS + 1):
                 url_params = {
@@ -87,7 +87,7 @@ class GitLabConnection(RESTConnection):
             return groups_by_id
         except Exception:
             logger.exception(f'Invalid request made while getting groups')
-            return {}
+            return groups_by_id
 
     # pylint: disable=too-many-nested-blocks, too-many-branches
     def _get_projects_users(self, projects_by_id: dict):
@@ -144,8 +144,8 @@ class GitLabConnection(RESTConnection):
             return {}
 
     def _get_membership_projects(self):
+        membership_projects_by_id = {}
         try:
-            membership_projects_by_id = {}
             for current_page in range(1, MAX_PAGES_PROJECTS + 1):
                 url_params = {
                     'page': current_page,
@@ -170,11 +170,11 @@ class GitLabConnection(RESTConnection):
             return membership_projects_by_id
         except Exception:
             logger.exception(f'Invalid request made while getting project users')
-            return {}
+            return membership_projects_by_id
 
     def _get_groups_projects(self, groups_by_id: dict):
+        projects_by_id = {}
         try:
-            projects_by_id = {}
             total_projects = 0
 
             for group_id, group in groups_by_id.items():
@@ -221,7 +221,7 @@ class GitLabConnection(RESTConnection):
             return projects_by_id
         except Exception:
             logger.exception(f'Invalid request made while getting groups projects')
-            return {}
+            return projects_by_id
 
     # pylint: disable=too-many-nested-blocks, too-many-branches
     def _get_groups_users(self, groups_by_id: dict):
@@ -408,6 +408,9 @@ class GitLabConnection(RESTConnection):
                     requests = [{'name': link} for link in links.values()]
 
                     for name, response in zip(links.keys(), self._async_get(requests)):
+                        if not self._is_async_response_good(response):
+                            logger.warning(f'Response is not valid {response}')
+                            continue
                         project[f'extra_{name}'] = response
 
                 project['extra_vulnerability_findings'] = self._get_vulnerability_findings_by_id(project_id)
