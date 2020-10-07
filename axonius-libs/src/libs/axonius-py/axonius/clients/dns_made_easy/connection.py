@@ -2,14 +2,17 @@ import hmac
 import logging
 
 from hashlib import sha1
-from time import strftime, gmtime
+from time import strftime, gmtime, sleep
 from typing import Iterable
+
+import requests
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 
-from dns_made_easy_adapter.consts import API_VERSION, STRFTIME_DATE_GMT, \
-    ALL_DOMAINS_ENDPOINT
+from axonius.clients.dns_made_easy.consts import API_VERSION, STRFTIME_DATE_GMT, \
+    ALL_DOMAINS_ENDPOINT, REQUEST_LIMIT, SLEEP_TIME, REMAINING_REQUESTS_HEADER
+from axonius.utils.parsing import int_or_none
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -242,3 +245,65 @@ class DnsMadeEasyConnection(RESTConnection):
     @staticmethod
     def _get_hmac(init_vector: bytes, value: bytes) -> str:
         return hmac.new(init_vector, value, sha1).hexdigest()
+
+    def remove_subdomain_from_dns_made_easy(self, device: dict):
+        """
+        This function is used by the EC in order to delete records from a
+        domain according to the results of a saved query.
+
+        :param device: A dictionary that contains the domain ID and record ID
+        for each device that matches the saved query
+        """
+        domain_id = device.get('domain_id')
+        record_id = device.get('record_id')
+
+        try:
+            # the authentication headers are very short-lived. regen them for each call
+            self._set_authentication_headers()
+
+            # no response is kept here, since it is always an empty byte-string
+            response = self._delete(f'{ALL_DOMAINS_ENDPOINT}/{domain_id}/records/{record_id}',
+                                    return_response_raw=True,
+                                    use_json_in_response=False
+                                    )
+            return True, 'Success'
+        except Exception as err:
+            message = f'Unable to delete record {record_id} from ' \
+                      f'domain {domain_id}: {str(err)}'
+            logger.exception(message)
+            return False, message
+
+    # pylint: disable=arguments-differ
+    def _handle_response(self, response, *args, **kwargs):
+        """
+        Override the RESTConnection _handle_response in order to implement a
+        retry mechanism. This API does not respond with a normal HTTP 429
+        response, but with a response header that tells you how many API
+        requests you have remaining to use in a _rolling 5-minute_ window.
+
+        :param response: A Python request response object
+        :return response: The response object is passed back to the
+        overridden _handle_response()
+        """
+        headers = response.headers
+        if not (headers and isinstance(headers, (dict, requests.structures.CaseInsensitiveDict))):
+            message = f'Malformed response headers. Expected a dict, got ' \
+                      f'{type(headers)}: {str(headers)}'
+            logger.warning(message)
+            raise ValueError(message)
+
+        # this is the rate limit, showing how many API calls can be made before
+        #   exceeding the threshold
+        remaining_requests = int_or_none(headers.get(REMAINING_REQUESTS_HEADER))
+
+        if remaining_requests is None:
+            message = f'Remaining requests returned NoneType'
+            logger.warning(message)
+            raise ValueError(message)
+
+        logger.debug(f'Requests remaining: {remaining_requests}')
+        if remaining_requests <= REQUEST_LIMIT:
+            logger.info(f'Waiting {SLEEP_TIME} seconds due to rate limiting')
+            sleep(SLEEP_TIME)
+
+        return super()._handle_response(response, *args, **kwargs)

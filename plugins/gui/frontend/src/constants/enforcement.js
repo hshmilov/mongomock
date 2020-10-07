@@ -226,6 +226,9 @@ export const actionsMeta = {
   add_custom_data: {
     title: 'Add Custom Data',
   },
+  remove_subdomain_from_dns_made_easy: {
+    title: 'Remove Subdomain from DNS Made Easy',
+  },
   aws_operations: {
     title: 'Manage AWS Services',
     items: ['aws_ec2_start_instance', 'aws_ec2_stop_instance', 'aws_ec2_add_tags', 'aws_ec2_delete_tags'],
@@ -278,6 +281,10 @@ export const actionsMeta = {
     title: 'Axonius Utilities',
     items: ['tag', 'untag', 'add_custom_data', 'refetch_action'],
   },
+  manage_dns_services: {
+    title: 'Manage DNS Services',
+    items: ['remove_subdomain_from_dns_made_easy']
+  },
 };
 
 export const mainCondition = 'main';
@@ -325,5 +332,5 @@ export const deletedToastMessages = {
 export const actionCategories = [
   'notify', 'create_incident', 'axonius',
   'enrich_device_or_user_data', 'create_cmdb_computer', 'scan_va', 'run_command', 'isolate_edr',
-  'manage_directory', 'aws_operations', 'azure_operations',
+  'manage_directory', 'aws_operations', 'azure_operations', 'manage_dns_services',
 ];

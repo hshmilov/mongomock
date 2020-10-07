@@ -236,7 +236,8 @@ class TestEnforcementNoQuery(TestBase):
                                                                   ActionCategory.Enrichment,
                                                                   ActionCategory.Run,
                                                                   ActionCategory.Isolate,
-                                                                  ActionCategory.ManageAD]
+                                                                  ActionCategory.ManageAD,
+                                                                  ActionCategory.DNS]
         assert self.enforcements_page.get_action_category_items(ActionCategory.Isolate) == [
             Action.cybereason_isolate.value,
             Action.cybereason_unisolate.value,

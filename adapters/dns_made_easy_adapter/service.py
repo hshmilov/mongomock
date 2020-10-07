@@ -5,13 +5,14 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.mixins.configurable import Configurable
+from axonius.plugin_base import return_error, add_rule
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import int_or_none, parse_bool_from_raw
+from axonius.clients.dns_made_easy.connection import DnsMadeEasyConnection
+from axonius.clients.dns_made_easy.consts import SOURCE_TYPE_BY_ID, API_ENDPOINT_BASE
 
-from dns_made_easy_adapter.connection import DnsMadeEasyConnection
 from dns_made_easy_adapter.client_id import get_client_id
-from dns_made_easy_adapter.consts import SOURCE_TYPE_BY_ID, API_ENDPOINT_BASE
 from dns_made_easy_adapter.structures import DnsMadeEasyDeviceInstance, \
     DnsMadeEasyNameServer, DnsMadeEasyDomain
 
@@ -31,8 +32,9 @@ class DnsMadeEasyAdapter(AdapterBase, Configurable):
 
     @staticmethod
     def _test_reachability(client_config):
-        return RESTConnection.test_reachability(client_config.get('domain'),
-                                                https_proxy=client_config.get('https_proxy'))
+        return RESTConnection.test_reachability(
+            client_config.get('domain'),
+            https_proxy=client_config.get('https_proxy'))
 
     @staticmethod
     def get_connection(client_config):
@@ -142,8 +144,9 @@ class DnsMadeEasyAdapter(AdapterBase, Configurable):
         """
         nameservers = list()
         if not isinstance(nameservers_raw, list):
-            raise ValueError(f'Malformed raw nameserver data. Expected a list, '
-                             f'got {type(nameservers_raw)}: {str(nameservers_raw)}')
+            raise ValueError(
+                f'Malformed raw nameserver data. Expected a list, '
+                f'got {type(nameservers_raw)}: {str(nameservers_raw)}')
 
         for nameserver in nameservers_raw:
             if isinstance(nameserver, dict):
@@ -429,3 +432,37 @@ class DnsMadeEasyAdapter(AdapterBase, Configurable):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    # pylint: disable=protected-access, inconsistent-return-statements
+    @add_rule('remove_subdomain_from_dns_made_easy', methods=['POST'])
+    def remove_subdomain_from_dns_made_easy(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+
+        # get the data from connection
+        request_data_dict = self.get_request_data_as_object()
+
+        success = False
+        error_message = 'Failure'
+
+        for client_id in self._clients:
+            try:
+                conn = self.get_connection(
+                    self._get_client_config_by_client_id(client_id))
+                with conn:
+                    result_status, error_message = \
+                        conn.remove_subdomain_from_dns_made_easy(request_data_dict)
+
+                    success = success or result_status
+                    if success is True:
+                        # return, not yield here. the request_data_dict is a Generator
+                        #   object that is yielded from process_query_data() in
+                        #   remove_subdomain_from_dns_made_easy.py (action type base)
+                        return '', 200
+
+                    logger.warning(f'client_id "{client_id}" failed trying to '
+                                   f'delete domain records: {error_message}')
+            except Exception as err:
+                logger.exception(f'Could not connect to {client_id}: {str(err)}')
+                error_message = f'{error_message}: {str(err)}'
+        return error_message, 400

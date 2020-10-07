@@ -460,6 +460,7 @@ class ActionCategory:
     ManageAD = 'Manage Microsoft Active Directory (AD) Services'
     Incident = 'Create Incident'
     Block = 'Block Device in Firewall'
+    DNS = 'Manage DNS Services'
 
 
 class TunnelStatuses:

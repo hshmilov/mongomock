@@ -72,6 +72,7 @@ from reports.action_types.base.update_cherwell_computer import CherwellUpdateCom
 from reports.action_types.base.rapid7_ips_to_site import Rapid7AddIPsToSite
 from reports.action_types.base.create_jira_asset import CreateJiraAssetAction
 from reports.action_types.alert.send_json_to_s3 import SendJsonToS3
+from reports.action_types.base.remove_subdomain_from_dns_made_easy import RemoveSubdomainFromDNSME
 
 AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'update_cherwell_computer': CherwellUpdateComputerAction,
@@ -145,4 +146,5 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'qualys_remove_tag': QualysRemoveTag,
     'opsgenie_create_alert': OpsgenieCreateAlert,
     'send_json_to_s3': SendJsonToS3,
+    'remove_subdomain_from_dns_made_easy': RemoveSubdomainFromDNSME,
 }
