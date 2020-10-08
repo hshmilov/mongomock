@@ -32,6 +32,7 @@
       <XRolePanel
         :visible="isPanelOpen"
         :role="currentRole"
+        :title="sidePanelTitle"
         @close="closePanel"
         @duplicate="handleDuplicateRole"
       />
@@ -65,6 +66,7 @@ export default {
       currentRole: {},
       selection: [],
       roleToDuplicate: null,
+      sidePanelTitle: 'New Role',
     };
   },
   computed: {
@@ -155,6 +157,7 @@ export default {
         this.selection = [selectedRoleId];
       }
       this.currentRole = _cloneDeep(_find(this.roles, { uuid: this.selection[0] }));
+      this.sidePanelTitle = this.currentRole.name;
       this.isPanelOpen = true;
     },
     handleAddRole() {
@@ -185,6 +188,7 @@ export default {
     closePanel() {
       this.currentRole = {};
       this.selection = [];
+      this.sidePanelTitle = 'New Role';
       this.isPanelOpen = false;
     },
     formatRole(role) {

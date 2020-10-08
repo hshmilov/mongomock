@@ -66,6 +66,10 @@ export default {
       default: () => {
       },
     },
+    title: {
+      type: String,
+      default: 'New Role',
+    },
   },
   data() {
     return {
@@ -397,7 +401,7 @@ export default {
           visible={this.visible}
           panel-container={this.getSidePanelContainer}
           panelClass={`role-panel ${this.mode !== FormMode.ViewRole ? 'with-footer' : ''}`}
-          title={this.name}
+          title={this.title}
           onClose={this.closePanel}
         >
           {

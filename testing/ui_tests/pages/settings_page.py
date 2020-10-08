@@ -179,6 +179,7 @@ class SettingsPage(Page):
 
     SETTINGS_SAVE_TIMEOUT = 60 * 30
     ROLE_PANEL_CONTENT = '.role-panel.x-side-panel .ant-drawer-body .ant-drawer-body__content'
+    ROLE_PANEL_TITLE_SELECTOR = '.role-panel .ant-drawer-title .title'
     ROLE_PANEL_ABSENT_CSS = '.role-panel.ant-drawer-open'
     USER_PANEL_ABSENT_CSS = '.user-panel.ant-drawer-open'
     SAVE_ROLE_NAME_SELECTOR = '.name-input'
@@ -321,6 +322,10 @@ class SettingsPage(Page):
 
     def click_manage_roles_settings(self):
         self.driver.find_element_by_css_selector(self.MANAGE_ROLES_CSS).click()
+
+    def get_role_panel_title(self):
+        element = self.driver.find_element_by_css_selector(self.ROLE_PANEL_TITLE_SELECTOR)
+        return element.text
 
     def is_users_and_roles_enabled(self):
         if len(self.driver.find_elements_by_css_selector(self.MANAGE_USERS_CSS)) == 0:
