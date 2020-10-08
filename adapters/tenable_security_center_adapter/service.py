@@ -13,7 +13,7 @@ from axonius.plugin_base import add_rule, return_error
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
-from axonius.utils.parsing import parse_bool_from_raw
+from axonius.utils.parsing import parse_bool_from_raw, int_or_none
 from axonius.clients.tenable_sc.connection import \
     TenableSecurityScannerConnection
 from axonius.clients.tenable_sc.consts import OS_IDENTIFICATION_PLUGIN_ID
@@ -372,6 +372,9 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                 if isinstance(xref, str) and xref:
                     xref = xref.split(',')
 
+                port = int_or_none(vulnerability.get('port'))
+                protocol = vulnerability.get('protocol')
+
                 nessus_instance = None
                 if plugin_text and 'Nessus version' in plugin_text:
                     nessus_instance = self._get_nessus_instance(vulnerability.get('pluginText'))
@@ -406,7 +409,9 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                                         last_seen=last_seen,
                                         last_mitigated=last_mitigated,
                                         has_been_mitigated=has_been_mitigated,
-                                        xref=xref)
+                                        xref=xref,
+                                        port=port,
+                                        protocol=protocol)
             except Exception:
                 logger.exception(f'Problem adding tenable vuln')
 

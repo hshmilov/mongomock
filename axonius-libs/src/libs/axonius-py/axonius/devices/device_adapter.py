@@ -625,6 +625,8 @@ class TenableVulnerability(SmartJsonClass):
     last_mitigated = Field(datetime.datetime, 'Last Mitigated')
     has_been_mitigated = Field(bool, 'Mitigated')
     xref = ListField(str, 'Cross References')
+    port = Field(int, 'Port')
+    protocol = Field(str, 'Protocol')
 
 
 class TenableSource(SmartJsonClass):
