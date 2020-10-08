@@ -3,6 +3,7 @@ import time
 
 from ui_tests.tests.ui_test_base import TestBase
 from axonius.consts.system_consts import METADATA_PATH, NODE_ID_ABSOLUTE_PATH
+import testing.tests.conftest
 
 
 class TestAbout(TestBase):
@@ -27,6 +28,7 @@ class TestAbout(TestBase):
         gui_service.stop(should_delete=False)
         gui_service.start_and_wait()
         time.sleep(5)
+        testing.tests.conftest.axonius_set_test_passwords()
         self.login()
 
     def test_latest_version(self):
