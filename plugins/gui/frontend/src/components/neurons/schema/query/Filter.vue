@@ -13,8 +13,6 @@
         :disabled="disabled"
         :first="!i"
         :module="module"
-        v-on="{ change: onExpressionsChangeByIndex(i)}"
-        @remove="() => removeExpression(i)"
       />
     </template>
     <Draggable
@@ -40,8 +38,11 @@
           :disabled="disabled"
           :first="!i"
           :module="module"
+          :view-fields="viewFields"
           v-on="{ change: onExpressionsChangeByIndex(i)}"
           @remove="removeExpression(i)"
+          @duplicate="duplicateExpression(i)"
+          @toggle-column="toggleColumn"
         />
       </li>
     </Draggable>
@@ -62,6 +63,8 @@
 </template>
 
 <script>
+import { UPDATE_DATA_VIEW } from '@store/mutations';
+import { mapState, mapMutations } from 'vuex';
 import { calcMaxIndex } from '@constants/utils';
 import { expression } from '@constants/filter';
 import Draggable from 'vuedraggable';
@@ -94,6 +97,11 @@ export default {
     };
   },
   computed: {
+    ...mapState({
+      viewFields(state) {
+        return state[this.module].view.fields;
+      },
+    }),
     expressions: {
       get() {
         return this.value;
@@ -110,6 +118,9 @@ export default {
     },
   },
   methods: {
+    ...mapMutations({
+      updateView: UPDATE_DATA_VIEW,
+    }),
     onExpressionsChangeByIndex(index) {
       return (update) => {
         this.$emit('change', this.expressions.map((currentExpression, i) => {
@@ -140,6 +151,31 @@ export default {
       }
       this.onExpressionsChange();
     },
+    duplicateExpression(index) {
+      const logicOp = this.expressions[index].logicOp || 'and';
+      const duplicateIndex = index + 1;
+      this.$emit('change', [
+        ...this.expressions.slice(0, index + 1),
+        { ...this.expressions[index], logicOp, i: duplicateIndex },
+        ...this.expressions.slice(index + 1).map((item, itemIndex) => {
+          return { ...item, i: duplicateIndex + itemIndex + 1 };
+        }),
+      ]);
+    },
+    toggleColumn(columnName) {
+      let viewFields = [];
+      if (this.viewFields.includes(columnName)) {
+        viewFields = this.viewFields.filter((column) => column !== columnName);
+      } else {
+        viewFields = [...this.viewFields, columnName];
+      }
+      this.updateView({
+        module: this.module,
+        view: {
+          fields: viewFields,
+        },
+      });
+    },
     reset() {
       this.filters.length = 0;
       this.$emit('error', null);
@@ -153,16 +189,6 @@ export default {
     .x-filter {
         .filter-title {
             line-height: 24px;
-        }
-
-        .expression-container {
-            display: grid;
-            grid-template-columns: auto 20px;
-            grid-column-gap: 4px;
-
-            .ant-btn-link {
-                text-align: center;
-            }
         }
 
         .footer {
@@ -179,9 +205,9 @@ export default {
             float: left;
             cursor: move;
             margin-right: 4px;
-            margin-top: 8px;
             opacity: 0;
             width: 5%;
+            margin-top: 15px;
           }
           .x-expression {
             width: 95%;

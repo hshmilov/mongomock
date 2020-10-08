@@ -183,6 +183,7 @@ class Page:
     DROPDOWN_SELECTED_OPTION_CSS = 'div.x-select-options > div.x-select-option'
     DROPDOWN_SELECT_OPTION_CSS = 'div.x-select-options > div.x-select-option[title=\'{title}\']'
     DROPDOWN_NEW_OPTION_CSS = 'div.x-select-options + div.x-footer-option'
+    DROPDOWN_FIELD_VALUE_CSS = '.x-select .x-select-trigger .trigger-text'
 
     TAB_HEADER_XPATH = '//div[contains(@class, \'x-tabs\')]/ul/li[contains(@class, \'header-tab\') and ' \
                        './/text()=\'{tab_title}\']'
@@ -406,6 +407,10 @@ class Page:
                            **kwargs):
         button = self.driver.find_element_by_id(button_id)
         return self.handle_button(button, **kwargs)
+
+    @staticmethod
+    def assert_button_title(button, title):
+        assert button.get_attribute('title') == title
 
     @staticmethod
     def handle_element_click(element, ignore_exc=False):

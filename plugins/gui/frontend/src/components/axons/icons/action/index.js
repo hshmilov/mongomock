@@ -8,6 +8,9 @@ import legendOpen from './legend-open';
 import legendClosed from './legend-close';
 import edit from './edit';
 import remove from './remove';
+import duplicateRow from './duplicate-row';
+import addColumn from './add-column';
+import removeColumn from './remove-column';
 
 export default {
   drag,
@@ -20,4 +23,7 @@ export default {
   legendClosed,
   edit,
   remove,
+  duplicateRow,
+  addColumn,
+  removeColumn,
 };

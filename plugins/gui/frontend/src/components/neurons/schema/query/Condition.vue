@@ -5,9 +5,12 @@
     :module="module"
     :condition="condition"
     :read-only="readOnly"
+    :view-fields="viewFields"
     @update="updateCondition"
     @change-child="onChangeChild"
     @remove-child="onRemoveChild"
+    @duplicate-child="onDuplicateChild"
+    @toggle-column="toggleColumn"
   >
     <XButton
       v-if="children.length && !readOnly"
@@ -55,6 +58,10 @@ export default {
     readOnly: {
       type: Boolean,
       default: false,
+    },
+    viewFields: {
+      type: Array,
+      default: () => ([]),
     },
   },
   data() {
@@ -108,6 +115,19 @@ export default {
     onRemoveChild(index) {
       this.children = this.children.filter((child) => child.i !== index);
     },
+    onDuplicateChild(index) {
+      const duplicateIndex = index + 1;
+      this.children = [
+        ...this.children.slice(0, duplicateIndex),
+        { ...this.children.find((child) => child.i === index), i: duplicateIndex },
+        ...this.children.slice(duplicateIndex).map((item, itemIndex) => {
+          return { ...item, i: duplicateIndex + itemIndex + 1 };
+        }),
+      ];
+    },
+    toggleColumn(columnName) {
+      this.$emit('toggle-column', columnName);
+    },
   },
 };
 </script>
@@ -121,15 +141,9 @@ export default {
 
     &__child {
       display: grid;
-      grid-template-columns: 240px auto;
+      grid-template-columns: 240px auto 48px;
       grid-gap: 4px;
       position: relative;
-
-      .child-remove {
-        position: absolute;
-        left: 100%;
-      }
-
     }
   }
 </style>

@@ -24,20 +24,36 @@
       :auto-fill="false"
       @input="(field, fieldType, filteredAdapters) => onChangeField(field, fieldType, filteredAdapters, true)"
     />
+    <div
+      v-if="field"
+      class="expression-actions"
+    >
+      <XButton
+        :disabled="!secondField"
+        type="link"
+        class="child-toggle-column"
+        :title="isColumnInTable ? 'Remove Field from Columns' : 'Add Field to Columns'"
+        @click="$emit('toggle-column', secondField)"
+      >
+        <XIcon
+          family="action"
+          :type="isColumnInTable ? 'removeColumn' : 'addColumn'"
+        />
+      </XButton>
+    </div>
   </div>
 </template>
 
 <script>
 import _isEmpty from 'lodash/isEmpty';
 import { mapState, mapGetters } from 'vuex';
-import XSelectTypedField from '../../inputs/SelectTypedField.vue';
-import XConditionFunctionFieldComparison from './ConditionFunctionFieldComparison.vue';
-
-
+import XSelectTypedField from '@neurons/inputs/SelectTypedField.vue';
+import XConditionFunctionFieldComparison from '@neurons/schema/query/ConditionFunctionFieldComparison.vue';
 import {
   GET_DATA_SCHEMA_BY_NAME,
   GET_MODULE_SCHEMA,
-} from '../../../../store/getters';
+} from '@store/getters';
+
 
 export default {
   name: 'XConditionFieldComparison',
@@ -56,6 +72,10 @@ export default {
     readOnly: {
       type: Boolean,
       default: false,
+    },
+    viewFields: {
+      type: Array,
+      default: () => ([]),
     },
   },
   data() {
@@ -106,7 +126,7 @@ export default {
       }
       // Filter all the complex fields
       schema.forEach((adapter) => {
-        let filteredFields = [];
+        const filteredFields = [];
         adapter.fields.forEach((field) => {
           if (field.type === 'array') {
             filteredFields.push(field.name);
@@ -126,6 +146,9 @@ export default {
     },
     fieldSchema() {
       return this.getFieldSchema(this.field);
+    },
+    isColumnInTable() {
+      return this.viewFields.includes(this.secondField);
     },
   },
   methods: {
@@ -179,5 +202,10 @@ export default {
 </script>
 
 <style lang="scss">
-
+.x-condition__child.x-condition-field-comparison {
+  grid-template-columns: 240px auto;
+  .child-toggle-column {
+    margin-left: auto;
+  }
+}
 </style>

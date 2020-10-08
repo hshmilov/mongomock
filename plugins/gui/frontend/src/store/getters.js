@@ -79,6 +79,13 @@ export const getModuleSchemaWithConnectionLabel = (state) => (module, objectView
   return getModuleSchemaFields(specific, generic, schema, objectView, filterPlugins, true);
 };
 
+export const GET_MODULE_FIELDS = 'GET_MODULE_FIELDS';
+export const getModuleFields = (state) => (module) => {
+  const generic = _get(state[module], 'fields.data.generic', []);
+  const specific = _get(state[module], 'fields.data.specific', []);
+  return [generic, ...Object.values(specific)].flat().map((field) => field.name);
+};
+
 export const GET_DATA_SCHEMA_LIST = 'GET_DATA_SCHEMA_LIST';
 export const getDataSchemaList = (state) => (module) => {
   const fields = state[module].fields.data;

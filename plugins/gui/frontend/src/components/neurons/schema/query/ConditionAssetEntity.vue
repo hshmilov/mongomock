@@ -1,7 +1,7 @@
 <template>
   <div class="x-condition-asset-entity x-condition__parent">
     <div class="parent-field">
-      <x-select-symbol
+      <XSelectSymbol
         v-model="field"
         :options="schema"
         minimal
@@ -13,14 +13,17 @@
       >{{ fieldTitle }}</div>
     </div>
     <template v-for="{ i, expression } in children">
-      <x-condition-asset-entity-child
+      <XConditionAssetEntityChild
         :key="`condition_${i}`"
         :schema="childrenSchema"
         :condition="expression"
         :parent-field="field"
         :read-only="readOnly"
+        :view-fields="viewFields"
         @change="onChangeChild(i, $event)"
         @remove="onRemoveChild(i)"
+        @duplicate="onDuplicateChild(i)"
+        @toggle-column="toggleColumn"
       />
     </template>
     <slot />
@@ -30,15 +33,15 @@
 <script>
 import { mapGetters } from 'vuex';
 import _keyBy from 'lodash/keyBy';
-import xSelectSymbol from '../../inputs/SelectSymbol.vue';
-import xConditionAssetEntityChild from './ConditionAssetEntityChild.vue';
-import { GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL } from '../../../../store/getters';
+import XSelectSymbol from '@neurons/inputs/SelectSymbol.vue';
+import XConditionAssetEntityChild from '@neurons/schema/query/ConditionAssetEntityChild.vue';
+import { GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL } from '@store/getters';
 
 
 export default {
   name: 'XConditionAssetEntity',
   components: {
-    xSelectSymbol, xConditionAssetEntityChild,
+    XSelectSymbol, XConditionAssetEntityChild,
   },
   props: {
     module: {
@@ -52,6 +55,10 @@ export default {
     readOnly: {
       type: Boolean,
       default: false,
+    },
+    viewFields: {
+      type: Array,
+      default: () => ([]),
     },
   },
   computed: {
@@ -94,6 +101,12 @@ export default {
     },
     onRemoveChild(index) {
       this.$emit('remove-child', index);
+    },
+    onDuplicateChild(index) {
+      this.$emit('duplicate-child', index);
+    },
+    toggleColumn(columnName) {
+      this.$emit('toggle-column', columnName);
     },
   },
 };

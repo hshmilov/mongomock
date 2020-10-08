@@ -21,11 +21,9 @@
 
 <script>
 import Plugin from './index';
-import XButton from '../../components/axons/inputs/Button.vue';
 
 export default {
   name: 'XMessageModal',
-  components: { XButton },
   data() {
     return {
       visible: false,

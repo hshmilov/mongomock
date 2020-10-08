@@ -260,6 +260,11 @@ class EntitiesPage(Page):
     SCHEDULE_TRIGGER_DROPDOWN_CSS = '.item_conditional .x-select .x-select-trigger'
 
     SAVE_QUERY_APPROVE_TEXT = 'Yes, Save'
+    EXPRESSION_TOGGLE_BUTTON = '.expression-toggle-column'
+    CHILD_TOGGLE_BUTTON = '.child-toggle-column'
+    CHILD_DUPLICATE_BUTTON = '.child-duplicate'
+    ADD_FIELDS_TO_COLUMN = 'Add Field to Columns'
+    REMOVE_FIELD_FROM_COLUMNS = 'Remove Field from Columns'
 
     COLUMN_SORT_CONTAINER_CSS = '.sort-container'
 
@@ -285,6 +290,19 @@ class EntitiesPage(Page):
     def click_query_wizard(self):
         time.sleep(0.3)
         self._call_wizard_command_with_timeout(lambda: self.driver.find_element_by_id(self.QUERY_WIZARD_ID).click())
+
+    def assert_toggle_column(self, button, disabled, add):
+        assert self.is_element_disabled(button) == disabled
+        self.assert_button_title(button,
+                                 self.ADD_FIELDS_TO_COLUMN if add else self.REMOVE_FIELD_FROM_COLUMNS)
+
+    def assert_parent_toggle_column(self, parent, disabled, add):
+        button = parent.find_element_by_css_selector(self.EXPRESSION_TOGGLE_BUTTON)
+        self.assert_toggle_column(button, disabled, add)
+
+    def assert_child_toggle_column(self, parent, disabled, add):
+        button = parent.find_element_by_css_selector(self.CHILD_TOGGLE_BUTTON)
+        self.assert_toggle_column(button, disabled, add)
 
     def select_query_field(self, text, parent=None, partial_text=True, select_num=0):
         self._call_wizard_command_with_timeout(
@@ -452,6 +470,9 @@ class EntitiesPage(Page):
                                                       self.DROPDOWN_SELECTED_OPTION_CSS, text,
                                                       parent=parent))
 
+    def is_logic_op_equals_to_and(self, expression_element):
+        return expression_element.find_element_by_css_selector(self.QUERY_LOGIC_DROPDOWN_CSS).text == 'and'
+
     def click_wizard_outdated_toggle(self):
         self.driver.find_element_by_css_selector(self.OUTDATED_TOGGLE_CSS).click()
 
@@ -557,12 +578,25 @@ class EntitiesPage(Page):
     def add_query_expression(self):
         self._call_wizard_command_with_timeout(
             lambda: self.driver.find_element_by_css_selector(self.QUERY_ADD_EXPRESSION_CSS).click())
+        return self.find_expressions()[-1]
+
+    def duplicate_expression(self, expression_element):
+        count = len(self.find_expressions())
+        expression_element.find_element_by_css_selector('.expression-duplicate').click()
+        wait_until(lambda: len(self.find_expressions()) == count + 1)
+        return self.find_expressions()[-1]
 
     def toggle_left_bracket(self, expression_element):
         expression_element.find_element_by_css_selector(self.QUERY_BRACKET_LEFT_CSS).click()
 
+    def is_left_bracket_on(self, expression_element):
+        return self.has_class(expression_element.find_element_by_css_selector(self.QUERY_BRACKET_LEFT_CSS), 'on')
+
     def toggle_right_bracket(self, expression_element):
         expression_element.find_element_by_css_selector(self.QUERY_BRACKET_RIGHT_CSS).click()
+
+    def is_right_bracket_on(self, expression_element):
+        return self.has_class(expression_element.find_element_by_css_selector(self.QUERY_BRACKET_RIGHT_CSS), 'on')
 
     def toggle_not(self, expression_element=None):
         if not expression_element:
@@ -570,11 +604,18 @@ class EntitiesPage(Page):
         self._call_wizard_command_with_timeout(
             lambda: expression_element.find_element_by_css_selector(self.QUERY_NOT_CSS).click())
 
+    def is_expression_not_on(self, expression_element):
+        return self.has_class(expression_element.find_element_by_css_selector(self.QUERY_NOT_CSS), 'on')
+
     def select_context_all(self, expression_element):
         self.select_option_without_search(self.QUERY_CONTEXT_CSS,
                                           self.DROPDOWN_SELECTED_OPTION_CSS,
                                           'Aggregated Data',
                                           parent=expression_element)
+
+    def assert_context_all(self, expression_element):
+        assert expression_element.find_element_by_css_selector(
+            f'{self.QUERY_CONTEXT_CSS}{self.DROPDOWN_FIELD_VALUE_CSS}').text == 'ALL'
 
     def select_context_obj(self, expression_element):
         self.select_option_without_search(self.QUERY_CONTEXT_CSS,
@@ -582,17 +623,29 @@ class EntitiesPage(Page):
                                           'Complex Field',
                                           parent=expression_element)
 
+    def assert_context_obj(self, expression_element):
+        assert expression_element.find_element_by_css_selector(
+            f'{self.QUERY_CONTEXT_CSS} {self.DROPDOWN_FIELD_VALUE_CSS}').text == 'OBJ'
+
     def select_context_ent(self, expression_element):
         self.select_option_without_search(self.QUERY_CONTEXT_CSS,
                                           self.DROPDOWN_SELECTED_OPTION_CSS,
                                           'Asset Entity',
                                           parent=expression_element)
 
+    def assert_context_ent(self, expression_element):
+        assert expression_element.find_element_by_css_selector(
+            f'{self.QUERY_CONTEXT_CSS} {self.DROPDOWN_FIELD_VALUE_CSS}').text == 'ENT'
+
     def select_context_cmp(self, expression_element):
         self.select_option_without_search(self.QUERY_CONTEXT_CSS,
                                           self.DROPDOWN_SELECTED_OPTION_CSS,
                                           'Field Comparison',
                                           parent=expression_element)
+
+    def assert_context_cmp(self, expression_element):
+        assert expression_element.find_element_by_css_selector(
+            f'{self.QUERY_CONTEXT_CSS} {self.DROPDOWN_FIELD_VALUE_CSS}').text == 'CMP'
 
     def select_asset_entity_adapter(self, expression_element, adapter_title):
         self._call_wizard_command_with_timeout(
@@ -1934,3 +1987,11 @@ class EntitiesPage(Page):
         time.sleep(0.5)
         options = parent.find_elements_by_css_selector(self.SAVED_QUERY_OPTIONS_CSS)
         return [option.text for option in options]
+
+    def toggle_column(self, field, exist_in_table, parent, button_selector):
+        assert (field in self.get_columns_header_text()) == exist_in_table
+        button = parent.find_element_by_css_selector(button_selector)
+        self.assert_toggle_column(button, disabled=False, add=not exist_in_table)
+        button.click()
+        self.assert_toggle_column(button, disabled=False, add=exist_in_table)
+        assert (field in self.get_columns_header_text()) != exist_in_table

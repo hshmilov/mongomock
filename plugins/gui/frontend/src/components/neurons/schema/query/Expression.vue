@@ -39,6 +39,8 @@
       :module="module"
       :context="context"
       :read-only="disabled"
+      :view-fields="viewFields"
+      @toggle-column="toggleColumn"
     />
 
     <!-- Option to add ')' and to remove the expression -->
@@ -49,27 +51,30 @@
       :on="expression.rightBracket"
       @click="toggleRightBracket"
     >)</XButton>
-    <XButton
+
+    <ExpressionActions
       v-if="!disabled"
-      type="link"
-      class="expression-remove"
-      @click="$emit('remove')"
-    >x</XButton>
+      :is-column-in-table="isColumnInTable"
+      :disabled-toggle-field="disableColumnToggle"
+      class-name="expression"
+      @duplicate="$emit('duplicate')"
+      @toggle-column="$emit('toggle-column', expression.field)"
+      @remove="$emit('remove')"
+    />
   </div>
 </template>
 
 <script>
 import { mapGetters } from 'vuex';
-
-import XSelect from '../../../axons/inputs/select/Select.vue';
+import XSelect from '@axons/inputs/select/Select.vue';
+import { AUTO_QUERY, GET_MODULE_FIELDS } from '@store/getters';
+import ExpressionActions from '@neurons/schema/query/ExpressionActions.vue';
 import XCondition from './Condition.vue';
-
-import { AUTO_QUERY } from '../../../../store/getters';
 
 export default {
   name: 'XExpression',
   components: {
-    XSelect, XCondition,
+    XSelect, XCondition, ExpressionActions,
   },
   model: {
     prop: 'expression',
@@ -92,6 +97,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    viewFields: {
+      type: Array,
+      default: () => ([]),
+    },
   },
   data() {
     return {
@@ -109,6 +118,7 @@ export default {
   computed: {
     ...mapGetters({
       autoQuery: AUTO_QUERY,
+      getModuleFields: GET_MODULE_FIELDS,
     }),
     logicOps() {
       return [{
@@ -154,6 +164,12 @@ export default {
     contextSelected() {
       return this.context !== '';
     },
+    isColumnInTable() {
+      return this.viewFields.includes(this.expression.field);
+    },
+    disableColumnToggle() {
+      return !this.getModuleFields(this.module).includes(this.expression.field);
+    },
   },
   methods: {
     updateExpression(update) {
@@ -174,6 +190,9 @@ export default {
         not: !this.expression.not,
       });
     },
+    toggleColumn(columnName) {
+      this.$emit('toggle-column', columnName);
+    },
   },
 };
 </script>
@@ -181,10 +200,11 @@ export default {
 <style lang="scss">
   .x-expression {
     display: grid;
-    grid-template-columns: 60px 30px 30px 60px auto 30px 30px;
+    grid-template-columns: 60px 30px 30px 60px auto 30px 66px;
     align-items: start;
     grid-gap: 8px;
-    margin-bottom: 16px;
+    margin-top: 8px;
+    margin-bottom: 8px;
 
     select, input:not([type=checkbox]) {
       height: 32px;

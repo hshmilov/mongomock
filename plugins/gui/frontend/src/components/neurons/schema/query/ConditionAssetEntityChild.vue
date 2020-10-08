@@ -22,28 +22,30 @@
       :read-only="readOnly"
       @update="onUpdateConditionFunction"
     />
-    <XButton
+    <ExpressionActions
       v-if="!readOnly"
-      type="link"
-      class="child-remove"
-      @click="$emit('remove')"
-    >x</XButton>
+      :is-column-in-table="isColumnInTable"
+      :disabled-toggle-field="!condition.field"
+      class-name="child"
+      @duplicate="$emit('duplicate')"
+      @toggle-column="$emit('toggle-column', condition.field)"
+      @remove="$emit('remove')"
+    />
   </div>
 </template>
 
 <script>
 import _keyBy from 'lodash/keyBy';
-import _isEqual from 'lodash/isEqual';
-import XStringView from '../types/string/StringView.vue';
-import XSelect from '../../../axons/inputs/select/Select.vue';
-import XConditionFunction from './ConditionFunction.vue';
-import { getUpdatedValueAfterFieldChange, getValueSchema } from '../../../../logic/condition';
-
+import XStringView from '@neurons/schema/types/string/StringView.vue';
+import XSelect from '@axons/inputs/select/Select.vue';
+import XConditionFunction from '@neurons/schema/query/ConditionFunction.vue';
+import ExpressionActions from '@neurons/schema/query/ExpressionActions.vue';
+import { getUpdatedValueAfterFieldChange } from '@/logic/condition';
 
 export default {
   name: 'XConditionAssetEntityChild',
   components: {
-    XStringView, XSelect, XConditionFunction,
+    XStringView, XSelect, XConditionFunction, ExpressionActions,
   },
   model: {
     prop: 'condition',
@@ -66,6 +68,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    viewFields: {
+      type: Array,
+      default: () => ([]),
+    },
   },
   computed: {
     field: {
@@ -85,6 +91,9 @@ export default {
     },
     fieldSchema() {
       return this.getFieldSchema(this.field);
+    },
+    isColumnInTable() {
+      return this.viewFields.includes(this.condition.field);
     },
   },
   methods: {

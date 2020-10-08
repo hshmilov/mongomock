@@ -69,6 +69,11 @@
 </template>
 
 <script>
+import {
+  isTableField,
+  getParentFromField,
+  isObjectListField,
+} from '@constants/utils';
 import { mapGetters } from 'vuex';
 import _get from 'lodash/get';
 import _isEmpty from 'lodash/isEmpty';
@@ -83,10 +88,7 @@ import XSelectTimeframe from '../../../neurons/inputs/SelectTimeframe.vue';
 import XFilterContains from '../../../neurons/schema/query/FilterContains.vue';
 import XCheckbox from '../../../axons/inputs/Checkbox.vue';
 import chartMixin from './chart';
-import {
-  getParentFromField,
-  isObjectListField,
-} from '../../../../constants/utils';
+
 
 import {
   GET_MODULE_SCHEMA,
@@ -268,12 +270,7 @@ export default {
         ...category,
         fields: category.fields.filter((field) => {
           if (field.name === 'labels') return true;
-          if (
-            !field.name.startsWith('specific_data')
-            && !field.name.startsWith('adapters_data')
-          ) {
-            return false;
-          }
+          if (!isTableField(field.name)) return false;
           return !isObjectListField(field);
         }),
       }));

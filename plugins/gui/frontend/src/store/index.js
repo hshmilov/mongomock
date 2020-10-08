@@ -89,6 +89,7 @@ import {
   FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES, fillUserFieldsGroupsFromTemplates,
   GET_SYSTEM_COLUMNS, getSystemColumns,
   GET_SAVED_QUERY_BY_NAME, getSavedQueryByName,
+  GET_MODULE_FIELDS, getModuleFields,
 } from './getters';
 
 import { adapters } from './modules/adapters';
@@ -150,6 +151,7 @@ export default new Vuex.Store({
     [FILL_USER_FIELDS_GROUPS_FROM_TEMPLATES]: fillUserFieldsGroupsFromTemplates,
     [GET_SYSTEM_COLUMNS]: getSystemColumns,
     [GET_SAVED_QUERY_BY_NAME]: getSavedQueryByName,
+    [GET_MODULE_FIELDS]: getModuleFields,
   },
   mutations: {
     [TOGGLE_SIDEBAR]: toggleSidebar,

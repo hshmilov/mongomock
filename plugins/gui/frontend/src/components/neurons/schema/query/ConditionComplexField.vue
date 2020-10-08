@@ -1,6 +1,6 @@
 <template>
   <div class="x-condition-complex-field x-condition__parent">
-    <x-select-typed-field
+    <XSelectTypedField
       :value="field"
       :filtered-adapters="condition.filteredAdapters"
       :options="schema"
@@ -8,13 +8,17 @@
       @input="onChangeField"
     />
     <template v-for="{ i, expression } in children">
-      <x-condition-complex-field-child
+      <XConditionComplexFieldChild
         :key="`condition_${i}`"
+        :parent-field="field"
         :schema="childrenSchema"
         :condition="expression"
         :read-only="readOnly"
+        :view-fields="viewFields"
         @change="onChangeChild(i, $event)"
         @remove="onRemoveChild(i)"
+        @duplicate="onDuplicateChild(i)"
+        @toggle-column="toggleColumn"
       />
     </template>
     <slot />
@@ -24,16 +28,15 @@
 <script>
 import { mapGetters } from 'vuex';
 import _keyBy from 'lodash/keyBy';
-import xSelectTypedField from '../../inputs/SelectTypedField.vue';
-import xConditionComplexFieldChild from './ConditionComplexFieldChild.vue';
-
-import { GET_MODULE_SCHEMA } from '../../../../store/getters';
+import XSelectTypedField from '@neurons/inputs/SelectTypedField.vue';
+import { GET_MODULE_SCHEMA } from '@store/getters';
+import XConditionComplexFieldChild from '@neurons/schema/query/ConditionComplexFieldChild.vue';
 
 
 export default {
   name: 'XConditionComplexField',
   components: {
-    xSelectTypedField, xConditionComplexFieldChild,
+    XSelectTypedField, XConditionComplexFieldChild,
   },
   props: {
     module: {
@@ -47,6 +50,10 @@ export default {
     readOnly: {
       type: Boolean,
       default: false,
+    },
+    viewFields: {
+      type: Array,
+      default: () => ([]),
     },
   },
   computed: {
@@ -91,6 +98,12 @@ export default {
     },
     onRemoveChild(index) {
       this.$emit('remove-child', index);
+    },
+    onDuplicateChild(index) {
+      this.$emit('duplicate-child', index);
+    },
+    toggleColumn(columnName) {
+      this.$emit('toggle-column', columnName);
     },
   },
 };

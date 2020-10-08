@@ -158,5 +158,7 @@ export default {
 </script>
 
 <style lang="scss">
-
+.x-condition__child.x-condition-aggregated-data {
+  grid-template-columns: 240px auto;
+}
 </style>

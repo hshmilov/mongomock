@@ -170,3 +170,7 @@ export const ChartViewGetter = (chart) => {
 
   return getters[chart.metric](chart.config);
 };
+
+export const isTableField = (fieldName) => {
+  return fieldName.startsWith('specific_data') || fieldName.startsWith('adapters_data');
+};

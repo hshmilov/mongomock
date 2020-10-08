@@ -35,13 +35,12 @@
 </template>
 
 <script>
+import XChexkbox from '@axons/inputs/Checkbox.vue';
 import Plugin from './index';
-import XButton from '../../components/axons/inputs/Button.vue';
-import XChexkbox from '../../components/axons/inputs/Checkbox.vue';
 
 export default {
   name: 'XSafeguard',
-  components: { XButton, XChexkbox },
+  components: { XChexkbox },
   data() {
     return {
       visible: false,
