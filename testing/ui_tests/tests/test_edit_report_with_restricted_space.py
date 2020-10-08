@@ -1,3 +1,6 @@
+from selenium.common.exceptions import NoSuchElementException
+
+from axonius.utils.wait import wait_until
 from ui_tests.pages.reports_page import ReportConfig
 from ui_tests.tests import ui_consts
 from ui_tests.tests.permissions_test_base import PermissionsTestBase
@@ -26,7 +29,8 @@ class TestEditReportWithRestrictedSpace(PermissionsTestBase):
         self.reports_page.wait_for_table_to_load()
         self.reports_page.click_report(self.TEST_REPORT_NAME)
         self.reports_page.wait_for_spinner_to_end()
-        assert self.reports_page.is_restricted_report_modal_exist()
+        wait_until(self.reports_page.is_restricted_report_modal_exist,
+                   tolerated_exceptions_list=[NoSuchElementException])
         self.reports_page.click_restricted_report_modal_confirm()
         self.reports_page.wait_for_table_to_be_responsive()
         self.login_page.logout_and_login_with_admin()
