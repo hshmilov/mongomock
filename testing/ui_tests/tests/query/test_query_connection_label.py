@@ -207,7 +207,7 @@ class TestQueryConnectionLabel(QueryTestBase):
             'connectionLabel': connection_label
         }
 
-    @pytest.mark.skip('AX-7287')
+    @pytest.mark.skip('AX-9476')
     def test_connection_label_query_with_same_client_id(self):
         """
           verify connection label when adapter client have same client_id ( like tanium adapters )
