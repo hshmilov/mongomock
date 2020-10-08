@@ -4,7 +4,8 @@ import json
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.clients.itop.consts import OBJECTS_PER_PAGE, MAX_NUMBER_OF_OBJECTS, API_URL_BASE_PREFIX, API_URL_SUFFIX, \
-    DEVICE_CLASS, DEVICE_OBJECT, USER_CLASS, USER_OBJECT
+    DEVICE_CLASS, DEVICE_OBJECT, USER_CLASS, USER_OBJECT, OPERATION_CHECK_CREDENTIALS, OPERATION_GET, \
+    DEFAULT_API_VERSION
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -15,58 +16,53 @@ class ItopConnection(RESTConnection):
     """ rest client for iTOP adapter """
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, url_base_prefix=API_URL_BASE_PREFIX,
-                         headers={'Content-Type': 'application/json',
+        super().__init__(*args, url_base_prefix=f'{API_URL_BASE_PREFIX}',
+                         headers={'Content-Type': 'application/x-www-form-urlencoded',
                                   'Accept': 'application/json'},
                          **kwargs)
+        self._api_version = DEFAULT_API_VERSION
 
-    def _get_version(self):
-        json_data = {
-            'operation': 'list_operations'
-        }
-        body_params = {
-            'auth_user': self._username,
-            'auth_pwd': self._password,
-            'json_data': json.dumps(json_data),
-        }
-        response = self._post(API_URL_SUFFIX, body_params=body_params)
-        if not (isinstance(response, dict) and response.get('version')):
-            message = f'Invalid response from the server while getting version and operations {str(response)}'
+    def _check_credentials(self):
+        try:
+            json_data = {
+                'operation': OPERATION_CHECK_CREDENTIALS,
+                'user': self._username,
+                'password': self._password
+            }
+
+            body_params = {
+                'version': self._api_version,
+                'auth_user': self._username,
+                'auth_pwd': self._password,
+                'json_data': json.dumps(json_data),
+            }
+
+            response = self._post(API_URL_SUFFIX, body_params=body_params,  use_json_in_body=False)
+            # authorized is a bool / does not exists.
+            # if its bool and True credentials are ok
+            # if its bool and False or does not exists -> Error will be raised (credentials are not ok)
+            if not (isinstance(response, dict) and response.get('authorized')):
+                message = f'Invalid response from the server while checking credentials {str(response)}'
+                logger.exception(message)
+                raise RESTException(message)
+
+        except Exception as e:
+            message = f'Error: Failed authorized credentials {str(e)}'
             logger.exception(message)
             raise RESTException(message)
-
-        return response.get('version')
 
     def _connect(self):
         if not (self._username and self._password):
             raise RESTException('No username or password')
 
         try:
-            version = self._get_version()
-
-            json_data = {
-                'operation': 'core/get',
-                'class': DEVICE_CLASS,
-                'key': f'SELECT {DEVICE_CLASS}',
-                'output_fields': '*',
-                'limit': '1',  # Amount of results to return (0 means unlimited)
-                'page': '1'  # Page number to return (cant be < 1)
-            }
-            body_params = {
-                'auth_user': self._username,
-                'auth_pwd': self._password,
-                'json_data': json.dumps(json_data),
-            }
-            url_params = {
-                'version': version
-            }
-            self._post(API_URL_SUFFIX, url_params=url_params, body_params=body_params)
+            self._check_credentials()
         except Exception as e:
             raise ValueError(f'Error: Invalid response from server, please check domain or credentials. {str(e)}')
 
     def _paginated_device_get(self):
         json_data = {
-            'operation': 'core/get',
+            'operation': OPERATION_GET,
             'class': DEVICE_CLASS,
             'key': f'SELECT {DEVICE_CLASS}',
             'output_fields': '*',
@@ -74,7 +70,7 @@ class ItopConnection(RESTConnection):
             'page': '1'
         }
 
-        yield self._paginated_object_get(object_type=DEVICE_OBJECT, json_data=json_data)
+        yield from self._paginated_object_get(object_type=DEVICE_OBJECT, json_data=json_data)
 
     def get_device_list(self):
         try:
@@ -85,7 +81,7 @@ class ItopConnection(RESTConnection):
 
     def _paginated_user_get(self):
         json_data = {
-            'operation': 'core/get',
+            'operation': OPERATION_GET,
             'class': USER_CLASS,
             'key': f'SELECT {USER_CLASS}',
             'output_fields': '*',
@@ -93,7 +89,7 @@ class ItopConnection(RESTConnection):
             'page': '1'
         }
 
-        yield self._paginated_object_get(object_type=USER_OBJECT, json_data=json_data)
+        yield from self._paginated_object_get(object_type=USER_OBJECT, json_data=json_data)
 
     def get_user_list(self):
         try:
@@ -104,21 +100,19 @@ class ItopConnection(RESTConnection):
 
     def _paginated_object_get(self, object_type: str, json_data: dict):
         try:
+            logger.info(f'Start querying for {object_type}')
+
             total_fetched_objects = 0
 
-            version = self._get_version()
-
             body_params = {
+                'version': self._api_version,
                 'auth_user': self._username,
                 'auth_pwd': self._password,
                 'json_data': json.dumps(json_data),
             }
-            url_params = {
-                'version': version
-            }
 
             while int(json_data['limit']) * int(json_data['page']) < MAX_NUMBER_OF_OBJECTS:
-                response = self._post(API_URL_SUFFIX, url_params=url_params, body_params=body_params)
+                response = self._post(API_URL_SUFFIX, body_params=body_params, use_json_in_body=False)
                 if not (isinstance(response, dict) and
                         isinstance(response.get('objects'), dict) and
                         response.get('objects')):
@@ -136,6 +130,8 @@ class ItopConnection(RESTConnection):
                     obj_fields_raw['key'] = obj_raw.get('key')
                     yield obj_fields_raw
                     total_fetched_objects += 1
+
+                logger.debug(f'Currently fetched {total_fetched_objects} from type {object_type}')
 
                 if total_fetched_objects >= MAX_NUMBER_OF_OBJECTS:
                     logger.info(f'Exceeded max number ({MAX_NUMBER_OF_OBJECTS}) of {object_type}')

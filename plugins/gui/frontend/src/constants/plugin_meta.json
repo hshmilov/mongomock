@@ -1213,7 +1213,7 @@
     "description": "Tenable Nessus CSV File Adapter imports device information from vulnerability scan data."
   },
   "itop_adapter": {
-    "title": "iTop - BETA",
+    "title": "iTop",
     "link": "https://docs.axonius.com/docs/itop",
     "description": "iTop is an open source ITSM solution allows management of configuration items and their relationships in a flexible CMDB."
   },

@@ -314,13 +314,23 @@ class ItopAdapter(AdapterBase):
                 return None
             user.id = str(user_id) + '_' + (user_raw.get('name') or '')
 
-            user.display_name = user_raw.get('name')
+            user.display_name = user_raw.get('friendlyname')
             user.first_name = user_raw.get('first_name')
+            # not a mistake, last name does come from the name attribute
+            user.last_name = user_raw.get('name')
             user.user_status = user_raw.get('status')
             user.employee_number = user_raw.get('employee_number')
-            user.mail = user_raw.get('email')
             user.user_telephone_number = user_raw.get('phone')
             user.user_manager = user_raw.get('manager_name')
+
+            mail = user_raw.get('email')
+            user.mail = mail
+            if isinstance(mail, str) and '@' in mail:
+                username, domain = mail.split('@', 1)
+                user.username = username
+                user.domain = domain
+            else:
+                user.username = mail
 
             organization_unit = user_raw.get('org_name')
             if isinstance(organization_unit, str):

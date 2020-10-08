@@ -1,8 +1,12 @@
 OBJECTS_PER_PAGE = 200
 MAX_NUMBER_OF_OBJECTS = 20000000
 
+DEFAULT_API_VERSION = '1.0'
 API_URL_BASE_PREFIX = 'webservices'
 API_URL_SUFFIX = 'rest.php'
+
+OPERATION_CHECK_CREDENTIALS = 'core/check_credentials'
+OPERATION_GET = 'core/get'
 
 DEVICE_OBJECT = 'Device'
 DEVICE_CLASS = 'NetworkDevice'
