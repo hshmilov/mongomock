@@ -93,7 +93,6 @@ class TestBase:
             self.port = 443
             remote_hub = f'http://{os.environ["REMOTE_HUB_ADDR"]}:4444/wd/hub'
             self.base_url = f'https://{os.environ["LOCAL_EXTERNAL_ADDR"]}'
-            options = webdriver.ChromeOptions()
             logger.info(f'Base Url: {self.base_url}')
             logger.info(f'Connecting to the remote hub {remote_hub}..')
             os.environ['XDG_DOWNLOAD_DIR'] = self.ui_tests_download_dir.name
@@ -137,7 +136,9 @@ class TestBase:
     @staticmethod
     def _get_desired_capabilities(incognito_mode=False):
         if pytest.config.option.browser == conftest.CHROME:
-            return webdriver.DesiredCapabilities.CHROME
+            d = webdriver.DesiredCapabilities.CHROME
+            d['goog:loggingPrefs'] = {'browser': 'ALL'}
+            return d
         if pytest.config.option.browser == conftest.FIREFOX:
             ff_profile = webdriver.FirefoxProfile()
             ff_profile.set_preference('security.insecure_field_warning.contextual.enabled', False)
@@ -251,7 +252,7 @@ class TestBase:
             if not os.path.exists(folder):
                 os.makedirs(folder)
             current_time = datetime.utcnow().strftime('%Y-%m-%d_%H%M%S')
-            for log_type in self.driver.log_types:
+            for log_type in self.driver.log_types + ['browser']:
                 file_path = os.path.join(
                     folder,
                     f'_{self.driver.name}_{current_time}_{log_type}.log')
