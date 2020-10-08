@@ -34,6 +34,7 @@ class InstancesPage(EntitiesPage):
     INSTANCE_NAME_TEXTBOX_ID = 'node_name'
     INSTANCE_HOSTNAME_TEXTBOX_ID = 'hostname'
     INSTANCE_INDICATION_CHECKBOX_ID = 'use_as_environment_name'
+    INSTANCE_PANEL_ABSENT_CSS = '.x-instance-side-panel.ant-drawer-open'
 
     @property
     def url(self):
@@ -188,8 +189,14 @@ class InstancesPage(EntitiesPage):
         WebDriverWait(self.driver, 2).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, self.INSTANCE_SIDE_PANEL_CLOSE_BUTTON_CSS))
         ).click()
+        self.wait_for_instance_panel_absent()
 
     def toggle_instance_indication_checkbox(self):
         self.wait_for_element_present_by_css(self.INSTANCE_SIDE_PANEL,
                                              is_displayed=True)
         self.driver.find_element_by_id(self.INSTANCE_INDICATION_CHECKBOX_ID).click()
+
+    def wait_for_instance_panel_absent(self):
+        self.wait_for_element_absent_by_css(self.INSTANCE_PANEL_ABSENT_CSS)
+        # Waiting for close animation
+        time.sleep(0.5)
