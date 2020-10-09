@@ -1,10 +1,15 @@
 import logging
 import threading
+import uuid
 from collections import defaultdict
+from datetime import datetime
 from typing import Iterable, Tuple, Dict, List
 
 import cachetools
+from apscheduler.executors.pool import ThreadPoolExecutor
+from apscheduler.triggers.interval import IntervalTrigger
 
+from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts import adapter_consts
 from axonius.entities import EntityType, AxoniusUser
 
@@ -64,15 +69,15 @@ class StaticAnalysisService(Triggerable, PluginBase):
         self.__nvd_searcher = NVDSearcher()
 
         # Currently commented out due to AX-9249 (NVD changing their API)
-        # self.__scheduler = LoggedBackgroundScheduler(executors={'default': ThreadPoolExecutor(1)})
-        # self.__scheduler.add_job(
-        #     func=self.__update_nvd_db,
-        #     trigger=IntervalTrigger(hours=NVD_DB_UPDATE_HOURS),
-        #     next_run_time=datetime.now(),
-        #     name='update_nvd_db',
-        #     id='update_nvd_db_thread',
-        #     max_instances=1)
-        # self.__scheduler.start()
+        self.__scheduler = LoggedBackgroundScheduler(executors={'default': ThreadPoolExecutor(1)})
+        self.__scheduler.add_job(
+            func=self.__update_nvd_db,
+            trigger=IntervalTrigger(hours=NVD_DB_UPDATE_HOURS),
+            next_run_time=datetime.now(),
+            name='update_nvd_db',
+            id='update_nvd_db_thread',
+            max_instances=1)
+        self.__scheduler.start()
 
         self.__jobs = AnalysisTypes(user_devices_association=self.__associate_users_with_devices,
                                     last_used_user_association=self.__parse_devices_last_used_users_departments,
@@ -466,12 +471,13 @@ class StaticAnalysisService(Triggerable, PluginBase):
             logger.exception(f'Failed to get CVE data for {cve_id}')
 
     def __query_nvd_with_software(self, installed_software: Iterable[Dict]) -> Iterable[dict]:
-        for software in installed_software:
-            software_vendor = software.get('vendor') or ''
-            software_name = software.get('name') or ''
-            software_version = software.get('version') or ''
+        software_to_query = []
+        try:
+            for software in installed_software:
+                software_vendor = software.get('vendor') or ''
+                software_name = software.get('name') or ''
+                software_version = software.get('version') or ''
 
-            try:
                 # Check for valid software input
                 if not all(isinstance(x, str) for x in (software_vendor, software_name, software_version)):
                     logger.error(f'Error: installed software contains not strings: {software}')
@@ -491,20 +497,22 @@ class StaticAnalysisService(Triggerable, PluginBase):
 
                 if not self._fetch_empty_vendor_software_vulnerabilites and not software_vendor:
                     continue
-                software_cves = self.__nvd_searcher.search_vuln(software_vendor, software_name, software_version)
-                for cve in software_cves:
-                    if software_vendor:
-                        cve['software_vendor'] = software_vendor
-                    if software_name:
-                        cve['software_name'] = software_name
-                    if software_version:
-                        cve['software_version'] = software_version
-
+                software_to_query.append({uuid.uuid4(): (software_vendor, software_name, software_version)})
+            software_cves = self.__nvd_searcher.search_vulns(software_to_query)
+            if not software_cves:
+                return
+            for software_id, cve_matches in software_cves.items():
+                software_data = [x for x in software_to_query if uuid.UUID(software_id) in x]
+                for cve in cve_matches:
+                    if software_data and software_data[0].get(uuid.UUID(software_id), ['', '', ''])[0]:
+                        cve['software_vendor'] = software_data[0][uuid.UUID(software_id)][0]
+                    if software_data and software_data[0].get(uuid.UUID(software_id), ['', '', ''])[1]:
+                        cve['software_name'] = software_data[0][uuid.UUID(software_id)][1]
+                    if software_data and software_data[0].get(uuid.UUID(software_id), ['', '', ''])[2]:
+                        cve['software_version'] = software_data[0][uuid.UUID(software_id)][2]
                     yield cve
-
-            except Exception:
-                logger.exception(f'Exception while searching for vuln for '
-                                 f'{software_vendor}:{software_name}:{software_version}')
+        except Exception:
+            logger.exception(f'Exception while searching for vulns for {software_to_query}')
 
     # Devices/Users association
 

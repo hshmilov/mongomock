@@ -46,7 +46,6 @@ fi
 # Now we have to use some scripts the system uses, lets active the venv
 source ./prepare_python_env.sh
 
-./download_artifacts.sh
 if [ $? -eq 0 ]
 then
   echo "Successfully downloaded artifacts"

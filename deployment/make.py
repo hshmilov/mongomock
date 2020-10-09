@@ -18,6 +18,7 @@ import time
 import zipfile
 from pathlib import Path
 
+import boto3
 import pip
 import requests
 from pip._vendor.packaging import markers as pip_markers
@@ -263,18 +264,14 @@ def download_artifacts():
     :return:
     """
     # Download nvd artifacts
-    print(f'Downloading NVD artifacts from {NVD_ARTIFACTS_URL}...')
-    response = requests.get(NVD_ARTIFACTS_URL, verify=False, timeout=60)
-    response.raise_for_status()
-    for file_name in response.json():
-        print(f'Downloading {NVD_ARTIFACTS_URL + file_name}...')
-        response = requests.get(NVD_ARTIFACTS_URL + file_name, verify=False, timeout=60)
-        response.raise_for_status()
-        with open(os.path.join(NVD_ARTIFACTS_PATH, file_name.split('/')[-1]), 'wb') as f:
-            f.write(response.content)
-
+    print(f'Downloading NVD artifacts from nvd-cache s3 bucket...')
+    s3 = boto3.resource('s3')
+    source_bucket = s3.Bucket('nvd-cache')
+    for s3_object in source_bucket.objects.all():
+        path, filename = os.path.split(s3_object.key)
+        source_bucket.download_file(s3_object.key, os.path.join(NVD_ARTIFACTS_PATH, filename))
+        print(f'Downloaded {filename}')
     print(f'Done downloading NVD Artifacts')
-    subprocess.check_output(os.path.join(CORTEX_PATH, "download_artifacts.sh"))
 
 
 def download_packages(winpip=False):

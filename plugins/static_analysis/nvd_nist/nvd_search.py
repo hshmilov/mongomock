@@ -1,22 +1,33 @@
 """
 Searches for vulnerable software versions.
 """
+import csv
+import gzip
 import itertools
 import json
 import logging
 import os
+import shlex
+import subprocess
 import threading
-import zipfile
+from collections import defaultdict
 
-import requests.exceptions
+from io import StringIO
 
-from axonius.utils.parsing import get_exception_string
+import cpe
 from static_analysis.nvd_nist import nvd_update
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
 ARTIFACT_FOLDER = os.path.join(CURRENT_DIR, 'artifacts')
+CPE2CSV_BINARY_PATH = os.path.join(CURRENT_DIR, '..', 'cpe2cve')
+TMP_SH_FILE_PATH = '/tmp/cve_finder.sh'
+CVE_FINDER_SH_FILE_TEMPLATE = '''#!/bin/bash
+{cpe2cve_path} -d ' ' -d2 , -o ',' -o2 , -cpe 2 -e 2 -matches 0 -cve 2 {artifacts_path}/*.json.gz << EOF
+{cpes}
+EOF
+'''
 
 
 class NVDSearcher:
@@ -29,18 +40,15 @@ class NVDSearcher:
         Initializes the class. We have to read all artifacts and load them into the memory.
         """
         self.__cve_db = None
-        self.__products_db = dict()
         self.__use_lock = threading.RLock()
 
-    def update(self, from_internal_cache=True):
+    def update(self):
         """
         Updates the NVD DB.
         :return:
         """
         try:
-            nvd_update.update(from_internal_cache=from_internal_cache)
-        except requests.exceptions.RequestException:
-            logger.warning(f'Warning, Internet problem. moving on: {get_exception_string()}')
+            nvd_update.update()
         except Exception:
             logger.exception('Cannot update nvd database, loading what is in the disk')
         self._load_artifacts()
@@ -53,7 +61,6 @@ class NVDSearcher:
         with self.__use_lock:
             # Delete all we have. It might be incorrect
             self.__cve_db = dict()
-            self.__products_db = dict()
 
             # Get all files we can update from
             list_dir = os.listdir(ARTIFACT_FOLDER)
@@ -61,7 +68,7 @@ class NVDSearcher:
             # e.g. ["modified", "2018", "2015", "2017"].sort() == ["2015", "2017", "2018", "modified"]
             list_dir.sort()
             for file_name in list_dir:
-                if file_name.endswith('.json.zip'):
+                if file_name.endswith('.json.gz'):
                     full_file_name = os.path.join(ARTIFACT_FOLDER, file_name)
                     try:
                         self._parse_artifact(full_file_name)
@@ -77,9 +84,8 @@ class NVDSearcher:
         vendor_name = None
         try:
             if vendor_data:
-                vendor_iter = ([(x['vendor_name'], y['product_name'])
-                                for y in x['product']['product_data']] for x in vendor_data)
-                vendor_iter = list(itertools.chain.from_iterable(vendor_iter))
+                vendor_iter = [(','.join(x.get_vendor()), ','.join(x.get_product())) for x in vendor_data]
+                vendor_iter = list(itertools.chain(vendor_iter))
                 vendors, names = list(map(set, zip(*vendor_iter)))
                 if len(vendors) == 1:
                     vendor_name = vendors.pop()
@@ -115,12 +121,11 @@ class NVDSearcher:
 
     def _parse_artifact(self, artifact_path):
         """
-        Gets an artifact path (.json.zip file) and parses it
+        Gets an artifact path (.json.gz file) and parses it
         :param artifact_path: a string indicating the path
         :return:
         """
-        archive = zipfile.ZipFile(artifact_path, 'r')
-        with archive.open(archive.namelist()[0]) as json_file:
+        with gzip.open(artifact_path, 'r') as json_file:
             cve_dict = json.loads(json_file.read())
 
         # Now parse all CVE's here. We want to save two DB's, a CVE DB and a Vendor->Product->Version DB.
@@ -147,8 +152,17 @@ class NVDSearcher:
                 cvss_v3 = (((cve_raw.get('impact') or {}).get('baseMetricV3')
                             or {}).get('cvssV3') or {}).get('baseScore')
 
-                vendor_data = (((cve_raw.get('cve') or {}).get('affects') or {}).get('vendor') or {}).get('vendor_data')
-                software_name, vendor_name = self._get_software_data(vendor_data)
+                cpe_raw = list(itertools.chain(*[cve.get('cpe_match') for cve in
+                                                 ((cve_raw.get('configurations', {}) or {}).get('nodes', {}) or [])
+                                                 if isinstance(cve, dict) and 'cpe_match' in cve]))
+                cpe_raw_for_vendors_and_software = []
+                for cpe_data in cpe_raw:
+                    if cpe_data.get('vulnerable') and cpe_data.get('cpe23Uri'):
+                        try:
+                            cpe_raw_for_vendors_and_software.append(cpe.CPE(cpe_data.get('cpe23Uri')))
+                        except Exception:
+                            logger.debug(f'Couldn\'t parse CPE {cpe_data}')
+                software_name, vendor_name = self._get_software_data(cpe_raw_for_vendors_and_software)
 
                 # Save only what's important
                 self.__cve_db[cve_id_from_nvd] = {
@@ -161,38 +175,10 @@ class NVDSearcher:
                     'software_name': software_name,
                     'software_vendor': vendor_name
                 }
-
-                # Now parse the list of products affected
-                for vendor_raw in cve_raw['cve'].get('affects', {}).get('vendor', {}).get('vendor_data', []):
-                    vendor_name = vendor_raw['vendor_name']
-
-                    # This might have '_', we need to filter that out because that's not how we'd get in in the search.
-                    vendor_name = vendor_name.replace('_', ' ')
-
-                    if vendor_name not in self.__products_db:
-                        self.__products_db[vendor_name] = {}
-
-                    for products_raw in vendor_raw.get('product', {}).get('product_data', []):
-                        product_name = products_raw['product_name']
-                        product_name = product_name.replace('_', ' ')
-
-                        if product_name not in self.__products_db[vendor_name]:
-                            self.__products_db[vendor_name][product_name] = dict()
-
-                        for version_raw in products_raw.get('version', {}).get('version_data', []):
-                            version_value = version_raw['version_value']
-                            if version_value not in self.__products_db[vendor_name][product_name]:
-                                self.__products_db[vendor_name][product_name][version_value] = list()
-
-                            # Each version can be affected by multiple id's. But we might have this cve already
-                            # from other artifacts
-                            if cve_id_from_nvd not in self.__products_db[vendor_name][product_name][version_value]:
-                                self.__products_db[vendor_name][product_name][version_value].append(cve_id_from_nvd)
             except Exception:
                 logger.exception(f'Could not parse CVE {cve_raw}, moving on')
 
         # Try to free memory
-        del archive
         del cve_dict
         # pylint: enable=too-many-locals, too-many-nested-blocks
 
@@ -206,6 +192,59 @@ class NVDSearcher:
                 except Exception:
                     logger.exception(f'Could not get CVE data for {cve_id_to_search}')
         return None
+
+    def search_vulns(self, softwares):
+        cpes = []
+        for software in softwares:
+            try:
+                product_id = next(iter(software))
+                details = software[product_id]
+                vendor_name, product_name, product_version = details
+                # Sanitize our input
+                vendor_name = str(vendor_name).strip().lower().replace(':', '')
+                product_name = str(product_name).strip().lower().replace(':', '')
+                product_version = str(product_version).strip().lower().replace(':', '')
+
+                empty_strings = ['', '0']
+                if product_name in empty_strings or product_version in empty_strings:
+                    logger.debug(f'Error, got an empty string. '
+                                 f'Software details - vendor: {str(vendor_name)} '
+                                 f'product {str(product_name)} version {str(product_version)}')
+                    continue
+                # pylint: disable=simplifiable-if-statement
+                if vendor_name == '0':
+                    logger.error(f'Error, got vendor name 0')
+                    continue
+
+                generated_cpe = f'cpe:/a:{vendor_name}:{product_name}:{product_version}'.lower().\
+                    replace(' ', '_').\
+                    replace('*', '').\
+                    replace('?', ''). \
+                    replace(',', '')
+                # Removing any unicode chars like ® that my appear
+                cpes.append(f'{product_id} {generated_cpe}'.encode('ascii', 'ignore').decode('utf-8'))
+            except Exception:
+                logger.warning(f'Couldn\'t parse software details: {software}')
+                continue
+        if not cpes:
+            return []
+        with self.__use_lock:
+            if self.__cve_db is None:
+                self._load_artifacts()
+            with open(TMP_SH_FILE_PATH, 'w') as fh:
+                fh.write(CVE_FINDER_SH_FILE_TEMPLATE.format(cpe2cve_path=os.path.abspath(CPE2CSV_BINARY_PATH),
+                                                            artifacts_path=os.path.abspath(ARTIFACT_FOLDER),
+                                                            cpes='\n'.join(cpes)))
+            os.chmod(TMP_SH_FILE_PATH, 0o777)
+            output = subprocess.check_output(TMP_SH_FILE_PATH).decode('utf-8')
+            os.remove(TMP_SH_FILE_PATH)
+            csv_reader = csv.reader(StringIO(output))
+            software_to_cve = defaultdict(list)
+            for row in csv_reader:
+                cve_data = self.__cve_db[row[1]].copy()
+                cve_data['matched_cpe'] = [x.split(' ')[1] for x in cpes if x.split(' ')[0] == row[0]]
+                software_to_cve[row[0]].append(cve_data)
+            return software_to_cve
 
     def search_vuln(self, vendor_name, product_name, product_version):
         """
@@ -250,27 +289,20 @@ class NVDSearcher:
         if vendor_name == '0':
             logger.error(f'Error, got vendor name 0')
             return []
-        if vendor_name == '':
-            empty_vendor = True
-        else:
-            empty_vendor = False
-        # pylint: enable=simplifiable-if-statement
 
-        # pylint: disable=too-many-nested-blocks
         with self.__use_lock:
             if self.__cve_db is None:
                 self._load_artifacts()
-            for db_vendor_name, db_vendor_products in self.__products_db.items():
-                # we have to replace all '_' with spaces from now on.
-                if str(db_vendor_name).lower() in vendor_name or empty_vendor:
-                    for db_vendor_product, db_vendor_product_versions in db_vendor_products.items():
-                        if (str(db_vendor_product).lower() in product_name and not empty_vendor) or \
-                                (str(db_vendor_product).lower() == product_name and empty_vendor):
-                            for db_version, db_version_cves in db_vendor_product_versions.items():
-                                if str(db_version).lower() == product_version:
-                                    return [self.__cve_db[v] for v in db_version_cves]
-        # pylint: enable=too-many-nested-blocks
-        return []
+            generated_cpe = f'cpe:/a:{vendor_name}:{product_name}:{product_version}'.lower().\
+                replace(' ', '_').\
+                replace('*', '').\
+                replace('?', '').\
+                replace(',', '').\
+                encode('ascii', 'ignore').decode('utf-8')
+            cmd_to_run = shlex.split(f'/bin/sh -c "echo {generated_cpe} | '
+                                     f'{CPE2CSV_BINARY_PATH} -cpe 1 -e 1 -cve 1 {ARTIFACT_FOLDER}/*.json.gz"')
+            output = subprocess.check_output(cmd_to_run).decode('utf-8')
+            return [self.__cve_db[cve] for cve in output.strip().split('\n')] if output else []
 
 
 if __name__ == '__main__':

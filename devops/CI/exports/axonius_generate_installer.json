@@ -7,6 +7,9 @@
     "password": "bringorder",
     "branch": "develop",
     "github_readonly_token": "{{env `AXONIUS_GITHUB_READONLY_TOKEN`}}",
+    "aws_default_region": "{{env `AWS_DEFAULT_REGION`}}",
+    "aws_access_key": "{{env `AWS_ACCESS_KEY_ID`}}",
+    "aws_secret_token": "{{env `AWS_SECRET_ACCESS_KEY`}}",
     "fork": "axonius",
     "build_mode": "",
     "zip_installer_path": "axonius_{{user `build_name`}}_installer.zip"
@@ -64,6 +67,11 @@
     {
       "type": "shell",
       "script": "./axonius_deploy.sh",
+      "environment_vars": [
+        "AWS_DEFAULT_REGION={{user `aws_default_region`}}",
+        "AWS_ACCESS_KEY_ID={{user `aws_access_key`}}",
+        "AWS_SECRET_ACCESS_KEY={{user `aws_secret_token`}}"
+      ],
       "execute_command": "chmod +x {{ .Path }}; {{ .Vars }} {{ .Path }} {{user `github_readonly_token`}} {{user `branch`}} {{user `fork`}} {{user `password`}} {{user `build_name`}} {{user `build_mode`}}"
     },
     {
