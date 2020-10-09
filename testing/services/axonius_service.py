@@ -694,8 +694,8 @@ class AxoniusService:
         return image_name
 
     def pull_weave_images(self, repull=False, show_print=True):
-        weave_images = [f'{DOCKERHUB_USER}/weavedb', f'{DOCKERHUB_USER}/weaveexec:{WEAVE_VERSION}',
-                        f'{DOCKERHUB_USER}/weave:{WEAVE_VERSION}']
+        weave_images = [f'{DOCKERHUB_URL}weaveworks/weavedb', f'{DOCKERHUB_URL}weaveworks/weaveexec:{WEAVE_VERSION}',
+                        f'{DOCKERHUB_URL}weaveworks/weave:{WEAVE_VERSION}']
         for current_weave_image in weave_images:
             self._pull_image(current_weave_image, repull, show_print)
         return weave_images

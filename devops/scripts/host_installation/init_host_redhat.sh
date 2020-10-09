@@ -161,7 +161,7 @@ usermod -aG docker $USER
 usermod -aG docker ubuntu
 echo "Installing weave"
 cd "$(dirname "$0")"
-cp ./weave-2.6.0 /usr/local/bin/weave
+cp ./weave-2.7.0 /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
 echo "Setting firewall exceptions"
 firewall-cmd --zone=internal --add-interface=docker0 --permanent

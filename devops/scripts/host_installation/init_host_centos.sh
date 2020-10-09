@@ -145,7 +145,7 @@ usermod -aG docker $USER
 usermod -aG docker ubuntu
 echo "Installing weave"
 cd "$(dirname "$0")"
-cp ./uploads/weave-2.6.0 /usr/local/bin/weave
+cp ./uploads/weave-2.7.0 /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
 
 # Timezone settings should be set on the host of containerized systems (It automatically sets the container clock as well).

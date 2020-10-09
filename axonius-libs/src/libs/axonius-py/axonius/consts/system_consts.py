@@ -41,7 +41,7 @@ AXONIUS_DNS_SUFFIX = 'axonius.local'
 WEAVE_PATH = '/usr/local/bin/weave'
 DOCKER_PATH = '/usr/bin/docker'
 DOCKERHUB_USER = 'nexus.pub.axonius.com/axonius'
-WEAVE_VERSION = '2.6.0'
+WEAVE_VERSION = '2.7.0'
 DOCKERHUB_URL = 'nexus.pub.axonius.com/'
 
 COMPARE_MAGIC_STRING = 'compare'

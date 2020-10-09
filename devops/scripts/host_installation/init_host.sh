@@ -169,7 +169,7 @@ ls -la
 
 
 echo "Installing weave"
-cp ./uploads/weave-2.6.0 /usr/local/bin/weave
+cp ./uploads/weave-2.7.0 /usr/local/bin/weave
 echo "Restarting Docker Service for Registry setup"
 systemctl restart docker
 chmod a+x /usr/local/bin/weave

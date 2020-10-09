@@ -13,7 +13,7 @@ trap finish EXIT
 
 echo "download weave version"
 weave_path="/usr/local/bin/weave"
-cp devops/scripts/host_installation/weave-2.6.0 ${weave_path}
+cp devops/scripts/host_installation/weave-2.7.0 ${weave_path}
 sudo chmod a+x ${weave_path}
 
 set -e

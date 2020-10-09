@@ -272,7 +272,7 @@ def setup_instances():
     setup_instances_cronjobs()
 
     resources_as_path = Path(RESOURCES_PATH)
-    copy_file(resources_as_path / 'weave-2.6.0', '/usr/local/bin/weave', mode=0o755, user='root', group='root')
+    copy_file(resources_as_path / 'weave-2.7.0', '/usr/local/bin/weave', mode=0o755, user='root', group='root')
     Path('/etc/sudoers.d/90-ubuntu').write_text('ubuntu ALL=(ALL) NOPASSWD: ALL\n')
     Path('/etc/sudoers.d/90-ubuntu').chmod(mode=440)
 
