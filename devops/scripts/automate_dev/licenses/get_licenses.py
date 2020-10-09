@@ -4,9 +4,17 @@ import glob
 import json
 import re
 
-import docker
+import csv
 import requests
 from pip._internal.req import parse_requirements
+
+
+GO_REPOS = [
+    ['facebookincubator/nvdtools', '0.1.4',
+     'Apache License 2.0',
+     'https://github.com/Axonius/nvdtools/blob/substring_search/LICENSE',
+     'We extended the product and vendor name search feature to allow for substring searches in addition to exact matches.']
+]
 
 
 def get_pypi_reqs():
@@ -44,9 +52,17 @@ def get_npm_reps():
                     continue
 
 
+def generate_go_csv():
+    with open('go.csv', 'w') as csvfile:
+        csvwrite = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        for row in GO_REPOS:
+            csvwrite.writerow(row)
+
+
 def main():
     get_npm_reps()
     get_pypi_reqs()
+    generate_go_csv()
 
 
 if __name__ == '__main__':
