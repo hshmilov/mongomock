@@ -20,13 +20,12 @@ from pathlib import Path
 
 import boto3
 import pip
-import requests
 from pip._vendor.packaging import markers as pip_markers
 
 import lists
 from devops.axonius_system import get_metadata
 from services.axonius_service import get_service
-from static_analysis.nvd_nist.nvd_update import NVD_ARTIFACTS_URL, NVD_ARTIFACTS_PATH
+from static_analysis.nvd_nist.nvd_update import NVD_ARTIFACTS_PATH
 from utils import (CORTEX_PATH, SOURCES_FOLDER_NAME, AutoOutputFlush,
                    print_state)
 
