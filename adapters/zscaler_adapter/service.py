@@ -135,6 +135,7 @@ class ZscalerAdapter(AdapterBase, Configurable):
             'required': [
                 'domain',
                 'username',
+                'apikey',
                 'password',
                 'verify_ssl'
             ],

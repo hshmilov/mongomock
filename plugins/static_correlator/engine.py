@@ -234,7 +234,8 @@ def hostnames_do_not_contradict_or_tenable_io(adapter_device1, adapter_device2):
         return True
     if adapter_device1.get('plugin_name') == 'tenable_io_adapter' and \
             adapter_device2.get('plugin_name') == 'tenable_io_adapter':
-        return True
+        if get_hostname(adapter_device1) == 'MacBook-Pro.local' or get_hostname(adapter_device2) == 'MacBook-Pro.local':
+            return True
     return False
 
 

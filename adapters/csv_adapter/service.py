@@ -146,7 +146,11 @@ class CsvAdapter(AdapterBase):
                 user_obj.first_name = vals.get('first_name')
                 user_obj.last_name = vals.get('last_name')
                 user_obj.mail = vals.get('mail')
-                user_obj.display_name = vals.get('name')
+                try:
+                    if vals.get('hostname'):
+                        user_obj.add_associated_device(device_caption=vals.get('hostname'))
+                except Exception:
+                    logger.exception(f'Problem adding associated device')
                 user_obj.domain = vals.get('domain')
                 user_obj.set_raw(user_raw)
 

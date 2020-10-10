@@ -334,7 +334,7 @@ class CentrifyAdapter(AdapterBase):
             device_fqdn = user_raw.get('FQDN')
             device_or_domain_name = user_raw.get('Name')
             if device_or_domain_name and not domain_id:
-                user.add_associated_device(caption=device_or_domain_name)
+                user.add_associated_device(device_caption=device_or_domain_name)
                 user.is_local = True
                 user.domain = device_or_domain_name or device_fqdn
             if device_or_domain_name and domain_id:

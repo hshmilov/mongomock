@@ -11,6 +11,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import format_mac
+from axonius.mixins.configurable import Configurable
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 import axonius.adapter_exceptions
@@ -28,7 +29,7 @@ BIN_NEW_LOCATION = '/home/axonius/bin'
 BIN_NAME = 'eset_connection.so'
 
 
-class EsetAdapter(AdapterBase):
+class EsetAdapter(AdapterBase, Configurable):
     """
     Connects axonius to Eset Remote Administrator (ERA)
     """
@@ -138,6 +139,8 @@ class EsetAdapter(AdapterBase):
                     last_seen = parse_date(entry.get('Last connected', ''))
                     if last_seen:
                         device.last_seen = last_seen
+                    elif self.__exclude_no_last_seen_devices:
+                        continue
                 except Exception:
                     logger.exception(f"Problem adding last seen to entry {entry}")
 
@@ -173,3 +176,27 @@ class EsetAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Endpoint_Protection_Platform, AdapterProperty.Agent, AdapterProperty.Manager]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'exclude_no_last_seen_devices',
+                    'title': 'Exclude no \'Last Seen\' devices',
+                    'type': 'bool'
+                }
+            ],
+            'required': ['exclude_no_last_seen_devices'],
+            'pretty_name': 'Eset Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'exclude_no_last_seen_devices': False,
+        }
+
+    def _on_config_update(self, config):
+        self.__exclude_no_last_seen_devices = config['exclude_no_last_seen_devices']

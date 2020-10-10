@@ -227,6 +227,8 @@ class CarbonblackDefenseAdapter(AdapterBase, Configurable):
                                      status=device_raw.get('status'))
             device.policy_name = device_raw.get('policyName')
             device.last_external_ip_address = device_raw.get('lastExternalIpAddress')
+            device.quarantined = device_raw.get('quarantined') \
+                if isinstance(device_raw.get('quarantined'), bool) else None
             device.set_raw(device_raw)
             return device
         except Exception:
