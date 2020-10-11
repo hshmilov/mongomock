@@ -6,6 +6,9 @@ import boto3
 from haikunator import Haikunator
 
 
+from common_argo import create_tunnel
+
+
 class AWSComputeManager:
     def __init__(self, credentials: dict):
         super().__init__()
@@ -206,8 +209,12 @@ class AWSComputeManager:
         self.ec2_client.start_instances(InstanceIds=[instance_id])
         instance = self.ec2_resource.Instance(instance_id)
         tags = instance.tags
+        private_ip = instance.private_ip_address
+        argo_token = ''
         for tag in tags:
             if tag['Key'] == 'argo_tunnel':
+                argo_token = tag.get('Value')
+                print(f'Got the argo_token from the tags with the value {argo_token}')
                 tag_exists = True
                 break
         if not tag_exists:
@@ -224,15 +231,9 @@ class AWSComputeManager:
                     },
                 ],
             )
-            private_ip = instance.private_ip_address
-            ENDPOINT = "http://argo.axonius.lan/api"
-            argo_tunnel = 'https://' + argo_token + '.builds.in.axonius.com'
-            data = {'action': 'create', 'name': instance_id, 'ip': private_ip, 'url': argo_tunnel}
-            try:
-                requests.post(url=ENDPOINT, data=data, verify=False)
-            except Exception:
-                traceback.print_exc()
-                print(f"Failed sending {data} to {ENDPOINT}")
+        # We have to create always the argo tunnel since we're deleting the tunnel on the stop_instance operation
+        argo_tunnel = 'https://' + argo_token + '.builds.in.axonius.com'
+        create_tunnel(instance_id, private_ip, argo_tunnel)
 
     def stop_instance(self, instance_id: str):
         self.ec2_client.stop_instances(InstanceIds=[instance_id])

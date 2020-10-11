@@ -1,6 +1,10 @@
 version: "3.2"
 services:
     web:
+        env_file:
+            - ./config/cloud/aws/.env.prod
+            - ./config/cloud/gcp/.env.prod
+            - ./config/cloud/common/.env.prod
         environment:
             - UWSGI_PROCESSES=100
 

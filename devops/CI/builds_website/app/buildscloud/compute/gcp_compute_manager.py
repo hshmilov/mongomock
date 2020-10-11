@@ -14,6 +14,8 @@ from buildscloud.builds_cloud_consts import GCP_DFEAULT_ZONE, GCP_DEFAULT_REGION
 from haikunator import Haikunator
 
 
+from common_argo import create_tunnel
+
 APPROVED_NODE_CHARACTERS = string.ascii_lowercase + string.digits + '-'
 
 
@@ -209,6 +211,8 @@ class GCPComputeManager:
         node = self.client.ex_get_node(node_id, zone='all')
         self.client.ex_start_node(node)
         labels = node.extra.get('labels')
+        argo_token = labels.get('argo_tunnel')
+        private_ip = node.private_ips[0]
         for label in labels:
             if label[0] == 'argo_tunnel':
                 label_exist = True
@@ -218,15 +222,9 @@ class GCPComputeManager:
             argo_token = haikunator.haikunate(token_length=5, token_hex=True)
             labels.update({'argo_tunnel': argo_token})
             self.client.ex_set_node_labels(node, labels=labels)
-            private_ip = node.private_ips[0]
-            ENDPOINT = "http://argo.axonius.lan/api"
-            argo_tunnel = 'https://' + argo_token + '.builds.in.axonius.com'
-            data = {'action': 'create', 'name': node.name, 'ip': private_ip, 'url': argo_tunnel}
-            try:
-                requests.post(url=ENDPOINT, data=data)
-            except Exception:
-                traceback.print_exc()
-                print(f"Failed sending {data} to {ENDPOINT}")
+        # We have to create always the argo tunnel since we're deleting the tunnel on the stop_instance operation
+        argo_tunnel = 'https://' + argo_token + '.builds.in.axonius.com'
+        create_tunnel(node.name, private_ip, argo_tunnel)
 
     def stop_node(self, node_id: str):
         node = self.client.ex_get_node(node_id, zone='all')

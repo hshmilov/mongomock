@@ -13,6 +13,7 @@ import requests
 from pymongo import MongoClient, DESCENDING
 
 from buildscloud.builds_cloud_consts import NO_INTERNET_NETWORK_SECURITY_OPTION
+from common_argo import delete_tunnel
 from buildscloud.builds_cloud_manager import BuildsCloudManager
 from config import TOKENS_PATH, CREDENTIALS_PATH, LOCAL_BUILDS_HOST
 from slacknotifier import SlackNotifier
@@ -157,6 +158,7 @@ class BuildsManager(object):
 
     def terminate_instance(self, cloud, instance_id):
         """Delete an instance by its id."""
+        delete_tunnel(instance_id)
         self.update_last_user_interaction_time(cloud, instance_id)
         self.bcm.terminate_instance(cloud, instance_id)
         self.db.instances.update_one({'cloud': cloud, 'id': instance_id}, {'$set': {'terminated': True, }})
@@ -193,6 +195,7 @@ class BuildsManager(object):
         """Delete an instance by its id."""
         self.update_last_user_interaction_time(cloud, instance_id)
         self.bcm.stop_instance(cloud, instance_id)
+        delete_tunnel(instance_id)
         return True
 
     def start_instance(self, cloud, instance_id):
