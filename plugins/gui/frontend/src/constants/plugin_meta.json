@@ -937,6 +937,11 @@
     "link": "https://docs.axonius.com/docs/cybereason-deep-detect-respond",
     "description": "Cybereason Deep Detect & Respond (EDR) defends against advanced attacks by collecting and analyzing behavioral data to identify suspicious activities."
   },
+  "netiq_adapter": {
+    "title": "NetIQ Advanced Authentication",
+    "link": "https://docs.axonius.com/docs/netiq",
+    "description": "NetIQ Advanced Authentication provides a centralized authentication framework that adds a strong level of authentication (MFA or 2 Factor)."
+  },
   "oracle_cloud_adapter": {
     "title": "Oracle Cloud",
     "link": "https://docs.axonius.com/docs/oracle-cloud",

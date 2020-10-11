@@ -313,6 +313,7 @@ DOCKER_PORTS = {
     'kolide-adapter':                   10007,
     'itop-adapter':                     10008,
     'cisco-ucsm-adapter':               10010,
+    'netiq-adapter':                    10011,
     'openvas-adapter':                  10014,
     'centrify-adapter':                 10015,
     'box-platform-adapter':             10016,
