@@ -276,8 +276,9 @@ class AzureAdClient(RESTConnection):
             return fltr_str.partition('eq')[-1].strip().replace('\'', ''), 'credsDetails'
         return None
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches, too-many-statements
     def _get_graph_user_list(self):
+        endpoints_counter = {}
         user_by_user_pn = dict()  # dict of userPrincipalName to user object
         async_requests_chunks = list()  # list of chunks of requests to perform asynchronously
         requests_chunk = list()  # list of requests, aka chunk
@@ -299,6 +300,8 @@ class AzureAdClient(RESTConnection):
                 logger.warning(f'User PN {user_pn} already known, skipping...')
                 continue
 
+            endpoints_counter[user_pn] = {'should_be': 0, 'current_amount': 0}
+
             # add resulting object to dict
             user_by_user_pn.setdefault(user_pn, user)
 
@@ -309,6 +312,7 @@ class AzureAdClient(RESTConnection):
                     'name': f'users/{user_pn}/memberOf',
                     'url_params': {'$select': 'displayName'}
                 })
+                endpoints_counter[user_pn]['should_be'] += 1
                 # handle mfa
                 if self._allow_fetch_mfa:
                     # READ ME!
@@ -320,12 +324,25 @@ class AzureAdClient(RESTConnection):
                         'name': 'reports/credentialUserRegistrationDetails',
                         'url_params': {'$filter': f'userPrincipalName eq \'{user_pn}\''}
                     })
+                    endpoints_counter[user_pn]['should_be'] += 1
             # add this chunk to queue if the chunk is full
             if idx and idx % internal_chunk_size == 0:
                 logger.info(f'Chunk has {len(requests_chunk)} requests. Flushing...')
                 async_requests_chunks.append(requests_chunk)
                 logger.info(f'Flushing chunk: {idx}, total chunks: {len(async_requests_chunks)}')
                 requests_chunk = list()
+
+        if self._email_activity_period:
+            user_statistics = self._get_users_from_office_365()
+            for user_pn in user_by_user_pn:
+                user_by_user_pn[user_pn]['extra_email_activity'] = user_statistics.get(user_pn)
+
+        for user_pn in endpoints_counter.copy():
+            if endpoints_counter[user_pn]['should_be'] == 0:
+                endpoints_counter.pop(user_pn)
+                if user_by_user_pn.get(user_pn):
+                    yield user_by_user_pn.get(user_pn)
+
         # add last chunk if needed
         if requests_chunk:
             async_requests_chunks.append(requests_chunk)
@@ -336,23 +353,36 @@ class AzureAdClient(RESTConnection):
             # async_get refreshes token
             # now run through the responses, match each response to a user
             for request_dict, response in zip(async_requests, self._async_get(async_requests, retry_on_error=True)):
-                if not self._is_async_response_good(response):
-                    logger.debug(f'Bad async response for {request_dict}, got: {response} ')
-                    continue
                 try:
                     user_pn, endpoint = self._extract_user_pn_and_endpoint(request_dict)
-                    user = user_by_user_pn[user_pn]
+                    user = user_by_user_pn.get(user_pn)
+                    if not user:
+                        logger.warning(f'User {user_pn} not found')
+                        if endpoints_counter.get(user_pn):
+                            endpoints_counter.pop(user_pn)
+                        continue
+                    if endpoints_counter.get(user_pn):
+                        endpoints_counter[user_pn]['current_amount'] += 1
+                    if not self._is_async_response_good(response):
+                        logger.debug(f'Bad async response for {request_dict}, got: {response} ')
+                        if endpoints_counter.get(user_pn) and endpoints_counter[user_pn]['current_amount'] >= \
+                                endpoints_counter[user_pn]['should_be']:
+                            endpoints_counter.pop(user_pn)
+                            yield user
+                        continue
                     user[endpoint] = response['value']
+                    if endpoints_counter.get(user_pn) and endpoints_counter[user_pn]['current_amount'] >= \
+                            endpoints_counter[user_pn]['should_be']:
+                        endpoints_counter.pop(user_pn)
+                        yield user
                 except Exception:
                     logger.exception(f'Failed to parse response for request {request_dict}')
                     continue
 
-        if self._email_activity_period:
-            user_statistics = self._get_users_from_office_365()
-            for user_pn in user_by_user_pn:
-                user_by_user_pn[user_pn]['extra_email_activity'] = user_statistics.get(user_pn)
-
-        yield from user_by_user_pn.values()
+        # If there any users that we didn't yield so far, we will yield it now.
+        # pylint: disable=consider-iterating-dictionary
+        for user_pn in endpoints_counter.keys():
+            yield user_by_user_pn[user_pn]
 
     def _iter_graph_users(self):
         attrs = USERS_ATTRIBUTES
