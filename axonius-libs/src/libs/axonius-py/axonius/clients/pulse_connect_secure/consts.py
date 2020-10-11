@@ -1,0 +1,5 @@
+MAX_NUMBER_OF_DEVICES = 20000000
+
+URL_BASE_PREFIX = 'api/v1'
+AUTHENTICATION_URL = 'auth'
+USERS_URL = f'system/active-users'

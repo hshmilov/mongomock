@@ -240,6 +240,7 @@ DOCKER_PORTS = {
     'master-proxy':                     8888,  # reserved
     'httpd-service':                    8889,  # reserved
     'bandicoot':                        9090,
+    'pulse-connect-secure-adapter':     9091,
     'g-naapi-adapter':                  9912,
     'avamar-adapter':                   9930,
     'riskiq-csv-adapter':               9931,

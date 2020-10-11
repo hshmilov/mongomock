@@ -1332,6 +1332,11 @@
     "link": "https://docs.axonius.com/docs/bitdefender-gravityzone-business-security",
     "description": "Bitdefender GravityZone Business Security uses machine learning and heuristics to protect against malware, phishing, ransomware, exploits and zero-days."
   },
+  "pulse_connect_secure_adapter": {
+    "title": "Pulse Connect Secure",
+    "link": "https://docs.axonius.com/docs/pulse-connect-secure",
+    "description": "Pulse Connect Secure provides zero trust secured access from any device to applications and services in the cloud and data center."
+  },
   "bomgar_adapter": {
     "title": "BeyondTrust Remote Support (Bomgar)",
     "link": "https://docs.axonius.com/docs/beyondtrust-remote-support",
