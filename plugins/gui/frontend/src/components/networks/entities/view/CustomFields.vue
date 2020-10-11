@@ -33,6 +33,11 @@
 </template>
 
 <script>
+import _filter from 'lodash/filter';
+import _find from 'lodash/find';
+import _orderBy from 'lodash/orderBy';
+import _get from 'lodash/get';
+import _isEmpty from 'lodash/isEmpty';
 import XCustomFieldsRow from './CustomFieldsRow.vue';
 
 export default {
@@ -64,24 +69,56 @@ export default {
   computed: {
     fieldConfig: {
       get() {
-        return this.value.filter((field) => field.name !== 'specific_data.data.id');
+        const valuesToDisplay = this.value.filter((field) => field.name !== 'specific_data.data.id');
+        const newValues = valuesToDisplay.filter((field) => field.isNew);
+        const existingValues = valuesToDisplay.filter((field) => !field.isNew).map((field) => ({
+          ...field,
+          title: this.customFieldsMap[this.trimName(field.name)].title,
+        }));
+        return [..._orderBy(existingValues, ['predefined', 'title'], ['desc', 'asc']), ...newValues];
       },
       set(value) {
         let valid = true;
-        value.forEach((field) => {
+        this.error = '';
+
+        const fieldsWithType = value.map((field) => ({
+          ...field,
+          type: field.name
+            ? _get(this.customFieldsMap[this.trimName(field.name)], 'type', null) || field.type
+            : field.type,
+        }));
+
+        for (let i = 0; i < fieldsWithType.length; i++) {
+          const field = fieldsWithType[i];
+
+          if (!field.name) {
+            valid = false;
+            break;
+          }
+
+          if (!field.predefined) {
+            const validationResult = this.checkExistingTypeCompatibility(field.name, field.type, field.isNew);
+            if (validationResult.duplicated) {
+              // New field's name already exists
+              valid = false;
+              this.error = validationResult.error;
+              break;
+            }
+          }
+
           if (!field.value && field.value !== 0 && field.value !== false) {
             // Field value is empty
             valid = false;
+            break;
           }
-          if (!field.predefined && this.checkDuplicate(field.name)) {
-            // New field's name already exists
-            valid = false;
-            this.error = 'Custom Field Name is already in use by another field';
-          } else {
-            this.error = '';
-          }
-        });
-        this.$emit('input', value);
+        }
+
+        const duplicationResult = this.areNewFieldsUnique(fieldsWithType);
+        if (duplicationResult.duplicated) {
+          valid = false;
+          this.error = duplicationResult.error;
+        }
+        this.$emit('input', fieldsWithType);
         this.$emit('validate', valid);
       },
     },
@@ -100,27 +137,32 @@ export default {
         .filter(filterFields)
         .sort(sortFields)
         .map((field) => ({
-          name: field.name, title: field.title,
+          name: field.name, title: field.title, type: field.type,
         }));
 
       const custom = this.fields.custom
         .filter(filterFields)
         .sort(sortFields)
         .map((field) => ({
-          name: this.trimName(field.name), title: field.title,
+          name: this.trimName(field.name), title: field.title, type: field.type,
         }));
 
       return { predefined, custom };
     },
+    guiCustomFields() {
+      // Gui custom fields are undefined in case no fields where added yet.
+      return _isEmpty(this.fieldOptions.custom) ? this.fieldOptions.predefined : this.fieldOptions.custom;
+    },
     predefinedFieldsMap() {
-      return this.fields.predefined.reduce((map, field) => ({ ...map, [field.name]: field }), {});
+      return this.fieldOptions.predefined.reduce((map, field) => ({ ...map, [field.name]: field }), {});
     },
     customFieldsMap() {
-      return this.fields.custom.reduce((map, field) => ({ ...map, [this.trimName(field.name)]: field }), {});
+      return this.guiCustomFields.reduce((map, field) => ({ ...map, [this.trimName(field.name)]: field }), {});
     },
-    customFieldTitles() {
-      const createTitles = (field) => field.title.toLowerCase();
-      return this.fieldOptions.custom.map(createTitles);
+    fieldTitlesToNameMap() {
+      return this.guiCustomFields.reduce((result, field) => ({
+        ...result, [field.title.toLowerCase()]: field.name,
+      }), {});
     },
   },
   methods: {
@@ -154,19 +196,59 @@ export default {
     removeField(index) {
       this.fieldConfig = this.fieldConfig.filter((field, i) => i !== index);
     },
-    checkDuplicate(fieldName) {
+    convertToCustomField(field, newField) {
+      if (!field) return '';
+      return newField ? `custom_${field.toLowerCase().replace(/ /g, '_')}` : field;
+    },
+    checkExistingTypeCompatibility(fieldName, fieldType, newField) {
+      const error = null;
       if (!fieldName) {
-        return false;
+        return { duplicated: false, error };
       }
-      const fieldsByName = this.definedFieldNames.filter((currentName) => {
-        if (this.customFieldsMap[currentName]) {
-          // Given a field definition, compare with its title
-          return fieldName === this.customFieldsMap[currentName].title;
+
+      const customField = this.convertToCustomField(fieldName, newField);
+      const existingField = this.customFieldsMap[customField];
+      if (existingField) {
+        // Given a field definition, compare with its title
+        const duplicated = fieldName === existingField.title
+                && fieldType !== existingField.type;
+        if (duplicated) {
+          // Field already exists with different type.
+          return {
+            duplicated: true,
+            error: `Error: ${fieldName} already exists as ${existingField.type}`,
+          };
         }
-        // With no field definition, the name itself (given by user) will be the title
-        return fieldName === currentName;
-      });
-      return (fieldsByName.length > 1 || this.customFieldTitles.includes(fieldName.toLowerCase()));
+      } else if (this.fieldTitlesToNameMap[fieldName.toLowerCase()]) {
+        const predefinedFieldName = this.fieldTitlesToNameMap[fieldName.toLowerCase()];
+        const existingPredefinedField = this.customFieldsMap[predefinedFieldName];
+        const errorMessage = existingPredefinedField
+          ? `Error: predefined field - ${fieldName} already exists as ${existingPredefinedField.type}`
+          : `Error: predefined field - ${fieldName} already exists`;
+        return {
+          duplicated: true,
+          error: errorMessage,
+        };
+      }
+      return { duplicated: false, error };
+    },
+    areNewFieldsUnique(newFields) {
+      let duplicated = false;
+      let error = null;
+      const fieldsNames = newFields.map((field) => ({
+        name: this.convertToCustomField(field.name, field.isNew),
+        type: field.type,
+        title: field.title || field.name,
+      }));
+      const res = _filter(fieldsNames, (val, i, iteratee) => _find(iteratee, { name: val.name }, i + 1));
+      if (res.length) {
+        duplicated = true;
+        error = `Error: ${res[0].title} already exists as ${res[0].type}`;
+      }
+      return {
+        duplicated,
+        error,
+      };
     },
   },
 };

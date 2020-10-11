@@ -4,12 +4,14 @@
     :handle-save="saveFields"
     :message="`Custom data saved`"
     approve-text="Save"
+    :disabled="!valid"
     @change="handleChange"
   >
     <XCustomFields
       v-model="customAdapterData"
       :module="module"
       :fields="customFields"
+      @validate="validateFieldsEditor"
     />
   </XFeedbackModal>
 </template>
@@ -29,6 +31,7 @@ export default {
   data() {
     return {
       customAdapterData: [],
+      valid: true,
     };
   },
   methods: {
@@ -51,6 +54,9 @@ export default {
       if (!active) {
         this.initCustomFields();
       }
+    },
+    validateFieldsEditor(valid) {
+      this.valid = valid;
     },
   },
 };

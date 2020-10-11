@@ -27,13 +27,15 @@
             :options="typeOptions"
             placeholder="Type..."
             :searchable="true"
+            :read-only="!field.isNew"
             :class="{'border-error': empty(fieldType), 'item-type': true}"
           />
           <input
             v-model="fieldTitle"
             type="text"
-            :class="{'border-error': empty(fieldName) || error, 'item-name': true}"
+            :class="{'border-error': empty(fieldTitle) || error, 'item-name': true}"
             @keypress="validateFieldName"
+            :disabled="!field.isNew"
           >
         </div>
         <Component
@@ -113,8 +115,8 @@ export default {
       get() {
         return this.field.title || this.field.name;
       },
-      set(name) {
-        this.$emit('input', { ...this.field, name });
+      set(title) {
+        this.$emit('input', { ...this.field, title, name: title });
       },
     },
     fieldType: {

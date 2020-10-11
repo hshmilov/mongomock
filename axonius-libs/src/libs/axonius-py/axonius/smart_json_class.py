@@ -233,7 +233,7 @@ class SmartJsonClass(metaclass=SmartJsonClassMetaclass):
             if issubclass(base.type, SmartJsonClass):
                 self[base.name] = base.type()
             field = self
-        if not isinstance(field_value, base.type):
+        if not issubclass(base.type, SmartJsonClass) and not isinstance(field_value, base.type):
             raise ValueError(f'Wrong type: {type(field_value)} is not {base.type}')
         try:
             field[base.name] = field_value

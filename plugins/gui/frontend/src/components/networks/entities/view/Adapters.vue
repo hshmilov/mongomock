@@ -87,10 +87,6 @@ import { pluginMeta } from '../../../../constants/plugin_meta';
 import { guiPluginName, initCustomData, getEntityPermissionCategory } from '../../../../constants/entities';
 import { GET_CONNECTION_LABEL } from '../../../../store/getters';
 
-const lastSeenByModule = {
-  users: 'last_seen_in_devices',
-  devices: 'last_seen',
-};
 
 export default {
   name: 'XEntityAdapters',
