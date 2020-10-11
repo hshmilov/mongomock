@@ -101,7 +101,7 @@ export const actionsMeta = {
     title: 'Add IPs to Tenable.io Scan',
   },
   tenable_io_tag_assets: {
-    title: 'Tag Tenable.io assets'
+    title: 'Tag Tenable.io Assets'
   },
   create_fresh_service_incident: {
     title: 'Create Freshservice Ticket',

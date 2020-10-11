@@ -51,7 +51,7 @@ class TenableIoTagAssets(ActionTypeBase):
                 },
                 {
                     'name': 'action',
-                    'title': 'Action',
+                    'title': 'Action type',
                     'type': 'string',
                     'enum': ['Add', 'Remove']
                 },
