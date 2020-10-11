@@ -36,10 +36,13 @@ SERVER_VERSIONS = {
              'default': 'Server 2019'}
 }
 
+SERVER_YEARS = ['2003', '2008', '2012', '2016', '2019']
+
 
 def parse_msft_release_version(os_string):
 
-    versions = SERVER_VERSIONS if 'server' in os_string else WORKSTATION_VERSIONS
+    versions = SERVER_VERSIONS if 'server' in os_string or any(x in os_string for x in SERVER_YEARS)\
+        else WORKSTATION_VERSIONS
     for rls_ver, win_ver in versions.items():
         matched_version = re.findall(WINDOWS_VERSION_REGEX, os_string)
         if matched_version and matched_version[0].startswith(rls_ver):

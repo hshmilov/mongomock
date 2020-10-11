@@ -8,11 +8,11 @@ def test_windows_os():
              'bitness': None, 'is_windows_server': False,
              'os_str': 'Microsoft Windows [Version 10.0.17134.829]'.lower()},
         'Microsoft Windows Storage Server 2008 R2 Standard':
-            {'type': 'Windows', 'distribution': 'Server 2008', 'type_distribution': 'Windows Server 2008',
+            {'type': 'Windows', 'distribution': 'Server 2008 R2', 'type_distribution': 'Windows Server 2008 R2',
              'bitness': None, 'is_windows_server': True,
              'os_str': 'Microsoft Windows Storage Server 2008 R2 Standard'.lower()},
         'Microsoft Windows Server 2012 R2 Standard':
-            {'type': 'Windows', 'distribution': 'Server 2012', 'type_distribution': 'Windows Server 2012',
+            {'type': 'Windows', 'distribution': 'Server 2012 R2', 'type_distribution': 'Windows Server 2012 R2',
              'bitness': None, 'is_windows_server': True,
              'os_str': 'Microsoft Windows Server 2012 R2 Standard'.lower()},
         'Microsoft Windows 8.1 Pro':
@@ -92,6 +92,19 @@ def test_windows_os():
                                                  'bitness': None,
                                                  'is_windows_server': False,
                                                  'os_str': 'Microsoft Windows NT Workstation 6.3'.lower()},
+        'win2012r2 6.3.9600': {'bitness': None,
+                               'distribution': 'Server 2012 R2',
+                               'is_windows_server': True,
+                               'os_str': 'win2012r2 6.3.9600',
+                               'type': 'Windows',
+                               'type_distribution': 'Windows Server 2012 R2'},
+        'microsoft windows server 2008 r2 (64-bit)': {'type': 'Windows', 'distribution': 'Server 2008 R2',
+                                                      'bitness': 64,
+                                                      'os_str': 'microsoft windows server 2008 r2 (64-bit)',
+                                                      'is_windows_server': True,
+                                                      'type_distribution': 'Windows Server 2008 R2'
+                                                      }
+
     }
     for dist, output in data.items():
         assert figure_out_os(dist) == output

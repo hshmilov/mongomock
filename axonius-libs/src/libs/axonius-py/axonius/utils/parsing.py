@@ -245,6 +245,8 @@ def figure_out_windows_dist(s):
         if version in s:
             dist_name = f'{dist_name} {version.strip()}'
             break
+    if ' r2' in s.lower() or 'r2 ' in s.lower():
+        dist_name = f'{dist_name} R2'
     if not dist_name.strip():
         return None
     return dist_name.strip()
