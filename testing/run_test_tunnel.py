@@ -190,6 +190,12 @@ def main(ami_id=None):
                                                                         append_ts=False)
         TC.print(f'client.rb file content: {client_rb_file}')
 
+        client_ip_address = instance_manager._InstanceManager__ssh_execute(instance,
+                                                                           'Get IP Address',
+                                                                           'curl -s -k https://wtfismyip.com/json',
+                                                                           append_ts=False)
+        TC.print(f'Client IP Address {client_ip_address}')
+
         # Create a copy of the testing folder and copy it to there.
         print(f'Creating source code tar and copying it..')
         execute('rm -rf testing.tar.gz')
