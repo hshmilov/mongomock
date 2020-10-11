@@ -51,3 +51,4 @@ DEFAULT_SCC_WHITELIST = [
 SCC_BAD_RESOURCE = 'compute.InstanceGroup'  # XXX Convert this to a list if absolutely necessary (keep url short)
 
 SCC_DAYS_MAX = 90
+BUCKET_OBJECTS_MAX = 1000

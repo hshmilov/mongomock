@@ -25,7 +25,7 @@ from axonius.utils.json_encoders import IgnoreErrorJSONEncoder
 from axonius.utils.parsing import format_subnet
 from gce_adapter.connection import GoogleCloudPlatformConnection
 from gce_adapter.consts import SQL_INSTANCE_STATES, SQL_DB_VERSIONS, SQL_SUSP_REASONS, SQL_INSTANCE_TYPES, \
-    SCC_FINDING_STATES, SCC_DAYS_MAX
+    SCC_FINDING_STATES, SCC_DAYS_MAX, BUCKET_OBJECTS_MAX
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -363,7 +363,7 @@ class GceAdapter(AdapterBase, Configurable):
         if self.__fetch_bkt_objects is False:
             bucket_objects_limit = 0
         elif isinstance(self.__fetch_bkt_objects, bool) and self.__fetch_bkt_objects:
-            bucket_objects_limit = 1000
+            bucket_objects_limit = BUCKET_OBJECTS_MAX
         else:
             bucket_objects_limit = self.__fetch_bkt_objects
         try:
@@ -460,8 +460,11 @@ class GceAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'fetch_bucket_objects',
-                    'type': 'integer',
-                    'title': 'Fetch Object metadata in Google Cloud Storage buckets (0: disabled, max supported: 1000)'
+                    'type': 'number',
+                    'title': 'Fetch Object metadata in Google Cloud Storage buckets (0: disabled, max supported: 1000)',
+                    'max': BUCKET_OBJECTS_MAX,
+                    'default': 0,
+                    'min': 0,
                 },
                 {
                     'name': 'match_role_permissions',
@@ -476,9 +479,11 @@ class GceAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'scc_findings_days',
-                    'type': 'integer',
+                    'type': 'number',
                     'title': 'Fetch SCC findings from the last X days (0: disabled, max supported: 90)',
                     # 'description': 'Requires organization-level securitycenter.findings.list permissions '
+                    'max': SCC_DAYS_MAX,
+                    'min': 0,
                 },
                 {
                     'name': 'scc_findings_filter',
