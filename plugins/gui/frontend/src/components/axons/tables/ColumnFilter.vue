@@ -157,7 +157,11 @@ export default {
     this.focusLastFilter();
   },
   created() {
-    this.fetchAdapters();
+    this.fetchAdapters(
+        {
+          listOnly: true
+        }
+    );
   },
   methods: {
     ...mapActions({ fetchAdapters: FETCH_ADAPTERS }),

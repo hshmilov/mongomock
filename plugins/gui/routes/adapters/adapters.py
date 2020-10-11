@@ -48,9 +48,12 @@ class Adapters(Connections):
         return {'schema': clients_value}
 
     @return_api_format()
-    @gui_route_logged_in(enforce_trial=False)
-    def adapters(self, api_format=True):
+    @gui_route_logged_in(enforce_trial=False, proceed_and_set_access=True)
+    def adapters(self, no_access, api_format=True):
+        list_only = request.args.get('list_only')
         if api_format:
+            if no_access:
+                return return_error('Unauthorized', 401)
             adapters = self._adapters()
             for adapter_name in adapters.keys():
                 for adapter in adapters[adapter_name]:
@@ -65,7 +68,16 @@ class Adapters(Connections):
                         client['client_config'][CONNECTION_LABEL] = (client_label.get(CONNECTION_LABEL, '')
                                                                      if client_label else '')
             return jsonify(adapters)
-        return jsonify(self._adapters_v2())
+        adapters = self._adapters_v2()
+
+        if no_access:
+            if not list_only:
+                return return_error('You are lacking some permissions for this request', 401)
+            for adapter_name, adapter_data_list in adapters.items():
+                for adapter_data in adapter_data_list:
+                    adapter_data.pop('clients_count', None)
+                    adapter_data.pop('supported_features', None)
+        return jsonify(adapters)
 
     @gui_route_logged_in('hint_raise/<plugin_name>', methods=['POST'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Adapters), skip_activity=True)
@@ -190,6 +202,7 @@ class Adapters(Connections):
                 'unique_plugin_name': adapter_unique_name,
                 'status': adapter.get('status', ''),
                 'supported_features': adapter['supported_features'],
+                'configured': bool(counter and counter[0]),
                 'clients_count': counter[0],
                 NODE_NAME: node_name,
                 NODE_ID: adapter[NODE_ID]

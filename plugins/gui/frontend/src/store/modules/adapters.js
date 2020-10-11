@@ -97,7 +97,7 @@ export const adapters = {
           // eslint-disable-next-line no-loop-func
           currentAdapter.forEach((a) => {
             const {
-              config, node_id: instanceId, node_name: instanceName, schema,
+              config, configured, node_id: instanceId, node_name: instanceName, schema,
               supported_features, unique_plugin_name
             } = a;
             adapter = {
@@ -109,6 +109,7 @@ export const adapters = {
               config,
               schema,
               supported_features,
+              configured: configured,
               instances: adapterInstancesIds,
               successClients: adaptersClients.success,
               errorClients: adaptersClients.error,
@@ -222,6 +223,8 @@ export const adapters = {
       let param = '';
       if (payload && payload.filter) {
         param = `?filter=${JSON.stringify(payload.filter)}&api_format=false`;
+      } else if (payload && payload.listOnly) {
+        param = '?api_format=false&list_only=true';
       } else {
         param = '?api_format=false';
       }
@@ -444,7 +447,7 @@ export const adapters = {
     },
     getConfiguredAdapters: (state) => {
       // configured adapter is one that has at least 1 client configured
-      return state.adapters.data.filter((adapter) => adapter.clientsCount);
+      return state.adapters.data.filter((adapter) => adapter.configured);
     },
   },
 };
