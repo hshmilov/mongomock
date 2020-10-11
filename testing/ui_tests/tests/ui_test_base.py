@@ -52,7 +52,6 @@ from ui_tests.pages.signup_page import SignupPage
 from ui_tests.pages.users_page import UsersPage
 from ui_tests.tests.ui_consts import ROOT_DIR
 from ui_tests.components.tag_component import TagComponent
-from testing.tests.conftest import axonius_set_test_passwords
 
 SCREENSHOTS_FOLDER = os.path.join(ROOT_DIR, 'screenshots')
 LOGS_FOLDER = os.path.join(LOGS_PATH_HOST, 'ui_logger')
@@ -359,12 +358,10 @@ class TestBase:
         logger.info(f'finishing setup_method {method.__name__}')
 
     def init_system(self):
-        self.axonius_system = get_service()
-        axonius_set_test_passwords()
         self.username = DEFAULT_USER['user_name'] if not read_saas_input_params() else \
             AXONIUS_AWS_TESTS_USER['user_name']
         self.password = DEFAULT_USER['password'] if not read_saas_input_params() else AXONIUS_AWS_TESTS_USER['password']
-
+        self.axonius_system = get_service()
         self.login()
         self.base_page.wait_for_run_research()
 

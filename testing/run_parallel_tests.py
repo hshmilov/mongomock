@@ -3,7 +3,6 @@ import glob
 import os
 import sys
 
-import testing.tests.conftest
 from test_helpers.parallel_runner import ParallelRunner
 from services.axonius_service import get_service
 
@@ -28,7 +27,6 @@ def main():
     try:
         axonius_system.take_process_ownership()
         axonius_system.start_and_wait()
-        testing.tests.conftest.axonius_set_test_passwords()
 
         # Run all parallel tests
         runner = ParallelTestsRunner()

@@ -13,7 +13,6 @@ from services.adapters.json_file_service import JsonFileService
 from services.axonius_service import get_service
 from services.plugins.compliance_service import ComplianceService
 from services.standalone_services.selenium_service import SeleniumService
-import testing.tests.conftest
 
 TIMEOUT_EXIT_CODE = 1000    # This has to be a large integer. [1-6] are valid pytest exit codes.
 
@@ -110,7 +109,6 @@ def main():
     try:
         axonius_system.take_process_ownership()
         axonius_system.start_and_wait()
-        testing.tests.conftest.axonius_set_test_passwords()
 
         if should_use_local_selenium:
             selenium_service.take_process_ownership()
