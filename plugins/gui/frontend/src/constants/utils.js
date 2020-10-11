@@ -56,7 +56,7 @@ export const getExcludedAdaptersFilter = (fieldType, field, filteredAdapters, co
         && field.indexOf('specific_data.data') !== -1
         && !filteredAdapters.selectAll
         && !filteredAdapters.clearAll) {
-    resultCondition = condition.replace('specific_data.data.', 'data.');
+    resultCondition = condition.replace(/specific_data.data./g, 'data.')
     excludedAdapters = Object.keys(filteredAdapters.selectedValues).filter((key) => !filteredAdapters.selectedValues[key]).join("', '");
   } else {
     return resultCondition;
