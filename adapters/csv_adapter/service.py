@@ -142,7 +142,11 @@ class CsvAdapter(AdapterBase):
                     continue
 
                 user_obj.id = file_name + '_' + user_id
-                user_obj.username = vals.get('username')
+                username = vals.get('username')
+                user_obj.username = username
+                if isinstance(username, str) and '\\' in username:
+                    user_obj.username = username.split('\\')[1]
+                    user_obj.domain = username.split('\\')[0]
                 user_obj.first_name = vals.get('first_name')
                 user_obj.last_name = vals.get('last_name')
                 user_obj.mail = vals.get('mail')

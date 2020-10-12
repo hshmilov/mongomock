@@ -120,6 +120,8 @@ class SccmAdapter(AdapterBase, Configurable):
         access_mp = Field(str, 'Access MP')
         guard_compliance_state = Field(str, 'Credential Guard Compliance State')
         current_compliance_status = ListField(CurrentComplianceStatus, 'Current Compliance Status')
+        primary_owner_name = Field(str, 'Primary Owner Name')
+        primary_owner_contact = Field(str, 'Primary Owner Contact')
 
         def add_sccm_vm(self, **kwargs):
             try:
@@ -387,6 +389,11 @@ class SccmAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting bios data dor {device_raw}')
                 device.sccm_type = computer_data.get('SystemType0')
+                try:
+                    device.primary_owner_name = computer_data.get('PrimaryOwnerName0')
+                    device.primary_owner_contact = computer_data.get('PrimaryOwnerContact0')
+                except Exception:
+                    logger.exception(f'Problem with contact')
                 product_type_dict = {'1': 'WORKSTATION', '2': 'DOMAIN CONTROLLER', '3': 'SERVER'}
                 device.sccm_product_type = product_type_dict.get(str(device_raw.get('ProductType0')))
                 try:

@@ -51,7 +51,8 @@ class BitlockerAdapter(AdapterBase, Configurable):
             connection.set_credentials(username=client_config[consts.USER],
                                        password=client_config[consts.PASSWORD])
             with connection:
-                pass  # check that the connection credentials are valid
+                for _ in connection.query(consts.BITLOCKER_QUERY):
+                    break
             return connection
         except Exception as err:
             message = f'Error connecting to client host: {client_config[consts.BITLOCKER_HOST]}  ' \

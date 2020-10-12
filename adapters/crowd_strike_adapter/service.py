@@ -13,6 +13,7 @@ from axonius.mixins.configurable import Configurable
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import parse_bool_from_raw
 from axonius.utils.parsing import is_domain_valid
 from crowd_strike_adapter import consts
 from crowd_strike_adapter.connection import CrowdStrikeConnection
@@ -51,6 +52,15 @@ class SensorUpdateSettings(SmartJsonClass):
     build = Field(str, 'Build')
 
 
+class PolicyDevice(SmartJsonClass):
+    applied = Field(bool, 'Applied')
+    applied_date = Field(datetime.datetime, 'Applied Date')
+    assigned_date = Field(datetime.datetime, 'Assigned Date')
+    policy_id = Field(str, 'Policy ID')
+    policy_type = Field(str, 'Policy Type')
+    rule_groups = ListField(str, 'Rule Groups')
+
+
 class Policy(SmartJsonClass):
     name = Field(str, 'Name')
     description = Field(str, 'Description')
@@ -78,6 +88,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         external_ip = Field(str, 'External IP')
         groups = ListField(Group, 'Groups')
+        policies = ListField(PolicyDevice, 'Policies')
         prevention_policy = Field(Policy, 'Prevention Policy')
         sensor_update_policy = Field(Policy, 'Sensor Update Policy')
         cs_agent_version = Field(str, 'CrowdStrike Agent Version')
@@ -283,7 +294,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
             logger.exception('Error getting policy %s', policy.get('id'))
         return parsed_policy
 
-    # pylint: disable=too-many-statements,too-many-branches,too-many-nested-blocks
+    # pylint: disable=too-many-statements,too-many-branches,too-many-nested-blocks,too-many-locals
     def _parse_raw_data(self, devices_raw_data):
         for device_raw in devices_raw_data:
             try:
@@ -303,6 +314,28 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     logger.exception(f'Problem with OU')
                 mac_address = device_raw.get('mac_address')
                 local_ip = device_raw.get('local_ip')
+                try:
+                    policies_raw = device_raw.get('policies')
+                    if not isinstance(policies_raw, list):
+                        policies_raw = []
+                    for policy_raw in policies_raw:
+                        try:
+                            if not isinstance(policy_raw, dict):
+                                continue
+                            rule_groups = None
+                            if isinstance(policy_raw.get('rule_groups'), list):
+                                rule_groups = policy_raw.get('rule_groups')
+                            assigned_date = parse_date(policy_raw.get('assigned_date'))
+                            device.policies.append(PolicyDevice(applied=parse_bool_from_raw(policy_raw.get('applied')),
+                                                                applied_date=parse_date(policy_raw.get('applied_date')),
+                                                                assigned_date=assigned_date,
+                                                                policy_id=policy_raw.get('policy_id'),
+                                                                policy_type=policy_raw.get('policy_type'),
+                                                                rule_groups=rule_groups))
+                        except Exception:
+                            logger.exception(f'Problem with policy {policy_raw}')
+                except Exception:
+                    logger.exception(f'Problem with policies')
                 device.add_ips_and_macs(mac_address, local_ip.split(',') if local_ip is not None else None)
                 try:
                     hostname = device_raw.get('hostname')
