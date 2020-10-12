@@ -96,9 +96,11 @@ class Connections:
             connection_data = request_data
         else:
             connection_label = request_data.pop('connection_label', None)
+            connection_active = request_data.pop('active', True)
             connection_data = {
                 'connection': request_data,
-                'connection_label': connection_label
+                'connection_label': connection_label,
+                'active': connection_active
             }
 
         return self._update_connection(connection_id, adapter_name, instance_id, instance_id_prev, connection_data,

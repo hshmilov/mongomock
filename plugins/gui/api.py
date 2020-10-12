@@ -1546,9 +1546,11 @@ class APIMixin:
         instance_id = request_data.pop('instanceName', self.node_id)
         prev_instance_id = request_data.pop('oldInstanceName', None)
         connection_label = request_data.pop('connection_label', None)
+        connection_active = request_data.pop('active', True)
         connection_data = {
             'connection': request_data,
-            'connection_label': connection_label
+            'connection_label': connection_label,
+            'active': connection_active
         }
         return self._update_connection(client_id, adapter_name, instance_id, prev_instance_id, connection_data)
 
