@@ -13,6 +13,10 @@ class HeavyLiftingService(PluginService):
         return 3
 
     @property
+    def get_uwsgi_max_listen_conns(self) -> int:
+        return 10000
+
+    @property
     def get_max_uwsgi_processes(self) -> int:
         return 8
 

@@ -19,3 +19,11 @@ def set_sysctl_value(key, value, path=SYSCTL_PATH):
 
     res = '\n'.join([f'{k} = {values_dict[k]}' for k in values_dict])
     Path(path).write_text(res + '\n')
+
+
+def get_sysctl_value(key, default=None):
+    try:
+        sysctl_key = Path(f'/proc/sys/{"/".join(key.split("."))}')
+        return sysctl_key.read_text().strip()
+    except Exception:
+        return default

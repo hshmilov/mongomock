@@ -34,7 +34,7 @@ from scripts.maintenance_tools.cluster_upgrader import shutdown_adapters, downlo
 from services.plugins.httpd_service import HttpdService
 from services.standalone_services.node_proxy_service import NodeProxyService
 from services.standalone_services.tunneler_service import TunnelerService
-from sysctl_editor import set_sysctl_value
+from sysctl_editor import set_sysctl_value, get_sysctl_value
 from utils import (AXONIUS_DEPLOYMENT_PATH,
                    print_state,
                    current_file_system_path,
@@ -43,6 +43,7 @@ from utils import (AXONIUS_DEPLOYMENT_PATH,
                    RESOURCES_PATH)
 
 CRON_D_PATH = Path('/etc/cron.d')
+SOMAXCONN = 20000
 
 
 def copy_file(local_path, dest_path, mode=0o700, user='root', group='root'):
@@ -289,6 +290,11 @@ def setup_host():
     set_sysctl_value('net.ipv4.conf.all.secure_redirects', '0')
     set_sysctl_value('net.ipv4.conf.default.secure_redirects', '0')
     set_sysctl_value('net.ipv4.conf.all.forwarding', '1')
+    try:
+        if int(get_sysctl_value('net.core.somaxconn', '-1')) < SOMAXCONN:
+            set_sysctl_value('net.core.somaxconn', str(SOMAXCONN))
+    except Exception as e:
+        print(f'Couldn\'t get/set the value of net.core.somaxconn: {str(e)}')
     os.system('sysctl --load')
 
     for user in ['ubuntu', 'customer']:

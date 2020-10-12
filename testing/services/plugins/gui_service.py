@@ -72,6 +72,10 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         super()._migrate_db()
         self._run_all_migrations()
 
+    @property
+    def get_uwsgi_max_listen_conns(self) -> int:
+        return 10000
+
     @db_migration(raise_on_failure=False)
     def _update_schema_version_1(self):
         print('upgrade to schema 1')

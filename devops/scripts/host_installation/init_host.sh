@@ -255,10 +255,19 @@ else
     echo "net.ipv4.conf.default.accept_redirects = 0" >> /etc/sysctl.conf
     echo "net.ipv4.conf.all.secure_redirects = 0" >> /etc/sysctl.conf
     echo "net.ipv4.conf.default.secure_redirects = 0" >> /etc/sysctl.conf
+    if [ $(sysctl -n net.core.somaxconn) -lt 20000 ]; then
+      echo "net.core.somaxconn = 20000" >> /etc/sysctl.conf
+    else
+      echo "net.core.somaxconn status is $(sysctl -n net.core.somaxconn)"
+    fi
 fi
 
 sysctl --load
 
+if [ $(sysctl -n net.core.somaxconn) -lt 20000 ]; then
+  echo "Updated net.core.somaxconn to 20000"
+  sysctl -w net.core.somaxconn=20000
+fi
 
 if [[ -d "/etc/scalyr-agent-2" ]]; then
     echo "scalyr exist"
