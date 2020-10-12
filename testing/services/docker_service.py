@@ -22,7 +22,6 @@ from axonius.utils.debug import COLOR, magentaprint
 from conf_tools import get_tunneled_dockers, get_customer_conf_json
 from services.axon_service import AxonService, TimeoutException
 from services.ports import DOCKER_PORTS
-from sysctl_editor import get_sysctl_value
 from test_helpers.exceptions import DockerException
 from test_helpers.parallel_runner import ParallelRunner
 
@@ -277,6 +276,14 @@ class DockerService(AxonService):
 
         return all_volumes
 
+    @staticmethod
+    def _get_sysctl_value(key, default=None):
+        try:
+            sysctl_key = Path(f'/proc/sys/{"/".join(key.split("."))}')
+            return sysctl_key.read_text().strip()
+        except Exception:
+            return default
+
     def _get_env_varaibles(self, docker_internal_env_vars, mode):
         env_variables = []
         for env in self.environment:
@@ -290,7 +297,7 @@ class DockerService(AxonService):
         env_variables.extend(['--env', f'PACKAGE_NAME={self.package_name}'])
         env_variables.extend(['--env', f'SERVICE_CLASS_NAME={self.service_class_name}'])
         env_variables.extend(['--env', f'UWSGI_THREADS={self.get_max_uwsgi_threads}'])
-        if int(get_sysctl_value('net.core.somaxconn', '-1')) < self.get_max_uwsgi_threads:
+        if int(self._get_sysctl_value('net.core.somaxconn', '-1')) < self.get_max_uwsgi_threads:
             env_variables.extend(['--env', f'UWSGI_LISTEN={self.get_uwsgi_max_listen_conns}'])
         env_variables.extend(['--env', f'UWSGI_PROCESSES={self.get_max_uwsgi_processes}'])
         env_variables.extend(['--env', f'MONGO_MAXPOOLSIZE={self.mongo_maxpoolsize}'])
