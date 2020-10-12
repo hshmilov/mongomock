@@ -93,7 +93,8 @@ def calculate_last_snapshot_size():
 
 def calculate_retention_days(total_free_space_in_kb, total_size_of_cycle_in_kb):
     total_free_disk_space_in_mb = total_free_space_in_kb / 1024  # kb_to_gb(total_free_space)
-    total_space_needed_for_cycle_in_mb = round((total_size_of_cycle_in_kb / 1024), 2)
+    total_space_needed_for_cycle_in_mb = max(round((total_size_of_cycle_in_kb / 1024), 2),
+                                             1)  # Defaulting to 1mb.
     # 30 days, each day we have once in history and one in cache.
     min_size_for_30_days = round(total_space_needed_for_cycle_in_mb * (30 + 30), 2)
 
