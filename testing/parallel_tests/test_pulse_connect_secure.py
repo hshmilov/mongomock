@@ -37,6 +37,10 @@ class TestPulseConnectSecureAdapter(AdapterTestBase):
         pass
 
     @pytest.mark.skip('No test environment')
+    def test_fetch_devices(self):
+        pass
+
+    @pytest.mark.skip('No test environment')
     def test_removing_adapter_creds_with_devices(self):
         pass
 
