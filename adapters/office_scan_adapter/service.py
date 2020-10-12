@@ -34,8 +34,10 @@ class OfficeScanAdapter(AdapterBase):
     def _test_reachability(client_config):
         return RESTConnection.test_reachability(client_config.get('domain'))
 
-    @staticmethod
-    def get_connection(client_config):
+    def get_connection(self, client_config):
+        domain = client_config['domain']
+        if not self._test_reachability(client_config):
+            raise RESTException(f'Could not connect to server: {domain}')
         connection = OfficeScanConnection(domain=client_config['domain'],
                                           verify_ssl=client_config['verify_ssl'],
                                           https_proxy=client_config.get('https_proxy'),
