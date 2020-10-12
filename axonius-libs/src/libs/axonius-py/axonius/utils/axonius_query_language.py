@@ -9,6 +9,7 @@ import cachetools
 from bson import ObjectId
 from bson.json_util import default
 from frozendict import frozendict
+
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, \
     ADAPTERS_META, CLIENT_USED, PLUGIN_UNIQUE_NAME, \
     SPECIFIC_DATA_CLIENT_USED, CORRELATION_REASONS, HAS_NOTES, SPECIFIC_DATA_PLUGIN_UNIQUE_NAME,\
@@ -23,6 +24,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 METADATA_FIELDS_TO_PROJECT_FOR_GUI = ['client_used']
 PREFERRED_SUFFIX = '_preferred'
+PREFERRED_FIELDS = 'preferred_fields'
 ADAPTER_PROPERTIES_DB_ENTRY = 'adapters.data.adapter_properties'
 ADAPTER_LAST_SEEN_DB_ENTRY = 'adapters.data.last_seen'
 
@@ -38,11 +40,17 @@ def convert_many_queries_to_elemmatch_helper(name: str, value: object, length_of
     }
 
 
-def convert_many_queries_to_elemmatch(datas, prefix, include_outdated: bool):
+def convert_many_queries_to_elemmatch(datas, prefix, include_outdated: bool, preferred=False):
     """
     Helper for fix_specific_data
     """
     length_of_prefix = len(prefix) + 1
+    if preferred:
+        _and = []
+        for data in datas:
+            k, v = data
+            _and.append({k.replace('specific_data.data', PREFERRED_FIELDS): v})
+        return _and
     if len(datas) == 1:
         k, v = datas[0]
 
@@ -175,6 +183,10 @@ def fix_specific_data(find, include_outdated: bool):
     prefix = 'specific_data'
     datas = [(k, v) for k, v in find.items() if k.startswith(prefix)]
     if datas:
+        preferred_fields_query = []
+        if any(x[0].endswith(PREFERRED_SUFFIX) for x in datas):
+            preferred_fields_query = convert_many_queries_to_elemmatch(datas, PREFERRED_SUFFIX, include_outdated,
+                                                                       preferred=True)
         adapters_query = convert_many_queries_to_elemmatch(datas, prefix, include_outdated)
         tags_query = convert_many_queries_to_elemmatch(datas, prefix, include_outdated)
         tags_query['$elemMatch']['$and'].append({
@@ -188,10 +200,11 @@ def fix_specific_data(find, include_outdated: bool):
                 },
                 {
                     'tags': tags_query
-                }
+                },
             ]
         }
-
+        if preferred_fields_query:
+            elem_match['$or'].append(*preferred_fields_query)
         find.update(elem_match)
 
     for k, _ in datas:
@@ -965,6 +978,7 @@ def convert_db_entity_to_view_entity(entity: dict, ignore_errors: bool = False) 
             HAS_NOTES: entity.get(HAS_NOTES),
             'adapters': adapters,
             'labels': labels,
+            PREFERRED_FIELDS: entity.get(PREFERRED_FIELDS),
             'accurate_for_datetime': entity.get('accurate_for_datetime')
         }
     except Exception:
@@ -985,15 +999,6 @@ def convert_db_projection_to_view(projection):
             continue
         if splitted[0] == SPECIFIC_DATA:
             splitted[0] = 'adapters'
-            if splitted[-1].endswith(PREFERRED_SUFFIX):
-                if ADAPTER_PROPERTIES_DB_ENTRY not in view_projection:
-                    view_projection[ADAPTER_PROPERTIES_DB_ENTRY] = 1
-                if ADAPTER_LAST_SEEN_DB_ENTRY not in view_projection:
-                    view_projection[ADAPTER_LAST_SEEN_DB_ENTRY] = 1
-                save_last = splitted[-1]
-                del splitted[-1]
-                # pylint: disable=W0106
-                splitted.append(save_last.replace(PREFERRED_SUFFIX, ''))
             view_projection['.'.join(splitted)] = v
             splitted[0] = 'tags'
             view_projection['.'.join(splitted)] = v

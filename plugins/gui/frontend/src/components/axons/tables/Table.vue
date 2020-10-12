@@ -236,7 +236,7 @@ export default {
     hasFilter(fieldName) {
       try {
         return Boolean(this.getFilters(fieldName)
-        .some((filter) => !(filter.term.trim() === '' && filter.include))
+          .some((filter) => !(filter.term.trim() === '' && filter.include))
         || this.getExcludeAdapters(fieldName).length);
       } catch (e) {
         return false;

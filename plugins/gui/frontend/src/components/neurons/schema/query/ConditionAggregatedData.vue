@@ -121,7 +121,7 @@ export default {
       return this.getFieldSchema(this.field);
     },
     showSecondaryValues() {
-      return !this.disableAdaptersFilterQueriesList.includes(this.condition.field);
+      return !this.disableAdaptersFilterQueriesList.includes(this.condition.field) && !this.condition.field.endsWith('_preferred');
     },
   },
   methods: {

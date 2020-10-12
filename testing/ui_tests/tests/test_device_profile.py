@@ -26,7 +26,7 @@ class TestDeviceProfile(TestBase):
                     ','.join(CSV_FIELDS) +
                     f'\ndcny1.TestDomain.test,Serial1,Windows,,Office,02:11:24.485Z 02:11:24.485Z,10.0.2.99,10.0.2.99')
             }
-            self.adapters_page.upload_csv(LABEL_CLIENT_WITH_SAME_ID, client_details)
+            self.adapters_page.upload_csv(LABEL_CLIENT_WITH_SAME_ID, client_details, wait_for_toaster=True)
 
             self.devices_page.switch_to_page()
             self.devices_page.wait_for_table_to_be_responsive()

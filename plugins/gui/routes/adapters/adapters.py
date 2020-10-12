@@ -14,7 +14,8 @@ from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           NODE_ID, NODE_NAME, PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
                                           STATIC_CORRELATOR_PLUGIN_NAME,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME, CONNECT_VIA_TUNNEL,
-                                          DISCOVERY_CONFIG_NAME, CONNECTION_DISCOVERY_SCHEMA_NAME)
+                                          DISCOVERY_CONFIG_NAME, CONNECTION_DISCOVERY_SCHEMA_NAME,
+                                          AGGREGATOR_PLUGIN_NAME)
 from axonius.plugin_base import return_error
 from axonius.utils.gui_helpers import return_api_format
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
@@ -389,6 +390,10 @@ class Adapters(Connections):
 
             def inserted_to_db(*_):
                 logger.info(f'{adapter_unique_name} finished fetching data for {client_id}')
+
+                logger.info(f'Updating preferred fields')
+                self._trigger_remote_plugin(AGGREGATOR_PLUGIN_NAME, 'calculate_preferred_fields', blocking=True)
+
                 self._trigger('clear_dashboard_cache', blocking=False)
                 self._trigger_remote_plugin(STATIC_CORRELATOR_PLUGIN_NAME)
                 self._trigger_remote_plugin(STATIC_USERS_CORRELATOR_PLUGIN_NAME)

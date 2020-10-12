@@ -115,7 +115,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
             table_first_row_data = self.devices_page.get_all_data_proper()[0]
             assert table_first_row_data['Host Name'] == host_name
             assert table_first_row_data['Asset Name'] == asset_name
-            assert table_first_row_data['Preferred Host Name'] == ''
+            assert table_first_row_data['Preferred Host Name'].strip() == ''
 
             # remove network interfaces: IPs to avoid +x remainder that doesn't match the csv
             remove_network_ips = {'specific_data.data.network_interfaces.ips': [{'include': False, 'term': ''}]}

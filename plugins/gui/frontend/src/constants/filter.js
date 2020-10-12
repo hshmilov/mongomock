@@ -111,6 +111,15 @@ export const compOps = {
     isIPv6: '{field} == regex(":")',
     exists: exists_str,
   },
+  ip_preferred: {
+    contains,
+    equals,
+    IN,
+    regex,
+    isIPv4: '{field} == regex("\\.")',
+    isIPv6: '{field} == regex(":")',
+    exists: exists_str,
+  },
   subnet: {
     contains,
     equals,

@@ -79,7 +79,7 @@ export default {
       }
       // Filter '_preferred' fields because theyre not in the mongo but calculated dynamiclly
       const { fields } = this.options.find((item) => item.name === this.fieldType);
-      return fields.filter((item) => !this.excludedFields.includes(item.name) && item.name.indexOf('_preferred') === -1);
+      return fields.filter((item) => !this.excludedFields.includes(item.name));
     },
     firstType() {
       if (!this.options || !this.options.length) return 'axonius';

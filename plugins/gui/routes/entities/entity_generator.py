@@ -8,6 +8,7 @@ from flask import (jsonify,
                    make_response, request)
 
 from axonius.consts.gui_consts import FILE_NAME_TIMESTAMP_FORMAT, ACTIVITY_PARAMS_COUNT, FeatureFlagsNames
+from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils.db_querying_helper import get_entities
 from axonius.utils.gui_helpers import (historical, paginated,
@@ -327,12 +328,18 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @filtered_entities()
         @gui_route_logged_in('manual_link', methods=['POST'])
         def entities_link(self, mongo_filter):
-            return self._link_many_entities(self.entity_type, mongo_filter)
+            device_id = self._link_many_entities(self.entity_type, mongo_filter)
+            self._trigger_remote_plugin(AGGREGATOR_PLUGIN_NAME, 'calculate_preferred_fields',
+                                        blocking=True,
+                                        data={'device_ids': [device_id]})
+            return device_id
 
         @filtered_entities()
         @gui_route_logged_in('manual_unlink', methods=['POST'])
         def entities_unlink(self, mongo_filter):
-            return self._unlink_axonius_entities(self.entity_type, mongo_filter)
+            ret_data = self._unlink_axonius_entities(self.entity_type, mongo_filter)
+            self._trigger_remote_plugin_no_blocking(AGGREGATOR_PLUGIN_NAME, 'calculate_preferred_fields')
+            return ret_data
 
         @gui_route_logged_in(rule='destroy', methods=['POST'])
         def api_users_destroy(self):

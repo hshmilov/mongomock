@@ -9,6 +9,7 @@ import re
 from bson import ObjectId
 from dateutil.parser import parse as parse_date
 
+from axonius.consts.adapter_consts import PREFERRED_FIELDS
 from axonius.consts.gui_consts import (ChartMetrics, ChartViews, ChartFuncs, ChartRangeTypes, ChartRangeUnits,
                                        ADAPTERS_DATA, SPECIFIC_DATA, RANGE_UNIT_DAYS,
                                        DASHBOARD_COLLECTION, SortType, SortOrder, LABELS_FIELD)
@@ -419,7 +420,8 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
                             '$and': adapter_conditions
                         }
                     }
-                }
+                },
+                PREFERRED_FIELDS: 1
             }
         },
         # collect all data available by filters
@@ -710,12 +712,14 @@ def _generate_aggregate_combine_inputs_reduce(field_adapter_parent, field_tags_p
     field_name = field_key = key
     if field_key == LABELS_FIELD:
         field_key = 'name'
+    field_prefix = ''.join(field_adapter_parent.split('.')[2:])
     return {
         '$reduce': {
             'input': {
                 '$setUnion': [
                     f'{field_adapter_parent}',
-                    f'{field_tags_parent}'
+                    f'{field_tags_parent}',
+                    [f'$preferred_fields.{field_prefix}' if field_prefix else '$preferred_fields']
                 ]
             },
             'initialValue': [],

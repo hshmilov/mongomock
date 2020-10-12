@@ -107,7 +107,8 @@ from axonius.consts.plugin_consts import (
     HISTORICAL_DEVICES_DB_VIEW, HISTORICAL_USERS_DB_VIEW, USER_ADAPTERS_HISTORICAL_RAW_DB,
     DEVICE_ADAPTERS_HISTORICAL_RAW_DB, DEVICES_FIELDS, USERS_FIELDS, ADAPTERS_CLIENTS_LABELS, USER_ADAPTERS_RAW_DB,
     DEVICE_ADAPTERS_RAW_DB, REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME, PASSWORD_EXPIRATION_DAYS, CLIENTS_COLLECTION,
-    PASSWORD_MANGER_AWS_SM_VAULT, AWS_SM_ACCESS_KEY_ID, AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION, CLIENT_ACTIVE)
+    PASSWORD_MANGER_AWS_SM_VAULT, AWS_SM_ACCESS_KEY_ID, AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION, CLIENT_ACTIVE,
+    CALCULATE_PREFERRED_FIELDS_INTERVAL)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE, DEFAULT_SSL_CIPHERS, NO_RSA_SSL_CIPHERS, \
     SSL_CIPHERS_HIGHER_SECURITY
@@ -3298,6 +3299,8 @@ class PluginBase(Configurable, Feature, ABC):
         self._socket_recv_timeout = DEFAULT_SOCKET_RECV_TIMEOUT
         self._socket_read_timeout = DEFAULT_SOCKET_READ_TIMEOUT
         self._update_adapters_clients_periodically = config[AGGREGATION_SETTINGS].get(UPDATE_CLIENTS_STATUS, False)
+        self._calculate_preferred_fields_interval = config[AGGREGATION_SETTINGS].get(
+            CALCULATE_PREFERRED_FIELDS_INTERVAL, 6)
         self._uppercase_hostnames = config[AGGREGATION_SETTINGS].get(UPPERCASE_HOSTNAMES) or False
         self._remove_domain_from_preferred_hostname = config[AGGREGATION_SETTINGS].get(
             REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME) or False
@@ -4287,6 +4290,11 @@ class PluginBase(Configurable, Feature, ABC):
                             'type': 'bool'
                         },
                         {
+                            'name': CALCULATE_PREFERRED_FIELDS_INTERVAL,
+                            'title': 'Calculate preferred fields every X hours',
+                            'type': 'number'
+                        },
+                        {
                             'name': REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME,
                             'title': 'Remove domain from preferred hostname',
                             'type': 'bool'
@@ -4302,7 +4310,7 @@ class PluginBase(Configurable, Feature, ABC):
                     'type': 'array',
                     'required': [
                         MAX_WORKERS, SOCKET_READ_TIMEOUT, UPPERCASE_HOSTNAMES, REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME,
-                        UPDATE_CLIENTS_STATUS
+                        UPDATE_CLIENTS_STATUS, CALCULATE_PREFERRED_FIELDS_INTERVAL
                     ]
                 },
                 {
@@ -4654,6 +4662,7 @@ class PluginBase(Configurable, Feature, ABC):
                 SOCKET_READ_TIMEOUT: 5,
                 UPPERCASE_HOSTNAMES: False,
                 REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME: False,
+                CALCULATE_PREFERRED_FIELDS_INTERVAL: 6,
                 UPDATE_CLIENTS_STATUS: False
             },
             'getting_started_checklist': {

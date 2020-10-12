@@ -1,4 +1,5 @@
 import concurrent.futures
+import itertools
 import logging
 import time
 from datetime import datetime, timedelta
@@ -13,16 +14,20 @@ from pymongo.errors import CollectionInvalid, BulkWriteError
 from aggregator.exceptions import AdapterOffline, ClientsUnavailable
 from aggregator.historical import create_retrospective_historic_collections, MIN_DISK_SIZE
 from axonius.db_migrations import db_migration
+from axonius.utils.axonius_query_language import PREFERRED_SUFFIX
+from axonius.utils.datetime import parse_date
 from axonius.utils.mongo_indices import common_db_indexes, non_historic_indexes
 from axonius.adapter_base import is_plugin_adapter
-from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS, NON_THREAD_SAFE_CLEAN_DB_ADAPTERS
-from axonius.consts.gui_consts import ParallelSearch
+from axonius.consts.adapter_consts import NON_THREAD_SAFE_CLEAN_DB_ADAPTERS, AXONIUS_INTERNAL_ID
+from axonius.consts.adapter_consts import PREFERRED_FIELDS as PREFERRED_FIELDS_LABEL
+from axonius.consts.gui_consts import ParallelSearch, PREFERRED_FIELDS, SPECIFIC_DATA_PREFIX_LENGTH, \
+    MAX_DAYS_SINCE_LAST_SEEN
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
                                           PARALLEL_ADAPTERS,
                                           PLUGIN_NAME,
                                           ADAPTERS_LIST_LENGTH,
-                                          CLIENT_ACTIVE)
+                                          CLIENT_ACTIVE, ACTIVE_DIRECTORY_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import EntityType, PluginBase
@@ -189,6 +194,7 @@ class AggregatorService(Triggerable, PluginBase):
         :param List clients: list of clients to execute fetch for.
         """
         def get_adapter_clients():
+            # pylint: disable=C0330
             return [x['client_id'] for x
                     in self._get_db_connection()[adapter]['clients'].find(
                     filter={
@@ -405,6 +411,236 @@ class AggregatorService(Triggerable, PluginBase):
             adapters = list(self.filter_out_custom_discovery_adapters(adapters, job_name))
         return adapters
 
+    @staticmethod
+    def _last_resort_preferred_field(device_data, specific_property, sub_property):
+        """
+        return the first adapter with field that matched no matter the last_seen or which adapter property it has
+        """
+        last_seen, val, sub_property_val = datetime(1970, 1, 1, 0, 0, 0), '', ''
+        for adapter in device_data['adapters']:
+            if adapter.get('plugin_type', '') != 'Adapter':
+                continue
+            _adapter = adapter.get('data', {})
+            if last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == '' and \
+                    sub_property is not None and specific_property in _adapter:
+                try:
+                    sub_property_val = _adapter[specific_property][sub_property] if \
+                        isinstance(_adapter[specific_property], dict) else \
+                        [x[sub_property] for x in _adapter[specific_property] if sub_property in x]
+                # Field not in result
+                except Exception:
+                    sub_property_val = None
+            if val != '':
+                break
+            if sub_property is not None and specific_property in _adapter and \
+                    (sub_property_val != [] and sub_property_val is not None):
+                val = sub_property_val
+                break
+            elif specific_property in _adapter and not isinstance(sub_property, str):
+                val = _adapter[specific_property]
+                break
+            else:
+                val = ''
+        return val
+
+    @staticmethod
+    # pylint: disable=too-many-branches
+    def _get_preferred_field_from_ad(device_data, specific_property, sub_property, preferred_field):
+        val_changed_by_ad = False
+        last_seen, val, sub_property_val = datetime(1970, 1, 1, 0, 0, 0), '', ''
+        try:
+            for ad_adapter in [ad.get('data', {}) for ad in device_data['adapters'] if
+                               ad.get('plugin_name', '') == ACTIVE_DIRECTORY_PLUGIN_NAME]:
+                tmp_val = ad_adapter.get(specific_property)
+                tmp_last_seen = ad_adapter.get('last_seen')
+
+                if tmp_val is None and tmp_last_seen is None:
+                    break
+                if tmp_last_seen < last_seen:
+                    continue
+                if tmp_val is not None and sub_property is not None:
+                    try:
+                        sub_property_val = tmp_val[sub_property] if isinstance(tmp_val,
+                                                                               dict) else \
+                            [x[sub_property] for x in tmp_val if sub_property in x]
+                    # Field not in result
+                    except Exception:
+                        sub_property_val = None
+                if tmp_val is not None and isinstance(sub_property, str) and \
+                        (sub_property_val is not None and sub_property_val != []):
+                    val = sub_property_val
+                    last_seen = tmp_last_seen
+                    val_changed_by_ad = True
+                elif tmp_val is not None and sub_property is None:
+                    val = tmp_val
+                    last_seen = tmp_last_seen
+                    val_changed_by_ad = True
+                if val == '':
+                    last_seen = datetime(1970, 1, 1, 0, 0, 0)
+        except TypeError:
+            val_changed_by_ad = False
+        finally:
+            # AD overrides them all
+            if val_changed_by_ad:
+                last_seen = datetime.now()
+                if preferred_field == 'specific_data.data.hostname_preferred' and val:
+                    # This is happening regardless of remove_domain_from_preferred_hostname.
+                    # we remove the domain in case of AD always.
+                    val = val.upper().split('.')[0]
+            # pylint: disable=lost-exception
+            return val, last_seen
+
+    @staticmethod
+    # pylint: disable=too-many-boolean-expressions
+    def _get_preferred_field_from_agent_adapter(sub_property, specific_property, _adapter):
+        last_seen, val, sub_property_val = datetime(1970, 1, 1, 0, 0, 0), '', ''
+        if sub_property is not None and specific_property in _adapter:
+            try:
+                sub_property_val = _adapter[specific_property][sub_property] if \
+                    isinstance(_adapter[specific_property], dict) else \
+                    [x[sub_property] for x in _adapter[specific_property] if sub_property in x]
+            # Field not in result
+            except Exception:
+                sub_property_val = None
+        if sub_property is not None and specific_property in _adapter and \
+                (sub_property_val != [] and sub_property_val is not None):
+            val = sub_property_val
+            last_seen = _adapter['last_seen']
+        elif specific_property in _adapter and not isinstance(sub_property, str):
+            val = _adapter[specific_property]
+            last_seen = _adapter['last_seen']
+        return val, last_seen
+
+    @staticmethod
+    def _get_preferred_field_from_assets_adapter(_adapter, sub_property, specific_property):
+        last_seen, val, sub_property_val = datetime(1970, 1, 1, 0, 0, 0), '', ''
+        if last_seen is None:
+            last_seen = datetime(1970, 1, 1, 0, 0, 0)
+        if 'adapter_properties' in _adapter and 'Assets' in _adapter['adapter_properties']:
+            if sub_property is not None and specific_property in _adapter:
+                try:
+                    sub_property_val = _adapter[specific_property][sub_property] if \
+                        isinstance(_adapter[specific_property], dict) else \
+                        [x[sub_property] for x in _adapter[specific_property] if
+                         sub_property in x]
+                # Field not in result
+                except Exception:
+                    sub_property_val = None
+            if sub_property is not None and specific_property in _adapter and \
+                    (sub_property_val != [] and sub_property_val is not None):
+                val = sub_property_val
+                last_seen = _adapter['last_seen'] if 'last_seen' in _adapter else datetime.now()
+            elif specific_property in _adapter and not isinstance(sub_property, str):
+                val = _adapter[specific_property]
+                last_seen = _adapter['last_seen'] if 'last_seen' in _adapter else datetime.now()
+        return val, last_seen
+
+    # pylint: disable=too-many-nested-blocks,too-many-branches,too-many-statements,too-many-boolean-expressions
+    def update_device_preferred_fields(self, device_id, preferred_field, device_data, specific_property, sub_property):
+        sub_property_val, val, last_seen = '', '', datetime(1970, 1, 1, 0, 0, 0)
+        remove_domain_from_preferred_hostname = False
+        try:
+            # pylint: disable=protected-access
+            remove_domain_from_preferred_hostname = PluginBase.Instance._remove_domain_from_preferred_hostname or False
+            # pylint: enable=protected-access
+        except Exception:
+            pass
+        for adapter in device_data['adapters']:
+            if adapter.get('plugin_type', '') != 'Adapter':
+                continue
+            _adapter = adapter.get('data', {})
+            # IP addresses we take from cloud providers no matter what (AX-7875)
+            if specific_property == 'network_interfaces' and sub_property == 'ips' and \
+                    'adapter_properties' in _adapter and 'Cloud_Provider' in _adapter['adapter_properties']:
+                try:
+                    sub_property_val = _adapter[specific_property][sub_property] if \
+                        isinstance(_adapter[specific_property], dict) else \
+                        [x[sub_property] for x in _adapter[specific_property] if sub_property in x]
+                # Field not in result
+                except Exception:
+                    sub_property_val = None
+            if sub_property_val:
+                val = sub_property_val
+                last_seen = datetime.now()
+
+            # First priority is the latest seen Agent adapter
+            if 'adapter_properties' in _adapter and 'Agent' in _adapter['adapter_properties'] \
+                    and 'last_seen' in _adapter and isinstance(_adapter['last_seen'], datetime) \
+                    and _adapter['last_seen'] > last_seen and val == '':
+                val, last_seen = self._get_preferred_field_from_agent_adapter(sub_property,
+                                                                              specific_property,
+                                                                              _adapter)
+                if isinstance(last_seen, str):
+                    last_seen = parse_date(last_seen)
+
+            # Second priority is active-directory data
+            if (val != '' and last_seen is not None and isinstance(last_seen, datetime) and
+                (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
+                    (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
+                val, last_seen = self._get_preferred_field_from_ad(device_data,
+                                                                   specific_property,
+                                                                   sub_property,
+                                                                   preferred_field)
+                if isinstance(last_seen, str):
+                    last_seen = parse_date(last_seen)
+
+            # Third priority is the latest seen Assets adapter
+            if (val != '' and last_seen != datetime(1970, 1, 1, 0, 0, 0) and
+                isinstance(last_seen, datetime) and
+                (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
+                    (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
+                val, last_seen = self._get_preferred_field_from_assets_adapter(_adapter,
+                                                                               sub_property,
+                                                                               specific_property)
+                if isinstance(last_seen, str):
+                    last_seen = parse_date(last_seen)
+
+        # Forth priority is first adapter that has the value
+        if last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == '':
+            val = self._last_resort_preferred_field(device_data, specific_property, sub_property)
+
+        if remove_domain_from_preferred_hostname:
+            if preferred_field == 'specific_data.data.hostname_preferred':
+                if isinstance(val, list):
+                    val = [str(x).upper().split('.')[0] for x in val]
+                val = val.upper().split('.')[0]
+        if isinstance(val, list) and any(isinstance(x, list) for x in val):
+            val = list(itertools.chain.from_iterable(val))
+        if val:
+            self.devices_db.update_one(
+                {
+                    AXONIUS_INTERNAL_ID: device_id
+                },
+                {
+                    '$set': {
+                        preferred_field.replace('specific_data.data', PREFERRED_FIELDS_LABEL): val
+                    }
+                }
+            )
+
+    def update_preferred_fields_values(self, device_ids):
+        if not device_ids:
+            device_ids = self.devices_db.find({}, projection=[AXONIUS_INTERNAL_ID])
+        for device_id in device_ids:
+            if isinstance(device_id, dict):
+                device_id = device_id.get(AXONIUS_INTERNAL_ID)
+            device_data = self.devices_db.find_one({AXONIUS_INTERNAL_ID: device_id})
+            for preferred_field in PREFERRED_FIELDS:
+                specific_property = preferred_field[SPECIFIC_DATA_PREFIX_LENGTH:].replace(PREFERRED_SUFFIX, '')
+                if specific_property.find('.') != -1:
+                    specific_property, sub_property = specific_property.split('.')
+                else:
+                    sub_property = None
+                try:
+                    self.update_device_preferred_fields(device_id,
+                                                        preferred_field,
+                                                        device_data,
+                                                        specific_property,
+                                                        sub_property)
+                except Exception as e:
+                    logger.exception(f'Problem in creating preferred fields: {e}')
+                    continue
+
     # pylint: disable=inconsistent-return-statements
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         if job_name == 'clean_db':
@@ -415,6 +651,12 @@ class AggregatorService(Triggerable, PluginBase):
             return
         if job_name == 'fetch_filtered_adapters':
             adapters = self.get_adapters_data(post_json, job_name)
+        elif job_name == 'calculate_preferred_fields':
+            try:
+                self.update_preferred_fields_values(post_json.get('device_ids', []) if post_json else [])
+            except Exception:
+                logger.error('Couldn\'t recalculate preferred fields values', exc_info=True)
+            return
         elif job_name == 'save_history':
             now = datetime.utcnow()
             return {
@@ -435,10 +677,10 @@ class AggregatorService(Triggerable, PluginBase):
         return self._fetch_data_from_adapters(adapters, run_identifier)
 
     def _request_clean_db_from_adapter(self, adapter_unique_list):
-        '''
+        """
         calls /clean_devices on the given adapter unique name
         :return:
-        '''
+        """
         for plugin_unique_name in adapter_unique_list:
             if self.devices_db.count_documents({f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name}, limit=1) or \
                     self.users_db.count_documents({f'adapters.{PLUGIN_UNIQUE_NAME}': plugin_unique_name}, limit=1):

@@ -21,10 +21,10 @@ from pymongo.errors import ExecutionTimeout
 from bson import ObjectId
 from flask import request, session, g, Response
 
+from axonius.consts.adapter_consts import PREFERRED_FIELDS as PREFERRED_FIELDS_LABEL
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFAULT_TIME_FORMAT, MAX_SORTED_FIELDS, \
-    MIN_SORTED_FIELDS, PREFERRED_FIELDS, MAX_DAYS_SINCE_LAST_SEEN, SPECIFIC_DATA_PREFIX_LENGTH, \
-    ADAPTER_CONNECTIONS_FIELD, DISTINCT_ADAPTERS_COUNT_FIELD, CORRELATION_REASONS_FIELD, CORRELATION_REASONS, \
-    HAS_NOTES, HAS_NOTES_TITLE, SortType, SortOrder
+    MIN_SORTED_FIELDS, ADAPTER_CONNECTIONS_FIELD, DISTINCT_ADAPTERS_COUNT_FIELD, CORRELATION_REASONS_FIELD, \
+    CORRELATION_REASONS, HAS_NOTES, HAS_NOTES_TITLE, SortType, SortOrder, PREFERRED_FIELDS
 
 from axonius.entities import EntitiesNamespace
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
@@ -32,8 +32,7 @@ from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
-from axonius.utils.axonius_query_language import parse_filter, parse_filter_non_entities, PREFERRED_SUFFIX
-from axonius.utils.datetime import parse_date
+from axonius.utils.axonius_query_language import parse_filter, parse_filter_non_entities
 from axonius.utils.revving_cache import rev_cached_entity_type
 from axonius.utils.threading import singlethreaded
 from axonius.utils.dict_utils import is_filter_in_value, make_hash
@@ -54,7 +53,7 @@ PAGINATION_LIMIT_MAX = 2000
 FIELDS_TO_PROJECT = ['internal_axon_id', 'adapters.pending_delete', f'adapters.{PLUGIN_NAME}',
                      'tags.type', 'tags.name', f'tags.{PLUGIN_NAME}',
                      'accurate_for_datetime', ADAPTERS_LIST_LENGTH,
-                     'labels', 'adapters.client_used']
+                     'labels', 'adapters.client_used', PREFERRED_FIELDS_LABEL]
 
 FIELDS_TO_PROJECT_FOR_GUI = ['internal_axon_id', 'adapters', 'unique_adapter_names', 'labels', ADAPTERS_LIST_LENGTH]
 
@@ -795,6 +794,13 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
         # Return no value for this path
         return None
 
+    if field_path in PREFERRED_FIELDS and entity_data.get(PREFERRED_FIELDS_LABEL):
+        field_value = entity_data.get(PREFERRED_FIELDS_LABEL, {})
+        field_parts = field_path[len('specific_data.data.'):].split('.')
+        for field_part in field_parts:
+            field_value = field_value.get(field_part, {})
+        return field_value if not (isinstance(field_value, list) and len(field_value) == 1
+                                   and isinstance(field_value[0], list)) else field_value[0]
     if specific_adapter is not None and specific_adapter in entity_data['adapters_data']:
         try:
             # Check if the field is a complicated field (has dot in it) and if so takes only the desired value
@@ -935,14 +941,6 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
     :param add_assoc_adapter: whether to return the associated adapter
     :return:                Mapping of a field path to it's value list as found in the entity_data
     """
-    remove_domain_from_preferred_hostname = False
-    try:
-        # pylint: disable=protected-access
-        remove_domain_from_preferred_hostname = PluginBase.Instance._remove_domain_from_preferred_hostname or False
-        # pylint: enable=protected-access
-    except Exception:
-        remove_domain_from_preferred_hostname = False
-
     def _extract_name(field_path):
         """
         Try to match given field path with the prefix of specific_data, meaning it is a generic field
@@ -963,12 +961,8 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
 
     field_to_value = {}
     specific_adapters_values = []
-    specific_adapter_name = ''
     excluded_adapters = excluded_adapters or {}
     for field_path in fields:
-        if field_path in PREFERRED_FIELDS:
-            continue
-
         entity_data = dict(entity_datas) if isinstance(entity_datas, dict) else entity_datas
 
         if excluded_adapters and field_path in excluded_adapters:
@@ -1026,177 +1020,6 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                     field_detail = None
             field_details.append(field_detail)
         field_to_value[f'{field_path}_details'] = field_details
-
-    # The next block handles columns with _preferred suffix
-    # The priority order is according to here https://axonius.atlassian.net/browse/AX-6238
-    # pylint: disable=too-many-nested-blocks
-    for preferred_field in PREFERRED_FIELDS:
-        if preferred_field not in fields:
-            continue
-        else:
-            specific_property = preferred_field[SPECIFIC_DATA_PREFIX_LENGTH:].replace(PREFERRED_SUFFIX, '')
-            if specific_property.find('.') != -1:
-                specific_property, sub_property = specific_property.split('.')
-            else:
-                sub_property = None
-            val, last_seen, sub_property_val = '', datetime(1970, 1, 1, 0, 0, 0), None
-        try:
-            for adapter in entity_datas['adapters_data']:
-                if not adapter.endswith('_adapter'):
-                    continue
-                for _adapter in entity_datas['adapters_data'][adapter]:
-                    # IP addresses we take from cloud providers no matter what (AX-7875)
-                    if specific_property == 'network_interfaces' and sub_property == 'ips' and \
-                            'adapter_properties' in _adapter and 'Cloud_Provider' in _adapter['adapter_properties']:
-                        try:
-                            sub_property_val = _adapter[specific_property][sub_property] if \
-                                isinstance(_adapter[specific_property], dict) else \
-                                [x[sub_property] for x in _adapter[specific_property] if sub_property in x]
-                        # Field not in result
-                        except Exception:
-                            sub_property_val = None
-                    if sub_property_val:
-                        val = sub_property_val
-                        last_seen = datetime.now()
-
-                    # First priority is the latest seen Agent adapter
-                    # pylint: disable=too-many-boolean-expressions
-                    if 'adapter_properties' in _adapter and 'Agent' in _adapter['adapter_properties'] and 'last_seen' \
-                            in _adapter and isinstance(_adapter['last_seen'], datetime) \
-                            and _adapter['last_seen'] > last_seen and val != '':
-                        if sub_property is not None and specific_property in _adapter:
-                            try:
-                                sub_property_val = _adapter[specific_property][sub_property] if \
-                                    isinstance(_adapter[specific_property], dict) else \
-                                    [x[sub_property] for x in _adapter[specific_property] if sub_property in x]
-                            # Field not in result
-                            except Exception:
-                                sub_property_val = None
-                        elif specific_property in _adapter and \
-                                (sub_property_val != [] and sub_property_val is not None):
-                            val = sub_property_val
-                            last_seen = _adapter['last_seen'] if isinstance(_adapter['last_seen'], datetime) else \
-                                parse_date(_adapter['last_seen'])
-                        elif specific_property in _adapter and not isinstance(sub_property, str):
-                            val = _adapter[specific_property]
-                            last_seen = _adapter['last_seen'] if isinstance(_adapter['last_seen'], datetime) else \
-                                parse_date(_adapter['last_seen'])
-
-                    # Second priority is active-directory data
-                    # pylint: disable=too-many-boolean-expressions
-                    if (val != '' and last_seen is not None and isinstance(last_seen, datetime) and
-                            (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
-                            (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
-                        val_changed_by_ad = False
-                        try:
-                            for tmp_val, tmp_last_seen in \
-                                    find_entity_field(entity_datas,
-                                                      specific_property,
-                                                      specific_adapter='active_directory_adapter'):
-                                if tmp_val is None and tmp_last_seen is None:
-                                    break
-                                if tmp_last_seen < last_seen:
-                                    continue
-                                if tmp_val is not None and sub_property is not None:
-                                    try:
-                                        sub_property_val = tmp_val[sub_property] if isinstance(tmp_val, dict) else \
-                                            [x[sub_property] for x in tmp_val if sub_property in x]
-                                    # Field not in result
-                                    except Exception:
-                                        sub_property_val = None
-                                if tmp_val is not None and isinstance(sub_property, str) and \
-                                        (sub_property_val is not None and sub_property_val != []):
-                                    val = sub_property_val
-                                    last_seen = tmp_last_seen if isinstance(tmp_last_seen, datetime) else \
-                                        parse_date(tmp_last_seen)
-                                    val_changed_by_ad = True
-                                elif tmp_val is not None and sub_property is None:
-                                    val = tmp_val
-                                    last_seen = tmp_last_seen if isinstance(tmp_last_seen, datetime) else \
-                                        parse_date(tmp_last_seen)
-                                    val_changed_by_ad = True
-                                if val == '':
-                                    last_seen = datetime(1970, 1, 1, 0, 0, 0)
-                        except TypeError:
-                            val_changed_by_ad = False
-                        finally:
-                            # AD overrides them all
-                            if val_changed_by_ad:
-                                last_seen = datetime.now()
-                                if preferred_field == 'specific_data.data.hostname_preferred' and val:
-                                    # This is happening regardless of remove_domain_from_preferred_hostname. we remove
-                                    # the domain in case of AD always.
-                                    val = val.upper().split('.')[0]
-
-                    # Third priority is the latest seen Assets adapter
-                    if (val != '' and last_seen != datetime(1970, 1, 1, 0, 0, 0) and isinstance(last_seen, datetime) and
-                            (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
-                            (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
-                        if last_seen is None:
-                            last_seen = datetime(1970, 1, 1, 0, 0, 0)
-                        if 'adapter_properties' in _adapter and 'Assets' in _adapter['adapter_properties']:
-                            if sub_property is not None and specific_property in _adapter:
-                                try:
-                                    sub_property_val = _adapter[specific_property][sub_property] if \
-                                        isinstance(_adapter[specific_property], dict) else \
-                                        [x[sub_property] for x in _adapter[specific_property] if sub_property in x]
-                                # Field not in result
-                                except Exception:
-                                    sub_property_val = None
-                            if specific_property in _adapter and \
-                                    (sub_property_val != [] and sub_property_val is not None):
-                                val = sub_property_val
-                                last_seen = _adapter['last_seen'] if 'last_seen' in _adapter else datetime.now()
-                            elif specific_property in _adapter and not isinstance(sub_property, str):
-                                val = _adapter[specific_property]
-                                last_seen = _adapter['last_seen'] if 'last_seen' in _adapter else datetime.now()
-
-            # Forth priority is first adapter that has the value
-            if last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == '':
-                for adapter in entity_datas['adapters_data']:
-                    if not adapter.endswith('_adapter'):
-                        continue
-                    for _adapter in entity_datas['adapters_data'][adapter]:
-                        if last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == '' and \
-                                sub_property is not None and specific_property in _adapter:
-                            try:
-                                sub_property_val = _adapter[specific_property][sub_property] if \
-                                    isinstance(_adapter[specific_property], dict) else \
-                                    [x[sub_property] for x in _adapter[specific_property] if sub_property in x]
-                            # Field not in result
-                            except Exception:
-                                sub_property_val = None
-                        if val != '':
-                            break
-                        elif specific_property in _adapter and \
-                                (sub_property_val != [] and sub_property_val is not None):
-                            val = sub_property_val
-                            break
-                        elif specific_property in _adapter and not isinstance(sub_property, str):
-                            val = _adapter[specific_property]
-                            break
-                        else:
-                            val = ''
-
-            if isinstance(val, list) and isinstance(val[0], list):
-                val = val[0]
-            elif not isinstance(val, list):
-                val = [val]
-
-            if field_filters and field_filters.get(preferred_field):
-                val = [item for item in val if is_filter_in_value(item, field_filters[preferred_field])]
-
-            field_to_value[preferred_field] = val
-
-            if remove_domain_from_preferred_hostname:
-                if preferred_field == 'specific_data.data.hostname_preferred' and field_to_value[preferred_field]:
-                    field_to_value[preferred_field] = [
-                        str(x).upper().split('.')[0] for x in field_to_value[preferred_field]
-                    ]
-
-        except Exception as e:
-            logger.exception(f'Problem in merging preferred fields: {e}')
-            continue
 
     # in case the entity has meta data added like client_used
     if not include_details:
@@ -1452,7 +1275,30 @@ def entity_fields(entity_type: EntityType):
         {
             'name': 'specific_data.data.os.type_preferred',
             'title': 'Preferred OS Type',
-            'type': 'string'
+            'type': 'string',
+            'enum': [
+                'Windows',
+                'Linux',
+                'OS X',
+                'iOS',
+                'AirOS',
+                'Android',
+                'FreeBSD',
+                'VMWare',
+                'Cisco',
+                'Mikrotik',
+                'VxWorks',
+                'PanOS',
+                'F5 Networks Big-IP',
+                'Solaris',
+                'AIX',
+                'Printer',
+                'PlayStation',
+                'Check Point',
+                'Arista',
+                'Netscaler',
+                'Chrome OS'
+            ],
         },
         {
             'name': 'specific_data.data.os.distribution_preferred',
@@ -1467,7 +1313,11 @@ def entity_fields(entity_type: EntityType):
         {
             'name': 'specific_data.data.os.bitness_preferred',
             'title': 'Preferred OS Bitness',
-            'type': 'string'
+            'type': 'integer',
+            'enum': [
+                32,
+                64
+            ],
         },
         {
             'name': 'specific_data.data.os.kernel_version_preferred',
@@ -1487,7 +1337,13 @@ def entity_fields(entity_type: EntityType):
         {
             'name': 'specific_data.data.network_interfaces.ips_preferred',
             'title': 'Preferred IPs',
-            'type': 'string'
+            'filterable': True,
+            'format': 'ip_preferred',
+            'items': {
+                'type': 'string',
+                'format': 'ip_preferred'
+            },
+            'type': 'array'
         },
         {
             'name': 'specific_data.data.device_model_preferred',
@@ -1509,7 +1365,10 @@ def entity_fields(entity_type: EntityType):
 
     generic_in_fields = [adapters_json, unique_adapters_json, axon_id_json] \
         + flatten_fields(generic_fields, 'specific_data.data', ['scanner']) \
-        + [tags_json] + preferred_json + correlation_reasons_json + has_notes_json
+        + [tags_json] + correlation_reasons_json + has_notes_json
+
+    if entity_type == EntityType.Devices:
+        generic_in_fields += preferred_json
 
     generic_in_fields = [set_field_filterable(field) for field in generic_in_fields]
 

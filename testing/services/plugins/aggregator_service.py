@@ -62,6 +62,13 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
         for entity_type in EntityType:
             create_capped_collection(self._historical_entity_views_db_map[entity_type], proper_capped_size)
 
+    def update_preferred_fields(self):
+        response = requests.post(
+            self.req_url + '/trigger/calculate_preferred_fields?blocking=False', headers={API_KEY_HEADER: self.api_key})
+        assert response.status_code == 200, f'Error in response: {str(response.status_code)}, ' \
+                                            f'{str(response.content)}'
+        return response
+
     @db_migration(raise_on_failure=False)
     def _update_schema_version_1(self):
         # moved from actual views to a collection that is constantly rebuilt

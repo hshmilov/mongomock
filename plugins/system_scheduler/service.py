@@ -144,6 +144,16 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             'default': ThreadPoolExecutorApscheduler(1)
         })
 
+        self.__run_preferred_fields_calculation = LoggedBackgroundScheduler(executors={
+            'default': ThreadPoolExecutorApscheduler(1)
+        })
+        self.__run_preferred_fields_calculation.add_job(func=self.__run_preferred_field_calculations,
+                                                        trigger=IntervalTrigger(
+                                                            hours=self._calculate_preferred_fields_interval),
+                                                        next_run_time=datetime.now(),
+                                                        max_instances=1)
+        self.__run_preferred_fields_calculation.start()
+
         if self._update_adapters_clients_periodically:
             self.__adapter_clients_status.add_job(func=self.__check_adapter_clients_status,
                                                   trigger=IntervalTrigger(
@@ -849,6 +859,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     with self.__correlation_lock:
                         logger.info(f'Other correlation has finished')
                 self._request_gui_dashboard_cache_clear()
+                self._trigger_remote_plugin(AGGREGATOR_PLUGIN_NAME, 'calculate_preferred_fields', blocking=True)
             except Exception:
                 logger.error(f'Failed running correlation phase', exc_info=True)
 
@@ -1295,6 +1306,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             self._run_cleaning_phase([_adapter[PLUGIN_UNIQUE_NAME]])
             self._trigger_remote_plugin(STATIC_CORRELATOR_PLUGIN_NAME)
             self._trigger_remote_plugin(STATIC_USERS_CORRELATOR_PLUGIN_NAME)
+            self._trigger_remote_plugin(AGGREGATOR_PLUGIN_NAME, 'calculate_preferred_fields', blocking=True)
             self._request_gui_dashboard_cache_clear()
 
         def connection_custom_discovery_inserted_to_db(*args, **kwargs):
@@ -1414,6 +1426,9 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     }
             except Exception:
                 logger.exception(f'Error checking enforcement "{enforcement.get("name", "unknown")}"')
+
+    def __run_preferred_field_calculations(self):
+        self._trigger_remote_plugin(AGGREGATOR_PLUGIN_NAME, 'calculate_preferred_fields', blocking=True)
 
     def __run_triggered_enforcements(self):
         enforcements_to_run = list(self.get_enforcements_to_run())

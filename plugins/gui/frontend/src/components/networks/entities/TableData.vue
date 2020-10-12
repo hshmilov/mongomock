@@ -173,8 +173,7 @@ export default {
       return this.getFilteredAdapters.length;
     },
     showExpand() {
-      return (this.hoverRow || this.expandData) && this.adaptersLength > 1 && this.fieldName.includes('specific_data')
-      && !this.fieldName.includes('_preferred') && !_isEmpty(this.data[this.fieldName]);
+      return (this.hoverRow || this.expandData) && this.adaptersLength > 1 && this.fieldName.includes('specific_data') && !_isEmpty(this.data[this.fieldName]);
     },
     adaptersList() {
       return this.getFilteredAdapters.map((adapter) => [adapter]);

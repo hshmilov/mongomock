@@ -2,6 +2,8 @@ from axonius.devices.dns_resolvable import DNSResolvableDevice
 
 ADAPTER_PLUGIN_TYPE = 'Adapter'
 IGNORE_DEVICE = 'IgnoreDevice'
+AXONIUS_INTERNAL_ID = 'internal_axon_id'
+PREFERRED_FIELDS = 'preferred_fields'
 
 # Active directory adapter
 DNS_RESOLVE_STATUS = DNSResolvableDevice.dns_resolve_status.name
