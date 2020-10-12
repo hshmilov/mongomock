@@ -23,6 +23,20 @@ input[type='text'], input[type='password'], input[type='number'] {
 
 // AModal
 .ant-modal-root {
+  &:not(.ant-modal-confirm) {
+    .ant-modal-wrap {
+      .ant-modal {
+        .ant-modal-body {
+          padding: 0 24px;
+        }
+
+        .ant-modal-footer {
+          border-top: unset;
+          padding: 10px 24px;
+        }
+      }
+    }
+  }
   .ant-modal-mask {
     z-index: 1001;
   }
@@ -44,17 +58,6 @@ input[type='text'], input[type='password'], input[type='number'] {
           font-weight: normal;
           font-size: 18px;
           color: $theme-black;
-        }
-      }
-
-      &:not(.ant-modal-confirm) {
-        .ant-modal-body {
-          padding: 0 24px;
-        }
-
-        .ant-modal-footer {
-          border-top: unset;
-          padding: 10px 24px;
         }
       }
     }
