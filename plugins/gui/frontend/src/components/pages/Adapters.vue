@@ -39,10 +39,10 @@
               Name
             </th>
             <th class="row-data">
-              Description
+              Connection Status
             </th>
             <th class="row-data">
-              Connection Status
+              Description
             </th>
           </tr>
         </thead>
@@ -68,11 +68,6 @@
                 class="adapter-title"
                 :logo="`adapters/${item.id}`"
               >{{ item.title }}</XTitle>
-            </td>
-            <td class="row-data description">
-              <div class="content">
-                {{ item.description }}
-              </div>
             </td>
             <td class="row-data status">
               <div class="summary">
@@ -115,6 +110,11 @@
                     {{ item.inactiveClients }}
                   </span>
                 </div>
+              </div>
+            </td>
+            <td class="row-data description">
+              <div class="content">
+                {{ item.description }}
               </div>
             </td>
           </tr>
