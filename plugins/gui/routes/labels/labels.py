@@ -225,7 +225,9 @@ class Labels:
             'audit.adapters.clean': 'Cleanup',
             'audit.adapters.clean.template': 'Removed {count} {asset} from adapter \'{adapter}\'',
             'audit.adapters.post': 'Edit Advanced Settings',
-            'audit.adapters.post.template': 'Edited {config_name} for adapter {adapter_name}',
+            'audit.adapters.post.template': 'Edited {config_name} for adapter {adapter_name}'
+                                            ' Old configuration:{current_settings}.'
+                                            ' New configuration:{updated_settings}',
 
             'audit.adapters.<adapter_name>.connections': 'Adapters',
             'audit.adapters.<adapter_name>.connections.put': 'Add Connection',

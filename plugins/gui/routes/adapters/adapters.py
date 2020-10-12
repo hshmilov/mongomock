@@ -16,10 +16,11 @@ from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME, CONNECT_VIA_TUNNEL,
                                           DISCOVERY_CONFIG_NAME, CONNECTION_DISCOVERY_SCHEMA_NAME,
                                           AGGREGATOR_PLUGIN_NAME)
+from axonius.logging.audit_helper import AuditCategory
 from axonius.plugin_base import return_error
 from axonius.utils.gui_helpers import return_api_format
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
-
+from axonius.modules.plugin_settings import Consts
 from axonius.utils.revving_cache import rev_cached
 from axonius.utils.threading import run_and_forget
 from gui.logic.db_helpers import beautify_db_entry
@@ -466,9 +467,12 @@ class Adapters(Connections):
         config = clear_passwords_fields(config, schema)
         return config, schema
 
-    @gui_route_logged_in('<adapter_name>/<config_name>', methods=['POST'], enforce_trial=False,
-                         activity_params=['adapter_name', 'config_name'])
+    @gui_route_logged_in('<adapter_name>/<config_name>', methods=['POST'], enforce_trial=False, skip_activity=True)
     def update_adapter(self, adapter_name, config_name):
+
+        config_from_db = self.plugins.get_plugin_settings(adapter_name).configurable_configs[config_name]
+        config_to_set = request.get_json(silent=True)
+
         response = self._save_plugin_config(adapter_name, config_name)
         self._adapter_advanced_config_schema.clean_cache()
         if response != '':
@@ -476,6 +480,10 @@ class Adapters(Connections):
 
         config_schema = self.plugins.get_plugin_settings(adapter_name).config_schemas[config_name]
         self._get_adapter_connections_data.clean_cache()
+
+        if config_from_db and config_to_set and config_schema:
+            self._audit_adapter_settings(adapter_name, config_schema, config_name, config_from_db, config_to_set)
+
         return json.dumps({
             'config_name': config_schema.get('pretty_name', '')
         }) if config_schema else ''
@@ -536,3 +544,17 @@ class Adapters(Connections):
             plugin_name = plugin_unique_name
 
         return plugin_name
+
+    def _audit_adapter_settings(self, adapter_name, config_schema, config_name, config_from_db, config_to_set):
+        try:
+
+            self.log_activity_user_default(AuditCategory.Adapters.value, 'post', {
+                'adapter_name': self._get_plugin_name(adapter_name),
+                Consts.ConfigName:  config_schema.get('pretty_name', ''),
+                'current_settings': json.dumps(config_from_db if config_name == DISCOVERY_CONFIG_NAME else
+                                               self._audit_remove_password_fields(config_schema, config_from_db)) or '',
+                'updated_settings': json.dumps(config_from_db if config_name == DISCOVERY_CONFIG_NAME else
+                                               self._audit_remove_password_fields(config_schema, config_to_set)) or ''
+            })
+        except Exception:
+            logger.exception(f'Adapter {adapter_name} failure to audit advanced settingd for config name {config_name}')
