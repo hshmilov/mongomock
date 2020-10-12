@@ -22,6 +22,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
 ARTIFACT_FOLDER = os.path.join(CURRENT_DIR, 'artifacts')
 CPE2CSV_BINARY_PATH = os.path.join(CURRENT_DIR, '..', 'cpe2cve')
+MAX_RUNTIME_CPE2CVE = 20 * 60
 TMP_SH_FILE_PATH = '/tmp/cve_finder.sh'
 CVE_FINDER_SH_FILE_TEMPLATE = '''#!/bin/bash
 {cpe2cve_path} -d ' ' -d2 , -o ',' -o2 , -cpe 2 -e 2 -matches 0 -cve 2 {artifacts_path}/*.json.gz << EOF
@@ -236,7 +237,7 @@ class NVDSearcher:
                                                             artifacts_path=os.path.abspath(ARTIFACT_FOLDER),
                                                             cpes='\n'.join(cpes)))
             os.chmod(TMP_SH_FILE_PATH, 0o777)
-            output = subprocess.check_output(TMP_SH_FILE_PATH).decode('utf-8')
+            output = subprocess.check_output(TMP_SH_FILE_PATH, timeout=MAX_RUNTIME_CPE2CVE).decode('utf-8')
             os.remove(TMP_SH_FILE_PATH)
             csv_reader = csv.reader(StringIO(output))
             software_to_cve = defaultdict(list)
@@ -301,7 +302,7 @@ class NVDSearcher:
                 encode('ascii', 'ignore').decode('utf-8')
             cmd_to_run = shlex.split(f'/bin/sh -c "echo {generated_cpe} | '
                                      f'{CPE2CSV_BINARY_PATH} -cpe 1 -e 1 -cve 1 {ARTIFACT_FOLDER}/*.json.gz"')
-            output = subprocess.check_output(cmd_to_run).decode('utf-8')
+            output = subprocess.check_output(cmd_to_run, timeout=MAX_RUNTIME_CPE2CVE).decode('utf-8')
             return [self.__cve_db[cve] for cve in output.strip().split('\n')] if output else []
 
 
