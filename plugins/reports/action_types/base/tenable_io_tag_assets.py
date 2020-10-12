@@ -64,6 +64,7 @@ class TenableIoTagAssets(ActionTypeBase):
             'required': [
                 'verify_ssl',
                 'tags_names',
+                'use_adapter',
                 'action'
             ],
             'type': 'array'

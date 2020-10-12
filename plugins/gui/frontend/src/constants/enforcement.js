@@ -72,10 +72,10 @@ export const actionsMeta = {
     title: 'Unisolate in Cybereason Deep Detect & Respond',
   },
   limacharlie_isolate: {
-    title: 'Isolate in Limacharlie',
+    title: 'Isolate in LimaCharlie',
   },
   limacharlie_unisolate: {
-    title: 'Unisolate in Limacharlie',
+    title: 'Unisolate in LimaCharlie',
   },
   cybereason_tag: {
     title: 'Tag in Cybereason Deep Detect & Respond',
