@@ -153,15 +153,38 @@ class Login:
                                              or 'diag-l.axonius.com' in request.referrer
                                              or 'insider.axonius.lan' in request.referrer):
             return
+        remote_ip = self.get_remote_ip()
+        if remote_ip:
+            self.log_activity(AuditCategory.UserSession, AuditAction.FailureFrom, {
+                'user_name': user_name,
+                'ip': remote_ip
+            })
+        else:
+            self.log_activity(AuditCategory.UserSession, AuditAction.Failure, {
+                'user_name': user_name,
+            })
 
-        self.log_activity(AuditCategory.UserSession, AuditAction.Failure, {
-            'user_name': user_name
-        })
+    @staticmethod
+    def get_remote_ip() -> str:
+        try:
+            return request.environ.get('HTTP_X_REAL_IP') or \
+                request.environ.get('HTTP_X_FORWARDED_FOR') or \
+                request.remote_addr
+        except Exception:
+            logger.exception('Error while getting remote ip')
+        return ''
 
     def _log_activity_login(self):
-        self.log_activity_user(AuditCategory.UserSession, AuditAction.Login, {
-            'status': 'successful'
-        })
+        remote_ip = self.get_remote_ip()
+        if remote_ip:
+            self.log_activity_user(AuditCategory.UserSession, AuditAction.LoginFrom, {
+                'status': 'successful',
+                'ip': remote_ip
+            })
+        else:
+            self.log_activity_user(AuditCategory.UserSession, AuditAction.Login, {
+                'status': 'successful',
+            })
 
     def _log_activity_login_password_expiration(self, user_name):
         self.log_activity(AuditCategory.UserSession, AuditAction.PasswordExpired, {

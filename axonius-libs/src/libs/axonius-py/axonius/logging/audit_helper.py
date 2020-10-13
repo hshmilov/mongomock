@@ -22,6 +22,7 @@ class AuditCategory(Enum):
 
 class AuditAction(Enum):
     Login = 'login'
+    LoginFrom = 'login_from'
     Logout = 'logout'
     Start = 'start'
     Post = 'post'
@@ -29,6 +30,7 @@ class AuditAction(Enum):
     StartPhase = 'start_phase'
     CompletePhase = 'complete_phase'
     Failure = 'failure'
+    FailureFrom = 'failure_from'
     Fetch = 'fetch'
     Clean = 'clean'
     Trigger = 'trigger'
