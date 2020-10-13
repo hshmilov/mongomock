@@ -1,4 +1,6 @@
 # pylint: disable=too-many-lines
+import base64
+import functools
 import logging
 import threading
 import time
@@ -7,7 +9,7 @@ from concurrent.futures import (ALL_COMPLETED, ThreadPoolExecutor,
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Set, Dict, Iterator, List, Tuple
+from typing import Set, Dict, List
 from dateutil import tz
 import requests
 
@@ -17,8 +19,7 @@ from apscheduler.executors.pool import \
 from apscheduler.triggers.base import BaseTrigger
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
-from flask import jsonify
-from promise import Promise
+from flask import jsonify, request
 
 from axonius.adapter_base import AdapterBase
 from axonius.background_scheduler import LoggedBackgroundScheduler
@@ -31,24 +32,20 @@ from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           REPORTS_PLUGIN_NAME,
                                           STATIC_ANALYSIS_PLUGIN_NAME,
                                           STATIC_CORRELATOR_PLUGIN_NAME, CLIENTS_COLLECTION,
-                                          GUI_PLUGIN_NAME, DISCOVERY_CONFIG_NAME,
-                                          ENABLE_CUSTOM_DISCOVERY, DISCOVERY_REPEAT_TYPE, DISCOVERY_REPEAT_ON,
-                                          DISCOVERY_RESEARCH_DATE_TIME, DISCOVERY_REPEAT_EVERY,
+                                          GUI_PLUGIN_NAME,
+                                          ENABLE_CUSTOM_DISCOVERY, DISCOVERY_REPEAT_ON,
+                                          DISCOVERY_RESEARCH_DATE_TIME,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
-                                          AGGREGATOR_PLUGIN_NAME, DISCOVERY_REPEAT_RATE, CONNECTION_DISCOVERY,
-                                          ADAPTER_DISCOVERY, DISCOVERY_REPEAT_ON_WEEKDAYS,
-                                          DISCOVERY_REPEAT_EVERY_DAY, HISTORY_REPEAT_ON, HISTORY_REPEAT_TYPE,
+                                          AGGREGATOR_PLUGIN_NAME, CONNECTION_DISCOVERY,
+                                          HISTORY_REPEAT_ON, HISTORY_REPEAT_TYPE,
                                           HISTORY_REPEAT_EVERY, HISTORY_REPEAT_WEEKDAYS, HISTORY_REPEAT_RECURRENCE,
                                           HISTORY_REPEAT_EVERY_LIFECYCLE, WEEKDAYS, CLIENT_ACTIVE)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import (SchedulerState, Phases, ResearchPhases,
                                              CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL, TUNNEL_STATUS_CHECK_INTERVAL,
-                                             CUSTOM_DISCOVERY_CHECK_INTERVAL, CUSTOM_DISCOVERY_THRESHOLD,
-                                             RUN_ENFORCEMENT_CHECK_INTERVAL,
                                              RESEARCH_THREAD_ID, CORRELATION_SCHEDULER_THREAD_ID,
-                                             SCHEDULER_CONFIG_NAME, SCHEDULER_SAVE_HISTORY_CONFIG_NAME,
-                                             RUN_ENFORCEMENT_CHECK_THRESHOLD)
+                                             SCHEDULER_CONFIG_NAME, SCHEDULER_SAVE_HISTORY_CONFIG_NAME)
 from axonius.consts.report_consts import TRIGGERS_FIELD
 from axonius.entities import EntityType
 from axonius.logging.audit_helper import (AuditCategory, AuditAction)
@@ -59,13 +56,15 @@ from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.plugin_exceptions import PhaseExecutionException
 from axonius.saas.input_params import read_saas_input_params
 from axonius.thread_stopper import StopThreadException
-from axonius.types.enforcement_classes import TriggerPeriod, Trigger
 from axonius.utils.backup import backup_to_s3, backup_to_external
-from axonius.utils.datetime import time_diff, days_diff
 from axonius.utils.files import get_local_config_file
 from axonius.utils.root_master.root_master import root_master_restore_from_s3, \
     root_master_restore_from_smb, root_master_restore_from_azure, DISK_SPACE_FREE_GB_MANDATORY, get_central_core_module
 from axonius.utils.host_utils import get_free_disk_space, check_installer_locks
+from system_scheduler.custom_schedulers.adapter_connections_scheduler import CustomConnectionsScheduler
+from system_scheduler.custom_schedulers.adapter_scheduler import CustomAdapterScheduler
+from system_scheduler.custom_schedulers.discovery_scheduler import DiscoveryCustomScheduler
+from system_scheduler.custom_schedulers.encforcements_scheduler import EnforcementsCustomScheduler
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -122,24 +121,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                                    max_instances=1)
             self.__tunnel_status_scheduler.start()
 
-        self.__custom_discovery_scheduler = LoggedBackgroundScheduler(executors={
-            'default': ThreadPoolExecutorApscheduler(1)
-        })
-        self.__custom_discovery_scheduler.add_job(func=self.__run_custom_discovery_adapters,
-                                                  trigger=IntervalTrigger(seconds=CUSTOM_DISCOVERY_CHECK_INTERVAL),
-                                                  next_run_time=datetime.now(),
-                                                  max_instances=1)
-        self.__custom_discovery_scheduler.start()
-
-        self.__run_enforcements_scheduler = LoggedBackgroundScheduler(executors={
-            'default': ThreadPoolExecutorApscheduler(1)
-        })
-        self.__run_enforcements_scheduler.add_job(func=self.__run_triggered_enforcements,
-                                                  trigger=IntervalTrigger(seconds=RUN_ENFORCEMENT_CHECK_INTERVAL),
-                                                  next_run_time=datetime.now(),
-                                                  max_instances=1)
-        self.__run_enforcements_scheduler.start()
-
         self.__adapter_clients_status = LoggedBackgroundScheduler(executors={
             'default': ThreadPoolExecutorApscheduler(1)
         })
@@ -169,6 +150,34 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         self._correlation_scheduler.start()
         self.configure_correlation_scheduler()
         self.system_scheduler_plugin_settings = self._get_collection('plugin_settings')
+
+        self.custom_adapter_scheduler = None
+        self.custom_connection_scheduler = None
+        self.custom_enforcements_scheduler = None
+        self.init_custom_schedulers()
+
+    def init_custom_schedulers(self):
+        try:
+            self.custom_adapter_scheduler = CustomAdapterScheduler(db=self.mongo_client)
+            self.custom_adapter_scheduler.init_adapters_custom_discovery_scheduling(
+                self.trigger_custom_discovery_adapter
+            )
+        except Exception:
+            logger.critical('Error while configuring custom adapter discovery scheduler', exc_info=True)
+        try:
+            self.custom_connection_scheduler = CustomConnectionsScheduler(db=self.mongo_client)
+            self.custom_connection_scheduler.init_connections_custom_discovery_scheduling(
+                self.trigger_custom_discovery_connection
+            )
+        except Exception:
+            logger.critical('Error while configuring custom adapter connections scheduler', exc_info=True)
+        try:
+            self.custom_enforcements_scheduler = EnforcementsCustomScheduler(db=self.mongo_client)
+            self.custom_enforcements_scheduler.init_enforcements_custom_discovery_scheduling(
+                self.trigger_custom_enforcement
+            )
+        except Exception:
+            logger.critical('Error while configuring custom enforcements schedulers', exc_info=True)
 
     def run_correlations(self):
         if self.__correlation_lock.acquire(False):
@@ -963,167 +972,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 return True
         return False
 
-    # pylint: disable=too-many-return-statements
-    @staticmethod
-    def should_run_custom_discovery(discovery_config: dict, last_discovery: datetime) -> bool:
-        """
-        Check if the given adapter/client should be triggered by the given discovery config
-        :param discovery_config: adapter custom discovery settings
-        :param last_discovery: last time the adapter/client was triggered
-        :return: True if we should trigger adapter/client fetch
-        """
-        current_time = datetime.now().time()
-
-        # Check for every X hours.
-        if discovery_config.get(DISCOVERY_REPEAT_TYPE) == DISCOVERY_REPEAT_RATE:
-            if not last_discovery:
-                return True
-
-            diff = (datetime.now() - last_discovery).seconds
-            repeat_rate = discovery_config.get(DISCOVERY_REPEAT_RATE, 12) * 3600
-            # too early
-            if diff < repeat_rate:
-                return False
-            return True
-
-        discovery_type_config = None
-        run_on_weekdays = False
-        run_repeat_every_day = False
-        if discovery_config.get(DISCOVERY_REPEAT_TYPE) == DISCOVERY_REPEAT_ON_WEEKDAYS:
-            run_on_weekdays = True
-            discovery_type_config = discovery_config.get(DISCOVERY_REPEAT_ON_WEEKDAYS)
-        elif discovery_config.get(DISCOVERY_REPEAT_TYPE) == DISCOVERY_REPEAT_EVERY_DAY:
-            run_repeat_every_day = True
-            discovery_type_config = discovery_config.get(DISCOVERY_REPEAT_EVERY_DAY)
-
-        # Check custom discovery time
-        try:
-            scheduled_custom_discovery_time = \
-                datetime.strptime(discovery_type_config.get(DISCOVERY_RESEARCH_DATE_TIME), '%H:%M').time()
-        except ValueError:
-            logger.error(f'Error parsing discovery time: {discovery_type_config.get(DISCOVERY_RESEARCH_DATE_TIME)}')
-            return False
-
-        # its too early
-        if current_time < scheduled_custom_discovery_time:
-            return False
-
-        # too late
-        if time_diff(current_time, scheduled_custom_discovery_time).seconds > CUSTOM_DISCOVERY_THRESHOLD:
-            return False
-
-        # Check for weekday
-        if run_on_weekdays:
-            today = datetime.today().strftime('%A').lower()
-            if today in discovery_type_config.get(DISCOVERY_REPEAT_ON, []):
-                if not last_discovery:
-                    return True
-                if time_diff(current_time, last_discovery.time()).seconds > RUN_ENFORCEMENT_CHECK_INTERVAL:
-                    return True
-
-        # Check for day diff
-        elif run_repeat_every_day:
-            if not last_discovery:
-                return True
-            days_since_last_discovery = datetime.today().toordinal() - last_discovery.toordinal()
-            if days_since_last_discovery >= discovery_type_config.get(DISCOVERY_REPEAT_EVERY, 1):
-                return True
-        return False
-
-    def get_custom_discovery_adapters(self) -> Iterator[Tuple[dict, List[Tuple[Tuple[Dict, bool]]]]]:
-        """
-        Get adapters that has custom discovery settings and should be triggered right now
-        :return: an iterator of Tuples, which contains the adapter, and it's clients that should be triggered
-        at this time (with custom discovery). Each client in the List, is a tuple of (Client, custom_discovery_set)
-        """
-        all_plugins_with_custom_discovery_enabled = self.plugins.get_plugin_names_with_config(
-            DISCOVERY_CONFIG_NAME,
-            {
-                f'{ADAPTER_DISCOVERY}.{ENABLE_CUSTOM_DISCOVERY}': True
-            }
-        )
-
-        all_plugins_with_custom_connection_discovery_enabled = self.plugins.get_plugin_names_with_config(
-            DISCOVERY_CONFIG_NAME,
-            {
-                f'{CONNECTION_DISCOVERY}.{ENABLE_CUSTOM_DISCOVERY}': True
-            }
-        )
-
-        def _handle_connection_discovery(_adapter: Dict, adapter_config: Dict, _plugin_settings: Dict,
-                                         _should_trigger_adapter: bool) -> Tuple[Dict, List[Dict], List[Dict]]:
-            """
-            Function to filter which of the adapter's clients should be triggered.
-            :param _adapter: the adapter object.
-            :param adapter_config: The adapter's config from core db.
-            :param _plugin_settings: the adapter's plugin_settings object. (self.plugin_settings)
-            :param _should_trigger_adapter: is the adapter should be triggered now (with its custom discovery)
-            :return: first element of the tuple is the adapter, second - a list of clients with custom discovery
-            configured and last the clients which should be triggered along with the adapter discovery configurations.
-            """
-            # remove adapter that has clients with custom discovery, so we won't trigger twice.
-            if _adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled:
-                all_plugins_with_custom_discovery_enabled.remove(_adapter[PLUGIN_NAME])
-            _clients = self.get_adapter_active_clients(_adapter[PLUGIN_UNIQUE_NAME])
-            adapter_discovery_enabled = adapter_config.get(ENABLE_CUSTOM_DISCOVERY, False)
-            custom_discovery_clients_to_trigger = []
-            adapter_discovery_clients_to_trigger = []
-
-            for client in _clients:
-                _config = client.get(CONNECTION_DISCOVERY, {})
-                connection_discovery_enabled = _config.get(ENABLE_CUSTOM_DISCOVERY, False)
-
-                if connection_discovery_enabled:
-                    last_fetch_time = client.get(LAST_FETCH_TIME)
-                    if self.should_run_custom_discovery(_config, last_fetch_time):
-                        custom_discovery_clients_to_trigger.append(client)
-                elif adapter_discovery_enabled and _should_trigger_adapter:
-                    adapter_discovery_clients_to_trigger.append(client)
-
-            # All the adapter's clients will be triggered one by one.
-            # ￿So clients with custom discovery, won't be triggered twice.
-            if custom_discovery_clients_to_trigger or adapter_discovery_clients_to_trigger:
-                yield _adapter, custom_discovery_clients_to_trigger, adapter_discovery_clients_to_trigger
-
-        def _get_adapter_discovery_config(_adapter: Dict) -> Tuple[Dict, Dict]:
-            """
-            :param _adapter: the adapter doc from db
-            :return: Tuple of adapter's plugin_settings object and config from core db.
-            """
-            _plugin_settings = self.plugins.get_plugin_settings(_adapter[PLUGIN_NAME])
-            return _plugin_settings, _plugin_settings.configurable_configs.discovery_configuration[ADAPTER_DISCOVERY]
-
-        # pylint: disable=too-many-nested-blocks
-        if all_plugins_with_custom_discovery_enabled or all_plugins_with_custom_connection_discovery_enabled:
-            for adapter in self.core_configs_collection.find():
-                if (adapter[PLUGIN_NAME] in all_plugins_with_custom_connection_discovery_enabled) or\
-                        (adapter[PLUGIN_NAME] in all_plugins_with_custom_discovery_enabled):
-                    should_trigger_adapter = False
-                    plugin_settings, config = _get_adapter_discovery_config(adapter)
-                    last_adapter_fetch_time = plugin_settings.plugin_settings_keyval[LAST_FETCH_TIME]
-                    if self.should_run_custom_discovery(config, last_adapter_fetch_time):
-                        should_trigger_adapter = True
-
-                    num_of_clients_to_trigger = 0
-                    if adapter[PLUGIN_NAME] in all_plugins_with_custom_connection_discovery_enabled:
-                        try:
-                            num_of_clients_to_trigger = self.get_adapter_clients_filtered_count(
-                                adapter[PLUGIN_UNIQUE_NAME])
-                            if num_of_clients_to_trigger > 0:
-                                yield from _handle_connection_discovery(adapter,
-                                                                        config,
-                                                                        plugin_settings,
-                                                                        should_trigger_adapter)
-                        except Exception:
-                            logger.exception(
-                                f'Error filtering adapter {adapter[PLUGIN_UNIQUE_NAME]} custom connection discovery')
-                    if num_of_clients_to_trigger == 0 and adapter[PLUGIN_NAME]\
-                            in all_plugins_with_custom_discovery_enabled and should_trigger_adapter:
-                        yield adapter, None, None
-
-        else:
-            return []
-
     def __get_all_adapters(self):
         yield from self.core_configs_collection.find(
             {
@@ -1231,226 +1079,146 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             logger.exception('Error triggering realtime adapters')
         logger.debug('Finished RT cycle')
 
-    @staticmethod
-    def __promise_callback_wrapper(f, **kwargs):
-
-        def wrapper(*args):
-            return f(*args, **kwargs)
-
-        return wrapper
-
-    def __trigger_specific_client(self, _adapter: Dict, _client: Dict, custom_discovery: bool):
-
-        def _specific_adapter_resolve_callback(*args, **kwargs):
-            _client_id = kwargs.get('client_id')
-            _custom_discovery = kwargs.get('connection_custom_discovery')
-            if _custom_discovery:
-                logger.debug(f'{_adapter[PLUGIN_UNIQUE_NAME]} has finished fetching data for'
-                             f' client: {_client_id} after custom discovery trigger.')
-            else:
-                logger.debug(f'{_adapter[PLUGIN_UNIQUE_NAME]} has finished fetching data for'
-                             f' client: {_client_id}')
-
-        def _specific_adapter_reject_callback(err, **kwargs):
-            _client_id = kwargs.get('client_id', {})
-            logger.exception(f'Failed fetching from {_client_id}', exc_info=err)
-
-        def _trigger_client(resolve, _):
-            try:
-                job_name = f'insert_to_db_{_client["_id"]}'
-                self._async_trigger_remote_plugin(_adapter[PLUGIN_UNIQUE_NAME], job_name, data={
-                    'client_name': _client['client_id'],
-                    'connection_custom_discovery': custom_discovery
-                }).then(did_fulfill=self.__promise_callback_wrapper(_specific_adapter_resolve_callback,
-                                                                    client_id=_client['client_id'],
-                                                                    connection_custom_discovery=custom_discovery),
-                        did_reject=self.__promise_callback_wrapper(_specific_adapter_reject_callback,
-                                                                   client_id=_client['client_id'])) \
-                    .then(did_fulfill=resolve, did_reject=resolve)
-            except Exception:
-                logger.exception('Error triggering custom discovery adapter client')
-                resolve()
-
-        return Promise(_trigger_client)
-
-    @staticmethod
-    def _get_clients_id(_clients):
-        if _clients:
-            return [client[CLIENT_ID] for client in _clients]
-        return None
-
-    def __run_custom_discovery_adapters(self):
-        adapters_to_call = list(self.get_custom_discovery_adapters())
-        if not adapters_to_call:
-            logger.debug('Custom Discovery: No adapters to call, not doing anything at all')
-            return
-
-        def _prepare_adapters_log(adapters):
-            return [
-                (_adapter[PLUGIN_UNIQUE_NAME],
-                 self._get_clients_id(_clients_with_discovery),
-                 self._get_clients_id(_clients_without_discovery))
-                for _adapter, _clients_with_discovery, _clients_without_discovery in adapters
-            ]
-
-        logger.info(f'Starting Custom Discovery cycle with {len(adapters_to_call)}'
-                    f' adapters: {_prepare_adapters_log(adapters_to_call)}')
-
+    def trigger_custom_discovery_adapter(self, adapter_name: str):
+        """
+        Trigger custom discovery adapter
+        :param adapter_name: adapter to trigger
+        :return:
+        """
         def inserted_to_db(*args, **kwargs):
-            _adapter = kwargs.get('adapter', {})
-            logger.debug(f'{_adapter[PLUGIN_UNIQUE_NAME]} has finished fetching data')
+            plugin_unique_name = kwargs.get('plugin_unique_name')
+            logger.debug(f'{plugin_unique_name} has finished fetching data')
             self._request_gui_dashboard_cache_clear()
             self.log_activity(AuditCategory.CustomDiscovery, AuditAction.Clean, {
-                'adapter': _adapter[PLUGIN_NAME]
+                'adapter': adapter_name
             })
-            self._run_cleaning_phase([_adapter[PLUGIN_UNIQUE_NAME]])
+            self._run_cleaning_phase([plugin_unique_name])
             self._trigger_remote_plugin(STATIC_CORRELATOR_PLUGIN_NAME)
             self._trigger_remote_plugin(STATIC_USERS_CORRELATOR_PLUGIN_NAME)
             self._trigger_remote_plugin(AGGREGATOR_PLUGIN_NAME, 'calculate_preferred_fields', blocking=True)
             self._request_gui_dashboard_cache_clear()
 
+        def rejected(err, **kwargs):
+            plugin_unique_name = kwargs.get('plugin_unique_name', {})
+            logger.exception(f'Failed fetching from {plugin_unique_name}', exc_info=err)
+
+        try:
+            if check_installer_locks(unlink=False):
+                logger.info(f'Installer is in progress, not triggering custom discovery cycle for {adapter_name}')
+                return
+
+            clients_to_trigger = {}
+            # get adapter connections without enabled custom connection discovery
+            for adapter_unique_name in DiscoveryCustomScheduler.get_plugin_unique_names(adapter_name):
+                adapter_clients = DiscoveryCustomScheduler.get_adapter_clients(adapter_unique_name)
+                for client in adapter_clients:
+                    connection_discovery = client.get(CONNECTION_DISCOVERY, {})
+                    if not connection_discovery.get(ENABLE_CUSTOM_DISCOVERY):
+                        clients_to_trigger.setdefault(adapter_unique_name, []).append(client.get('client_id'))
+
+            self.log_activity(AuditCategory.CustomDiscovery, AuditAction.Fetch, {
+                'adapter': adapter_name
+            })
+
+            for adapter_unique_name, clients in clients_to_trigger.items():
+                self._async_trigger_remote_plugin(adapter_unique_name, 'insert_to_db',
+                                                  data={'client_names': clients}) \
+                    .then(did_fulfill=functools.partial(inserted_to_db,
+                                                        plugin_unique_name=adapter_unique_name),
+                          did_reject=functools.partial(rejected, plugin_unique_name=adapter_unique_name))
+
+        except Exception:
+            logger.exception('Error triggering custom discovery adapters')
+        logger.info('Finished Custom Discovery cycle')
+
+    def is_connection_active(self, adapter_unique_name, client_id):
+        try:
+            client_data = self.mongo_client[adapter_unique_name]['clients'].find_one({
+                'client_id': client_id
+            })
+            return client_data and client_data.get(CLIENT_ACTIVE)
+        except Exception:
+            logger.exception(f'Error while checking connection status for {adapter_unique_name}:{client_id}')
+        return None
+
+    def __run_preferred_field_calculations(self):
+        self._trigger_remote_plugin(AGGREGATOR_PLUGIN_NAME, 'calculate_preferred_fields', blocking=True)
+
+    def trigger_custom_discovery_connection(self, adapter_name: str, client_id: str):
+
         def connection_custom_discovery_inserted_to_db(*args, **kwargs):
-            _adapter = kwargs.get('adapter', {})
-            logger.debug(f'{_adapter[PLUGIN_UNIQUE_NAME]} clients has finished fetching data')
+            plugin_unique_name = kwargs.get('plugin_unique_name')
+            logger.debug(f'{plugin_unique_name} has finished fetching data for client_id: {client_id}')
 
             self._trigger_remote_plugin(STATIC_CORRELATOR_PLUGIN_NAME)
             self._trigger_remote_plugin(STATIC_USERS_CORRELATOR_PLUGIN_NAME)
             self._request_gui_dashboard_cache_clear()
 
         def rejected(err, **kwargs):
-            _adapter = kwargs.get('adapter', {})
-            logger.exception(f'Failed fetching from {_adapter[PLUGIN_UNIQUE_NAME]}', exc_info=err)
+            plugin_unique_name = kwargs.get('plugin_unique_name')
+            client_id = kwargs.get('client_id')
+            logger.exception(f'Failed fetching from plugin_unique_name {plugin_unique_name} for {client_id}',
+                             exc_info=err)
 
         try:
-            clients_trigger_promises = []
-            for adapter, clients_with_discovery, clients_without_discovery in adapters_to_call:
-                # When adapter has at least one connection with custom discovery enabled, all connections
-                # will be triggered separately so clients won't be triggered twice.
-                if clients_with_discovery or clients_without_discovery:
-                    logger.debug('triggering clients custom discovery')
-                    if clients_with_discovery:
-                        for client in clients_with_discovery:
-                            self.log_activity(AuditCategory.ConnectionCustomDiscovery, AuditAction.Fetch, {
-                                'adapter': adapter[PLUGIN_NAME],
-                                'client_id': client['client_id']
-                            })
-                            clients_trigger_promises.append(self.__trigger_specific_client(adapter, client, True))
-
-                    if clients_without_discovery:
-                        self.log_activity(AuditCategory.CustomDiscovery, AuditAction.Fetch, {
-                            'adapter': adapter[PLUGIN_NAME]
-                        })
-                        for client in clients_without_discovery:
-                            clients_trigger_promises.append(self.__trigger_specific_client(adapter, client, False))
-
-                    # run clean phase only if adapter has custom discovery time configured, otherwise
-                    # just finalize trigger.
-                    # Wrapping with lambdas, to make a closure with the loop params.
-                    Promise.all(clients_trigger_promises).then(
-                        (lambda _adapter, _clients_without_discovery:
-                         lambda _: inserted_to_db(adapter=_adapter) if _clients_without_discovery
-                         else connection_custom_discovery_inserted_to_db(adapter=_adapter))
-                        (adapter, clients_without_discovery))
-                else:
-                    logger.debug('triggering adapter custom discovery')
-                    self.log_activity(AuditCategory.CustomDiscovery, AuditAction.Fetch, {
-                        'adapter': adapter[PLUGIN_NAME]
+            if check_installer_locks(unlink=False):
+                logger.info(f'Installer is in progress, '
+                            f'not triggering custom discovery connection for {adapter_name}:{client_id}')
+                return
+            for adapter_unique_name in DiscoveryCustomScheduler.get_plugin_unique_names(adapter_name):
+                try:
+                    # we are triggering the adapter with this unique job name
+                    # because we dont want triggerable to think these jobs are duplicates
+                    encoded_client_id = base64.b64encode(client_id.encode()).decode()
+                    job_name = f'insert_to_db_{encoded_client_id}'
+                    if not self.is_connection_active(adapter_unique_name, client_id):
+                        logger.debug(f'{adapter_unique_name}:{client_id} is inactive, not triggering custom connection')
+                        continue
+                    self.log_activity(AuditCategory.ConnectionCustomDiscovery, AuditAction.Fetch, {
+                        'adapter': adapter_name,
+                        'client_id': client_id
                     })
-                    # pylint: disable=line-too-long
-                    self._async_trigger_remote_plugin(adapter[PLUGIN_UNIQUE_NAME], 'insert_to_db')\
-                        .then(did_fulfill=self.__promise_callback_wrapper(inserted_to_db, adapter=adapter),
-                              did_reject=self.__promise_callback_wrapper(rejected, adapter=adapter))
+                    logger.info(
+                        f'triggering {adapter_unique_name} for custom connection discovery, client_id: {client_id}'
+                    )
+                    self._async_trigger_remote_plugin(adapter_unique_name, job_name, data={
+                        'client_name': client_id,
+                    }).then(
+                        did_fulfill=functools.partial(connection_custom_discovery_inserted_to_db,
+                                                      plugin_unique_name=adapter_unique_name, client_id=client_id),
+                        did_reject=functools.partial(rejected, plugin_unique_name=adapter_unique_name)
+                    )
+                except Exception:
+                    logger.exception('Error triggering custom discovery adapter client')
+
         except Exception:
             logger.exception('Error triggering custom discovery adapters')
-        logger.info('Finished Custom Discovery cycle')
+        logger.info('Finished Custom Discovery Connection trigger')
 
-    @staticmethod
-    def should_trigger_run_enforcement(trigger: Trigger):
-        current_date = datetime.now()
-        current_time = current_date.time()
-        scheduled_run_time = datetime.strptime(trigger.period_time, '%H:%M').time()
-
-        # check if time matches the scheduled time, within 3 min threshold
-        if (current_time < scheduled_run_time or
-                time_diff(current_time, scheduled_run_time).seconds > RUN_ENFORCEMENT_CHECK_THRESHOLD):
-            return False
-
-        # check if triggered within the 3 min. threshold
-        if (trigger.last_triggered and
-                days_diff(current_date, trigger.last_triggered) == 0 and
-                time_diff(current_time, trigger.last_triggered.time()).seconds < RUN_ENFORCEMENT_CHECK_THRESHOLD):
-            return False
-
-        if trigger.period == TriggerPeriod.daily:
-            # check if X days have passed since last run
-            return (not trigger.last_triggered or
-                    days_diff(current_date, trigger.last_triggered) >= trigger.period_recurrence)
-
-        if trigger.period == TriggerPeriod.weekly:
-            # check if weekdays match
-            current_weekday = str(current_date.weekday())
-            return current_weekday in trigger.period_recurrence
-
-        if trigger.period == TriggerPeriod.monthly:
-            current_day = str(current_date.day)
-            tomorrow = current_date + timedelta(days=1)
-            if tomorrow.month != current_date.month:
-                # last day of month is marked in the recurrence as '29'
-                current_day = '29'
-            return current_day in trigger.period_recurrence
-
-        return False
-
-    def get_enforcements_to_run(self):
-        scheduled_enforcements = self._get_collection(REPORTS_PLUGIN_NAME, REPORTS_PLUGIN_NAME).find({
-            TRIGGERS_FIELD: {
-                '$ne': []
-            },
-            f'{TRIGGERS_FIELD}.period': {
-                '$nin': [TriggerPeriod.all.name, TriggerPeriod.never.name]
-            }
-        }, projection={
-            'name': 1,
-            TRIGGERS_FIELD: 1
-        })
-        for enforcement in scheduled_enforcements:
-            try:
-                if not enforcement.get(TRIGGERS_FIELD):
-                    continue
-
-                trigger = Trigger.from_dict(enforcement[TRIGGERS_FIELD][0])
-                if self.should_trigger_run_enforcement(trigger):
-                    yield {
-                        'report_name': enforcement.get('name', ''),
-                        'configuration_name': trigger.name
-                    }
-            except Exception:
-                logger.exception(f'Error checking enforcement "{enforcement.get("name", "unknown")}"')
-
-    def __run_preferred_field_calculations(self):
-        self._trigger_remote_plugin(AGGREGATOR_PLUGIN_NAME, 'calculate_preferred_fields', blocking=True)
-
-    def __run_triggered_enforcements(self):
-        enforcements_to_run = list(self.get_enforcements_to_run())
-        if not enforcements_to_run:
-            logger.debug('No enforcements to run, not doing anything at all')
-            return
-        logger.info(f'Starting to trigger {len(enforcements_to_run)} Enforcements')
-
+    def trigger_custom_enforcement(self, enforcement_name):
         def triggered(*args, **kwargs):
-            logger.debug(f'Enforcement has finished running')
+            logger.debug(f'Custom scheduled {enforcement_name} enforcement has finished running')
 
         def rejected(err):
-            logger.exception(f'Failed running scheduled enforcement', exc_info=err)
+            logger.exception(f'Failed running custom scheduled enforcement {enforcement_name}', exc_info=err)
 
         try:
-            for enforcement_data in enforcements_to_run:
-                self._async_trigger_remote_plugin(
-                    REPORTS_PLUGIN_NAME, 'run', priority=True, data=enforcement_data
-                ).then(did_fulfill=triggered, did_reject=rejected)
+            if check_installer_locks(unlink=False):
+                logger.info(f'Installer is in progress, '
+                            f'not triggering custom discovery enforcement for {enforcement_name}')
+                return
+            enforcement = self._get_collection(REPORTS_PLUGIN_NAME, REPORTS_PLUGIN_NAME).find_one({
+                'name': enforcement_name
+            })
+            data = {
+                'report_name': enforcement.get('name', ''),
+                'configuration_name': enforcement[TRIGGERS_FIELD][0].get('name')
+            }
+            self._async_trigger_remote_plugin(REPORTS_PLUGIN_NAME, 'run', data=data, priority=True).then(
+                did_fulfill=triggered, did_reject=rejected)
         except Exception:
-            logger.exception('Error triggering enforcements to run')
-        logger.info('Finished Triggering Enforcements')
+            logger.exception(f'Error triggering custom scheduled enforcement: {enforcement_name}')
+        logger.info(f'Finished Triggering Custom Scheduled Enforcement: {enforcement_name}')
 
     def _get_plugins(self, plugin_subtype: PluginSubtype) -> list:
         """
@@ -1708,3 +1476,67 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 logger.exception('An exception was raised while stopping all plugins.')
 
         logger.info('Finished stopping all plugins.')
+
+    @add_rule('update_custom_adapter_scheduler', methods=['POST'])
+    def update_custom_adapter_scheduler(self):
+        data = request.get_json(silent=True)
+        if data is None:
+            return return_error('No data received')
+        adapter_name = data.get('adapter_name')
+        try:
+            self.custom_adapter_scheduler.update_job(adapter_name, create=True,
+                                                     callback=self.trigger_custom_discovery_adapter)
+        except Exception as e:
+            logger.exception(f'Error while updating {adapter_name} adapter scheduler {e}')
+            return return_error(str(e), non_prod_error=True, http_status=500)
+        return 'OK', 200
+
+    @add_rule('update_connection_scheduler', methods=['POST'])
+    def update_custom_connection_scheduler(self):
+        data = request.get_json(silent=True)
+        if data is None:
+            return return_error('No data received')
+
+        client_id = data.get('client_id')
+        adapter_name = data.get('adapter_name')
+        connection_discovery = data.get(CONNECTION_DISCOVERY, {})
+        try:
+            self.custom_connection_scheduler.update_job(
+                adapter_name, client_id, connection_discovery=connection_discovery,
+                create=True, callback=self.trigger_custom_discovery_connection)
+        except Exception as e:
+            logger.exception(f'Error while updating {adapter_name}:{client_id} scheduler {e}')
+            return return_error(str(e), non_prod_error=True, http_status=500)
+        return 'OK', 200
+
+    @add_rule('remove_custom_connections_scheduler_job', methods=['POST'])
+    def remove_custom_connections_scheduler_job(self):
+        try:
+            data = request.get_json(silent=True)
+            if data:
+                client_id = data.get('client_id')
+                adapter_name = data.get('adapter_name')
+                if client_id and adapter_name:
+                    self.custom_connection_scheduler.remove_job_by_client_id(adapter_name, client_id)
+                else:
+                    logger.exception(f'Wrong data {adapter_name}{client_id}')
+            else:
+                self.custom_connection_scheduler.remove_all_jobs()
+        except Exception as e:
+            logger.exception(f'Error while updating removing all custom connections scheduler jobs {e}')
+            return return_error(str(e), non_prod_error=True, http_status=500)
+        return 'OK', 200
+
+    @add_rule('update_custom_enforcement', methods=['POST'])
+    def update_custom_enforcement(self):
+        data = request.get_json(silent=True)
+        if data is None:
+            return return_error('No data received')
+        enforcement_name = data.get('enforcement_name')
+        try:
+            self.custom_enforcements_scheduler.update_job(enforcement_name, create=True,
+                                                          callback=self.trigger_custom_enforcement)
+        except Exception as e:
+            logger.exception(f'Error while updating {enforcement_name} enforcement scheduler {e}')
+            return return_error(str(e), non_prod_error=True, http_status=500)
+        return 'OK', 200

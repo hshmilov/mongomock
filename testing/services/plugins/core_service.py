@@ -1145,6 +1145,47 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
                 config[ADAPTER_DISCOVERY][DISCOVERY_REPEAT_ON_WEEKDAYS][DISCOVERY_REPEAT_ON] = fixed_repeat_on
                 self.db.plugins.get_plugin_settings(plugin_name).configurable_configs[DISCOVERY_CONFIG_NAME] = config
 
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_31(self):
+        print('Upgrade to schema 31')
+        # fix connection custom discovery settings
+        plugins = self.db.client['core']['configs'].find(
+            {
+                'plugin_type': ADAPTER_PLUGIN_TYPE
+            })
+        for plugin in plugins:
+            plugin_unique_name = plugin.get(PLUGIN_UNIQUE_NAME)
+            clients = self.db.client[plugin_unique_name]['clients'].find({
+                f'{CONNECTION_DISCOVERY}.{DISCOVERY_REPEAT_RATE}': {
+                    '$gt': 24
+                }
+            })
+            for client in clients:
+                self.db.client[plugin_unique_name]['clients'].update(
+                    {
+                        '_id': client['_id']
+                    },
+                    {
+                        '$set':
+                            {
+                                f'{CONNECTION_DISCOVERY}.{DISCOVERY_REPEAT_RATE}': 24
+                            }
+                    })
+
+        configs_to_fix = self.db.client[CORE_UNIQUE_NAME][Consts.AllConfigurableConfigs].find(
+            {
+                f'config.{ADAPTER_DISCOVERY}.{DISCOVERY_REPEAT_RATE}': {
+                    '$gt': 24
+                }
+            })
+        # fix adapters custom discovery settings
+        for config_to_fix in configs_to_fix:
+            config = config_to_fix.get('config', {})
+            plugin_name = config_to_fix.get(PLUGIN_NAME)
+            config[ADAPTER_DISCOVERY][DISCOVERY_REPEAT_RATE] = 24
+            self.db.plugins.get_plugin_settings(plugin_name).configurable_configs[DISCOVERY_CONFIG_NAME] = \
+                config
+
     def migrate_adapter_advanced_settings_to_connection(
             self,
             adapter_name: str,

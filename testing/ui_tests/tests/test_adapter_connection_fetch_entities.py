@@ -18,9 +18,7 @@ class TestAdapterConnectionFetchEntities(TestBase):
             adapter_name=AD_ADAPTER_NAME,
             client_position=0,
             mode=self.adapters_page.DISCOVERY_SCHEDULE_INTERVAL_TEXT,
-            value=1,
-            do_fetch=False)
-        self.adapters_page.wait_for_connection_saved_toaster_start()
+            value=1)
 
         self.devices_page.switch_to_page()
         wait_until(self._check_for_devices_exist, total_timeout=240, interval=5)

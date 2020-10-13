@@ -173,7 +173,7 @@ class Trigger(DataClassJsonMixin):
     # Which entities to run upon
     run_on: RunOnEntities
     # Trigger recurrence - according to selected period can be either number of days or indexes of week / month days
-    period_recurrence: int
+    period_recurrence: List[int]
     # Trigger recurrence - Time
     period_time: str
 

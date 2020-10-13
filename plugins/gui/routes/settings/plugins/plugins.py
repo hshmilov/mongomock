@@ -395,8 +395,21 @@ class Plugins:
                     not user_settings_permission.get(PermissionCategory.Roles, {}).get(PermissionAction.Update):
                 for external_service in ['ldap_login_settings', 'saml_login_settings']:
                     role_assignment_rules = config_to_set[external_service].get(ROLE_ASSIGNMENT_RULES, {})
-                    role_assignment_rules[DEFAULT_ROLE_ID] = config_from_db.\
+                    role_assignment_rules[DEFAULT_ROLE_ID] = config_from_db. \
                         get(external_service, {}).get(ROLE_ASSIGNMENT_RULES, {}).get(DEFAULT_ROLE_ID)
+
+        old_connection_discovery = config_from_db.get(CONNECTION_DISCOVERY, {})
+        new_connection_discovery = config_to_set.get(CONNECTION_DISCOVERY, {})
+        if new_connection_discovery and new_connection_discovery.get(ENABLE_CUSTOM_DISCOVERY) is False \
+                and old_connection_discovery.get(ENABLE_CUSTOM_DISCOVERY) is True:
+            try:
+                # triggering remove_custom_connections_scheduler_job with empty post data for removing all the jobs
+                self.request_remote_plugin('remove_custom_connections_scheduler_job',
+                                           plugin_unique_name=SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                           method='POST',
+                                           timeout=10)
+            except Exception:
+                logger.exception('Error while triggering remove_custom_connections_scheduler_job')
 
         self._update_plugin_config(plugin_name, config_name, config_to_set)
         return ''
@@ -536,9 +549,9 @@ class Plugins:
             except Exception:
                 logger.exception(f'Failed deleting last fetch on discovery change')
 
-            old_connection_discovery_enabled = current_discovery.get(CONNECTION_DISCOVERY, {})\
+            old_connection_discovery_enabled = current_discovery.get(CONNECTION_DISCOVERY, {}) \
                 .get(ENABLE_CUSTOM_DISCOVERY, False)
-            new_connection_discovery_enabled = config_to_set.get(CONNECTION_DISCOVERY,  {})\
+            new_connection_discovery_enabled = config_to_set.get(CONNECTION_DISCOVERY, {}) \
                 .get(ENABLE_CUSTOM_DISCOVERY, False)
             if not new_connection_discovery_enabled and old_connection_discovery_enabled:
                 #  When disabling connection discovery on updater level, we need to remove settings

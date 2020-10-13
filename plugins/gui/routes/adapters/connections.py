@@ -11,7 +11,8 @@ from bson import ObjectId
 from axonius.adapter_base import AdapterBase
 from axonius.consts.adapter_consts import LAST_FETCH_TIME, CLIENT_ID, CONNECTION_LABEL
 from axonius.consts.gui_consts import (FeatureFlagsNames, IS_INSTANCES_MODE, INSTANCE_NAME, INSTANCE_PREV_NAME)
-from axonius.consts.plugin_consts import (PLUGIN_NAME, PLUGIN_UNIQUE_NAME, NODE_ID, CONNECTION_DISCOVERY, CLIENT_ACTIVE)
+from axonius.consts.plugin_consts import (PLUGIN_NAME, PLUGIN_UNIQUE_NAME, NODE_ID, CONNECTION_DISCOVERY,
+                                          SYSTEM_SCHEDULER_PLUGIN_NAME, CLIENT_ACTIVE)
 from axonius.logging.audit_helper import AuditCategory
 from axonius.plugin_base import return_error, EntityType
 from axonius.utils.gui_helpers import (entity_fields)
@@ -60,11 +61,21 @@ class Connections:
         client_data, code = self._add_connection(adapter_name, instance_id, connection_data)
 
         if code == 200:
+            client_id = json.loads(client_data).get(CLIENT_ID, '')
             try:
-                client_id = json.loads(client_data).get(CLIENT_ID, '')
                 self.log_activity_user_connection('put', adapter_name, client_id, instance_name, is_instance_mode)
             except Exception:
                 logger.exception(f'error in audit message loading client_id from json client data {client_data}')
+            try:
+                self.request_remote_plugin('update_connection_scheduler',
+                                           plugin_unique_name=SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                           method='POST',
+                                           timeout=10,
+                                           json={'adapter_name': adapter_name,
+                                                 'client_id': client_id,
+                                                 CONNECTION_DISCOVERY: connection_data[CONNECTION_DISCOVERY]})
+            except Exception as e:
+                logger.exception(f'Error while triggering update_connection_scheduler {e}')
         return client_data, code
 
     @gui_route_logged_in('test', methods=['POST'], skip_activity=True)
@@ -144,6 +155,7 @@ class Connections:
         if not connection_from_db:
             return return_error('Server is already gone, please try again after refreshing the page')
         client_id = connection_from_db['client_id']
+
         if request.method == 'DELETE' and request.args.get('deleteEntities', False):
             self._remove_connection_assets(adapter_name, client_id)
 
@@ -154,6 +166,15 @@ class Connections:
             self.clients_labels.clean_cache()
             self._get_adapter_connections_data.clean_cache()
             self.log_activity_user_connection('delete', adapter_name, client_id, instance_name, is_instance_mode)
+            try:
+                self.request_remote_plugin('remove_custom_connections_scheduler_job',
+                                           plugin_unique_name=SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                           method='POST',
+                                           timeout=10,
+                                           json={'adapter_name': adapter_name,
+                                                 'client_id': client_id})
+            except Exception:
+                logger.exception('Failed triggering update_connection_scheduler')
             return json.dumps({'client_id': client_id}), 200
 
         if not connection_data.get('connection'):
@@ -221,6 +242,17 @@ class Connections:
 
         except Exception:
             logger.exception('failed to audit adapter client connection changes')
+
+        try:
+            self.request_remote_plugin('update_connection_scheduler',
+                                       plugin_unique_name=SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                       method='POST',
+                                       timeout=10,
+                                       json={'adapter_name': adapter_name,
+                                             'client_id': client_id,
+                                             CONNECTION_DISCOVERY: connection_data[CONNECTION_DISCOVERY]})
+        except Exception:
+            logger.exception('Failed triggering update_connection_scheduler')
 
         self._adapters.clean_cache()
         self._adapters_v2.clean_cache()

@@ -15,6 +15,7 @@ from flask import jsonify
 from dataclasses import dataclass
 
 from axonius.consts import plugin_consts
+from axonius.consts.plugin_consts import SYSTEM_SCHEDULER_PLUGIN_NAME
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.entities import EntityType
 from axonius.logging.audit_helper import AuditCategory, AuditAction
@@ -255,6 +256,13 @@ class ReportsService(Triggerable, PluginBase):
                     })
                     if result.matched_count == 0:
                         logger.info(f'Failed to process trigger {trigger["name"]}')
+
+                    if trigger_obj.period not in [TriggerPeriod.all, TriggerPeriod.never]:
+                        self.request_remote_plugin('update_custom_enforcement',
+                                                   plugin_unique_name=SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                                   method='POST',
+                                                   timeout=10,
+                                                   json={'enforcement_name': enforcement.get('name')})
         return ''
 
     @add_rule('reports/<report_id>', methods=['POST'])

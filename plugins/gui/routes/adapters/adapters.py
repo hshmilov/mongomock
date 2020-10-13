@@ -15,7 +15,7 @@ from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           STATIC_CORRELATOR_PLUGIN_NAME,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME, CONNECT_VIA_TUNNEL,
                                           DISCOVERY_CONFIG_NAME, CONNECTION_DISCOVERY_SCHEMA_NAME,
-                                          AGGREGATOR_PLUGIN_NAME)
+                                          SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME)
 from axonius.logging.audit_helper import AuditCategory
 from axonius.plugin_base import return_error
 from axonius.utils.gui_helpers import return_api_format
@@ -407,7 +407,6 @@ class Adapters(Connections):
                                               'insert_to_db',
                                               data={
                                                   'client_name': client_id,
-                                                  'connection_saved': True,
                                               }).then(did_fulfill=inserted_to_db,
                                                       did_reject=rejected)
 
@@ -477,6 +476,11 @@ class Adapters(Connections):
         self._adapter_advanced_config_schema.clean_cache()
         if response != '':
             return response
+        self.request_remote_plugin('update_custom_adapter_scheduler',
+                                   plugin_unique_name=SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                   method='POST',
+                                   timeout=10,
+                                   json={'adapter_name': adapter_name})
 
         config_schema = self.plugins.get_plugin_settings(adapter_name).config_schemas[config_name]
         self._get_adapter_connections_data.clean_cache()

@@ -407,8 +407,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         }
 
     # pylint: disable=R1710,too-many-branches
-    def _handle_insert_to_db_async(self, client_name, check_fetch_time, log_fetch=True,
-                                   connection_custom_discovery=False, connection_saved=False):
+    def _handle_insert_to_db_async(self, client_names, check_fetch_time, log_fetch=True):
         """
         Handles all asymmetric fetching of devices data, by creating a threadpool to handle each fetch in a
         different thread, please notice that it only fetches the data asynchronously but parse in synchronously.
@@ -420,32 +419,20 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             if self.plugin_name in THREAD_SAFE_ADAPTERS:
                 return (
                     yield from self._handle_insert_to_db_async_thread_safe(
-                        client_name, check_fetch_time, log_fetch=log_fetch,
-                        connection_custom_discovery=connection_custom_discovery,
-                        connection_saved=connection_saved))
-            if isinstance(client_name, list):
-                for client in client_name:
+                        client_names, check_fetch_time, log_fetch=log_fetch))
+            if isinstance(client_names, list):
+                for client in client_names:
                     data[client] = [x['raw'] for x in self.insert_data_to_db(
                         client, check_fetch_time=check_fetch_time,
                         parse_after_fetch=True,
-                        log_fetch=log_fetch,
-                        connection_custom_discovery=connection_custom_discovery)]
-            elif client_name is None:
+                        log_fetch=log_fetch)]
+            elif not client_names:
                 # Probably realtime adapter with system_scheduler trigger
                 for client in self._get_all_active_clients():
                     data[client] = [x['raw'] for x in self.insert_data_to_db(
                         client, check_fetch_time=check_fetch_time,
                         parse_after_fetch=True,
-                        log_fetch=log_fetch,
-                        connection_custom_discovery=connection_custom_discovery)]
-            else:
-                data[client_name] = [x['raw'] for x in self.insert_data_to_db(
-                    client_name,
-                    check_fetch_time=check_fetch_time,
-                    parse_after_fetch=True,
-                    log_fetch=log_fetch,
-                    connection_custom_discovery=connection_custom_discovery,
-                    connection_saved=connection_saved)]
+                        log_fetch=log_fetch)]
             time_before_query = datetime.now()
             results = list(concurrent_multiprocess_yield([y for x in data for y in data[x] if y[0]],
                                                          DEFAULT_PARALLEL_COUNT))
@@ -454,7 +441,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         except adapter_exceptions.AdapterException:
             try:
-                problematic_client = client_name if isinstance(client_name, str) else client if\
+                problematic_client = client if\
                     isinstance(client, str) else data[client]
             except Exception:
                 problematic_client = 'Unknown'
@@ -485,27 +472,20 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             # pylint: disable=W0631
             logger.error(f'Failed parsing and saving data: {str(e)}', exc_info=True)
 
-    def _handle_insert_to_db_async_thread_safe(self, client_name, check_fetch_time, log_fetch=True,
-                                               connection_custom_discovery=False, connection_saved=False):
+    def _handle_insert_to_db_async_thread_safe(self, client_names, check_fetch_time, log_fetch=True):
         data = {}
         finished = {}
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_ASYNC_FETCH_WORKERS) as executor:
             try:
-                if isinstance(client_name, list):
-                    for client in client_name:
+                if isinstance(client_names, list):
+                    for client in client_names:
                         data[executor.submit(self.insert_data_to_db, client, check_fetch_time=check_fetch_time,
-                                             parse_after_fetch=True, thread_safe=True, log_fetch=log_fetch,
-                                             connection_custom_discovery=connection_custom_discovery)] = client
-                elif client_name is None:
+                                             parse_after_fetch=True, thread_safe=True, log_fetch=log_fetch)] = client
+                elif not client_names:
                     # Probably realtime adapter with system_scheduler trigger
                     for client in self._get_all_active_clients():
                         data[executor.submit(self.insert_data_to_db, client, check_fetch_time=check_fetch_time,
                                              parse_after_fetch=True, thread_safe=True, log_fetch=log_fetch)] = client
-                else:
-                    data[executor.submit(self.insert_data_to_db, client_name, check_fetch_time=check_fetch_time,
-                                         parse_after_fetch=True, thread_safe=True, log_fetch=log_fetch,
-                                         connection_custom_discovery=connection_custom_discovery,
-                                         connection_saved=connection_saved)] = client_name
 
                 # Wait until all fetches finish
                 for client in concurrent.futures.as_completed(data):
@@ -513,7 +493,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
             except adapter_exceptions.AdapterException:
                 try:
-                    problematic_client = client_name if isinstance(client_name, str) else client if \
+                    problematic_client = client if \
                         isinstance(client, str) else data[client]
                 except Exception:
                     problematic_client = 'Unknown'
@@ -535,84 +515,101 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 # pylint: disable=W0631
                 logger.error(f'Failed parsing and saving data: {str(e)}', exc_info=True)
 
+    def handle_tunnel_connect(self, client_name):
+        res = self._trigger_remote_plugin(
+            INSTANCE_CONTROL_PLUGIN_NAME,
+            job_name='execute_shell',
+            data={'cmd': self.PING_TUNNEL_CLIENT_CMD.format(ip=self.DEFAULT_TUNNEL_CLIENT_IP)},
+            timeout=30,
+            stop_on_timeout=True,
+            priority=True
+        )
+        res.raise_for_status()
+        if self.PING_CMD_EXPECTED_RESULT not in res.text:
+            self.log_activity(AuditCategory.Adapters, AuditAction.Skip, {
+                'adapter': self.plugin_name,
+                'client_id': client_name
+            })
+            self._update_client_status(client_name, 'error')
+            self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'tunnel_is_down', blocking=False)
+            return to_json({'devices_count': 0, 'users_count': 0})
+        self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'tunnel_is_up', blocking=False)
+
+    # pylint: disable=too-many-nested-blocks
+    def handle_insert_to_db(self, post_json):
+        with self._adapter_fetch_lock:
+            clients = []
+            client_name = post_json and post_json.get('client_name')
+            clients.append(client_name)
+            client_names = post_json.get('client_names', []) if post_json else []
+            clients.extend(client_names)
+            clients = self.filter_inactive_clients(clients)
+            # only inactive adapters were triggered
+            if (client_names or client_name) and not clients:
+                return
+            if self._connect_via_tunnel:
+                self.handle_tunnel_connect(client_name)
+
+            check_fetch_time = False
+            if post_json and post_json.get('check_fetch_time'):
+                check_fetch_time = post_json.get('check_fetch_time')
+            log_fetch = True
+            if post_json:
+                log_fetch = post_json.get('log_fetch', True)
+            parallel_fetch = self.feature_flags_config().get(ParallelSearch.root_key, {}).get(
+                ParallelSearch.enabled,
+                False)
+            try:
+                try:
+                    if self.plugin_name in PARALLEL_ADAPTERS and parallel_fetch:
+                        res = {'devices_count': 0,
+                               'users_count': 0
+                               }
+                        fetch_start_time = datetime.utcnow()
+                        for client, result in self._handle_insert_to_db_async(
+                                client_name, check_fetch_time, log_fetch=log_fetch):
+                            if result != '':
+                                result = json.loads(result)
+                                res['devices_count'] += result['devices_count']
+                                res['users_count'] += result['users_count']
+                                if log_fetch:
+                                    self._log_activity_adapter_client_fetch_summary(client,
+                                                                                    fetch_start_time,
+                                                                                    result['users_count'],
+                                                                                    result['devices_count'])
+                            logger.info(f'Received from {client}: {result}')
+
+                        res = to_json(res)
+                    else:
+                        if not clients:
+                            res = self.insert_data_to_db(None, check_fetch_time=check_fetch_time,
+                                                         log_fetch=log_fetch)
+                        else:
+                            for client in clients:
+                                try:
+                                    res = self.insert_data_to_db(client, check_fetch_time=check_fetch_time,
+                                                                 log_fetch=log_fetch)
+                                except adapter_exceptions.AdapterException:
+                                    logger.warning(f'Failed inserting data for client '
+                                                   f'{str(client_name)}', exc_info=True)
+                except adapter_exceptions.AdapterException:
+                    logger.warning(f'Failed inserting data for client '
+                                   f'{str(client_name)}', exc_info=True)
+                    return ''
+                for entity_type in EntityType:
+                    if json.loads(res)[f'{entity_type.value.lower()}_count']:
+                        self._save_field_names_to_db(entity_type)
+                return res
+
+            except BaseException:
+                delayed_trigger_gc()
+                raise
+
     # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         self.__has_a_reason_to_live = True
-        # pylint: disable=too-many-nested-blocks
         if job_name.startswith('insert_to_db'):
-            with self._adapter_fetch_lock:
-                client_name = post_json and post_json.get('client_name')
-                connection_custom_discovery = post_json and post_json.get('connection_custom_discovery')
-                connection_saved = post_json and post_json.get('connection_saved', False)
-                if self._connect_via_tunnel:
-                    res = self._trigger_remote_plugin(
-                        INSTANCE_CONTROL_PLUGIN_NAME,
-                        job_name='execute_shell',
-                        data={'cmd': self.PING_TUNNEL_CLIENT_CMD.format(ip=self.DEFAULT_TUNNEL_CLIENT_IP)},
-                        timeout=30,
-                        stop_on_timeout=True,
-                        priority=True
-                    )
-                    res.raise_for_status()
-                    if self.PING_CMD_EXPECTED_RESULT not in res.text:
-                        self.log_activity(AuditCategory.Adapters, AuditAction.Skip, {
-                            'adapter': self.plugin_name,
-                            'client_id': client_name
-                        })
-                        self._update_client_status(client_name, 'error')
-                        self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'tunnel_is_down', blocking=False)
-                        return to_json({'devices_count': 0, 'users_count': 0})
-                    self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'tunnel_is_up', blocking=False)
-
-                check_fetch_time = False
-                if post_json and post_json.get('check_fetch_time'):
-                    check_fetch_time = post_json.get('check_fetch_time')
-                log_fetch = True
-                if post_json:
-                    log_fetch = post_json.get('log_fetch', True)
-                parallel_fetch = self.feature_flags_config().get(ParallelSearch.root_key, {}).get(
-                    ParallelSearch.enabled,
-                    False)
-                try:
-                    try:
-                        if self.plugin_name in PARALLEL_ADAPTERS and parallel_fetch:
-                            res = {'devices_count': 0,
-                                   'users_count': 0
-                                   }
-                            fetch_start_time = datetime.utcnow()
-                            for client, result in self._handle_insert_to_db_async(
-                                    client_name, check_fetch_time, log_fetch=log_fetch,
-                                    connection_custom_discovery=connection_custom_discovery,
-                                    connection_saved=connection_saved):
-                                if result != '':
-                                    result = json.loads(result)
-                                    res['devices_count'] += result['devices_count']
-                                    res['users_count'] += result['users_count']
-                                    if log_fetch:
-                                        self._log_activity_adapter_client_fetch_summary(client,
-                                                                                        fetch_start_time,
-                                                                                        result['users_count'],
-                                                                                        result['devices_count'])
-                                logger.info(f'Received from {client}: {result}')
-
-                            res = to_json(res)
-                        else:
-                            res = self.insert_data_to_db(client_name, check_fetch_time=check_fetch_time,
-                                                         log_fetch=log_fetch,
-                                                         connection_custom_discovery=connection_custom_discovery,
-                                                         connection_saved=connection_saved)
-                    except adapter_exceptions.AdapterException:
-                        logger.warning(f'Failed inserting data for client '
-                                       f'{str(client_name)}', exc_info=True)
-                        return ''
-                    for entity_type in EntityType:
-                        if json.loads(res)[f'{entity_type.value.lower()}_count']:
-                            self._save_field_names_to_db(entity_type)
-                    return res
-
-                except BaseException:
-                    delayed_trigger_gc()
-                    raise
+            self.handle_insert_to_db(post_json)
         elif job_name == 'clean_devices':
             with self._adapter_fetch_lock:
                 do_not_look_at_last_cycle = False
@@ -871,7 +868,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
     # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def insert_data_to_db(self, client_name: str = None, check_fetch_time: bool = False,
                           parse_after_fetch: bool = False, thread_safe: bool = False,
-                          log_fetch=True, connection_custom_discovery=False, connection_saved=False):
+                          log_fetch=True):
         """
         Will insert entities from the given client name (or all clients if None) into DB
         :return:
@@ -898,18 +895,12 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                          'warning')
             return to_json({'devices_count': 0, 'users_count': 0, 'min_time_check': True})
 
-        # If this trigger is from custom connection discovery, need to update fetch_time.
-        if connection_custom_discovery or connection_saved:
-            if not client_name:
-                logger.exception(f'Can\'t trigger custom connection discovery without client name.')
-            else:
-                self.update_adapter_client_connection_fetch_time(client_name, current_time)
-        elif not connection_saved:
-            self.__last_fetch_time = current_time
+        self.__last_fetch_time = current_time
 
         if client_name:
             devices_count = 0
             users_count = 0
+            self.update_adapter_client_connection_fetch_time(client_name, current_time)
 
             try:
                 if log_fetch:
@@ -1074,6 +1065,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
                 if not (adapter_custom_discovery or client_connection_discovery):
                     self.__last_fetch_time = None
+
                 return jsonify(add_client_result), 200
 
             if self.get_method() == 'POST':
@@ -1929,6 +1921,14 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         """
         return [x['client_id'] for x in self._get_clients_config({CLIENT_ACTIVE: {'$ne': False}})]
 
+    def filter_inactive_clients(self, clients: List) -> List:
+        try:
+            all_clients = self._get_clients_config({CLIENT_ACTIVE: {'$ne': False}})
+            filtered_clients = [client[CLIENT_ID] for client in all_clients if client[CLIENT_ID] in clients]
+            return filtered_clients
+        except Exception:
+            logger.exception('Error while filtering inactive clients')
+
     def _get_client_config_by_client_id(self, client_id: str):
         """Returning the data inside 'clients' Collection on <plugin_unique_name> db.
         """
@@ -2184,7 +2184,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                             'name': DISCOVERY_REPEAT_RATE,
                             'title': 'Repeat scheduled discovery every (hours)',
                             'type': 'number',
-                            'max': 24 * 365  # Up to a year
+                            'min': 1,
+                            'max': 24
                         },
                         {
                             'name': DISCOVERY_REPEAT_EVERY_DAY,
@@ -2287,7 +2288,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     'name': DISCOVERY_REPEAT_RATE,
                     'title': 'Repeat scheduled discovery every (hours)',
                     'type': 'number',
-                    'max': 24 * 365  # Up to a year
+                    'min': 1,
+                    'max': 24
                 },
                 {
                     'name': DISCOVERY_REPEAT_EVERY_DAY,
