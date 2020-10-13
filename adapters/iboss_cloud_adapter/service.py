@@ -427,19 +427,22 @@ class IbossCloudAdapter(AdapterBase):
                 return None
             user.id = str(user_id) + '_' + (user_raw.get('username') or '')
 
-            # Means that these are servers and a single user would not be associated with a server
-            if user_raw.get('username') == user_raw.get('deviceName'):
-                logger.debug(f'Server could not be associated with a user {user_raw}')
-                return None
-
             username = user_raw.get('username')
-            user.username = user_raw.get('username')
+            device_caption = user_raw.get('deviceName')
+            if isinstance(username, str) and isinstance(device_caption, str):
+                if username.lower() == device_caption.lower():
+                    # Means that these are servers and a single user would not be associated with a server
+                    logger.debug(f'Server could not be associated with a user {user_raw}')
+                    return None
 
-            if isinstance(username, str) and '@' in username:
-                user.mail = username
+            if isinstance(username, str):
+                user.username = username
+                if '@' in username:
+                    user.mail = username
 
             user.last_seen = parse_date(user_raw.get('lastSeen'))
-            user.add_associated_device(device_caption=user_raw.get('deviceName'))
+            if isinstance(device_caption, str):
+                user.add_associated_device(device_caption=device_caption)
 
             self._fill_iboss_cloud_connected_user_fields(user_raw, user)
 
