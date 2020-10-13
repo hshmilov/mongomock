@@ -1,10 +1,10 @@
 from pymongo.collection import Collection
 from axonius.consts.plugin_consts import PLUGIN_NAME, PLUGIN_UNIQUE_NAME
 
-from ui_tests.tests.ui_test_base import TestBase
+from upgrade.UpgradeTestBase import UpgradeTestBase
 
 
-class TestLeftovers(TestBase):
+class TestLeftovers(UpgradeTestBase):
     # https://axonius.atlassian.net/browse/AX-4431
     def test_leftovers(self):
         # Creating a fake 'leftover' plugin registration

@@ -72,7 +72,7 @@ echo "#### Populating with data finished"
 
 echo "#### Running before upgrade setups"
 cd testing
-timeout 3600 ../pyrun.sh run_upgrade_tests.py --teardown-keep-db upgrade/before_upgrade
+timeout 3600 ../pyrun.sh run_upgrade_tests.py --teardown-keep-db upgrade/before_upgrade -p no:testing/tests/conftest.py
 cd ..
 echo "#### Before upgrade setups done"
 
@@ -92,7 +92,7 @@ echo "#### Installed ${version}"
 echo "#### Running after upgrade tests"
 ./pyrun.sh devops/scripts/discover_now.py --wait
 cd testing
-timeout 3600 ../pyrun.sh run_upgrade_tests.py --teardown-keep-db upgrade/after_upgrade
+timeout 3600 ../pyrun.sh run_upgrade_tests.py --teardown-keep-db upgrade/after_upgrade -p no:testing/tests/conftest.py
 cd ..
 echo "#### After upgrade tests done"
 

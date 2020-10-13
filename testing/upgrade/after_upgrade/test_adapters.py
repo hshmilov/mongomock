@@ -1,7 +1,7 @@
-from ui_tests.tests.ui_test_base import TestBase
+from upgrade.UpgradeTestBase import UpgradeTestBase
 
 
-class TestAdapters(TestBase):
+class TestAdapters(UpgradeTestBase):
     def test_no_bad_adapters(self):
         self.adapters_page.switch_to_page()
         self.adapters_page.wait_for_spinner_to_end()

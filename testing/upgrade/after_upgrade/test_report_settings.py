@@ -8,6 +8,10 @@ from axonius.consts.gui_consts import DASHBOARD_SPACE_DEFAULT
 
 
 class TestReportSettings(TestReportGenerationBase):
+    @property
+    def should_revert_passwords(self):
+        return False
+
     def test_reports_saved(self):
         self.reports_page.switch_to_page()
         self.reports_page.wait_for_spinner_to_end()

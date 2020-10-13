@@ -2,11 +2,12 @@ import time
 import json
 from pathlib import Path
 
+from upgrade.UpgradeTestBase import UpgradeTestBase
+
 from ui_tests.tests.ui_consts import Account
-from ui_tests.tests.ui_test_base import TestBase
 
 
-class TestPrepareAlert(TestBase):
+class TestPrepareAlert(UpgradeTestBase):
     def test_api_key(self):
         # since this is the first test, sometimes we are doing stuff before it was actually loaded
         time.sleep(5)

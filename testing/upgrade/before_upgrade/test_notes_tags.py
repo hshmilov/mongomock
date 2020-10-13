@@ -1,8 +1,8 @@
 from ui_tests.tests.ui_consts import Notes, Tags, COMP_EQUALS
-from ui_tests.tests.ui_test_base import TestBase
+from upgrade.UpgradeTestBase import UpgradeTestBase
 
 
-class TestNotes(TestBase):
+class TestNotes(UpgradeTestBase):
     def test_create_note(self):
         self.select_device(Notes.note1_device_filter)
 

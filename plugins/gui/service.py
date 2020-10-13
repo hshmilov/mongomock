@@ -16,6 +16,7 @@ from typing import (List, Dict)
 from pathlib import Path
 from bson import ObjectId
 from bson.json_util import dumps
+import bcrypt
 import requests
 import cachetools
 
@@ -104,6 +105,11 @@ DEFAULT_AWS_TEST_PASSWORD = '$2b$12$GE1DJiMkTLh.5VW6iICUr.oR5yVIXgA5vFK1FF2dkHzo
 SUPPORTED_API_VERSIONS = ['4.0']
 
 
+def _generate_password(length=32):
+    password = secrets.token_hex(nbytes=length).encode()
+    return bcrypt.hashpw(password, bcrypt.gensalt())
+
+
 class GuiService(Triggerable,
                  FeatureFlags,
                  IdentityProviders,
@@ -120,8 +126,7 @@ class GuiService(Triggerable,
     DEFAULT_AVATAR_PIC = '/src/assets/images/users/avatar.png'
     ALT_AVATAR_PIC = '/src/assets/images/users/alt_avatar.png'
     DEFAULT_USER = {'user_name': ADMIN_USER_NAME,
-                    'password':
-                        '$2b$12$SjT4qshlg.uUpsgE3vHwp.7A0UtkGEoWfUR0wFet3WZuXTnMgOCIK',
+                    'password': _generate_password(),
                     'first_name': 'administrator', 'last_name': '',
                     'pic_name': DEFAULT_AVATAR_PIC,
                     'source': 'internal',
@@ -131,8 +136,7 @@ class GuiService(Triggerable,
                     }
 
     ALTERNATIVE_USER = {'user_name': AXONIUS_USER_NAME,
-                        'password':
-                            '$2b$12$HQTyeTlepuCDC.5ZJ0TFo.U9ZUBARAEFU5pjhcnY.GfWaQWydcn8G',
+                        'password': _generate_password(),
                         'first_name': 'axonius', 'last_name': '',
                         'pic_name': ALT_AVATAR_PIC,
                         'source': 'internal',
@@ -141,8 +145,7 @@ class GuiService(Triggerable,
                         }
 
     ALTERNATIVE_RO_USER = {'user_name': AXONIUS_RO_USER_NAME,
-                           'password':
-                               '$2b$12$qZqtPeZWYp/mMathAxc7QOHn5yQd0U8NdA.wCneUfvmcUAVej.rAy',
+                           'password': _generate_password(),
                            'first_name': 'axonius_ro', 'last_name': '',
                            'pic_name': ALT_AVATAR_PIC,
                            'source': 'internal',

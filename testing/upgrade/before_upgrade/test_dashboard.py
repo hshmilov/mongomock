@@ -1,7 +1,7 @@
-from ui_tests.tests.ui_test_base import TestBase
+from upgrade.UpgradeTestBase import UpgradeTestBase
 
 
-class TestNotes(TestBase):
+class TestNotes(UpgradeTestBase):
     def test_new_dashboard(self):
         self.dashboard_page.switch_to_page()
         self.dashboard_page.wait_for_spinner_to_end()

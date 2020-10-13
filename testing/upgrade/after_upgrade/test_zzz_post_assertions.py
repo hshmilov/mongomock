@@ -1,7 +1,7 @@
-from ui_tests.tests.ui_test_base import TestBase
+from upgrade.UpgradeTestBase import UpgradeTestBase
 
 
-class TestZzzPostAssertions(TestBase):
+class TestZzzPostAssertions(UpgradeTestBase):
     def test_run_cycle_after_upgrade(self):
         self._clean_db()
 

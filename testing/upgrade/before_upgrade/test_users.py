@@ -2,10 +2,10 @@ import subprocess
 import shlex
 
 from ui_tests.tests import ui_consts
-from ui_tests.tests.ui_test_base import TestBase
+from upgrade.UpgradeTestBase import UpgradeTestBase
 
 
-class TestPrepareUsers(TestBase):
+class TestPrepareUsers(UpgradeTestBase):
     def test_hidden_user(self):
         cortex_root = self.axonius_system.gui.cortex_root_dir
         # note: this is how chef invokes this script. if you touch anything here, you must update chef as well

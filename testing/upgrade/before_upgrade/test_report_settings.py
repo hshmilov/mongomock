@@ -1,10 +1,10 @@
 from services.standalone_services.syslog_service import SyslogService
 from ui_tests.pages.reports_page import ReportFrequency
 from ui_tests.tests.ui_consts import VALID_EMAIL, EmailSettings, Reports
-from ui_tests.tests.ui_test_base import TestBase
+from upgrade.UpgradeTestBase import UpgradeTestBase
 
 
-class TestPrepareReportSettings(TestBase):
+class TestPrepareReportSettings(UpgradeTestBase):
     def test_report_no_email_settings(self):
         with SyslogService().contextmanager(take_ownership=True):
             self.settings_page.switch_to_page()

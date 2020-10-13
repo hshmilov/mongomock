@@ -2,8 +2,9 @@ import time
 from datetime import datetime, timedelta
 
 from ui_tests.pages.entities_page import EntitiesPage
-from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import History
+
+from upgrade.UpgradeTestBase import UpgradeTestBase
 
 
 def _check_history_of_entity(page: EntitiesPage):
@@ -20,7 +21,7 @@ def _check_history_of_entity(page: EntitiesPage):
         page.clear_existing_date(allow_failures=False)
 
 
-class TestHistory(TestBase):
+class TestHistory(UpgradeTestBase):
     def test_history(self):
         _check_history_of_entity(self.devices_page)
         _check_history_of_entity(self.users_page)

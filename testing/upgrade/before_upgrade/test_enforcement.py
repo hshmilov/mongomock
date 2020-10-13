@@ -1,9 +1,9 @@
 from ui_tests.pages.enforcements_page import Period
 from ui_tests.tests.ui_consts import Enforcements
-from ui_tests.tests.ui_test_base import TestBase
+from upgrade.UpgradeTestBase import UpgradeTestBase
 
 
-class TestPrepareEnforcement(TestBase):
+class TestPrepareEnforcement(UpgradeTestBase):
     def test_create_enforcement(self):
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, Enforcements.enforcement_query_1)
         self.enforcements_page.create_basic_enforcement(Enforcements.enforcement_name_1)

@@ -2,10 +2,10 @@ import time
 
 from ui_tests.pages.enforcements_page import Period
 from ui_tests.tests.ui_consts import Enforcements
-from ui_tests.tests.ui_test_base import TestBase
+from upgrade.UpgradeTestBase import UpgradeTestBase
 
 
-class TestEnforcement(TestBase):
+class TestEnforcement(UpgradeTestBase):
     def test_create_enforcement(self):
         self.enforcements_page.switch_to_page()
         self.enforcements_page.wait_for_table_to_load()

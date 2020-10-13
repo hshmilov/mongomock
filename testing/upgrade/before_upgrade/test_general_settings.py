@@ -2,10 +2,10 @@ from services.standalone_services.syslog_service import SyslogService
 from test_credentials.test_ad_credentials import ad_client1_details
 from ui_tests.pages.page import TAB_BODY
 from ui_tests.tests.ui_consts import EmailSettings, Saml, DISCOVERY_UPDATED_VALUE
-from ui_tests.tests.ui_test_base import TestBase
+from upgrade.UpgradeTestBase import UpgradeTestBase
 
 
-class TestPrepareGlobalSettings(TestBase):
+class TestPrepareGlobalSettings(UpgradeTestBase):
     def test_email_settings(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()

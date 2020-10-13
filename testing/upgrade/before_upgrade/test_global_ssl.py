@@ -1,9 +1,9 @@
 import os
 
-from ui_tests.tests.ui_test_base import TestBase
+from upgrade.UpgradeTestBase import UpgradeTestBase
 
 
-class TestGlobalSSL(TestBase):
+class TestGlobalSSL(UpgradeTestBase):
     def test_global_ssl(self):
         self.settings_page.switch_to_page()
         self.settings_page.click_certificate_settings()

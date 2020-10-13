@@ -5,7 +5,7 @@ from datetime import timedelta, datetime
 
 from axonius.entities import EntityType
 from services.axonius_service import AxoniusService
-from ui_tests.tests.ui_test_base import TestBase
+from upgrade.UpgradeTestBase import UpgradeTestBase
 from ui_tests.tests.ui_consts import History
 
 SAMPLE_DOC = '''
@@ -67,7 +67,7 @@ def generate_fake_history(axonius: AxoniusService, entity_type, days, items_per_
         print(f'history: {entity_type} day {day} done')
 
 
-class TestPopulateHistory(TestBase):
+class TestPopulateHistory(UpgradeTestBase):
     def test_populate_history(self):
         generate_fake_history(self.axonius_system, EntityType.Devices.value, days=History.history_depth,
                               items_per_day=History.entities_per_day)

@@ -1,9 +1,9 @@
 from axonius.utils.wait import wait_until
 from ui_tests.tests.ui_consts import Notes, Tags, COMP_EQUALS
-from ui_tests.tests.ui_test_base import TestBase
+from upgrade.UpgradeTestBase import UpgradeTestBase
 
 
-class TestNotes(TestBase):
+class TestNotes(UpgradeTestBase):
     def test_admin_note(self):
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
