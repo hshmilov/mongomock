@@ -112,6 +112,7 @@ class Page:
     LOADING_SPINNER_CSS = '.v-spinner-bg'
     LOADING_SPINNER_CSS2 = '.v-spinner'
     ANT_LOADING_SPINNER = '.loading-spinner'
+    CHECKBOX_CHECKED_CLASS_NAME = 'checked'
     CHECKBOX_XPATH_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]/div[contains(@class, \'x-checkbox\')]'
     CHECKBOX_XPATH_TEMPLATE_WITH_SINGLE_QUOTE = \
         '//div[child::label[text()="{label_text}"]]/div[contains(@class, \'x-checkbox\')]'
@@ -1156,6 +1157,10 @@ class Page:
 
     def get_row_checkbox(self, index=1):
         return self.driver.find_element_by_css_selector(self.TABLE_ROW_CHECKBOX_CSS.format(child_index=index))
+
+    def is_row_checkbox_checked(self, index=1):
+        row = self.get_row_checkbox(index)
+        return self.CHECKBOX_CHECKED_CLASS_NAME in row.get_attribute('class')
 
     def is_row_checkbox_absent(self, index=1):
         return len(self.driver.find_elements_by_css_selector(

@@ -17,9 +17,15 @@ class TestDevicesTable(TestEntitiesTable):
         self.devices_page.switch_to_page()
         self.devices_page.wait_for_table_to_load()
         self.devices_page.click_row_checkbox()
+        assert self.devices_page.is_row_checkbox_checked()
+        self.devices_page.open_tag_dialog()
+        self.devices_page.click_tag_cancel_button()
+        assert self.devices_page.is_row_checkbox_checked()
         self.devices_page.add_new_tags([self.LABELS_TEXTBOX_TEXT])
+        assert not self.devices_page.is_row_checkbox_checked()
         assert self.LABELS_TEXTBOX_TEXT in self.devices_page.get_first_row_tags()
         self.devices_page.remove_first_tag()
+        assert not self.devices_page.is_row_checkbox_checked()
         assert not self.devices_page.get_first_row_tags()
 
     def test_devices_action_remove_plugin_tag(self):
@@ -101,11 +107,11 @@ class TestDevicesTable(TestEntitiesTable):
 
         self.devices_page.click_row_checkbox(1)
         self.devices_page.add_new_tags(['tag2'])
-        self.devices_page.click_row_checkbox(1)  # uncheck row
 
         self.devices_page.click_row_checkbox(2)
         self.devices_page.add_new_tags(['tag1'])
 
+        self.devices_page.click_row_checkbox(2)
         self.devices_page.click_row_checkbox(3)
         self.devices_page.open_tag_dialog()
         self.devices_page.fill_tags_input_text('tag3')
@@ -115,8 +121,10 @@ class TestDevicesTable(TestEntitiesTable):
         list_tags = self.devices_page.get_checkbox_list()
         assert all(self.devices_page.is_tag_has_status(tag, statuses[index]) for index, tag in enumerate(list_tags))
         self.devices_page.click_tag_save_button()
-
         self.devices_page.wait_for_success_tagging_message(2)
+
+        self.devices_page.click_row_checkbox(2)
+        self.devices_page.click_row_checkbox(3)
         self.devices_page.open_tag_dialog()
         list_tags = self.devices_page.get_checkbox_list()
         assert all(self.devices_page.is_tag_has_status(tag, statuses[index]) for index, tag in enumerate(list_tags))
@@ -136,16 +144,17 @@ class TestDevicesTable(TestEntitiesTable):
         # Select the first row
         self.devices_page.click_row_checkbox(1)
         self.devices_page.add_new_tags([self.LABEL_A_MAJOR_ISSUE])
-        # Unselect the first row
-        self.devices_page.click_row_checkbox(1)
         # Select the second row
         self.devices_page.click_row_checkbox(2)
         self.devices_page.add_new_tags([self.LABEL_CASE_ID, self.LABEL_TAG_BUG])
         # Select the first row (now the first and second rows are selected
         self.devices_page.click_row_checkbox(1)
+        self.devices_page.click_row_checkbox(2)
         self.devices_page.add_new_tags([self.LABEL_OS_SERVICE_PACK_ISSUE], 2)
 
     def _test_partial_tag_circularity(self):
+        self.devices_page.click_row_checkbox(1)
+        self.devices_page.click_row_checkbox(2)
         self.devices_page.open_tag_dialog()
         partial = self.devices_page.toggle_partial_tag(self.LABEL_TAG_BUG)
         assert self.devices_page.has_class(partial['tag_icon_ele'], self.devices_page.PartialIcon['CHECKED'])

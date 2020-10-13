@@ -295,7 +295,6 @@ class TestDashboardActions(TestBase):
         for x in row_numbers:
             self.devices_page.click_row_checkbox(x)
         self.devices_page.add_new_tags(tags, len(row_numbers))
-        self.devices_page.toggle_select_all_rows_checkbox()
         assert self.devices_page.verify_no_entities_selected()
 
     def test_segmentation_chart_tags_filter(self):

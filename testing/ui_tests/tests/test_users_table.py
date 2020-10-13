@@ -23,6 +23,7 @@ class TestUsersTable(TestEntitiesTable):
     QUERY_FILTER_USERNAME = 'specific_data.data.username == regex("m")'
     QUERY_FIELDS = 'adapters,specific_data.data.image,specific_data.data.username,specific_data.' \
                    'data.domain,specific_data.data.last_seen,specific_data.data.is_admin,labels'
+    SAMPLE_TAG = 'TestTag'
 
     def test_users_fetched(self):
         self.settings_page.switch_to_page()
@@ -248,3 +249,18 @@ class TestUsersTable(TestEntitiesTable):
         is the same as the default fields order
         """
         self.check_initial_column_order(self.users_page)
+
+    def test_users_table_selection_after_tag_modal(self):
+        self.base_page.run_discovery()
+        self.users_page.switch_to_page()
+        self.users_page.click_row_checkbox()
+        assert self.devices_page.is_row_checkbox_checked()
+        self.devices_page.open_tag_dialog()
+        self.devices_page.click_tag_cancel_button()
+        assert self.devices_page.is_row_checkbox_checked()
+        self.users_page.add_new_tags([self.SAMPLE_TAG])
+        assert not self.users_page.is_row_checkbox_checked()
+        assert self.SAMPLE_TAG in self.users_page.get_first_row_tags()
+        self.users_page.remove_first_tag()
+        assert not self.users_page.is_row_checkbox_checked()
+        assert not self.users_page.get_first_row_tags()

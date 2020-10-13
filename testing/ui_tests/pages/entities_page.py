@@ -1819,6 +1819,9 @@ class EntitiesPage(Page):
     def click_tag_save_button(self):
         self.click_button(self.SAVE_BUTTON, context=self.driver.find_element_by_css_selector(self.TAG_MODAL_CSS))
 
+    def click_tag_cancel_button(self):
+        self.click_button(self.CANCEL_BUTTON, context=self.driver.find_element_by_css_selector(self.TAG_MODAL_CSS))
+
     def open_tag_dialog(self):
         self.open_actions_menu()
         self.click_actions_tag_button()
@@ -1880,6 +1883,7 @@ class EntitiesPage(Page):
         self.wait_for_spinner_to_end()
 
     def remove_first_tag(self):
+        self.click_row_checkbox()
         self.open_tag_dialog()
         self.wait_for_element_present_by_css(self.TAG_CHECKBOX_CSS).click()
         self.click_tag_save_button()

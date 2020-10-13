@@ -81,7 +81,8 @@ export default {
       if (!this.entitiesMeta) return [];
       const labelSets = Object.values(this.entitiesMeta);
       if (!labelSets.length) return [];
-      return _uniq(_flatten(labelSets.map((labelSet) => labelSet.filter((label) => !this.initialSelection.includes(label)))));
+      return _uniq(_flatten(labelSets.map((labelSet) => labelSet
+        .filter((label) => !this.initialSelection.includes(label)))));
     },
   },
   methods: {
@@ -100,7 +101,8 @@ export default {
       /* Separate added and removed tags */
       const added = this.selected.filter((tag) => !this.initialSelection.includes(tag));
       const removed = this.initialSelection.filter((tag) => !this.selected.includes(tag));
-      removed.push(...this.initialIndeterminate.filter((item) => (!this.indeterminate.includes(item) && !this.selected.includes(item))));
+      removed.push(...this.initialIndeterminate
+        .filter((item) => (!this.indeterminate.includes(item) && !this.selected.includes(item))));
 
       const addResponse = await this.addLabels({
         module: this.module,
@@ -121,7 +123,7 @@ export default {
       if (!addResponse && !removeResponse) return;
       this.taggedCount = addResponse ? addResponse.data : removeResponse.data;
       await this.milestoneCompleted({ milestoneName: TAG_DEVICE });
-      this.$emit('done', false);
+      this.$emit('done', true);
     },
     removeEntitiesLabels(labels) {
       this.removeLabels({
