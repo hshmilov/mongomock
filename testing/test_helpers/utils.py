@@ -1,4 +1,6 @@
 import time
+import requests
+from axonius.utils.datetime import parse_date
 
 
 def try_until_not_thrown(times, sleep_period, runnable, *args, **kwargs):
@@ -30,7 +32,7 @@ def populate_test_devices_esx(axonius_fixture, esx_fixture):
     client = client_details[0][0]
     assert esx_fixture.is_up()
 
-    client_id = f"{client['host']}/{client['user']}"
+    client_id = f'{client["host"]}/{client["user"]}'
     esx_fixture.add_client(client)
     axonius_fixture.assert_device_aggregated(esx_fixture, [(client_id, SOME_DEVICE_ID)])
 
@@ -38,3 +40,20 @@ def populate_test_devices_esx(axonius_fixture, esx_fixture):
 def check_conf(axonius_fixture, adapter_service, adapter_name):
     adapter = axonius_fixture.db.get_unique_plugin_config(adapter_service.unique_name)
     assert adapter['plugin_name'] == adapter_name
+
+
+def get_server_date():
+    req = requests.get('https://127.0.0.1/', verify=False)
+    server_date = req.headers.get('Date')
+    req.close()
+    return parse_date(server_date) if server_date is not None else None
+
+
+def get_datetime_format_by_gui_date(gui_date_format):
+    dates_dict = {
+        'YYYY-MM-DD': '%Y-%m-%d',
+        'MM-DD-YYYY': '%m-%d-%Y',
+        'DD-MM-YYYY': '%d-%m-%Y',
+    }
+
+    return dates_dict[gui_date_format]

@@ -52,7 +52,8 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        LATEST_VERSION_URL, INSTALLED_VERISON_KEY, FeatureFlagsNames,
                                        IDENTITY_PROVIDERS_CONFIG, NO_ACCESS_ROLE,
                                        DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES, IS_API_USER, Signup,
-                                       PREDEFINED_SAVED_QUERY_REF_REGEX, UPDATED_BY_FIELD)
+                                       PREDEFINED_SAVED_QUERY_REF_REGEX, UPDATED_BY_FIELD,
+                                       FEATURE_FLAGS_CONFIG)
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           ADMIN_USER_NAME,
@@ -615,6 +616,7 @@ class GuiService(Triggerable,
 
     def load_metadata(self):
         try:
+            config, schema = self._get_plugin_configs(FEATURE_FLAGS_CONFIG, GUI_PLUGIN_NAME)
             metadata_bytes = ''
             if os.path.exists(METADATA_PATH):
                 with open(METADATA_PATH, 'r', encoding='UTF-8') as metadata_file:
@@ -626,6 +628,8 @@ class GuiService(Triggerable,
                         del metadata_json['Commit Date']
                     metadata_json['Customer ID'] = self.node_id
                     metadata_json['Installed Version'] = metadata_json.pop('Version', None)
+                    if config.get(FeatureFlagsNames.ExpiryDate, ''):
+                        metadata_json['Contract Expiry Date'] = config.get(FeatureFlagsNames.ExpiryDate)
                     return metadata_json
         except Exception:
             logger.exception(f'Bad __build_metadata file {metadata_bytes}')

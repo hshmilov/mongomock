@@ -158,17 +158,7 @@
         id="about-tab"
         title="About"
       >
-        <div class="tab-settings">
-          <XCustom
-            :data="systemInfo"
-            :vertical="true"
-          />
-          <label
-            v-if="newVersionAvailable"
-            class="new-version-available"
-          > <a href="mailto:support@axonius.com?subject=Request for upgrade">
-            Contact us</a> to request an update.</label>
-        </div>
+        <XAbout />
       </XTab>
     </XTabs>
     <XToast
@@ -199,8 +189,8 @@ import XTabs from '../axons/tabs/Tabs.vue';
 import XTab from '../axons/tabs/Tab.vue';
 import XToast from '../axons/popover/Toast.vue';
 import XForm from '../neurons/schema/Form.vue';
-import XCustom from '../neurons/schema/Custom.vue';
 import XMaintenance from '../networks/config/Maintenance.vue';
+import XAbout from '../networks/config/About.vue';
 import XFeatureFlags from '../networks/config/FeatureFlags.vue';
 import XTunnel from '../networks/config/Tunnel.vue';
 import XCertificateSettings from '../networks/config/CertificateSettings.vue';
@@ -213,7 +203,7 @@ export default {
     XTab,
     XToast,
     XForm,
-    XCustom,
+    XAbout,
     XMaintenance,
     XFeatureFlags,
     XTunnel,
@@ -234,8 +224,6 @@ export default {
       identityProvidersComplete: true,
       schedulerComplete: true,
       message: '',
-      systemInfo: {},
-      newVersionAvailable: false,
     };
   },
   computed: {
@@ -361,11 +349,6 @@ export default {
       });
     }
     this.featureFlags = _cloneDeep(this.featureFlagsFromState);
-    const response = await this.fetchData({
-      rule: 'settings/metadata',
-    });
-    this.systemInfo = response.data;
-    this.newVersionAvailable = 'Latest Available Version' in this.systemInfo;
   },
   methods: {
     ...mapMutations({

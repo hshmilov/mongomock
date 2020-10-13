@@ -1,12 +1,11 @@
 import time
 
 import pytest
-import requests
-from dateutil import parser
 from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException
 from services.adapters.cybereason_service import CybereasonService
 
 from test_credentials.test_gui_credentials import AXONIUS_USER
+from test_helpers.utils import get_server_date
 from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.pages.enforcements_page import Action, ActionCategory
 from axonius.utils.wait import wait_until
@@ -150,10 +149,7 @@ class TestFeatureFlags(TestBase):
 
     @pytest.mark.skip('AX-6775')
     def test_contract_expiration(self):
-        req = requests.get('https://127.0.0.1/', verify=False)
-        server_date = req.headers.get('Date')
-        req.close()
-        server_date = parser.parse(server_date) if server_date is not None else None
+        server_date = get_server_date()
         self.dashboard_page.switch_to_page()
         for days_remaining in [60, 15, 3]:
             self._change_expiration_date(days_remaining, server_time=server_date, contract=True)

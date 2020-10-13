@@ -1,8 +1,9 @@
 import time
 import collections
-
-from datetime import datetime, timedelta
 from uuid import uuid4
+from datetime import datetime, timedelta
+import dateutil
+
 import requests
 
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException, \
@@ -16,6 +17,7 @@ from axonius.consts.gui_consts import PROXY_ERROR_MESSAGE
 from axonius.consts.plugin_consts import CORRELATION_SCHEDULE_HOURS_INTERVAL, AWS_SM_ACCESS_KEY_ID, \
     AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION
 from services.axon_service import TimeoutException
+from test_helpers.utils import get_datetime_format_by_gui_date
 from ui_tests.pages.page import PAGE_BODY, TAB_BODY, Page
 
 # pylint: disable=too-many-lines,no-member
@@ -117,14 +119,16 @@ class SettingsPage(Page):
     SAFEGUARD_REMOVE_BUTTON_TEXT = 'Delete Role'
     XPATH_BY_CLASS_NAME = '//*[contains(@class, \'{name}\')]'
     DATEPICKER_CLASS_NAME = 'x-date-edit'
+    TRIAL_DATE_PICKER_CSS = f'div.item_trial_end .{DATEPICKER_CLASS_NAME}'
+    CONTRACT_DATE_PICKER_CSS = f'.item_expiry_date .{DATEPICKER_CLASS_NAME}'
     # sorry - but it's not my fault
     # https://axonius.atlassian.net/browse/AX-2991
     # those are the fully fledged css selectors for the elements
     CERT_ELEMENT_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=cert_file]'
     PRIVATE_ELEMENT_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=private_key]'
     MUTUAL_TLS_CERTIFICATE_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=ca_certificate]'
-    CERT_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=cert_file] + div[class=file] '\
-                                     'div[class=file__name]'
+    CERT_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=cert_file] + '\
+                                     'div[class=file] div[class=file__name]'
     PRIVATE_ELEMENT_FILENAME_SELECTOR = 'div.x-tab.active.certificate-settings-tab input[id=private_key] ' \
                                         '+ div[class=file] div[class=file__name]'
     CSV_IP_TO_LOCATION_SELECTOR = 'div.x-tab.active.global-settings-tab ' \
@@ -191,6 +195,9 @@ class SettingsPage(Page):
     TABLE_ACTION_ITEM_XPATH = \
         '//li[@class=\'ant-dropdown-menu-item\' and contains(text(),\'{action}\')]'
 
+    ABOUT_PAGE_LABEL_KEY_XPATH = '//div[@class=\'x-settings-about\']//label[@for=\'{value}\']'
+    ABOUT_PAGE_LABEL_VALUE_XPATH = '//div[@class=\'x-settings-about\']//label[@for=\'{value}\']' \
+                                   '/following-sibling::div[@class=\'table-td-content-{value}\']'
     ADD_USER_BUTTON_TEXT = 'Add User'
     ADD_ROLE_BUTTON_TEXT = 'Add Role'
 
@@ -286,6 +293,15 @@ class SettingsPage(Page):
     ROLE_ASSIGNMENT_RULES_ROW = '.draggable > .item:nth-child({row_index})'
     LOCKED_ACTIONS_SELECT_ID = '#locked_actions_select'
     LIFECYCLE_WEEKDAYS_SELECT_ID = '#repeat_on_select'
+
+    GUI_SETTINGS_DEFAULT_TIME_FORMAT = 'YYYY-MM-DD'
+    GUI_SETTINGS_US_TIME_FORMAT = 'MM-DD-YYYY'
+
+    ABOUT_PAGE_CONTRACT_EXPIRY_DATE_LABEL = 'Contract Expiry Date'
+    ABOUT_PAGE_BUILD_DATE_LABEL = 'Build Date'
+
+    ABOUT_PAGE_DATE_KEYS = [ABOUT_PAGE_BUILD_DATE_LABEL, ABOUT_PAGE_CONTRACT_EXPIRY_DATE_LABEL]
+    NEXT_DAYS_COUNT = 30
 
     @property
     def url(self):
@@ -564,7 +580,7 @@ class SettingsPage(Page):
             for permissionCategoryName in permissions:
                 if permissionCategoryName in categoryPanel.get_attribute('class'):
                     currentPermissionCategory = permissionCategoryName
-            currentSelectedActions = categoryPanel.\
+            currentSelectedActions = categoryPanel. \
                 find_elements_by_css_selector('.v-expansion-panel-content .x-checkbox.checked')
             if not currentPermissionCategory:
                 continue
@@ -1434,6 +1450,9 @@ class SettingsPage(Page):
                                               time_value=time_of_day,
                                               weekdays=weekdays)
 
+    def get_date_format(self):
+        return self.find_elements_by_css(self.DATE_FORMAT_CSS)[0].text
+
     def set_date_format(self, date_format):
         self.select_option_without_search(self.DATE_FORMAT_CSS,
                                           self.SELECT_OPTION_CSS,
@@ -1774,3 +1793,42 @@ class SettingsPage(Page):
     def close_tunnel_disconnected_modal(self):
         self.wait_for_element_present_by_css('.ant-modal-close-x').click()
         self.wait_for_modal_close()
+
+    def clear_trial_datepicker(self):
+        element = self.find_elements_by_css(self.TRIAL_DATE_PICKER_CSS)[0]
+        try:
+            self.clear_existing_date(element)
+        except NoSuchElementException:
+            pass
+
+    def clear_contract_datepicker(self):
+        element = self.find_elements_by_css(self.CONTRACT_DATE_PICKER_CSS)[0]
+        try:
+            self.clear_existing_date(element)
+        except NoSuchElementException:
+            pass
+
+    def about_page_get_label_text(self, label_value):
+        element = self.find_element_by_xpath(self.ABOUT_PAGE_LABEL_KEY_XPATH.format(value=label_value))
+        return element.text
+
+    def about_page_get_label_value_by_key(self, label_key):
+        element = self.find_element_by_xpath(self.ABOUT_PAGE_LABEL_VALUE_XPATH.format(value=label_key))
+        return element.text
+
+    def about_page_contract_details_exists(self):
+        try:
+            return len(self.find_elements_by_text(self.ABOUT_PAGE_CONTRACT_EXPIRY_DATE_LABEL)) > 0
+        except Exception:
+            return False
+
+    def assert_about_tab_values(self, metadata_file, date_format=GUI_SETTINGS_DEFAULT_TIME_FORMAT):
+        for key, value in metadata_file:
+            if value:
+                assert key == self.about_page_get_label_text(key)
+                if key in self.ABOUT_PAGE_DATE_KEYS:
+                    date_str = datetime.date(dateutil.parser.parse(value))
+                    assert date_str.strftime(
+                        get_datetime_format_by_gui_date(date_format)) == self.about_page_get_label_value_by_key(key)
+                else:
+                    assert value == self.about_page_get_label_value_by_key(key)
