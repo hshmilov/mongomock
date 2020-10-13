@@ -48,6 +48,7 @@ class DevicesPage(EntitiesPage):
     FIELD_OS_MAJOR = 'OS: Major'
     FIELD_OS_BUILD = 'OS: Build'
     FIELD_OS_BITNESS = 'OS: Bitness'
+    FIELD_OS_DISTRIBUTION = 'OS: Distribution'
     FIELD_CPU_BITNESS = 'CPUs: Bitness'
     FIELD_AGENT_VERSION = 'Agent Version'
     FIELD_PORT_ACCESS_PORT_TYPE = 'Port Access: Port Type'
@@ -437,6 +438,14 @@ class DevicesPage(EntitiesPage):
             self.select_query_value_without_search(connection_label, parent=children[0])
         elif operator == COMP_IN:
             self.fill_query_string_value(connection_label, parent=children[0])
+
+    def build_os_distribution_lt_gt_query(self, adapter_name, os_distribution, operator, expression_index=0):
+        expression = self.find_expressions()[expression_index]
+        self.select_query_adapter(adapter_name, parent=expression)
+        self.select_query_field(self.FIELD_OS_DISTRIBUTION, parent=expression)
+        self.select_query_comp_op(operator, parent=expression)
+        self.select_query_value_without_search(os_distribution, parent=expression)
+        self.wait_for_table_to_be_responsive()
 
     def get_host_name_aggregated_value(self):
         return [item.text for item in self.driver.find_elements_by_css_selector(self.HOST_NAME_AGGREGATED_FIELD_CSS)]

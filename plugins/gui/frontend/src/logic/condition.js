@@ -3,7 +3,10 @@ import _isEqual from 'lodash/isEqual';
 import IP from 'ip';
 
 import { getExcludedAdaptersFilter } from '../constants/utils';
-import { compOps, opTitleTranslation, sizeLtGtFields, regexSpecialCharacters } from '../constants/filter';
+import {
+  compOps, opTitleTranslation, sizeLtGtFields, regexSpecialCharacters, osDistributionFormat,
+  SMALLER_THAN_OPERATOR, BIGGER_THAN_OPERATOR,
+} from '../constants/filter';
 import { pluginTitlesToNames } from '../constants/plugin_meta';
 
 const convertSubnetToRaw = (val) => {
@@ -160,6 +163,13 @@ const Condition = function (field, fieldSchema, adapter, compOp, value, filtered
         return formatVersion();
       }
     }
+
+    if (fieldSchema.format && fieldSchema.format === osDistributionFormat) {
+      if (compOp !== SMALLER_THAN_OPERATOR && compOp !== BIGGER_THAN_OPERATOR) {
+        return '';
+      }
+    }
+
     const valueSchema = getValueSchema(fieldSchema, compOp);
     if (value && !_isEmpty(valueSchema.enum)) {
       if (compOp === 'equals' && !schemaEnumFind(valueSchema, value)) {
@@ -289,7 +299,8 @@ export const getOpsMap = (schema) => {
     }
     schema = schema.items;
   }
-  if (schema.enum && schema.format !== 'predefined' && schema.format !== 'tag') {
+  const specialEnumFormats = new Set(['predefined', 'tag', osDistributionFormat]);
+  if (schema.enum && !specialEnumFormats.has(schema.format)) {
     ops = {
       ...ops,
       equals: compOps[schema.type].equals,
@@ -329,6 +340,13 @@ const isStringComparison = (schema, compOp) => {
   return typesExpectingString.includes(schema.type) && opsExpectingString.includes(compOp);
 };
 
+const isOsDistributionStringComparison = (schema, compOp) => {
+  const typesExpectingString = ['string'];
+  const opsExpectingString = ['equals', 'starts', 'ends'];
+  return (schema.format === osDistributionFormat) && typesExpectingString.includes(schema.type)
+      && opsExpectingString.includes(compOp);
+};
+
 const isArrayItemsComparison = (schema, compOp) => {
   const typesExpectingItems = ['array'];
   const opsExpectingItems = ['contains', 'equals', 'subnet', 'notInSubnet', 'starts', 'ends'];
@@ -348,6 +366,9 @@ export const getValueSchema = (fieldSchema, compOp) => {
     return {};
   }
   if (isStringComparison(fieldSchema, compOp)) {
+    return { type: 'string' };
+  }
+  if (isOsDistributionStringComparison(fieldSchema, compOp)) {
     return { type: 'string' };
   }
   if (isDateCountComparison(fieldSchema, compOp)) {

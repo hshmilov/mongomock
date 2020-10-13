@@ -32,7 +32,7 @@ from axonius.utils.parsing import (
     is_valid_ipv4,
     parse_major_minor_version
 )
-
+from axonius.devices.msft_versions import ENUM_WINDOWS_VERSIONS
 
 MAX_SIZE_OF_MONGO_DOCUMENT = (1024**2) * 10
 
@@ -187,7 +187,8 @@ class DeviceAdapterOS(SmartJsonClass):
                            'F5 Networks Big-IP', 'Solaris', 'AIX', 'Printer', 'PlayStation', 'Check Point', "Arista",
                            'Netscaler', 'Chrome OS']
     )
-    distribution = Field(str, 'Distribution')
+    distribution = Field(str, 'Distribution', enum=ENUM_WINDOWS_VERSIONS, skip_enum_check=True,
+                         json_format=JsonStringFormat.os_distribution)
     type_distribution = Field(str, 'Type and Distribution')
     is_windows_server = Field(bool, 'Is Windows Server')
     os_str = Field(str, 'Full OS String')

@@ -30,6 +30,7 @@ import _isEmpty from 'lodash/isEmpty';
 import _isEqual from 'lodash/isEqual';
 import _get from 'lodash/get';
 import _isPlainObject from 'lodash/isPlainObject';
+import { osDistributionFormat, SIZE_OPERATOR } from '@constants/filter';
 import XSelect from '../../../axons/inputs/select/Select.vue';
 import string from '../types/string/StringEdit.vue';
 import number from '../types/numerical/NumberEdit.vue';
@@ -38,7 +39,6 @@ import bool from '../types/boolean/BooleanEdit.vue';
 import integer from '../types/numerical/IntegerEdit.vue';
 // eslint-disable-next-line import/no-duplicates
 import array from '../types/numerical/IntegerEdit.vue';
-import { SIZE_OPERATOR } from '../../../../constants/filter';
 
 import {
   checkShowValue, getOpsList, getOpsMap, schemaEnumFind, getValueSchema,
@@ -77,7 +77,7 @@ export default {
     },
     argumentProxy() {
       if (!_isEmpty(this.valueSchema.enum) && !schemaEnumFind(this.valueSchema, this.argument)
-          && this.operator !== SIZE_OPERATOR) {
+          && this.operator !== SIZE_OPERATOR && this.valueSchema.format !== osDistributionFormat) {
         return null;
       }
       return this.argument;

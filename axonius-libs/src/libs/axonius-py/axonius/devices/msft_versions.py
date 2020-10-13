@@ -38,6 +38,27 @@ SERVER_VERSIONS = {
 
 SERVER_YEARS = ['2003', '2008', '2012', '2016', '2019']
 
+ENUM_WINDOWS_VERSIONS = ['Server 2019',
+                         'Server 2016',
+                         '10',
+                         'Server 2012 R2',
+                         '8.1',
+                         '8',
+                         'Server 2012',
+                         'Server 2008 R2',
+                         '7',
+                         'Server 2008',
+                         'Vista',
+                         'XP Professional x64 Edition',
+                         'Server 2003',
+                         'XP',
+                         'Me',
+                         'Server 2000',
+                         '2000',
+                         '98',
+                         'NT',
+                         '95']
+
 
 def parse_msft_release_version(os_string):
 

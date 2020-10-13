@@ -62,6 +62,12 @@ export const dateFilter = [
 
 export const INCLUDE_OUDATED_MAGIC = 'INCLUDE OUTDATED: ';
 
+export const SIZE_OPERATOR = 'size';
+export const SMALLER_THAN_OPERATOR = '<';
+export const BIGGER_THAN_OPERATOR = '>';
+
+export const osDistributionFormat = 'os-distribution';
+
 const exists = '({field} == ({"$exists":true,"$ne":null}))';
 const exists_str = '({field} == ({"$exists":true,"$ne":""}))';
 const exists_array = '({field} == ({"$exists":true,"$ne":[]}))';
@@ -72,20 +78,20 @@ const regex = '{field} == regex("{val}", "i")';
 const numerical = {
   equals: '{field} == {val}',
   IN: '{field} in [{val}]',
-  '<': '{field} < {val}',
-  '>': '{field} > {val}',
+  [SMALLER_THAN_OPERATOR]: '{field} < {val}',
+  [BIGGER_THAN_OPERATOR]: '{field} > {val}',
   exists,
 };
 const date = {
-  '<': '{field} < date("{val}")',
-  '>': '{field} > date("{val}")',
+  [SMALLER_THAN_OPERATOR]: '{field} < date("{val}")',
+  [BIGGER_THAN_OPERATOR]: '{field} > date("{val}")',
   days: '{field} >= date("NOW {op} {val}d")',
   next_days: '{field} <= date("NOW {op} {val}d")',
   hours: '{field} >= date("NOW {op} {val}h")',
   next_hours: '{field} <= date("NOW {op} {val}h")',
   exists,
 };
-export const SIZE_OPERATOR = 'size';
+
 export const compOps = {
   array: {
     [SIZE_OPERATOR]: '{field} == size({val})',
@@ -160,6 +166,17 @@ export const compOps = {
   percentage: numerical,
   number: numerical,
   integer: numerical,
+  [osDistributionFormat]: {
+    contains,
+    equals,
+    IN,
+    starts: '{field} == regex("^{val}", "i")',
+    ends: '{field} == regex("{val}$", "i")',
+    regex,
+    [SMALLER_THAN_OPERATOR]: '{field} < "{val}"',
+    [BIGGER_THAN_OPERATOR]: '{field} > "{val}"',
+    exists: exists_str,
+  },
 };
 
 export const opTitleTranslation = {

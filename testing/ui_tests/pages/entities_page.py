@@ -50,6 +50,7 @@ class EntitiesPage(Page):
     QUERY_VALUE_COMPONENT_INPUT_CSS = '.x-condition-function .argument input'
     QUERY_VALUE_COMPONENT_CSS = '.x-condition-function .argument'
     QUERY_VALUE_FIELD_COMPARISON_COMPONENT_CSS = '.x-condition-function-field-comparison .argument'
+    QUERY_VALUE_ENUM_INITIAL = 'VALUE...'
     QUERY_SEARCH_INPUT_CSS = '#query_list .input-value'
     EXPRESSION_INPUT_INT_TRIGGER_CSS = '.x-condition-function .argument .x-select-trigger'
     EXP1_TRIGGER_CSS = '.x-condition-function .argument > .trigger.arrow'
@@ -456,13 +457,13 @@ class EntitiesPage(Page):
                                                       self.DROPDOWN_SELECTED_OPTION_CSS,
                                                       value, parent=parent))
 
-    def get_query_value(self, parent=None, input_type_string=False):
+    def get_query_value(self, parent=None, input_type_string=False, is_enum_value=False):
         css_to_use = self.QUERY_VALUE_COMPONENT_INPUT_CSS if input_type_string else self.QUERY_VALUE_COMPONENT_CSS
         if parent:
             el = parent.find_element_by_css_selector(css_to_use)
         else:
             el = self.wait_for_element_present_by_css(css_to_use)
-        return el.get_attribute('value')
+        return el.get_attribute('value') if not is_enum_value else el.text
 
     def select_query_logic_op(self, text, parent=None):
         self._call_wizard_command_with_timeout(

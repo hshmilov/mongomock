@@ -13,11 +13,12 @@ from frozendict import frozendict
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, \
     ADAPTERS_META, CLIENT_USED, PLUGIN_UNIQUE_NAME, \
     SPECIFIC_DATA_CLIENT_USED, CORRELATION_REASONS, HAS_NOTES, SPECIFIC_DATA_PLUGIN_UNIQUE_NAME,\
-    SAVED_QUERY_PLACEHOLDER_REGEX
+    SAVED_QUERY_PLACEHOLDER_REGEX, OS_DISTRIBUTION_GT_LT_QUERY_REGEX
 from axonius.consts.plugin_consts import PLUGIN_NAME, ADAPTERS_LIST_LENGTH
 from axonius.consts.system_consts import MULTI_COMPARE_MAGIC_STRING, COMPARE_MAGIC_STRING
 from axonius.utils.datetime import parse_date
 from axonius.utils.mongo_chunked import read_chunked
+from axonius.devices.msft_versions import ENUM_WINDOWS_VERSIONS
 import axonius.pql
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -27,6 +28,8 @@ PREFERRED_SUFFIX = '_preferred'
 PREFERRED_FIELDS = 'preferred_fields'
 ADAPTER_PROPERTIES_DB_ENTRY = 'adapters.data.adapter_properties'
 ADAPTER_LAST_SEEN_DB_ENTRY = 'adapters.data.last_seen'
+OS_DISTRIBUTION_GT_SUFFIX = 'os.distribution >'
+OS_DISTRIBUTION_LT_SUFFIX = 'os.distribution <'
 
 
 def convert_many_queries_to_elemmatch_helper(name: str, value: object, length_of_prefix: int):
@@ -806,6 +809,32 @@ def translate_from_connection_labels(filter_str: str) -> str:
     return translate_connection_label_in_string(filter_str, '', client_labels)
 
 
+def translate_os_distribution_gt_lt_filter(filter_str: str) -> str:
+    """
+    Translates the relational operators '>' and '<' that are applied to os distribution to 'IN' operator
+    For example: If the given input is '(specific_data.data.os.distribution > "Server 2012 R2")'
+    The resulted output will contain all values of windows versions bigger than "Server 2012 R2" and
+    will look like that: '(specific_data.data.os.distribution in ["10","Server 2016","Server 2019"])'
+    Note! This works only for windows versions as of now.
+    :param filter_str: The filter string to translate
+    """
+    matcher = re.search(OS_DISTRIBUTION_GT_LT_QUERY_REGEX, filter_str)
+    while matcher:
+        os_distribution = matcher.group(2)
+        comp_operator = matcher.group(1)
+        distribution_enum_index = ENUM_WINDOWS_VERSIONS.index(os_distribution)
+        if comp_operator == '<':
+            relevant_os_distributions = ENUM_WINDOWS_VERSIONS[distribution_enum_index + 1:]
+        else:
+            relevant_os_distributions = ENUM_WINDOWS_VERSIONS[:distribution_enum_index]
+        translated_filter = 'os.distribution in [' \
+                            + ','.join('"{0}"'.format(version) for version in relevant_os_distributions) + ']'
+        filter_str = filter_str.replace(matcher.group(0), translated_filter)
+        matcher = re.search(OS_DISTRIBUTION_GT_LT_QUERY_REGEX, filter_str)
+
+    return filter_str
+
+
 def parse_filter(filter_str: str, history_date=None, entity=None) -> dict:
     """
     If given filter contains the keyword NOW, meaning it needs a calculation relative to current date,
@@ -815,6 +844,8 @@ def parse_filter(filter_str: str, history_date=None, entity=None) -> dict:
     from axonius.consts.adapter_consts import CONNECTION_LABEL
 
     filter_str = replace_saved_queries_ids(filter_str, entity)
+    if filter_str and (OS_DISTRIBUTION_LT_SUFFIX in filter_str or OS_DISTRIBUTION_GT_SUFFIX in filter_str):
+        filter_str = translate_os_distribution_gt_lt_filter(filter_str)
     if filter_str and CONNECTION_LABEL in filter_str:
         return dict(parse_filter_uncached(translate_from_connection_labels(filter_str), history_date))
     if filter_str and 'NOW' in filter_str:

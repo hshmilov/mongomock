@@ -78,6 +78,7 @@ import {
 } from '@axons/inputs/dynamicSelects';
 import XTimePicker from '@axons/inputs/TimePicker.vue';
 import { validateEmail } from '@constants/validations';
+import { osDistributionFormat, BIGGER_THAN_OPERATOR, SMALLER_THAN_OPERATOR } from '@constants/filter';
 import primitiveMixin from '../../../../../mixins/primitive';
 import XDateEdit from './DateEdit.vue';
 
@@ -135,6 +136,9 @@ export default {
     inputType() {
       if (this.schema.format && this.schema.format === 'password') {
         return 'password';
+      } if (this.schema.format && this.schema.format === osDistributionFormat
+        && this.operator !== SMALLER_THAN_OPERATOR && this.operator !== BIGGER_THAN_OPERATOR) {
+        return 'text';
       } if (this.schema.enum) {
         return '';
       }
@@ -162,6 +166,9 @@ export default {
   methods: {
     formatData() {
       return this.data;
+    },
+    resetData() {
+      this.data = '';
     },
     onFocusIn(event) {
       if (this.isUnchangedPassword) {

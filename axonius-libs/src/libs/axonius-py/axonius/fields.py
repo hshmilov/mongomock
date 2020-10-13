@@ -57,7 +57,7 @@ def prepare_value(value, field_type, field_instance, name):
     if isinstance(value, list) and len(value) == 1 and field_type == str and isinstance(value[0], str):
         value = value[0]
 
-    if enum:
+    if enum and not field_instance.skip_enum_check:
         values = [item for item in enum if compare_enum(item, value)]
         if not values:
             raise ValueError(f'Unexpected enum value {value}, '
@@ -211,6 +211,7 @@ class JsonStringFormat(JsonFormat):
     image = auto()
     subnet = auto()
     version = auto()
+    os_distribution = auto()
 
 
 class JsonArrayFormat(JsonFormat):
@@ -223,7 +224,7 @@ class Field:
 
     # pylint: disable=too-many-arguments
     def __init__(self, field_type, title=None, description=None, converter=None, json_format: JsonFormat = None,
-                 min_value=None, max_value=None, pattern=None, enum=None, hidden=False):
+                 min_value=None, max_value=None, pattern=None, enum=None, skip_enum_check=False, hidden=False):
         """
         :param field_type: The python type of the field, must be provided.
         :param description: The description of the field (would be displayed in the GUI)
@@ -233,6 +234,7 @@ class Field:
         :param max_value: if provided, will be returned as format json-field
         :param pattern: if provided, will be returned as format json-field
         :param enum: if provided, will be checked that the values are valid and will be returned as format json-field
+        :param skip_enum_check: if provided, the check for valid enum values is skipped
         :param hidden: if provided, the field will not be displayed in the GUI
         """
         self._type = field_type
@@ -262,6 +264,7 @@ class Field:
         elif issubclass(field_type, Enum):
             enum = field_type
         self._enum = enum
+        self._skip_enum_check = skip_enum_check
         self._dynamic = False
         self._hidden = hidden
 
@@ -304,6 +307,10 @@ class Field:
     @property
     def enum(self):
         return self._enum
+
+    @property
+    def skip_enum_check(self):
+        return self._skip_enum_check
 
     @property
     def dynamic(self):
