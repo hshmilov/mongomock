@@ -314,7 +314,11 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
     entity_field_data = merge_entities_fields(entity_fields, field_by_name)
 
     if search_term:
+        search_term = search_term.lower()
+
         def search_term_in_row_value(field_value):
+            if isinstance(field_value, str):
+                field_value = field_value.lower()
             # pylint: disable=unidiomatic-typecheck
             if not isinstance(field_value, Iterable) and type(search_term) == type(field_value):
                 return search_term == field_value
