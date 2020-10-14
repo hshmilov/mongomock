@@ -18,7 +18,7 @@ from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME)
 from axonius.logging.audit_helper import AuditCategory
 from axonius.plugin_base import return_error
-from axonius.utils.gui_helpers import return_api_format
+from axonius.utils.gui_helpers import return_api_format, get_adapters_metadata
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from axonius.modules.plugin_settings import Consts
 from axonius.utils.revving_cache import rev_cached
@@ -50,12 +50,9 @@ class Adapters(Connections):
         return {'schema': clients_value}
 
     @return_api_format()
-    @gui_route_logged_in(enforce_trial=False, proceed_and_set_access=True)
-    def adapters(self, no_access, api_format=True):
-        list_only = request.args.get('list_only')
+    @gui_route_logged_in(enforce_trial=False)
+    def adapters(self, api_format=True):
         if api_format:
-            if no_access:
-                return return_error('Unauthorized', 401)
             adapters = self._adapters()
             for adapter_name in adapters.keys():
                 for adapter in adapters[adapter_name]:
@@ -70,16 +67,20 @@ class Adapters(Connections):
                         client['client_config'][CONNECTION_LABEL] = (client_label.get(CONNECTION_LABEL, '')
                                                                      if client_label else '')
             return jsonify(adapters)
-        adapters = self._adapters_v2()
+        return jsonify(self._adapters_v2())
 
-        if no_access:
-            if not list_only:
-                return return_error('You are lacking some permissions for this request', 401)
-            for adapter_name, adapter_data_list in adapters.items():
-                for adapter_data in adapter_data_list:
-                    adapter_data.pop('clients_count', None)
-                    adapter_data.pop('supported_features', None)
-        return jsonify(adapters)
+    @gui_route_logged_in('list', enforce_permissions=False)
+    def adapters_list(self):
+        adapters = self._adapters_v2()
+        adapters_meta = get_adapters_metadata()
+        configured_adapters = []
+        for adapter_name, adapter_data_list in adapters.items():
+            if any(bool(a.get('clients_count', {}).get('total_count')) for a in adapter_data_list):
+                configured_adapters.append({
+                    'name': adapter_name,
+                    'title': adapters_meta.get(adapter_name, {}).get('title', adapter_name)
+                })
+        return jsonify(configured_adapters)
 
     @gui_route_logged_in('hint_raise/<plugin_name>', methods=['POST'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Adapters), skip_activity=True)
@@ -204,7 +205,6 @@ class Adapters(Connections):
                 'unique_plugin_name': adapter_unique_name,
                 'status': adapter.get('status', ''),
                 'supported_features': adapter['supported_features'],
-                'configured': bool(counter and counter[0]),
                 'clients_count': counter[0],
                 NODE_NAME: node_name,
                 NODE_ID: adapter[NODE_ID]

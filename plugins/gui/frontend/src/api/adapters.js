@@ -23,3 +23,16 @@ export const fetchAdapterConnectionsData = async (adapterName) => {
   const res = await request(requestOptions);
   return res.data;
 };
+
+export const fetchAdapterList = async () => {
+  const uri = '/adapters/list';
+
+  const request = createRequest(uri);
+
+  const requestOptions = {
+    method: 'GET',
+  };
+
+  const res = await request(requestOptions);
+  return res.data;
+};

@@ -61,22 +61,22 @@
         :filter-option="filterOption"
       >
         <ASelectOption
-          v-for="a in getConfiguredAdapters"
-          :key="a.id"
-          :value="a.id"
-          :label="a.title"
+          v-for="adapter in configuredAdapters"
+          :key="adapter.name"
+          :value="adapter.name"
+          :label="adapter.title"
         >
           <span
             role="img"
-            :aria-label="a.title"
+            :aria-label="adapter.title"
             class="exclude-adapter__logo"
           >
             <img
-              :src="require(`Logos/adapters/${a.id}.png`)"
+              :src="require(`Logos/adapters/${adapter.name}.png`)"
               width="24"
             >
           </span>
-          {{ a.title }}
+          {{ adapter.title }}
         </ASelectOption>
       </ASelect>
 
@@ -108,10 +108,9 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from 'vuex';
 import { Modal, Input, Select } from 'ant-design-vue';
-import { FETCH_ADAPTERS } from '@store/modules/adapters';
 import _cloneDeep from 'lodash/cloneDeep';
+import { fetchAdapterList } from '@api/adapters';
 
 export default {
   name: 'XColumnFilter',
@@ -145,26 +144,17 @@ export default {
       unsavedValueFilters: [],
       visible: false,
       unsavedExcludeAdapters: [],
+      configuredAdapters: [],
     };
-  },
-  computed: {
-    ...mapGetters({
-      getConfiguredAdapters: 'getConfiguredAdapters',
-    }),
   },
   mounted() {
     this.resetFilters();
     this.focusLastFilter();
   },
-  created() {
-    this.fetchAdapters(
-        {
-          listOnly: true
-        }
-    );
+  async created() {
+    this.configuredAdapters = await fetchAdapterList();
   },
   methods: {
-    ...mapActions({ fetchAdapters: FETCH_ADAPTERS }),
     toggleInclude(index) {
       this.unsavedValueFilters[index].include = !this.unsavedValueFilters[index].include;
     },
