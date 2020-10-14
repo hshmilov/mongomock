@@ -181,7 +181,13 @@ def main(ami_id=None):
             ssh_user='ubuntu',
             ssh_pass='bringorder'
         )
-        axonius_instance.wait_for_ssh()
+
+        TC.print('Waiting for chef to finish provision')
+        for i in range(10):
+            try:
+                axonius_instance.wait_for_ssh()
+            except Exception:
+                continue
         TC.print('Connected to stack machine using ssh')
 
         client_rb_file = instance_manager._InstanceManager__ssh_execute(axonius_instance,
