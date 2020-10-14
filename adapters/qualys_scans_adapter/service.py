@@ -124,6 +124,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         qualys_tags = ListField(str, 'Qualys Tags')
         last_vuln_scan = Field(datetime.datetime, 'Last Vuln Scan')
         agent_last_seen = Field(datetime.datetime, 'Agent Last Seen')
+        compliance_last_scan = Field(datetime.datetime, 'Compliance Last Scan')
         qweb_host_id = Field(int, 'Qweb Host ID')
         tracking_method = Field(str, 'Tracking Method')
         inventory_instance = Field(InventoryInstance, 'Inventory Asset')
@@ -567,22 +568,31 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem getting OS from {device_raw}')
             try:
+                last_seens = []
                 last_vuln_scan = parse_date(device_raw.get('lastVulnScan'))
+                last_seens.append(last_vuln_scan)
                 device.last_vuln_scan = last_vuln_scan
+
                 agent_last_seen = parse_date((device_raw.get('agentInfo') or {}).get('lastCheckedIn'))
+                last_seens.append(agent_last_seen)
                 device.agent_last_seen = agent_last_seen
-                if agent_last_seen and last_vuln_scan:
-                    device.last_seen = max(last_vuln_scan, agent_last_seen)
-                elif agent_last_seen or last_vuln_scan:
-                    device.last_seen = agent_last_seen or last_vuln_scan
+
+                compliance_last_scan = parse_date(device_raw.get('lastComplianceScan'))
+                last_seens.append(compliance_last_scan)
+                device.compliance_last_scan = compliance_last_scan
+
+                last_system_boot = parse_date(str(device_raw.get('lastSystemBoot')))
+                last_seens.append(last_system_boot)
+
+                device.last_seen = max(d for d in last_seens if isinstance(d, datetime.datetime))
             except Exception:
                 logger.exception(f'Problem getting last seen for {device_raw}')
             device.add_agent_version(agent=AGENT_NAMES.qualys_scans,
                                      version=(device_raw.get('agentInfo') or {}).get('agentVersion'),
                                      status=(device_raw.get('agentInfo') or {}).get('status'))
             device.physical_location = (device_raw.get('agentInfo') or {}).get('location')
-            if device_raw.get('lastSystemBoot'):
-                device.set_boot_time(boot_time=parse_date(str(device_raw.get('lastSystemBoot'))))
+            if last_system_boot:
+                device.set_boot_time(boot_time=last_system_boot)
             try:
                 if not device_raw.get('networkInterface') and device_raw.get('address'):
                     device.add_nic(ips=[device_raw.get('address')])
