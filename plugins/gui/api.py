@@ -8,11 +8,12 @@ from typing import List
 from flask import g, has_request_context, jsonify, request
 from passlib.hash import bcrypt
 
+from axonius.adapter_base import AdapterBase
 from axonius.consts.adapter_consts import CONNECTION_LABEL
 from axonius.consts.gui_consts import IS_AXONIUS_ROLE, RootMasterNames
 from axonius.consts.metric_consts import ApiMetric
 from axonius.consts.plugin_consts import (DEVICE_CONTROL_PLUGIN_NAME, NODE_ID,
-                                          PLUGIN_NAME)
+                                          PLUGIN_NAME, CONNECTION_DISCOVERY)
 from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import EntityType, PluginBase, return_error
@@ -1545,11 +1546,15 @@ class APIMixin:
             return return_error('Connection data is required', 400)
         instance_id = request_data.pop('instanceName', self.node_id)
         prev_instance_id = request_data.pop('oldInstanceName', None)
-        connection_label = request_data.pop('connection_label', None)
+        connection_label = request_data.pop(CONNECTION_LABEL, None)
         connection_active = request_data.pop('active', True)
+        connection_discovery = (
+            request_data.pop(CONNECTION_DISCOVERY, AdapterBase._connection_discovery_schema_default())
+        )
         connection_data = {
             'connection': request_data,
-            'connection_label': connection_label,
+            CONNECTION_LABEL: connection_label,
+            CONNECTION_DISCOVERY: connection_discovery,
             'active': connection_active
         }
         return self._update_connection(client_id, adapter_name, instance_id, prev_instance_id, connection_data)

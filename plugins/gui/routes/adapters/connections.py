@@ -106,11 +106,15 @@ class Connections:
         if request_data.get('connection'):
             connection_data = request_data
         else:
-            connection_label = request_data.pop('connection_label', None)
+            connection_label = request_data.pop(CONNECTION_LABEL, None)
             connection_active = request_data.pop('active', True)
+            connection_discovery = (
+                request_data.pop(CONNECTION_DISCOVERY, AdapterBase._connection_discovery_schema_default())
+            )
             connection_data = {
                 'connection': request_data,
-                'connection_label': connection_label,
+                CONNECTION_LABEL: connection_label,
+                CONNECTION_DISCOVERY: connection_discovery,
                 'active': connection_active
             }
 
@@ -205,7 +209,7 @@ class Connections:
 
             # only audit discovery details in case it enabled
             def get_discovery_details(discovery: dict) -> dict:
-                return discovery if discovery['enabled'] is True else {'enabled': False}
+                return discovery if discovery and discovery.get('enabled') else {'enabled': False}
 
             def get_client_info(connection, label, discovery, active, instance):
                 return {
