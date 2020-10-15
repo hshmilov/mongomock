@@ -81,9 +81,11 @@ export const getModuleSchemaWithConnectionLabel = (state) => (module, objectView
 
 export const GET_MODULE_FIELDS = 'GET_MODULE_FIELDS';
 export const getModuleFields = (state) => (module) => {
+  const excludedFields = ['adapter_list_length'];
   const generic = _get(state[module], 'fields.data.generic', []);
   const specific = _get(state[module], 'fields.data.specific', []);
-  return [generic, ...Object.values(specific)].flat().map((field) => field.name);
+  const allFields = [generic, ...Object.values(specific)].flat().map((field) => field.name);
+  return allFields.filter((name) => !excludedFields.includes(name));
 };
 
 export const GET_DATA_SCHEMA_LIST = 'GET_DATA_SCHEMA_LIST';
