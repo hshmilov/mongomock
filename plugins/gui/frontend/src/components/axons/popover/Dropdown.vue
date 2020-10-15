@@ -114,7 +114,8 @@ export default {
       const styles = {};
       const boundingRect = this.$el.getBoundingClientRect();
       if (this.align === 'right') {
-        const right = window.innerWidth - boundingRect.left - boundingRect.width;
+        const scrollbarWidth = window.innerWidth - document.body.offsetWidth;
+        const right = window.innerWidth - boundingRect.left - boundingRect.width - scrollbarWidth;
         styles.right = `${right}px`;
         styles.left = 'auto';
       }
