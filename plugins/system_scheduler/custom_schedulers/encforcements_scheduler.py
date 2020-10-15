@@ -34,7 +34,7 @@ class EnforcementsCustomScheduler(DiscoveryCustomScheduler):
                                day=f'*/{recurrence}')
 
         if trigger.period == TriggerPeriod.weekly:
-            scheduled_weekdays = [calendar.day_name[x] for x in trigger.period_recurrence]
+            scheduled_weekdays = [calendar.day_name[int(x)] for x in trigger.period_recurrence]
             weekdays_for_cron = ','.join([day[:3].lower() for day in
                                           scheduled_weekdays])
             return CronTrigger(hour=hour,
