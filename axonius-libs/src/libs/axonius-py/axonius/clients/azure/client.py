@@ -3,6 +3,7 @@ import datetime
 import logging
 from collections import namedtuple
 from typing import Dict, NamedTuple
+from urllib.parse import quote, unquote
 
 import adal
 from requests import HTTPError
@@ -159,16 +160,22 @@ class AzureCloudConnection(RESTConnection):
 
         self.__all_subscriptions = None
 
+    @staticmethod
+    def _get_url_safe_str(in_str, safe='', encoding=None):
+        if in_str == unquote(in_str, encoding=encoding):
+            return quote(in_str, safe=safe, encoding=encoding)
+        return in_str
+
     def _oauth2_refresh_token(self, resource):
         last_refresh, expires_in, _ = self._oauth2_token_details.get(resource) or (None, None, None)
 
         if last_refresh and expires_in \
                 and last_refresh + datetime.timedelta(seconds=expires_in) > datetime.datetime.now():
             return
-
+        safe_client_secret = self._get_url_safe_str(self._app_client_secret)
         body_params = f'grant_type=client_credentials' \
             f'&client_id={self._app_client_id}' \
-            f'&client_secret={self._app_client_secret}' \
+            f'&client_secret={safe_client_secret}' \
             f'&resource={resource}'
 
         response = self._post(f'{self._auth_url}/{self.tenant_id}/oauth2/token',
