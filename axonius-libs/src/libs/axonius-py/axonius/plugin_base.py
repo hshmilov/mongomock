@@ -1751,13 +1751,15 @@ class PluginBase(Configurable, Feature, ABC):
                     self.execution_promises.submit(action_promise.do_reject, Exception(err_msg))
                     self._open_actions.pop(action_id)
 
-    def _get_db_connection(self):
+    def _get_db_connection(self, create_new=False):
         """
         Returns a new DB connection that can be queried.
         Currently, it uses mongodb
 
         :return: MongoClient
         """
+        if create_new:
+            self.mongo_client = get_db_client()
         return self.mongo_client
 
     def _get_collection(self, collection_name, db_name=None) -> Collection:

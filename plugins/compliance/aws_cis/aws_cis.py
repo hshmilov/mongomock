@@ -17,7 +17,7 @@ NUMBER_OF_PARALLEL_PROCESSES = 5
 TIMEOUT_FOR_RESULT_GENERATION = 60 * 60 * 5     # 5 hours
 
 
-# pylint: disable=protected-access
+# pylint: disable=protected-access,bad-continuation
 class AWSCISGenerator:
     def __init__(self):
         self.plugin_base: PluginBase = PluginBase.Instance
@@ -114,14 +114,15 @@ class AWSCISGenerator:
                             logger.error(f'Report finished empty for "{account_name}" ({account_id}')
                             continue
 
-                        PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['reports'].insert_one(
-                            {
-                                'account_id': account_id,
-                                'account_name': account_name,
-                                'report': report_json,
-                                'type': 'aws-cis',
-                                'last_updated': datetime.datetime.now()
-                            }
+                        PluginBase.Instance._get_db_connection(create_new=True)[COMPLIANCE_PLUGIN_NAME][
+                            'reports'].insert_one(
+                                {
+                                    'account_id': account_id,
+                                    'account_name': account_name,
+                                    'report': report_json,
+                                    'type': 'aws-cis',
+                                    'last_updated': datetime.datetime.now()
+                                }
                         )
 
                         logger.info(f'Finished AWS-CIS report for "{account_name}" ({account_id} '

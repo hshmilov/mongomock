@@ -10,12 +10,11 @@ from compliance.azure_cis.azure_cis_account_report import generate_report_for_az
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-
 NUMBER_OF_PARALLEL_PROCESSES = 5
-TIMEOUT_FOR_RESULT_GENERATION = 60 * 60 * 5     # 5 hours
+TIMEOUT_FOR_RESULT_GENERATION = 60 * 60 * 5  # 5 hours
 
 
-# pylint: disable=protected-access
+# pylint: disable=protected-access,bad-continuation
 class AzureCISGenerator:
     def __init__(self):
         self.plugin_base: PluginBase = PluginBase.Instance
@@ -81,14 +80,15 @@ class AzureCISGenerator:
                 start_time = futures_to_data[future]
                 try:
                     account_id, account_name, report_json = future.result()
-                    PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME]['azure_reports'].insert_one(
-                        {
-                            'account_id': account_id,
-                            'account_name': account_name,
-                            'report': report_json,
-                            'type': 'azure-cis',
-                            'last_updated': datetime.datetime.now()
-                        }
+                    PluginBase.Instance._get_db_connection(create_new=True)[COMPLIANCE_PLUGIN_NAME][
+                        'azure_reports'].insert_one(
+                            {
+                                'account_id': account_id,
+                                'account_name': account_name,
+                                'report': report_json,
+                                'type': 'azure-cis',
+                                'last_updated': datetime.datetime.now()
+                            }
                     )
 
                     logger.info(f'Finished Azure-CIS report for "{account_name}" ({account_id} '
