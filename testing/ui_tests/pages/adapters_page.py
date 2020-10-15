@@ -98,6 +98,7 @@ class AdaptersPage(EntitiesPage):
     ADAPTERS_SWITCH_LABEL_CSS = '.adapters-search .x-switch-label'
     ADAPTERS_SWITCH_BUTTON_CSS = '.adapters-search .ant-switch'
     ADAPTERS_SWITCH_CLASS_NAME = 'connection-status'
+    CONFIGURE_ADAPTERS_LABEL_PATTERN = r'configured adapters \((\d) of (\d)\)'
 
     @property
     def url(self):
@@ -444,13 +445,18 @@ class AdaptersPage(EntitiesPage):
         return self.driver.find_element_by_css_selector(f'{self.PASSWORD_VAULT_TOGGLE_CSS}__status')
 
     def get_configured_adapters_count_from_switch_label(self):
-        pattern = r'configured only \((\d)\)'
-
         element = self.wait_for_element_present_by_css(self.ADAPTERS_SWITCH_LABEL_CSS)
         element_text = element.text
 
-        match_object = re.match(pattern, element_text, re.I | re.M)
+        match_object = re.match(self.CONFIGURE_ADAPTERS_LABEL_PATTERN, element_text, re.I | re.M)
         return int(match_object.group(1))
+
+    def get_total_adapters_count_from_switch_label(self):
+        element = self.wait_for_element_present_by_css(self.ADAPTERS_SWITCH_LABEL_CSS)
+        element_text = element.text
+
+        match_object = re.match(self.CONFIGURE_ADAPTERS_LABEL_PATTERN, element_text, re.I | re.M)
+        return int(match_object.group(2))
 
     def verify_only_configured_adapters_visible(self):
         adapters_count = self.get_adapters_table_length()

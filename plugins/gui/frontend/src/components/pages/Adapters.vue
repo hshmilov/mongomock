@@ -172,9 +172,6 @@ export default {
       }
       return res;
     },
-    configuredAdaptersCount() {
-      return this.getConfiguredAdapters.length;
-    },
     successfullyconfiguredAdapters() {
       return this.adaptersData.filter(getConnectedAdapters).length;
     },
@@ -199,7 +196,7 @@ export default {
       },
     },
     configuredSwitchLabel() {
-      return `Configured only (${this.configuredAdaptersCount})`;
+      return `Configured adapters (${this.getConfiguredAdapters.length} of ${this.adaptersData.length})`;
     },
   },
   methods: {

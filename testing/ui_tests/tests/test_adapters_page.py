@@ -59,6 +59,11 @@ class TestAdaptersPage(TestBase):
         assert not self.plugin_meta['json_file_adapter']['link']
         assert not self.adapters_page.find_help_link()
 
+    def test_adapters_page_total_number_of_adapter(self):
+        self.adapters_page.switch_to_page()
+        assert self.adapters_page.get_adapters_table_length() == \
+            self.adapters_page.get_total_adapters_count_from_switch_label()
+
     @property
     def plugin_meta(self):
         plugin_meta_path = os.path.join(get_cortex_dir(), 'plugins/gui/frontend/src/constants/plugin_meta.json')
