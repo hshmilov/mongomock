@@ -46,50 +46,63 @@ import {
 
 export const MAX_GET_SIZE = 2000;
 export const REQUEST_API = 'REQUEST_API';
-export const requestApi = ({ commit }, payload) => {
-  if (!payload.rule) return;
+export const requestApi = async ({ commit }, payload) => {
+  const {
+    type: mutation,
+    payload: actionPayload,
+    rule,
+    data,
+    binary,
+  } = payload;
 
-  if (payload.type) {
-    commit(payload.type, {
-      rule: payload.rule, fetching: true, error: '', ...payload.payload,
+  if (!rule) throw new Error('rule not supplied');
+
+  if (mutation) {
+    commit(mutation, {
+      rule: payload.rule, fetching: true, error: '', ...actionPayload,
     });
   }
-  if (!payload.method) payload.method = 'GET';
 
-  const request_config = { method: payload.method, url: payload.rule };
+  const requestConfig = {
+    method: payload.method || 'GET',
+    url: payload.rule,
+    data,
+    responseType: binary ? 'arraybuffer' : 'appliaction/json',
+  };
 
-  if (payload.data) request_config.data = payload.data;
-  if (payload.binary) request_config.responseType = 'arraybuffer';
-  return new Promise((resolve, reject) => axiosClient(request_config)
-    .then((response) => {
-      if (payload.type) {
-        commit(payload.type, {
-          rule: payload.rule, fetching: false, data: response.data, ...payload.payload,
-        });
-      }
-      resolve(response);
-    })
-    .catch((error) => {
-      let errorMessage = error.message;
-      if (error && error.response) {
-        errorMessage = error.response.data.message;
-        if (error.response.status === 401) {
-          if (errorMessage !== 'password expired') {
-            commit(INIT_USER, { fetching: false, error: errorMessage });
-            return;
-          }
-        }
-        if (error.response.status >= 500) {
-          errorMessage = 'An error occurred. Please contact the Axonius support team.';
+  try {
+    const response = await axiosClient(requestConfig);
+    if (mutation) {
+      commit(mutation, {
+        rule,
+        fetching: false,
+        data: response.data,
+        ...actionPayload,
+      });
+    }
+    return response;
+  } catch (error) {
+    const apiErrorMessage = _get(error, 'response.data.message');
+    let errorMessage = apiErrorMessage || error.message;
+
+    if (error.response) {
+      if (error.response.status === 401) {
+        if (errorMessage !== 'password expired') {
+          commit(INIT_USER, { fetching: false, error: errorMessage });
+          throw error;
         }
       }
-      if (payload.type) {
-        commit(payload.type, {
-          rule: payload.rule, fetching: false, error: errorMessage, ...payload.payload,
-        });
+      if (error.response.status >= 500) {
+        errorMessage = 'An error occurred. Please contact the Axonius support team.';
       }
-      reject(error);
-    }));
+    }
+    if (mutation) {
+      commit(payload.type, {
+        rule, fetching: false, error: errorMessage, ...actionPayload,
+      });
+    }
+    throw error;
+  }
 };
 
 export const getModule = (state, payload) => {
@@ -108,11 +121,12 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
 
   if (payload.isExperimentalAPI && ['users', 'devices'].includes(path) && view.query.search !== null) {
     // eslint-disable-next-line consistent-return
-    return await dispatch(REQUEST_API, {
+    await dispatch(REQUEST_API, {
       rule: `/graphql/search/${path}?term=${view.query.search}&count=True`,
       type: UPDATE_DATA_COUNT,
       payload,
     });
+    return;
   }
   // For now we support only /users and /devices 'big queries'
   if (view.query.filter.length > MAX_GET_SIZE && ['users', 'devices'].includes(path)) {

@@ -291,7 +291,7 @@ export const auth = {
        */
       return new Promise((resolve, reject) => {
         if (!payload || !payload.user_name || !payload.password) {
-          reject('user_name & password are must');
+          reject(new Error('user_name & password are must'));
         }
 
         dispatch(REQUEST_API, {
@@ -341,18 +341,19 @@ export const auth = {
       try {
         const auth2 = window.gapi.auth2.getAuthInstance();
         auth2.signOut();
-      } catch (err) {
-      }
+      } catch (err) {}
       return dispatch(REQUEST_API, {
         rule: 'logout',
       }).then(() => {
         commit(RESET_DEVICES_STATE);
         commit(RESET_USERS_STATE);
-        if (payload) {
-          payload.fetching = false;
-          payload.data = null;
-          return commit(SET_USER, payload);
-        }
+        commit(SET_USER, {
+          ...payload,
+          fetching: false,
+          error: '',
+          data: null,
+        });
+        Promise.resolve();
       });
     },
     [GET_ALL_USERS]({ dispatch }) {

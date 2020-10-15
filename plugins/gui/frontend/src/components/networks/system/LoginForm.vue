@@ -76,13 +76,14 @@ export default {
     onValidate(valid) {
       this.invalidForm = !valid;
     },
-    onLogin() {
-      this.login(this.credentials).then((res) => {
+    async onLogin() {
+      try {
+        const res = await this.login(this.credentials);
         if (res.status === 200) {
           // Set getting started panel state to open=true
           GettingStartedPubSub.$emit('getting-started-login');
         }
-      }).catch((error) => {
+      } catch (error) {
         const errorMessage = error.response.data.message;
         if (errorMessage && errorMessage === 'password expired') {
           const token = error.response.data.additional_data.split('token=')[1];
@@ -95,7 +96,7 @@ export default {
             onOk: () => this.$router.push({ path: '/', query: { token } }),
           });
         }
-      });
+      }
     },
   },
 };
