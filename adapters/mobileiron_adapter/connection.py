@@ -6,19 +6,25 @@ from mobileiron_adapter.consts import DEVICE_PER_PAGE, MAX_DEVICES_COUNT
 
 
 class MobileironConnection(RESTConnection):
-    def __init__(self, *args, is_cloud=False, **kwargs):
+    def __init__(self, *args, is_cloud=False, is_no_url_base=False, **kwargs):
         super().__init__(*args, headers={'Content-Type': 'application/json',
                                          'Accept': 'application/json'},
                          **kwargs)
         self.__fetch_apps = False
         self._users_dict = {}
         self._is_cloud = is_cloud
+        self._is_no_url_base = is_no_url_base
 
     def _connect(self):
         if not self._is_cloud:
             self._connect_core()
             return
         self._connect_cloud()
+
+    def _do_request(self, *args, **kwargs):
+        if not self._is_cloud and self._is_no_url_base:
+            kwargs.setdefault('do_basic_auth', True)
+        return super()._do_request(*args, **kwargs)
 
     def _connect_cloud(self):
         response = self._get('metadata/tenant',
@@ -37,8 +43,11 @@ class MobileironConnection(RESTConnection):
             raise RESTException('No user name or password')
         self._get('ping', do_basic_auth=True)
         response = self._get('device_spaces/mine')
-        if not isinstance(response, dict) or not response.get('results') or not isinstance(response['results'], list):
+        if not isinstance(response, dict):
             raise RESTException('Could not get device_spaces/mine request')
+        if not (response.get('results') and isinstance(response['results'], list)):
+            logger.warning(f'Got invalid results: {response.get("results")}')
+            raise RESTException(f'Invalid or no device space returned for user, please check permissions.')
         device_space_id = response['results'][0]['id']
         self._get('devices/count', url_params={'adminDeviceSpaceId': device_space_id, 'query': ''})
 

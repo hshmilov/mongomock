@@ -66,7 +66,8 @@ class MobileironAdapter(AdapterBase, Configurable):
                                           verify_ssl=client_config['verify_ssl'],
                                           username=client_config['username'],
                                           password=client_config['password'],
-                                          is_cloud=False)
+                                          is_cloud=False,
+                                          is_no_url_base=bool(client_config.get('no_base_path')))
         return connection
 
     def _connect_client(self, client_config):
