@@ -1239,31 +1239,34 @@ def parse_raw_data_inner_regular(
                                     device.cloud_provider = 'AWS'
                                     device.cloud_id = ecs_ec2_instance_id
 
-                                for attribute in container_instance_raw_data.get('attributes'):
-                                    attribute_name = attribute.get('name')
-                                    attribute_value = attribute.get('value')
+                                # this data is optional, so may not exist
+                                container_attributes = container_instance_raw_data.get('attributes')
+                                if container_attributes and isinstance(container_attributes, list):
+                                    for attribute in container_attributes:
+                                        attribute_name = attribute.get('name')
+                                        attribute_value = attribute.get('value')
 
-                                    if not isinstance(attribute_name, str) or not isinstance(attribute_value, str):
-                                        continue
+                                        if not isinstance(attribute_name, str) or not isinstance(attribute_value, str):
+                                            continue
 
-                                    attribute_name = attribute_name.lower()
-                                    if attribute_name == 'ecs.ami-id':
-                                        device.image_id = attribute_value
+                                        attribute_name = attribute_name.lower()
+                                        if attribute_name == 'ecs.ami-id':
+                                            device.image_id = attribute_value
 
-                                    elif attribute_name == 'ecs.vpd-id':
-                                        device_vpc_id = attribute_value
+                                        elif attribute_name == 'ecs.vpd-id':
+                                            device_vpc_id = attribute_value
 
-                                    elif attribute_name == 'ecs.subnet-id':
-                                        device_subnet_id = attribute_value
+                                        elif attribute_name == 'ecs.subnet-id':
+                                            device_subnet_id = attribute_value
 
-                                    elif attribute_name == 'ecs.availability-zone':
-                                        device.aws_availability_zone = attribute_value
+                                        elif attribute_name == 'ecs.availability-zone':
+                                            device.aws_availability_zone = attribute_value
 
-                                    elif attribute_name == 'ecs.instance-type':
-                                        device.instance_type = attribute_value
+                                        elif attribute_name == 'ecs.instance-type':
+                                            device.instance_type = attribute_value
 
-                                    elif attribute_name == 'ecs.os-type':
-                                        device.figure_os(attribute_value)
+                                        elif attribute_name == 'ecs.os-type':
+                                            device.figure_os(attribute_value)
 
                                 # we have no info of the ip of the container in ec2. we have to get all the ip's
                                 # of this ec2 instance from the ec2 data.
