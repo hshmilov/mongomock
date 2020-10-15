@@ -1,5 +1,7 @@
 import os
 import sys
+from pathlib import Path
+
 import daemonocle
 import logging
 import json_log_formatter
@@ -12,12 +14,19 @@ WATCHDOG_LOGS_DIR = LOGS_PATH_HOST / 'watchdogs'
 
 class WatchdogTask:
 
-    def __init__(self):
-        self.name = self.__class__.__name__.lower()
+    def __init__(self, name=None):
+        if not name:
+            self.name = self.__class__.__name__.lower()
+        else:
+            self.name = name
         WATCHDOG_LOGS_DIR.mkdir(parents=True, exist_ok=True)
         self.logfile = WATCHDOG_LOGS_DIR / f'{self.name}.watchdog.log'
         self.pidfile = WATCHDOG_LOGS_DIR / f'{self.name}.pid'
-
+        if str(self.logfile).startswith('/tmp'):
+            self.logfile = Path('/proc/self/cwd').resolve() / '..' / '..' / '..' / 'logs' / 'watchdogs' / \
+                f'{self.name}.watchdog.log'
+            self.pidfile = Path('/proc/self/cwd').resolve() / '..' / '..' / '..' / 'logs' / 'watchdogs' / \
+                f'{self.name}.pid'
         formatter = json_log_formatter.JSONFormatter()
         json_handler = logging.FileHandler(filename=self.logfile)
         json_handler.setFormatter(formatter)

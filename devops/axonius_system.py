@@ -7,6 +7,7 @@ import platform
 import os
 
 from datetime import datetime
+from pathlib import Path
 
 import docker
 from pymongo.errors import PyMongoError
@@ -28,6 +29,8 @@ from axonius.consts.system_consts import (METADATA_PATH,
                                           CORTEX_PATH, AXONIUS_VPN_DATA_PATH, AXONIUS_SAAS_VAR_NAME)
 from devops.scripts.watchdog import watchdog_main
 from tunnel_setup import setup_openvpn
+
+DOCKER_LOGIN_PATH = Path('../testing/test_credentials/docker_login.sh').absolute()
 
 
 def main(command):
@@ -170,6 +173,8 @@ def system_entry_point(args):
         args.env.append(f'{AXONIUS_SAAS_VAR_NAME}=TRUE')
 
     if args.mode in ('up', 'build'):
+        if DOCKER_LOGIN_PATH.exists():
+            os.system(str(DOCKER_LOGIN_PATH))
         axonius_system.pull_base_image(args.pull_base_image, tag=args.image_tag)
         # If there's and update to the base-image there should always be an update to the manager image as well
         axonius_system.pull_manager_image(args.pull_base_image, tag=args.image_tag)

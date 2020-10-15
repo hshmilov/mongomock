@@ -13,7 +13,11 @@ if [[ $(uname -r) =~ .*Microsoft || $(uname -s) =~ MINGW.* || "$OSTYPE" == "msys
     # Windows host
     if [[ ! $(uname -r) =~ .*Microsoft ]]; then
       docker() {
-          realdocker='/c/Program Files/Docker/Docker/Resources/bin/docker'
+          if [ -f '/c/Program Files/Docker/Docker/Resources/bin/docker' ];then
+            realdocker='/c/Program Files/Docker/Docker/Resources/bin/docker'
+          else
+            realdocker=`which docker.exe`
+          fi
           export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*"
           printf "%s\0" "$@" > /tmp/args.txt
           winpty bash -c "xargs -0a /tmp/args.txt '$realdocker'"

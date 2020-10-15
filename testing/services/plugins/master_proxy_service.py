@@ -8,8 +8,7 @@ from urllib3 import ProxyManager
 from axonius.consts import plugin_consts
 from axonius.consts.plugin_consts import MASTER_PROXY_PLUGIN_NAME
 from axonius.consts.system_consts import NODE_MARKER_PATH
-from scripts.instances.instances_consts import (AXONIUS_SETTINGS_HOST_PATH,
-                                                PROXY_DATA_HOST_PATH)
+from scripts.instances.instances_consts import PROXY_DATA_HOST_PATH
 from services.ports import DOCKER_PORTS
 from services.system_service import SystemService
 from services.weave_service import WeaveService
@@ -27,7 +26,7 @@ def read_proxy_data():
         port = DOCKER_PORTS[MASTER_PROXY_PLUGIN_NAME]
         if NODE_MARKER_PATH.is_file():
             print(f'running on node, work with {MASTER_PROXY_PLUGIN_NAME}')
-            return {CREDS: f'localhost:{port}', VERIFY: False}
+            return {CREDS: f'master-proxy.axonius.local:{port}', VERIFY: False}
 
         proxy_data_file = PROXY_DATA_HOST_PATH
         if proxy_data_file.is_file():
@@ -71,7 +70,7 @@ class MasterProxyService(SystemService, WeaveService):
     def is_up(self, *args, **kwargs):
         try:
             response = requests.get('https://manage.chef.io',
-                                    proxies={'https': f'https://127.0.0.1:{self.port()}'},
+                                    proxies={'https': f'https://master-proxy.axonius.local:{self.port()}'},
                                     timeout=(10, 60))
             if response.status_code == 200:
                 print(f'proxy started ok')
@@ -98,7 +97,8 @@ class MasterProxyService(SystemService, WeaveService):
     def volumes_override(self):
 
         return [f'{self.service_dir}/{CONF_FILE}:/etc/tinyproxy/tinyproxy.conf',
-                f'{AXONIUS_SETTINGS_HOST_PATH}:{plugin_consts.AXONIUS_SETTINGS_PATH}']
+                f'{self.cortex_root_dir}/{plugin_consts.AXONIUS_SETTINGS_DIR_NAME}:'
+                f'{plugin_consts.AXONIUS_SETTINGS_PATH}']
 
     @property
     def _additional_parameters(self):
