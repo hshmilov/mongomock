@@ -39,6 +39,30 @@ logger = logging.getLogger(f'axonius.{__name__}')
 @gui_category_add_rules('dashboard')
 class Dashboard(Charts, Notifications):
 
+    MATCH_PUBLIC_SPACES = {'type': {'$ne': DASHBOARD_SPACE_TYPE_PERSONAL}}
+
+    @staticmethod
+    def _get_personal_space_filter():
+        return {
+            '$and': [
+                {'type': DASHBOARD_SPACE_TYPE_PERSONAL},
+                {'user_id': get_connected_user_id()}
+            ]
+        }
+
+    def _get_permitted_spaces_filter(self):
+        return {
+            '$and': [
+                {
+                    '$or': [
+                        {'public': {'$in': [None, True]}},
+                        {'roles': str(self.get_user_role_id())}
+                    ]
+                },
+                {'type': {'$ne': DASHBOARD_SPACE_TYPE_PERSONAL}}
+            ]
+        }
+
     def _is_personal_space(self, space_id: ObjectId) -> bool:
         space = self._dashboard_spaces_collection.find_one({
             '_id': space_id
@@ -115,31 +139,13 @@ class Dashboard(Charts, Notifications):
 
         :return:
         """
-        personal_space_filter = {
-            '$and': [
-                {'type': DASHBOARD_SPACE_TYPE_PERSONAL},
-                {'user_id': get_connected_user_id()}
-            ]
-        }
-        public_spaces_with_roles_filter = {
-            '$and': [
-                {
-                    '$or': [
-                        {'public': {'$in': [None, True]}},
-                        {'roles': str(self.get_user_role_id())}
-                    ]
-                },
-                {'type': {'$ne': DASHBOARD_SPACE_TYPE_PERSONAL}}
-            ]
-        }
-        all_public_spaces_filter = {'type': {'$ne': DASHBOARD_SPACE_TYPE_PERSONAL}}
         spaces_filter = filter_archived({
             'name': {
                 '$exists': True
             },
             '$or': [
-                personal_space_filter,
-                public_spaces_with_roles_filter if not self.is_admin_user() else all_public_spaces_filter
+                self._get_personal_space_filter(),
+                self._get_permitted_spaces_filter() if not self.is_admin_user() else self.MATCH_PUBLIC_SPACES
             ]
         })
         spaces = [{
@@ -159,10 +165,19 @@ class Dashboard(Charts, Notifications):
 
         if not space_id:
             return_error('space id is required', 400)
+
         space_filter = filter_archived({
-            '_id': ObjectId(space_id)
+            '_id': ObjectId(space_id),
+            '$or': [
+                self._get_personal_space_filter(),
+                self._get_permitted_spaces_filter() if not self.is_admin_user() else self.MATCH_PUBLIC_SPACES
+            ]
         })
+
         space = self._dashboard_spaces_collection.find_one(space_filter)
+
+        if not space:
+            return return_error('space not found', 404)
 
         charts_filter = filter_archived({
             'space': ObjectId(space_id),
@@ -198,8 +213,6 @@ class Dashboard(Charts, Notifications):
             'linked_dashboard': str(chart.get('linked_dashboard', ''))
         } for chart in self._dashboard_collection.find(charts_filter) if check_visible(chart)]
 
-        if not space:
-            return_error('Internal Server Error', 500)
         return jsonify({
             'uuid': str(space['_id']),
             'name': space['name'],
