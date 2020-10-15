@@ -2,9 +2,15 @@
 
 export CORTEX_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $CORTEX_ROOT/prepare_python_env.sh
+source $CORTEX_ROOT/bash_imports.sh
 
 echo "Killing dockers"
 RUNNING_DOCKERS=$( docker ps -q )
+if [ -f /.dockerenv ];then
+  # Dont kill axonius-manager from inside container
+  AXONIUS_MANAGER_CONTAINER_ID=$(docker ps --filter "name=$DOCKER_NAME" -q)
+  RUNNING_DOCKERS=${RUNNING_DOCKERS/$AXONIUS_MANAGER_CONTAINER_ID/""}
+fi
 if [ "$RUNNING_DOCKERS" != "" ]; then
     docker kill ${RUNNING_DOCKERS}
 fi
@@ -12,6 +18,11 @@ fi
 echo "Removing all containers"
 RUNNING_DOCKERS=$( docker ps -a -q )
 if [ "$RUNNING_DOCKERS" != "" ]; then
+    if [ -f /.dockerenv ];then
+      # Dont remove axonius-manager from inside container
+      AXONIUS_MANAGER_CONTAINER_ID=$(docker ps --filter "name=$DOCKER_NAME" -q)
+      RUNNING_DOCKERS=${RUNNING_DOCKERS/$AXONIUS_MANAGER_CONTAINER_ID/""}
+    fi
     docker rm -f ${RUNNING_DOCKERS}
     docker rm -f ${RUNNING_DOCKERS} # docker graph dependency issue
     RUNNING_DOCKERS=$( docker ps -a -q )

@@ -56,8 +56,7 @@ def main():
         os.chdir(INSTALL_HOME)
         # this command should run after this user terminates ssh
         os.system(
-            f'/usr/bin/nohup '
-            f'/home/decrypt/install_and_run.sh {decryption_key} >> /var/log/machine_boot.log 2>&1 &')
+            f'setsid /bin/bash -c "/home/decrypt/install_and_run.sh {decryption_key} >> /var/log/machine_boot.log 2>&1 &"')
 
     except Exception as e:
         print(e)

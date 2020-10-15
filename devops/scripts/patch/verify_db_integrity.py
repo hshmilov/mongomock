@@ -17,7 +17,7 @@ def log(fmt, *args, **kwargs):
 
 
 def main():
-    db = MongoClient('127.0.0.1:27017', username='ax_user', password='ax_pass')
+    db = MongoClient('mongo.axonius.local:27017', username='ax_user', password='ax_pass')
     dbs = db.list_database_names()  # this just returns a list string
     try:
         dbs.remove('admin')  # this doesn't remove the DB from mongo, it only removes it from the list :P

@@ -3,8 +3,6 @@
 import subprocess
 import docker
 
-from utils import print_state
-
 
 def stop_weave_network():
     try:
@@ -22,8 +20,8 @@ def destroy():
     host connection(running container and the image)
     """
     client = docker.from_env()
-    instances_dockers_container_names_substrings_to_keep = ['grid']
-    instances_docker_tag_substring_to_keep = ['selenium']
+    instances_dockers_container_names_substrings_to_keep = ['grid', 'axonius-manager']
+    instances_docker_tag_substring_to_keep = ['selenium', 'axonius-manager']
     stop_weave_network()
 
     for container in client.containers.list(ignore_removed=True):
@@ -39,10 +37,6 @@ def destroy():
         except Exception as e:
             print(f'Error while removing container {container.name}: {e}')
 
-    # restart docker service
-    print_state(f'Restarting docker service')
-    subprocess.check_call('service docker restart'.split())
-
     # remove gui volume
     print(f'Removing gui volume')
     try:
@@ -50,12 +44,19 @@ def destroy():
     except Exception:
         print('gui_data volume not found')
 
+    print('Removing instance-control volume')
+    try:
+        client.volumes.get('instance-control_data').remove(force=True)
+    except Exception:
+        print('instance-control_data volume not found')
+
     # docker is a bad boy. If there is some kind of dependency you should try to remove all images twice
     for x in range(1, 5):
         for image in client.images.list():
             tags = ','.join(image.tags)
 
-            if 'ubuntu:trusty' in tags:
+            if 'nexus.pub.axonius.com/axonius/axonius-base-image:latest' in image.tags or\
+                    'axonius/gui:latest' in image.tags:
                 # currently we can't upgrade ubuntu base image because diagnostics relies on it
                 print(f'Skipping {image}')
                 continue
@@ -66,7 +67,7 @@ def destroy():
                 continue
             try:
                 print(f'Removing {image}')
-                client.images.remove(image.id, force=False)
+                client.images.remove(image.id, force=True)
                 print(f'Removed {image}')
             except Exception as e:
                 print(f'Error while stopping Image {image} {e}')

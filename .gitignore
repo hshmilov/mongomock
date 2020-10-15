@@ -363,6 +363,9 @@ plugins/instance_control/rsa_keys
 
 # other
 **/secrets/*.json
+metrics
 
 #idea remote debug code gen filez
 .idea/runConfigurations/*_debug.xml
+infrastructures/host/utils/jq
+infrastructures/host/utils/jq.exe

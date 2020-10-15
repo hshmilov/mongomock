@@ -41,6 +41,9 @@ class MetricsFields:
 
 METRICS_INTERVAL_MINUTES = 10
 
-
+METRICS_PATH = Path('/home/axonius/app/metrics/metrics.json')
 METRICS_SCRIPT_PATH = '/home/ubuntu/cortex/plugins/instance_control/get_instance_metrics.py'
 METRICS_ENV_FILE_PATH = '/home/ubuntu/cortex/prepare_python_env.sh'
+
+PASSWORD_GET_URL = 'https://core.axonius.local/api/node/'
+UPGRADE_USER_NAME = 'axonius_upgrade'

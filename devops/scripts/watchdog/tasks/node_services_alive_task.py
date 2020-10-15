@@ -19,7 +19,7 @@ URL_TO_CHECK = 'https://manage.chef.io'
 
 def check_url():
     port = DOCKER_PORTS[MASTER_PROXY_PLUGIN_NAME]
-    proxies = {'https': f'https://localhost:{port}'}
+    proxies = {'https': f'https://master-proxy.axonius.local:{port}'}
     response = requests.get(URL_TO_CHECK, verify=False, timeout=(10, 20), proxies=proxies)
     return response
 

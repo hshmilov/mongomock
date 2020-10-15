@@ -43,7 +43,7 @@ def check_conf(axonius_fixture, adapter_service, adapter_name):
 
 
 def get_server_date():
-    req = requests.get('https://127.0.0.1/', verify=False)
+    req = requests.get('https://gui.axonius.local/', verify=False)
     server_date = req.headers.get('Date')
     req.close()
     return parse_date(server_date) if server_date is not None else None

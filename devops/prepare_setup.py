@@ -42,23 +42,14 @@ def main():
     args = setup_args()
     os.chdir(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-    runner = ParallelRunner()
-
-    # venv & base image
-    runner.append_single('venv', safe_run_bash(['./create_venv.sh']))
-    assert runner.wait_for_all() == 0
-
     all_flag = '' if args.dev else '--all'
 
     # build
     build_cmd = ['./axonius.sh', 'system', 'build', all_flag, '--prod', '--hard', '--yes-hard', '--rebuild-libs']
     if args.image_tag:
         build_cmd.extend(['--image-tag', args.image_tag])
-    runner.append_single(
-        'system',
-        safe_run_bash(build_cmd)
-    )
-    assert runner.wait_for_all() == 0
+
+    print(" ".join(build_cmd))
 
 
 if __name__ == '__main__':

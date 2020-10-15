@@ -38,6 +38,7 @@ HEAVY_LIFTING_PLUGIN_NAME = 'heavy_lifting_plugin'
 STATIC_ANALYSIS_PLUGIN_NAME = 'static_analysis'
 REIMAGE_TAGS_ANALYSIS_PLUGIN_NAME = 'reimage_tags_analysis'
 MASTER_PROXY_PLUGIN_NAME = 'master-proxy'
+AXONIUS_MANAGER_PLUGIN_NAME = 'axonius-manager'
 
 # ADAPTERS #
 ACTIVE_DIRECTORY_PLUGIN_NAME = 'active_directory_adapter'

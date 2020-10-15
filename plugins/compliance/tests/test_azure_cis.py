@@ -15,7 +15,7 @@ class PluginBaseMock:
 
     @staticmethod
     def _get_db_connection():
-        return pymongo.MongoClient('127.0.0.1:27017', username='ax_user', password='ax_pass',
+        return pymongo.MongoClient('mongo.axonius.local:27017', username='ax_user', password='ax_pass',
                                    connectTimeoutMS=5000, serverSelectionTimeoutMS=5000)
 
 

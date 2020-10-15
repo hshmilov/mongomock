@@ -6,7 +6,9 @@ This script installs the system from scratch (using --first-time) or as an upgra
 """
 import argparse
 import datetime
+import glob
 import os
+import shutil
 import stat
 import subprocess
 import sys
@@ -21,12 +23,11 @@ from utils import (AXONIUS_DEPLOYMENT_PATH,
                    current_file_system_path,
                    print_state,
                    run_cmd,
-                   chown_folder, verify_storage_requirements, show_weave_info)
+                   chown_folder, verify_storage_requirements)
 
 TIMESTAMP = datetime.datetime.now().strftime('%y%m%d-%H%M')
 
 DEPLOYMENT_FOLDER_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'deployment')
-VENV_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'venv')
 STATE_OUTPUT_PATH = os.path.join(os.path.dirname(current_file_system_path), 'encrypted.state')
 ARCHIVE_PATH = AXONIUS_OLD_ARCHIVE_PATH.format(TIMESTAMP)
 TEMPORAL_PATH = f'{AXONIUS_DEPLOYMENT_PATH}_TEMP_{TIMESTAMP}'
@@ -35,7 +36,7 @@ WEAVE_PATH = '/usr/local/bin/weave'
 DELETE_INSTANCES_USER_CRON_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH,
                                                       'delete_instances_user.py')
 SYSTEM_BOOT_CRON_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'machine_boot.sh')
-INSTANCES_SETUP_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH, 'setup_node.py')
+INSTANCES_SETUP_SCRIPT_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, INSTANCES_SCRIPT_PATH, 'setup_node.sh')
 INSTANCE_SETTINGS_DIR_NAME = '.axonius_settings'
 UPLOADED_FILES_DIR_NAME = 'uploaded_files'
 BOOT_CONFIGURATION_NAME = Path('boot_configuration_script.tar')
@@ -46,6 +47,7 @@ BOOTED_FOR_PRODUCTION_MARKER_PATH = os.path.join(AXONIUS_SETTINGS_PATH, '.booted
 INSTANCE_CONNECT_USER_PASSWORD = 'M@ke1tRain'
 PYTHON_INSTALLER_LOCK_DIR = Path('/tmp/ax-locks/')
 PYTHON_INSTALLER_LOCK_FILE = PYTHON_INSTALLER_LOCK_DIR / 'python_installer.lock'
+PYTHON_INSTALLED_HTTPD_PATH = Path(AXONIUS_DEPLOYMENT_PATH) / 'testing/services/plugins/httpd_service/httpd/upgrade.py'
 
 CHMOD_FILES = [
     INSTANCES_SETUP_SCRIPT_PATH,
@@ -94,6 +96,10 @@ def main():
 
             if PYTHON_INSTALLER_LOCK_FILE.is_file():
                 PYTHON_INSTALLER_LOCK_FILE.unlink()
+            if success:
+                sys.exit(0)
+            else:
+                sys.exit(1)
 
 
 def start_install_flow():
@@ -101,6 +107,7 @@ def start_install_flow():
     parser.add_argument('--first-time', action='store_true', default=False, help='First Time install')
     parser.add_argument('--no-research', action='store_true', default=False, help='Sudo password')
     parser.add_argument('--do-not-verify-storage', action='store_true', default=False, help='Skip storage verification')
+    parser.add_argument('--inside-container', action='store_true', default=False, help='Inside container section')
     parser.add_argument('--master-only', action='store_true', default=False,
                         help='Upgrade only this system even if nodes are connected')
     try:
@@ -112,15 +119,13 @@ def start_install_flow():
     no_research = args.no_research
     do_not_verify_storage = args.do_not_verify_storage
     master_only = args.master_only
-    first_time = args.first_time
-    if not first_time:
-        show_weave_info()
+    inside_container = args.inside_container
     if not do_not_verify_storage:
         verify_storage_requirements()
     if os.geteuid() != 0:
         print(f'Please run as root!')
         return False
-    install(first_time, no_research, master_only)
+    install(args.first_time, no_research, master_only, inside_container)
     print_state(f'Done, took {int(time.time() - start)} seconds')
     return True
 
@@ -133,27 +138,19 @@ def push_old_instances_settings():
 
 
 def load_new_source():
-    from utils import zip_loader
-    # this code run from _axonius.py zip, and assumes that zip loader exist
-    assert zip_loader is not None
-
     print_state('Loading new source folder')
-    zip_folder_source_path = f'{SOURCES_FOLDER_NAME}/'
+    installer_folder_source_path = f'{SOURCES_FOLDER_NAME}/'
     os.makedirs(AXONIUS_DEPLOYMENT_PATH, exist_ok=True)
     # Extracting source files from currently running python zip to AXONIUS_DEPLOYMENT_PATH
-    # pylint: disable=protected-access
-    for zip_path in zip_loader._files.keys():
-        zip_path = zip_path.replace('\\', '/')
-        if not zip_path.startswith(zip_folder_source_path):
-            continue
-        path = zip_path[len(zip_folder_source_path):]
+    for source_path in glob.glob(f'{installer_folder_source_path}/**', recursive=True):
+        path = source_path[len(installer_folder_source_path):]
         full_path = os.path.join(AXONIUS_DEPLOYMENT_PATH, path)
-        if '/' in path:
-            dir_name = os.path.dirname(full_path)
-            if not os.path.isdir(dir_name):
-                os.makedirs(dir_name)
-        data = zip_loader.get_data(zip_path)
-        open(full_path, 'wb').write(data)
+        if os.path.isdir(source_path):
+            if not os.path.isdir(full_path):
+                os.makedirs(full_path)
+            os.chmod(full_path, 0o755)
+            continue
+        shutil.copy2(source_path, full_path)
         # chmod +x for .sh files
         if full_path.endswith('.sh') and sys.platform.startswith('linux'):
             os.chmod(full_path, stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC |
@@ -164,22 +161,19 @@ def load_new_source():
 
 def install_requirements():
     print_state('Install requirements')
-    pip3_path = os.path.join(VENV_PATH, 'bin', 'pip3')
-    if sys.platform.startswith('win'):
-        pip3_win_path = os.path.join(VENV_PATH, 'Scripts', 'pip3.exe')
-        if os.path.exists(pip3_win_path):
-            pip3_path = pip3_win_path
+    pip3_path = 'python3.6 -m pip'
     requirements = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'requirements.txt')
     packages = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'deployment', 'packages')
-    subprocess.check_call([pip3_path, '-V'])
-    args = [pip3_path, 'install', '--upgrade', 'pip', '--find-links', packages,
-            '--no-index',  # Don't use internet access
-            '--no-cache']  # Don't use local cache
+    subprocess.check_call(f'{pip3_path} -V'.split(' '))
+    args = [*pip3_path.split(' '), 'install', '--upgrade', 'pip', '--find-links', packages,
+            '--no-index',           # Don't use internet access
+            '--no-cache',           # Don't use local cache
+            '--ignore-installed']   # Dont uninstall dist-packages (make python go mad)
     subprocess.check_call(args)
-    subprocess.check_call([pip3_path, '-V'])
-    args = [pip3_path, 'install', '-r', requirements, '--find-links', packages,
-            '--no-index',  # Don't use internet access
-            '--no-cache']  # Don't use local cache
+    args = [*pip3_path.split(' '), 'install', '-r', requirements, '--find-links', packages,
+            '--no-index',           # Don't use internet access
+            '--no-cache',           # Don't use local cache
+            '--ignore-installed']   # Dont uninstall dist-packages (make python go mad)
     subprocess.check_call(args)
 
 
@@ -219,35 +213,72 @@ def create_boot_config_file():
         print(f'Error creating boot file config {e}')
 
 
-def create_venv():
-    print_state('Creating python venv')
-    args = f'python3 -m virtualenv --python=python3.6 --clear {VENV_PATH} --never-download'.split(' ')
-    subprocess.check_call(args)
-
+def create_pth():
     # running this script as executable because can't easily import in at this stage
-    create_pth = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'devops', 'create_pth.py')
-    subprocess.check_call(['python3', create_pth])
+    create_pth_cmd = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'devops', 'create_pth.py')
+    return subprocess.check_output(['python3', create_pth_cmd]).decode('utf-8').strip()
 
 
-def install(first_time, no_research, master_only):
+def copy_installer_to_httpd():
+    ppid = os.getppid()
+    installer_cmdline = Path('/proc/{0}/cmdline'.format(ppid)).read_text().strip('\x00').split('\x00')
+    part = ''
+    for part in installer_cmdline:
+        if part.startswith('--') or part in Path('/etc/shells').read_text().strip().split('\n')[1:]:
+            continue
+        if Path(part).exists():
+            break
+    installer_path = (Path(os.getenv('ORIGINAL_PWD')) / part).absolute()
+    print(f'installer_path: {installer_path}')
+    if installer_path:
+        try:
+            shutil.copy2(str(installer_path), str(PYTHON_INSTALLED_HTTPD_PATH))
+        except Exception as e:
+            print(f'Error copying installation file to httpd path')
+    else:
+        print('Could not find installation file')
+
+
+def install(first_time, no_research, master_only, inside_container=False):
+    if inside_container:
+        from deployment.with_venv_install import after_venv_activation
+        after_venv_activation(first_time, no_research, master_only, current_file_system_path)
+        return
     if not first_time:
         validate_old_state()
         os.rename(AXONIUS_DEPLOYMENT_PATH, TEMPORAL_PATH)
 
     load_new_source()
-    create_venv()
-    install_requirements()
+    pth_file_location = create_pth()
+    # install_requirements()
     create_boot_config_file()
+    if not first_time:
+        copy_installer_to_httpd()
 
-    print('Activating venv!')
-    activate_this_file = os.path.join(VENV_PATH, 'bin', 'activate_this.py')
-    # pylint: disable=exec-used
-    exec(open(activate_this_file).read(), dict(__file__=activate_this_file))
-    print('Venv activated!')
-    # from this line on - we can use venv!
+    try:
+        from deployment.install_utils import setup_host, load_images, launch_axonius_manager, set_logrotate
+    except ModuleNotFoundError:
+        # Hack to reload the pth file contents without actually restart the python instance
+        # pylint: disable=expression-not-assigned
+        [sys.path.append(path) for path in Path(pth_file_location).read_text().strip().split('\n')]
+        from deployment.install_utils import setup_host, load_images, launch_axonius_manager, set_logrotate
+    setup_host()
+    # We load for the first time only to get the axonius-manager image
+    load_images()
+    os.system(f'mv images.tar {AXONIUS_DEPLOYMENT_PATH}/images.tar')
+    set_logrotate()
+    launch_axonius_manager()
+    extra_args = f'{"--first-time" if first_time else ""} {"--no-research" if no_research else ""} ' \
+                 f'{"--master-only" if master_only else ""}'
+    os.system(f'docker exec axonius-manager /bin/bash '
+              f'-c "python3 ./devops/create_pth.py; python3 ./deployment/install.py --inside-container {extra_args}"')
 
-    from deployment.with_venv_install import after_venv_activation
-    after_venv_activation(first_time, no_research, master_only, current_file_system_path)
+    # Cleanup
+    os.remove(f'{AXONIUS_DEPLOYMENT_PATH}/images.tar')
+
+    print('Restarting axonius-manager')
+    # Cleaning all hanging exec process before
+    launch_axonius_manager()
 
 
 if __name__ == '__main__':

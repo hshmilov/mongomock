@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 
 import os
-import sys
 
 
 def create_pth_file():
+    axon_pth_file_path = '/usr/local/lib/python3.6/dist-packages/axonius.pth'
+    if not os.path.exists(os.path.dirname(axon_pth_file_path)):
+        axon_pth_file_path = '/usr/local/lib/python3.6/site-packages/axonius.pth'
     current__dir = os.path.dirname(os.path.realpath(__file__))
     cortex_dir = os.path.join(current__dir, '..')
-    axon_pth_file_path = os.path.join(cortex_dir, 'venv', 'lib')
-    if not sys.platform.startswith('win'):
-        axon_pth_file_path = os.path.join(axon_pth_file_path, 'python3.6')
-    axon_pth_file_path = os.path.join(axon_pth_file_path, 'site-packages', 'axonius.pth')
     with open(axon_pth_file_path, 'w') as pth_file:
         pth_file.write(os.path.abspath(os.path.join(cortex_dir, 'axonius-libs', 'src',
                                                     'libs', 'axonius-py')) + '\n')
@@ -21,6 +19,7 @@ def create_pth_file():
         pth_file.write(os.path.abspath(os.path.join(cortex_dir, 'devops')) + '\n')
         pth_file.write(os.path.abspath(os.path.join(cortex_dir, 'devops', 'CI', 'builds_website', 'sdk')) + '\n')
         pth_file.write(os.path.abspath(os.path.join(cortex_dir)) + '\n')
+    print(axon_pth_file_path)
 
 
 if __name__ == '__main__':

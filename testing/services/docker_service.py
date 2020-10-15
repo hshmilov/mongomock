@@ -17,7 +17,7 @@ from axonius.consts.plugin_consts import (AXONIUS_SETTINGS_DIR_NAME,
                                           NODE_ID_FILENAME,
                                           DB_KEY_ENV_VAR_NAME)
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
-                                          WEAVE_NETWORK, LOGS_PATH_HOST, DB_KEY_PATH)
+                                          WEAVE_NETWORK, DB_KEY_PATH)
 from axonius.utils.debug import COLOR, magentaprint
 from conf_tools import get_tunneled_dockers, get_customer_conf_json
 from services.axon_service import AxonService, TimeoutException
@@ -38,19 +38,18 @@ def retry_if_timeout(exception):
 class DockerService(AxonService):
     def __init__(self, container_name: str, service_dir: str):
         super().__init__()
+        env_service_dir = os.environ.get('SERVICE_DIR', '/home/ubuntu/cortex')
         self._system_config = dict()
         self.container_name = container_name
         self.cortex_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-        self.libs_dir = Path(self.cortex_root_dir) / 'axonius-libs' / 'src'
-
-        if not (Path(self.cortex_root_dir) / 'venv').is_dir:
-            raise RuntimeError(f'Cortex dir is wrong ... {self.cortex_root_dir}')
-        relative_log_dir = LOGS_PATH_HOST / self.container_name
-        self.log_dir = str(relative_log_dir.resolve())
+        self.cortex_root_dir = self.cortex_root_dir.replace('/home/ubuntu/cortex', env_service_dir)
+        self.libs_dir = os.path.join(self.cortex_root_dir, 'axonius-libs', 'src')
+        self.log_dir = os.path.join(env_service_dir, 'logs', self.container_name)
         self.uploaded_files_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'uploaded_files'))
         os.makedirs(self.uploaded_files_dir, exist_ok=True)
         self.shared_readonly_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'shared_readonly_files'))
         self.service_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', service_dir))
+        self.service_dir = self.service_dir.replace('/home/ubuntu/cortex', env_service_dir)
         self.package_name = os.path.basename(self.service_dir)
         self._process_owner = False
         self.service_class_name = container_name.replace('-', ' ').title().replace(' ', '')
@@ -100,7 +99,10 @@ class DockerService(AxonService):
         """
         :return: list of pairs (exposed_port, inner_port)
         """
-        return [(DOCKER_PORTS[self.container_name], 443)]
+        ports = []
+        if self.container_name in DOCKER_PORTS:
+            ports.append((DOCKER_PORTS[self.container_name], 443))
+        return ports
 
     @property
     def is_unique_image(self):
@@ -468,7 +470,7 @@ class DockerService(AxonService):
 
     def get_image_exists(self):
         output = subprocess.check_output(['docker', 'images', self.image]).decode('utf-8')
-        return self.container_name in output
+        return self.container_name in output or self.image in output
 
     def remove_image(self):
         subprocess.call(['docker', 'rmi', self.image, '--force'], cwd=self.service_dir,

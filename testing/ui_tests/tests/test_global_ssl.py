@@ -7,6 +7,7 @@ import pytest
 import requests
 from selenium.common.exceptions import NoSuchElementException
 
+from axonius.consts.plugin_consts import GUI_PLUGIN_NAME, AXONIUS_DNS_SUFFIX
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from ui_tests.tests.ui_test_base import TestBase
 
@@ -60,18 +61,18 @@ class TestGlobalSSL(TestBase):
         keys_base_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                       '../../ssl_keys_for_tests'))
 
-        crt_filename = os.path.join(keys_base_path, 'localhost.crt')
+        crt_filename = os.path.join(keys_base_path, 'gui.axonius.local.crt')
         cert_data = open(crt_filename, 'r').read()
-        private_data = open(os.path.join(keys_base_path, 'localhost.key'), 'r').read()
+        private_data = open(os.path.join(keys_base_path, 'gui.axonius.local.key'), 'r').read()
 
         # Test that wrong hostname produces an error
         self.settings_page.set_global_ssl_settings('badhostname', cert_data, private_data)
         self.settings_page.click_modal_approve()
         self.settings_page.wait_for_toaster(
-            'Hostname does not match the hostname in the certificate file, hostname in given cert is localhost')
+            'Hostname does not match the hostname in the certificate file, hostname in given cert is gui.axonius.local')
 
         # Test that the right hostname works
-        self.settings_page.set_global_ssl_settings('localhost', cert_data, private_data)
+        self.settings_page.set_global_ssl_settings(f'{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}', cert_data, private_data)
         self.settings_page.click_modal_approve()
 
         try:
@@ -80,14 +81,14 @@ class TestGlobalSSL(TestBase):
             self.settings_page.refresh()
             try:
                 time.sleep(10)
-                peercert = _get_peer_ssl('https://localhost', crt_filename)
+                peercert = _get_peer_ssl(f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}', crt_filename)
                 # In this path, we check that the certificate is good
                 peercert_parsed = dict(i[0] for i in peercert['subject'])
-                assert peercert_parsed['commonName'] == 'localhost'
+                assert peercert_parsed['commonName'] == f'{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}'
             except requests.exceptions.SSLError as e:
                 # In this path, it means that the URL of the GUI isn't localhost, which is GOOD, because it
                 # means it failed verification and the SSL lib will report it back
-                assert 'doesn\'t match \'localhost\'' in str(e)
+                assert f'doesn\'t match \'{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}\'' in str(e)
         finally:
             # restore the previous setting: no SSL override
             self.settings_page.click_certificate_settings()
@@ -193,7 +194,7 @@ class TestGlobalSSL(TestBase):
 
     @staticmethod
     def _get_csr_file():
-        resp = requests.post('https://127.0.0.1/api/login',
+        resp = requests.post('https://gui.axonius.local/api/login',
                              data=json.dumps({
                                  'user_name': DEFAULT_USER['user_name'],
                                  'password': DEFAULT_USER['password'],
@@ -202,7 +203,7 @@ class TestGlobalSSL(TestBase):
                              verify=False)
         session = re.findall('session=(.*?);', resp.headers['Set-Cookie'])[0]
         resp.close()
-        resp = requests.get('https://127.0.0.1/api/certificate/csr',
+        resp = requests.get('https://gui.axonius.local/api/certificate/csr',
                             headers={'Cookie': 'session=' + session}, verify=False)
         return resp.content
 
@@ -291,7 +292,7 @@ class TestGlobalSSL(TestBase):
         assert self.settings_page.find_element_parent_by_text('AU/Some-State/Internet Widgits Pty Ltd')
 
         time.sleep(3)
-        peercert = _get_peer_ssl('https://localhost', False)
+        peercert = _get_peer_ssl(f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}', False)
         # In this path, we check that the certificate is good
         peercert_parsed = dict(i[0] for i in peercert['subject'])
         assert peercert_parsed['commonName'] == 'shukka.com'

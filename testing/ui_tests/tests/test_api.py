@@ -8,7 +8,7 @@ from ui_tests.tests.ui_test_base import TestBase
 
 
 def get_device_views_from_api(account_data):
-    api_url = parse.urljoin('https://localhost', 'api/V1/')
+    api_url = parse.urljoin('https://gui.axonius.local', 'api/V1/')
     device_views_url = parse.urljoin(api_url, 'devices/views')
 
     params = {'limit': 1000, 'skip': 0, 'filter': 'query_type==\'saved\''}
@@ -18,7 +18,7 @@ def get_device_views_from_api(account_data):
 
 
 def get_device_views_from_new_api(account_data):
-    api_url = parse.urljoin('https://localhost', 'api/')
+    api_url = parse.urljoin('https://gui.axonius.local', 'api/')
     device_views_url = parse.urljoin(api_url, 'devices/views/saved')
 
     params = {'limit': 1000, 'skip': 0, 'filter': 'query_type==\'saved\''}

@@ -49,7 +49,9 @@ DIR_MAP = {
 }
 # The following line contains commands that we run before each new test. we are going to append more commands
 # to it later, hence we have ./prepare_python_env.sh (for these commands)
-FIRST_BASH_COMMANDS_BEFORE_EACH_TEST = 'set -e; source ./prepare_python_env.sh; ./clean_dockers.sh; '
+FIRST_BASH_COMMANDS_BEFORE_EACH_TEST = 'set -e; source ./prepare_python_env.sh; ./clean_dockers.sh; ' \
+                                       './run_axonius_manager.sh; ./testing/host_port_forwarder.sh;' \
+                                       'docker exec axonius-manager sh ./testing/test_credentials/docker_login.sh;'
 SETUP_NGINX_CONF_FILES_CMD = 'python3 /home/ubuntu/cortex/testing/test_helpers/nginx_config_helper.py'
 MAX_SECONDS_FOR_ONE_JOB = 60 * 240  # no job (test / bunch of jobs) should take more than that
 MAX_SECONDS_FOR_THREAD_POOL = 60 * 260  # Just an extra caution for a timeout
@@ -275,12 +277,13 @@ class InstanceManager:
             prepare_ci_cmd = f'{prepare_ci_cmd} --image-tag {self.__image_tag}'
 
         # Build everything.
-        ret, overall_time = self.__ssh_execute(base_instance,
+        overall_time, ret = self.__ssh_execute(base_instance,
                                                'Prepare ci env with caching of images',
                                                prepare_ci_cmd,
-                                               return_times=True)
-        with TC.block(f'Finished building axonius on {ret}, took {overall_time} seconds'):
-            print(ret)
+                                               return_times=True,
+                                               append_ts=False)
+        with TC.block(f'Finished building axonius on {time.time()}, took {overall_time} seconds'):
+            print(ret.encode('ascii', 'ignore'))
 
         if self.number_of_instances > 1:
 
@@ -330,7 +333,7 @@ class InstanceManager:
                 instances_in_use.append(instance_to_run_on)
 
             try:
-                current_output = self.__ssh_execute(instance_to_run_on, command_job_name, command)
+                current_output = self.__ssh_execute(instance_to_run_on, command_job_name, command, append_ts=False)
             except Exception as e:
                 print(f'An exception calling __ssh_execute: {str(e)}')
                 current_output = e
@@ -583,7 +586,7 @@ def main():
 
             def get_ut_tests_jobs():
                 return {
-                    'Unit Tests': f'./run_ut_tests.sh {all_extra_pytest_args}'
+                    'Unit Tests': f'docker exec axonius-manager sh ./run_ut_tests.sh {all_extra_pytest_args}'
                 } if not is_instances else dict()
 
             def get_integ_tests_jobs():
@@ -594,7 +597,7 @@ def main():
 
                 return {
                     'integ_' + file_name.replace('.py', '').replace('::', '_'):
-                        f'python3 -u '
+                        f'docker exec axonius-manager python3 -u '
                         f'./testing/run_pytest.py {all_extra_pytest_args} {os.path.join(DIR_MAP["integ"], file_name)}'
                     for file_name in integ_tests
                 }
@@ -640,6 +643,7 @@ def main():
                     ])
 
                     parallel_jobs[job_name] = \
+                        f'docker exec axonius-manager ' \
                         f'python3 -u ./testing/run_parallel_tests.py {all_extra_pytest_args} {files_list}'
 
                 return parallel_jobs
@@ -653,7 +657,9 @@ def main():
 
                 return {
                     'ui_' + test_module.split('/')[-1].split('.py')[0]:
-                        'python3 -u ./testing/run_ui_tests.py -p no:testing/tests/conftest.py '
+                        'docker exec axonius-manager '
+                        'python3 -u ./testing/run_ui_tests.py -p no:testing/tests/conftest.py'
+
                         f'{all_extra_pytest_args} {os.path.join(DIR_MAP["ui"], test_module)}'
                     for test_module in ui_tests
                 }
@@ -714,7 +720,7 @@ def main():
 
             bash_commands_before_each_test = FIRST_BASH_COMMANDS_BEFORE_EACH_TEST
             for artifact_dir in ARTIFACTS_DIRS_INSIDE_CONTAINER.values():
-                bash_commands_before_each_test += 'rm -rf ' + os.path.join(artifact_dir, '*') + '; '
+                bash_commands_before_each_test += 'sudo rm -rf ' + os.path.join(artifact_dir, '*') + '; '
 
             for job_name in jobs:
                 jobs[job_name] = f'cd cortex; {bash_commands_before_each_test} {jobs[job_name]}'
@@ -722,7 +728,7 @@ def main():
 
         except Exception:
             print('Exception while executing all tests:')
-            print(traceback.format_exc())
+            print(traceback.format_exc().encode('ascii', 'ignore'))
             raise
 
         finally:

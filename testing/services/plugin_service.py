@@ -55,9 +55,7 @@ class PluginService(WeaveService):
         if service_dir is None:
             service_dir = f'../plugins/{container_name.replace("-", "_")}'
         super().__init__(container_name, service_dir)
-        if self.container_name not in DOCKER_PORTS:
-            raise ValueError(f'Container {self.container_name} missing external port in DOCKER_PORTS')
-        self.endpoint = ('localhost', DOCKER_PORTS[self.container_name])
+        self.endpoint = (self.container_name, 443)
         self.req_url = "https://{0}:{1}/api".format(self.endpoint[0], self.endpoint[1])
         self.config_file_path = self.service_dir + '/' + CONFIG_FILE_NAME
         self.last_vol_conf = None
@@ -140,7 +138,7 @@ class PluginService(WeaveService):
 
     @property
     def volumes_override(self):
-        libs = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'axonius-libs', 'src', 'libs'))
+        libs = os.path.abspath(os.path.join(self.libs_dir, 'libs'))
         return [f'{self.service_dir}:/home/axonius/app/{self.package_name}', f'{libs}:{LIBS_PATH.as_posix()}:ro']
 
     @property

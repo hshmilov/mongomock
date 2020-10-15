@@ -11,7 +11,7 @@ from pymongo import MongoClient
 # This file is WIP.
 # TLDR - It's a sloppy framework for establishing performance measurements on a DB
 
-c = MongoClient('127.0.0.1:27017', username='ax_user', password='ax_pass')
+c = MongoClient('mongo.axonius.local:27017', username='ax_user', password='ax_pass')
 db = c['aggregator']
 
 col = db['devices_db']

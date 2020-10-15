@@ -18,7 +18,7 @@ def main():
 
     connection_line = "mongodb://{user}:{password}@{addr}:{port}".format(user=username,
                                                                          password=password,
-                                                                         addr="127.0.0.1",
+                                                                         addr="mongo.axonius.local",
                                                                          port="27017")
     client = pymongo.MongoClient(connection_line)
 

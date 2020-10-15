@@ -23,9 +23,10 @@ INSTALLER_NAME=axonius_install.py
 
 gpg --batch --no-use-agent -dq -o "${INSTALLER_NAME}" --passphrase "${DECRYPTION_KEY}" version.zip
 ls -la axonius_install.py
+chmod +x axonius_install.py
 
 cd /home/ubuntu
-python3 ./axonius_install.py --first-time
+./axonius_install.py -- --first-time
 cd cortex
 ./machine_boot.sh
 cd ..

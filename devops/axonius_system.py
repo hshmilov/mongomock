@@ -8,10 +8,11 @@ import os
 
 from datetime import datetime
 
+import docker
 from pymongo.errors import PyMongoError
 
 from scripts.instances.instances_modes import get_instance_mode, InstancesModes
-from scripts.instances.network_utils import run_tunnel_for_adapters_register, stop_tunnel_for_adapters_register
+from scripts.instances.network_utils import fix_node_axonius_manager_hosts
 from axonius.utils.build_modes import BuildModes
 from conf_tools import get_customer_conf_json
 from exclude_helper import ExcludeHelper
@@ -75,11 +76,11 @@ class ExtendAction(argparse.Action):
 
 
 def restart_watchdogs():
-    watchdog_main.run_tasks('restart')
+    watchdog_main.run_tasks('restart', detached=True)
 
 
 def stop_watchdogs():
-    watchdog_main.run_tasks('stop')
+    watchdog_main.run_tasks('stop', detached=True)
 
 
 def system_entry_point(args):
@@ -127,7 +128,8 @@ def system_entry_point(args):
 
     if not os.path.exists(os.path.join(AXONIUS_VPN_DATA_PATH, 'openvpn.conf')) \
             and (read_saas_input_params() or args.saas) and not NODE_MARKER_PATH.is_file() and \
-            not os.environ.get('NODE_INIT_NAME', None) and 'linux' in sys.platform.lower():
+            not os.environ.get('NODE_INIT_NAME', None) and 'linux' in sys.platform.lower() and \
+            docker.from_env().info()['OperatingSystem'] != 'Docker Desktop':
         setup_openvpn()
 
     axonius_system = get_service()
@@ -169,6 +171,8 @@ def system_entry_point(args):
 
     if args.mode in ('up', 'build'):
         axonius_system.pull_base_image(args.pull_base_image, tag=args.image_tag)
+        # If there's and update to the base-image there should always be an update to the manager image as well
+        axonius_system.pull_manager_image(args.pull_base_image, tag=args.image_tag)
         axonius_system.build_libs(rebuild=args.rebuild_libs or args.image_tag != '', image_tag=args.image_tag)
 
     standalone_services = []
@@ -225,7 +229,7 @@ def system_entry_point(args):
         if adapters_to_register:
             print(f'Starting to quick register at {now}')
             if NODE_MARKER_PATH.exists():
-                run_tunnel_for_adapters_register()
+                fix_node_axonius_manager_hosts()
         failed_quick_register_adapters = set()
         for adapter in adapters_to_register:
             print(f'Quick registering {adapter}')
@@ -246,8 +250,6 @@ def system_entry_point(args):
                 failed_quick_register_adapters.add(adapter)
         if adapters_to_register:
             print(f'Finished quick registering, took {(datetime.now() - now).total_seconds()} seconds')
-            if NODE_MARKER_PATH.exists():
-                stop_tunnel_for_adapters_register()
 
         if failed_quick_register_adapters:
             # Fallback for failed quick register adapters
@@ -367,12 +369,10 @@ def service_entry_point(target, args):
 
     if args.mode == 'quick_register':
         if NODE_MARKER_PATH.exists():
-            run_tunnel_for_adapters_register()
+            fix_node_axonius_manager_hosts()
         for adapter in adapters:
             print(f'Registering {adapter}')
             axonius_system.get_adapter(adapter).quick_register()
-        if NODE_MARKER_PATH.exists():
-            stop_tunnel_for_adapters_register()
     elif args.mode == 'up':
         print(f'Starting {args.name}')
         axonius_system.start_plugins(adapters, services, standalone_services, 'prod' if args.prod else '',

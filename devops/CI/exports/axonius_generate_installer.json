@@ -29,7 +29,8 @@
       "ssh_username": "ubuntu",
       "network": "axonius-office-vpc",
       "subnetwork": "private-subnet",
-      "ssh_timeout": "4h"
+      "ssh_timeout": "4h",
+      "state_timeout": "10m"
     }
   ],
   "provisioners": [
@@ -48,6 +49,9 @@
       "type": "shell",
       "script": "{{user `host_installation`}}init_host.sh",
       "remote_folder": "/home/ubuntu/",
+      "environment_vars": [
+        "IS_EXPORT=true"
+      ],
       "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     },
     {

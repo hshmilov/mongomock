@@ -25,12 +25,11 @@ class MongoAliveTask(WatchdogTask):
 
     def __init__(self):
         super().__init__()
-        environment = {'DOCKER_HOST': 'unix:///var/run/weave/weave.sock'}
-        self.docker_client = docker.from_env(environment=environment)
+        self.docker_client = docker.from_env()
 
     @staticmethod
     def check_mongo_connection_now():
-        client = pymongo.MongoClient('127.0.0.1:27017', username='ax_user', password='ax_pass',
+        client = pymongo.MongoClient('mongo.axonius.local:27017', username='ax_user', password='ax_pass',
                                      connectTimeoutMS=5000, serverSelectionTimeoutMS=5000)
         list(client['core']['version'].find({}))
 

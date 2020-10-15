@@ -10,6 +10,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.remote.webelement import WebElement
 
+from axonius.consts.plugin_consts import GUI_PLUGIN_NAME, AXONIUS_DNS_SUFFIX
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
@@ -1365,7 +1366,7 @@ class EntitiesPage(Page):
         cookies = self.driver.get_cookies()
         for cookie in cookies:
             session.cookies.set(cookie['name'], cookie['value'])
-        resp = session.get('https://127.0.0.1/api/csrf')
+        resp = session.get(f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/csrf')
         csrf_token = resp.text
         resp.close()
         return csrf_token
@@ -1378,7 +1379,7 @@ class EntitiesPage(Page):
             session.cookies.set(cookie['name'], cookie['value'])
         session.headers['X-CSRF-Token'] = self.get_csrf_token()
         logger.info('posting for csv')
-        result = session.post(f'https://127.0.0.1/api/{entity_type}/csv',
+        result = session.post(f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/{entity_type}/csv',
                               json={'fields': fields,
                                     'filter': filters,
                                     'excluded_adapters': excluded_adapters,
@@ -1400,10 +1401,11 @@ class EntitiesPage(Page):
             session.cookies.set(cookie['name'], cookie['value'])
         session.headers['X-CSRF-Token'] = self.get_csrf_token()
         logger.info('posting for csv')
-        result = session.post(f'https://127.0.0.1/api/{entity_type}/{entity_id}/{field_name}/csv',
-                              json={'sort': sort, 'desc': ('1' if desc else '0'), 'search': search_text},
-                              timeout=CSV_TIMEOUT
-                              )
+        result = session.post(
+            f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/{entity_type}/{entity_id}/{field_name}/csv',
+            json={'sort': sort, 'desc': ('1' if desc else '0'), 'search': search_text},
+            timeout=CSV_TIMEOUT
+        )
         content = result.content
         logger.info('got content for csv')
         session.close()

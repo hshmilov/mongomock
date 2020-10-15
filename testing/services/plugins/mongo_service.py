@@ -12,7 +12,7 @@ from axonius.plugin_base import EntityType
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, GUI_PLUGIN_NAME,
                                           CORE_UNIQUE_NAME, REPORTS_PLUGIN_NAME,
-                                          REPORTS_CONFIG_COLLECTION)
+                                          REPORTS_CONFIG_COLLECTION, MONGO_UNIQUE_NAME)
 from axonius.consts.gui_consts import (GETTING_STARTED_CHECKLIST_SETTING,
                                        PREDEFINED_FIELD,
                                        USERS_PREFERENCES_COLLECTION)
@@ -32,7 +32,7 @@ from services.weave_service import WeaveService
 # docker network, and thus, inaccessible to the context this code is running from.
 connection_line = 'mongodb://{user}:{password}@{addr}:{port}'.format(user='ax_user',
                                                                      password='ax_pass',
-                                                                     addr='localhost',
+                                                                     addr=MONGO_UNIQUE_NAME,
                                                                      port=27017)
 # mongo need some time to shut down properly
 MONGO_STOP_GRACE_PERIOD = 600
@@ -49,17 +49,14 @@ class MongoService(SystemService, WeaveService):
         self.db_files = DBFileHelper(self.client)
 
     @property
-    def exposed_ports(self):
-        """
-        :return: list of pairs (exposed_port, inner_port)
-        """
-        return [(DOCKER_PORTS[self.container_name], 27017)]
-
-    @property
     def default_max_allowed_memory(self):
         # Default max allowed memory for this container, unless otherwise specified in self.max_allowed_memory
         # (at customer_conf.json)
         return 0.75
+
+    @property
+    def exposed_ports(self):
+        return [(DOCKER_PORTS['mongo'], DOCKER_PORTS['mongo'])]
 
     @property
     def memory_swappiness(self) -> Optional[int]:
@@ -97,7 +94,6 @@ class MongoService(SystemService, WeaveService):
 
     def clean_old_databases(self):
         registered_plugins = list(self.client['core']['configs'].find({}))
-
         # finding duplicates in the core configs
 
         by_plugin_name = defaultdict(list)
@@ -107,7 +103,6 @@ class MongoService(SystemService, WeaveService):
         # Plugins that we're updating to become a singleton
         plugins_in_question = ['reports', 'general_info', 'execution',
                                'static_correlator', 'static_users_correlator', 'device_control']
-
         for x in plugins_in_question:
             instances = by_plugin_name[x]
             if len(instances) > 1:

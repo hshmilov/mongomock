@@ -1,8 +1,12 @@
 #!/bin/bash
 
-sudo rm -rf /home/ubuntu/upgrade.log
-sudo touch /home/ubuntu/upgrade.log
-sudo chmod 0666 /home/ubuntu/upgrade.log
-/usr/bin/nohup sudo python3 /home/ubuntu/upgrade.py >> /home/ubuntu/upgrade.log 2>&1 &
+rm -rf /home/ubuntu/upgrade.log
+touch /home/ubuntu/upgrade.log
+chmod 0666 /home/ubuntu/upgrade.log
+
+mv /home/ubuntu/cortex/plugins/instance_control/upgrade.py /home/ubuntu/upgrade.py
+chmod +x /home/ubuntu/upgrade.py
+cd /home/ubuntu || exit
+/usr/bin/nohup /home/ubuntu/upgrade.py >> /home/ubuntu/upgrade.log 2>&1 &
 
 echo 'Upgrade started'

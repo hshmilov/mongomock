@@ -2,7 +2,6 @@ import os
 import shlex
 import subprocess
 import sys
-from pathlib import Path
 import time
 
 from axonius.utils.debug import redprint
@@ -34,35 +33,6 @@ def restart_all_adapters(init_name):
     print('Done restart all adapters')
 
 
-def change_instance_setup_user_pass():
-    axonius_service = get_service()
-    node_id = ''
-    new_password = ''
-    all_plugins = axonius_service.get_all_plugins()
-    # add instance control plugin for nodes running mongo only
-    all_plugins.append((axonius_service.instance_control.plugin_name, InstanceControlService))
-    for plugin_name, plugin in all_plugins:
-        try:
-            plugin_service = plugin()
-            node_id = plugin_service.vol_conf.node_id
-            if node_id:
-                new_password, _, _ = \
-                    plugin_service.run_command_in_container(f'curl -kfsSL {PASSWORD_GET_URL}{node_id}')
-                new_password = new_password.decode('ascii')
-                break
-        except Exception as e:
-            print(f'failed to read node_id from {plugin_name} {plugin} - {e}')
-
-    if not node_id:
-        print(f'failed to read node_id from all of the running adapters')
-        raise FileNotFoundError('node_id not found')
-
-    print(f'Password len is {len(new_password)}, "{new_password[:4]}..."')
-    subprocess.check_call(f'sudo /usr/sbin/usermod --password $(openssl passwd -1 {new_password}) node_maker',
-                          shell=True)
-    print('done!')
-
-
 def get_db_pass_from_core() -> str:
     """
     Get db password from core using curl docker container inside weave network
@@ -81,11 +51,6 @@ def get_db_pass_from_core() -> str:
         print('Exception while getting db pass')
 
 
-def create_marker(marker_path: Path):
-    command = f'sudo /sbin/runuser -l ubuntu -c "touch {marker_path.absolute().as_posix()}"'
-    subprocess.check_call(shlex.split(command))
-
-
 def setup_node(connection_string):
     master_ip, weave_pass, init_name = connection_string
     master_ip = master_ip.strip()
@@ -101,16 +66,15 @@ def setup_node(connection_string):
 
     shut_down_system()
     update_weave_connection_params(weave_pass, master_ip)
-    create_marker(USING_WEAVE_PATH)
+    USING_WEAVE_PATH.touch()
     connect_to_master(master_ip, weave_pass)
-    create_marker(NODE_MARKER_PATH)
+    NODE_MARKER_PATH.touch()
     # on a node with only mongo, we don't need the db pass,
     # which is used today only as an env-variable for plugins that need to interact with mongo.
     if get_instance_mode() != InstancesModes.mongo_only.value:
         db_pass = get_db_pass_from_core()
         update_db_enc_key(db_pass)
     restart_all_adapters(init_name)
-    change_instance_setup_user_pass()
 
 
 def logic_main():

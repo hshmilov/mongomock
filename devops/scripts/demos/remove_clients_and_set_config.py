@@ -4,7 +4,7 @@ import pymongo
 
 
 def main():
-    mc = pymongo.MongoClient('localhost', username='ax_user', password='ax_pass')
+    mc = pymongo.MongoClient('mongo.axonius.local', username='ax_user', password='ax_pass')
     for db in mc.database_names():
         print(f'{db}: removing clients and setting big last fetch...')
         mc[db].clients.remove({})

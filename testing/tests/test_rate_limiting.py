@@ -11,7 +11,7 @@ OLD_SETTINGS = json.loads('{"aggregation_settings":{"max_workers":20,"socket_rea
 
 
 def do_login():
-    return requests.post('https://127.0.0.1/api/login',
+    return requests.post('https://gui.axonius.local/api/login',
                          data=f'{{"user_name":"{DEFAULT_USER["user_name"]}",'
                               f'"password":"{DEFAULT_USER["password"]}","remember_me":false}}', verify=False)
 
@@ -22,7 +22,8 @@ def test_rate_limiting():
         assert resp.status_code == 200
         session = re.findall('session=(.*?);', resp.headers['Set-Cookie'])[0]
         resp.close()
-        resp = requests.get('https://127.0.0.1/api/logout', headers={'Cookie': 'session=' + session}, verify=False)
+        resp = requests.get('https://gui.axonius.local/api/logout', headers={'Cookie': 'session=' + session},
+                            verify=False)
         assert resp.status_code == 200
         resp.close()
 
@@ -31,11 +32,12 @@ def test_rate_limiting():
     assert resp.status_code == 200
     session = re.findall('session=(.*?);', resp.headers['Set-Cookie'])[0]
     resp.close()
-    resp = requests.get('https://127.0.0.1/api/csrf', headers={'Cookie': 'session=' + session}, verify=False)
+    resp = requests.get('https://gui.axonius.local/api/csrf', headers={'Cookie': 'session=' + session}, verify=False)
     assert resp.status_code == 200
     csrf_token = resp.content
     resp.close()
-    resp = requests.post('https://127.0.0.1/api/settings/plugins/core/CoreService', data=json.dumps(NEW_SETTINGS),
+    resp = requests.post('https://gui.axonius.local/api/settings/plugins/core/CoreService',
+                         data=json.dumps(NEW_SETTINGS),
                          headers={'Cookie': 'session=' + session, 'X-CSRF-TOKEN': csrf_token,
                                   'content-type': 'application/json;charset=UTF-8'}, verify=False)
     assert resp.status_code == 200
@@ -47,7 +49,8 @@ def test_rate_limiting():
         assert resp.status_code == 200
         session = re.findall('session=(.*?);', resp.headers['Set-Cookie'])[0]
         resp.close()
-        resp = requests.get('https://127.0.0.1/api/logout', headers={'Cookie': 'session=' + session}, verify=False)
+        resp = requests.get('https://gui.axonius.local/api/logout', headers={'Cookie': 'session=' + session},
+                            verify=False)
         assert resp.status_code == 200
         resp.close()
 
@@ -62,12 +65,13 @@ def test_rate_limiting():
     assert resp.status_code == 200
     session = re.findall('session=(.*?);', resp.headers['Set-Cookie'])[0]
     resp.close()
-    resp = requests.get('https://127.0.0.1/api/csrf', headers={'Cookie': 'session=' + session}, verify=False)
+    resp = requests.get('https://gui.axonius.local/api/csrf', headers={'Cookie': 'session=' + session}, verify=False)
     assert resp.status_code == 200
     csrf_token = resp.content
     resp.close()
 
-    resp = requests.post('https://127.0.0.1/api/settings/plugins/core/CoreService', data=json.dumps(OLD_SETTINGS),
+    resp = requests.post('https://gui.axonius.local/api/settings/plugins/core/CoreService',
+                         data=json.dumps(OLD_SETTINGS),
                          headers={'Cookie': 'session=' + session, 'X-CSRF-TOKEN': csrf_token,
                                   'content-type': 'application/json;charset=UTF-8'}, verify=False)
     assert resp.status_code == 200

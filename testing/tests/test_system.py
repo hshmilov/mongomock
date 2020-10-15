@@ -204,7 +204,7 @@ def test_exclude_config_quick():
 def test_master_proxy():
     port = DOCKER_PORTS[MASTER_PROXY_PLUGIN_NAME]
     assert requests.get('https://manage.chef.io',
-                        proxies={'https': f'https://localhost:{port}'},
+                        proxies={'https': f'https://master-proxy.axonius.local:{port}'},
                         timeout=(20, 90)).status_code == 200
 
 

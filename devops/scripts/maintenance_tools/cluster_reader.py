@@ -10,7 +10,7 @@ from services.weave_service import is_using_weave
 def read_cluster_data():
     try:
         cluster = run_cmd_in_container('instance-control',
-                                       f'curl -kfsSL https://localhost/api/{InstanceControlConsts.DescribeClusterEndpoint}')
+                                       f'curl -kfsSL https://127.0.0.1/api/{InstanceControlConsts.DescribeClusterEndpoint}')
         cluster = json.loads(cluster)
         if MASTER_ADDR_HOST_PATH.is_file():
             cluster['instance_type'] = 'node'

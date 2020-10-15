@@ -22,7 +22,11 @@ def wait_until_machine_is_ready():
 
 
 def chown_cortex():
-    subprocess.check_call(['chown', '-R', 'ubuntu:ubuntu', CORTEX_PATH])
+    subprocess.check_call(['sudo', 'chown', '-R', 'ubuntu:ubuntu', CORTEX_PATH])
+
+
+def chmod_cortex_dirs():
+    subprocess.check_call('sudo find . -type d -exec chmod 755 {} \\;'.split(' '), cwd=str(CORTEX_PATH))
 
 
 def set_unique_dns():
@@ -41,7 +45,6 @@ def main():
     wait_until_machine_is_ready()
 
     raise_system()
-    chown_cortex()
     print('System Is Ready.')
 
     # Putting marker to notify the system is stable and that it's not a new system.

@@ -9,10 +9,11 @@ import OpenSSL
 import requests
 
 from axonius.consts.gui_consts import GUI_CONFIG_NAME
+from axonius.consts.plugin_consts import GUI_PLUGIN_NAME, AXONIUS_DNS_SUFFIX
 from services.plugins.gui_service import GuiService
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from ui_tests.tests.test_global_ssl import CERT_SUCCESS_TOASTER_MSG
-from ui_tests.tests.ui_test_base import TestBase
+from ui_tests.tests.ui_test_base import TestBase, _docker_host_address
 
 NOT_PEM_FORMAT_ERROR_MSG = 'The uploaded file is not a pem-format certificate'
 NO_MUTUAL_CERTIFICATE_PROVIDED_MSG = 'Client certificate not found in request. ' \
@@ -25,17 +26,17 @@ NO_CLIENT_CERTIFICATE_ERROR = 'Client certificate not found in request. ' \
 
 CURL_SCRIPT_PATH = os.path.join(os.getcwd(), 'set_settings.sh')
 CURL_SET_ENFORCE_CMD = '''#!/bin/bash
-curl 'https://127.0.0.1/api/certificate/certificate_settings' \\
-  -H 'authority: 127.0.0.1' \\
+curl 'https://{gui_plugin}/api/certificate/certificate_settings' \\
+  -H 'authority: {gui_plugin}' \\
   -H 'accept: application/json, text/plain, */*' \\
   -H 'x-csrf-token: {csrf_token}' \\
   -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36'\\
   -H 'content-type: application/json;charset=UTF-8' \\
-  -H 'origin: https://127.0.0.1' \\
+  -H 'origin: https://{gui_plugin}' \\
   -H 'sec-fetch-site: same-origin' \\
   -H 'sec-fetch-mode: cors' \\
   -H 'sec-fetch-dest: empty' \\
-  -H 'referer: https://127.0.0.1/settings' \\
+  -H 'referer: https://{gui_plugin}/settings' \\
   -H 'accept-language: en-US,en;q=0.9,he;q=0.8' \\
   -H 'X-CLIENT-ESCAPED-CERT: {cert_file}' \\
   -H 'cookie: session={session}' \\
@@ -94,7 +95,7 @@ class TestMutualTLS(TestBase):
         MUTUAL_TLS_SETTING_WITH_ENFORCE['mutual_tls']['ca_certificate']['uuid'] = uuid
         MUTUAL_TLS_SETTING_WITH_ENFORCE['mutual_tls']['ca_certificate']['filename'] = fname
 
-        resp = session.post('https://127.0.0.1/api/certificate/certificate_settings',
+        resp = session.post(f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/certificate/certificate_settings',
                             verify=False,
                             headers={'Content-Type': 'application/json;charset=UTF-8', 'X-CSRF-TOKEN': csrf_token},
                             data=json.dumps(MUTUAL_TLS_SETTING_WITH_ENFORCE))
@@ -104,18 +105,33 @@ class TestMutualTLS(TestBase):
         csrf_token = self.get_csrf_token(session)
         with open(CURL_SCRIPT_PATH, 'w') as fh:
             fh.write(
-                CURL_SET_ENFORCE_CMD.format(csrf_token=csrf_token,
+                CURL_SET_ENFORCE_CMD.format(gui_plugin=f'{_docker_host_address()}:1337',
+                                            csrf_token=csrf_token,
                                             uuid=uuid,
                                             filename=fname,
                                             session=session_id,
                                             cert_file=urllib.parse.quote(cert_file), status='true').replace('\\\n', ''))
         os.chmod(CURL_SCRIPT_PATH, 0o777)
-        output = subprocess.check_output(['bash', CURL_SCRIPT_PATH])
+        output = b''
+        for i in range(5):
+            try:
+                output = subprocess.check_output(['bash', CURL_SCRIPT_PATH])
+                break
+            except Exception:
+                time.sleep(10)
+
         assert b'true' in output
 
+        gs = GuiService()
+        gs.take_process_ownership()
+
         # make sure certificate is required
-        resp = requests.get('https://127.0.0.1/login', verify=False)
-        assert resp.status_code == 400
+        resp = requests.get(f'https://{_docker_host_address()}:1337/login', verify=False)
+        try:
+            assert resp.status_code == 400
+        except AssertionError:
+            output, _, _ = gs.run_command_in_container('openresty -T')
+            assert 'optional_no_ca' not in output.decode('ascii')
 
         # Set enforcement to false
         self.axonius_system.db.plugins.gui.configurable_configs.update_config(
@@ -123,13 +139,19 @@ class TestMutualTLS(TestBase):
             {'mutual_tls_settings.mandatory': False},
             upsert=True
         )
-        gs = GuiService()
-        gs.take_process_ownership()
         gs.restart()
         time.sleep(30)
         # Make sure everything got back to normal
-        resp = requests.get('https://127.0.0.1/login', verify=False)
+        for i in range(5):
+            try:
+                resp = requests.get(f'https://{_docker_host_address()}:1337/login', verify=False)
+                break
+            except Exception:
+                time.sleep(10)
+
+        output, _, _ = gs.run_command_in_container('openresty -T')
         assert resp.status_code == 200
+        assert 'optional_no_ca' in output.decode('ascii')
 
         os.remove('test.key')
         os.remove('test.crt')
@@ -137,7 +159,7 @@ class TestMutualTLS(TestBase):
 
     @staticmethod
     def do_login(session):
-        resp = session.post('https://127.0.0.1/api/login',
+        resp = session.post(f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/login',
                             data=json.dumps({'user_name': DEFAULT_USER['user_name'],
                                              'password': DEFAULT_USER['password'], 'remember_me': False}),
                             verify=False)
@@ -147,4 +169,4 @@ class TestMutualTLS(TestBase):
 
     @staticmethod
     def get_csrf_token(session):
-        return session.get('https://127.0.0.1/api/csrf', verify=False).text
+        return session.get(f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/csrf', verify=False).text

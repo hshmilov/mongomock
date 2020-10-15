@@ -15,7 +15,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from axonius.adapter_base import WEEKDAYS
 from axonius.consts.gui_consts import PROXY_ERROR_MESSAGE
 from axonius.consts.plugin_consts import CORRELATION_SCHEDULE_HOURS_INTERVAL, AWS_SM_ACCESS_KEY_ID, \
-    AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION
+    AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION, GUI_PLUGIN_NAME, AXONIUS_DNS_SUFFIX
 from services.axon_service import TimeoutException
 from test_helpers.utils import get_datetime_format_by_gui_date
 from ui_tests.pages.page import PAGE_BODY, TAB_BODY, Page
@@ -1514,7 +1514,7 @@ class SettingsPage(Page):
 
         for cookie in cookies:
             session.cookies.set(cookie['name'], cookie['value'])
-        resp = session.get('https://127.0.0.1/api/csrf')
+        resp = session.get(f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/csrf')
         csrf_token = resp.text
         resp.close()
         session.headers['X-CSRF-Token'] = csrf_token
@@ -1524,9 +1524,11 @@ class SettingsPage(Page):
             current_settings['discovery_settings']['system_research_rate'] = interval_value
             current_settings['discovery_settings']['conditional'] = 'system_research_rate'
 
-        result = session.post('https://127.0.0.1/api/settings/plugins/system_scheduler/SystemSchedulerService',
-                              json=current_settings,
-                              timeout=self.SETTINGS_SAVE_TIMEOUT)
+        result = session.post(
+            f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/'
+            f'api/settings/plugins/system_scheduler/SystemSchedulerService',
+            json=current_settings,
+            timeout=self.SETTINGS_SAVE_TIMEOUT)
         return result
 
     def open_discovery_mode_options(self):
@@ -1567,8 +1569,10 @@ class SettingsPage(Page):
         self.wait_for_element_present_by_css(self.SCHEDULE_RATE_CSS)
 
     def get_current_schedule_settings(self, session):
-        current_settings = session.get('https://127.0.0.1/api/settings/plugins/system_scheduler/SystemSchedulerService',
-                                       timeout=self.SETTINGS_SAVE_TIMEOUT)
+        current_settings = session.get(
+            f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/settings/plugins/system_scheduler'
+            f'/SystemSchedulerService',
+            timeout=self.SETTINGS_SAVE_TIMEOUT)
         return current_settings.json().get('config', None)
 
     def fill_thycotic_host(self, host):

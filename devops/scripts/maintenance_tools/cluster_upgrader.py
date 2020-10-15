@@ -7,26 +7,28 @@ import argparse
 from pathlib import Path
 import shutil
 
+import requests
+
 from axonius.consts.instance_control_consts import InstanceControlConsts
 from axonius.consts.system_consts import NODE_MARKER_PATH, DOCKERHUB_URL
+from scripts.instances.network_utils import weave_dns_lookup
 from scripts.maintenance_tools.cluster_reader import read_cluster_data
 
+REQUEST_TIMEOUT = 60 * 30
 
-def curl_in_docker_network(docker_dns, endpoint):
-    env = {'DOCKER_HOST': 'unix:///var/run/weave/weave.sock'}
-    output = subprocess.check_output(
-        shlex.split(
-            f'docker run --rm {DOCKERHUB_URL}appropriate/curl -kfsSL https://{docker_dns}.axonius.local:443/api/{endpoint}'),
-        env=env, timeout=60 * 30)
-    output = output.decode().strip()
-    print(output)
+
+def request_instance_control(plugin_unique_name, endpoint):
+    plugin_unique_name_ip = weave_dns_lookup(plugin_unique_name)
+    res = requests.get(f'https://{plugin_unique_name_ip}:443/api/{endpoint}', verify=False,
+                       timeout=REQUEST_TIMEOUT)
+    print(res.text.strip())
 
 
 def run_upgrade_phase_on_node(node, phase):
     node_id = node['node_id']
     instance_control_name = node['plugin_unique_name']
     print(f'Starting phase {phase} on node {node_id} ({instance_control_name})')
-    curl_in_docker_network(instance_control_name, phase)
+    request_instance_control(instance_control_name, phase)
 
 
 def shutdown_adapters(instances):
@@ -34,9 +36,7 @@ def shutdown_adapters(instances):
         run_upgrade_phase_on_node(node, InstanceControlConsts.EnterUpgradeModeEndpoint)
 
 
-def download_upgrader_on_nodes(instances, upgrade_file_path):
-    shutil.copy(upgrade_file_path, '/home/ubuntu/cortex/testing/services/plugins/httpd_service/httpd/upgrade.py')
-
+def download_upgrader_on_nodes(instances):
     for node in instances:
         run_upgrade_phase_on_node(node, InstanceControlConsts.PullUpgrade)
 
@@ -84,7 +84,7 @@ def upgrader_main():
         print(f'Upgrade file is missing {upgrade_file}')
         return
 
-    download_upgrader_on_nodes(upgrade_file, upgrade_file)
+    download_upgrader_on_nodes(upgrade_file)
 
     print(f'UPGRADING MASTER!')
     subprocess.check_call(f'python3 {upgrade_file} --no-research'.split())

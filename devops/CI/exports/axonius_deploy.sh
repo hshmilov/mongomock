@@ -10,12 +10,8 @@ rm -rf cortex
 git clone https://$github_token@github.com/$fork/cortex
 cd cortex
 git checkout $branch
-# add go packages
-cd bandicoot
-go mod vendor
-cd ..
-./create_venv.sh
-source venv/bin/activate
 chmod u+x ./testing/test_credentials/docker_login.sh
 ./testing/test_credentials/docker_login.sh
+sudo python3 -m pip install -r requirements.txt --ignore-installed
+sudo python3 ./devops/create_pth.py
 python3 ./deployment/make.py --version "$build_name" --mode "$build_mode" --rebuild --pull

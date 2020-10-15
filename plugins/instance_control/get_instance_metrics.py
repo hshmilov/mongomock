@@ -70,7 +70,7 @@ def get_disk_space(result):
             result['metrics']['os_disk_size'] = round(bytes_to_kb(os_usage.total))
 
     except Exception as e:
-        result['errors'].append(e)
+        result['errors'].append(str(e))
 
 
 # pylint: disable=I1101

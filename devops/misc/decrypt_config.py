@@ -16,7 +16,7 @@ USAGE_EXAMPLE = 'decrypt_config.py -sp 20016 -dp 40016 -sP PASSWORD -p aws_adapt
 
 def parse_args():
     parser = argparse.ArgumentParser(epilog=USAGE_EXAMPLE)
-    parser.add_argument('--db-host', '-dh', default='127.0.0.1', type=str, help='MongoDB Host')
+    parser.add_argument('--db-host', '-dh', default='mongo.axonius.local', type=str, help='MongoDB Host')
     parser.add_argument('--db-port', '-dp', default=27017, type=int, help='MongoDB Port')
     parser.add_argument('--db-user', '-du', default='ax_user', type=str, help='MongoDB Username')
     parser.add_argument('--db-password', '-dP', default='ax_pass', type=str, help='MongoDB Password')

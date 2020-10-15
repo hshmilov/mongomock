@@ -2,6 +2,7 @@ import shutil
 import sys
 import os
 import subprocess
+from pathlib import Path
 
 MIN_GB_FOR_INSTALLATION = 10
 
@@ -34,20 +35,9 @@ def get_resources():
     """ a special function that gets:
         1. CORTEX_PATH (when run from zip, assume there isn't a clone of the source code)
         2. original path of the executable
-        3. the loader (when using ziploader)
-
-        Under the next two states: when the current python __main__ module is run from (a) a zip file, and (b) normally.
     """
-    main_module = sys.modules['__main__']
-    loader = main_module.__loader__
-    if loader is None or loader.__class__.__name__ == 'SourceFileLoader' or \
-            (hasattr(loader, '__name__') and loader.__name__ == 'BuiltinImporter'):
-        current_file = os.path.abspath(__file__)
-        return os.path.abspath(os.path.join(os.path.dirname(current_file), '..')), current_file, None
-    assert loader.__class__.__name__ == 'zipimporter'
-    archive_path = loader.archive
-    assert os.path.isfile(archive_path)
-    return None, os.path.abspath(archive_path), loader
+    current_file = os.path.abspath(__file__)
+    return os.path.abspath(os.path.join(os.path.dirname(current_file), '..')), current_file
 
 
 def print_state(text):
@@ -106,11 +96,16 @@ def verify_storage_requirements():
         print(f'Warning - could not get storage information: {str(e)}, continuing')
 
 
-CORTEX_PATH, current_file_system_path, zip_loader = get_resources()
-CWD = os.path.abspath(os.getcwd())
-AXONIUS_DEPLOYMENT_PATH = os.path.join(CWD, 'cortex')
+CORTEX_PATH, current_file_system_path = get_resources()
+CWD = os.path.abspath(os.getenv('ORIGINAL_PWD', os.getcwd()))
+# Check if inside docker or not
+if Path('/.dockerenv').exists():
+    AXONIUS_DEPLOYMENT_PATH = CWD
+else:
+    AXONIUS_DEPLOYMENT_PATH = os.path.join(CWD, 'cortex')
 DEPLOYMENT_FOLDER_PATH = os.path.join(AXONIUS_DEPLOYMENT_PATH, 'deployment')
 RESOURCES_PATH = os.path.join(DEPLOYMENT_FOLDER_PATH, 'resources')
 AXONIUS_OLD_ARCHIVE_PATH = os.path.join(CWD, 'old-cortex-archive-{0}.tar.gz')
 SOURCES_FOLDER_NAME = 'sources'
+INSTALLER_TEMP_DIR = 'tmp_install_dir'
 VENV_WRAPPER = os.path.join(DEPLOYMENT_FOLDER_PATH, 'venv_wrapper.sh')

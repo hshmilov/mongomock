@@ -35,7 +35,7 @@ def get_fields_from_gui():
 
 def main(adapter_name):
     connection_line = 'mongodb://{user}:{password}@{addr}:{port}'.format(user='ax_user', password='ax_pass',
-                                                                         addr='localhost', port=27017)
+                                                                         addr='mongo.axonius.local', port=27017)
     client = pymongo.MongoClient(connection_line)
     raw_devices = list(client['aggregator']['devices_db'].find({}))
     raw_devices = [x['adapters'][0] for x in raw_devices]

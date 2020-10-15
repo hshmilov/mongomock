@@ -1,4 +1,4 @@
-from axonius.utils.network.docker_network import read_weave_network_range
+from install_utils import read_weave_network_range
 from scripts.instances.instances_consts import WEAVE_NETWORK_SUBNET_KEY
 from upgrade.before_upgrade.test_change_weave_net import NEW_WEAVE_NETWORK
 from upgrade.upgrade_test_utils.customer_conf import read_upgrade_test_customer_data

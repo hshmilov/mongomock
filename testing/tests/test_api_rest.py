@@ -47,7 +47,7 @@ PROBLEMS = []
 
 # We don't want to run this for the meanwhile
 def _test_api(axonius_system):
-    client = RESTExample('https://127.0.0.1',
+    client = RESTExample('https://gui.axonius.local',
                          auth=(DEFAULT_USER['user_name'], DEFAULT_USER['password']),
                          verify=False)
 
@@ -59,7 +59,7 @@ def _test_api(axonius_system):
 
 
 def _run_specific_configuration(name):
-    client = RESTExample('https://127.0.0.1',
+    client = RESTExample('https://gui.axonius.local',
                          auth=(DEFAULT_USER['user_name'], DEFAULT_USER['password']),
                          verify=False)
 
@@ -76,7 +76,7 @@ _NUMBER_OF_PAGES = 7
 
 @pytest.mark.parametrize('page', range(_NUMBER_OF_PAGES))
 def test_api_rest_in_parallel(axonius_system, page):
-    client = RESTExample('https://127.0.0.1',
+    client = RESTExample('https://gui.axonius.local',
                          auth=(DEFAULT_USER['user_name'], DEFAULT_USER['password']),
                          verify=False)
 

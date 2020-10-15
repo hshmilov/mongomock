@@ -8,6 +8,7 @@ import time
 from datetime import datetime, timedelta
 from multiprocessing.pool import ThreadPool
 
+import docker
 import pytest
 
 from axonius.consts.gui_consts import GUI_CONFIG_NAME, DEVICES_DIRECT_REFERENCES_COLLECTION, \
@@ -15,16 +16,17 @@ from axonius.consts.gui_consts import GUI_CONFIG_NAME, DEVICES_DIRECT_REFERENCES
 from axonius.utils.debug import redprint
 from axonius.utils.json import from_json
 from conf_tools import TUNNELED_ADAPTERS
+from install_utils import get_weave_subnet_ip_range
 from scripts.instances.instances_modes import get_instance_mode, InstancesModes
 from scripts.instances.network_utils import (get_encryption_key,
-                                             restore_master_connection, get_weave_subnet_ip_range,
+                                             restore_master_connection,
                                              get_docker_subnet_ip_range, DOCKER_BRIDGE_INTERFACE_NAME)
 from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, GUI_SYSTEM_CONFIG_COLLECTION,
                                           USER_VIEWS, DEVICE_VIEWS)
 from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           NODE_MARKER_PATH,
-                                          WEAVE_PATH, DOCKERHUB_USER, WEAVE_VERSION, DOCKERHUB_URL, USING_WEAVE_PATH,
+                                          WEAVE_PATH, WEAVE_VERSION, DOCKERHUB_URL, USING_WEAVE_PATH,
                                           CUSTOMER_CONF_PATH)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
@@ -93,12 +95,14 @@ class AxoniusService:
                                  self.static_users_correlator,
                                  self.heavy_lifting,
                                  self.reports,
-                                 self.master_proxy,
-                                 self.openvpn]
+                                 self.master_proxy]
 
-        # No instance control on windows
-        if 'linux' in sys.platform.lower():
+        # No instance control and OpenVPN on windows
+        # Docker 'OperatingSystem' value is 'Docker Desktop' for OSX and Windows docker daemons and the linux version
+        # for docker-ce./
+        if 'linux' in sys.platform.lower() and docker.from_env().info()['OperatingSystem'] != 'Docker Desktop':
             self.axonius_services.append(self.instance_control)
+            self.axonius_services.append(self.openvpn)
 
         self.entity_views = {
             EntityType.Devices: self.db.get_collection(self.gui.plugin_name, DEVICE_VIEWS),
@@ -122,7 +126,8 @@ class AxoniusService:
 
     @classmethod
     def create_network(cls):
-        if not is_weave_up() and 'linux' in sys.platform.lower():
+        if not is_weave_up() and 'linux' in sys.platform.lower() and \
+                docker.from_env().info()['OperatingSystem'] != 'Docker Desktop':
             weave_subnet_ip_range = get_weave_subnet_ip_range()
             # Getting network encryption key.
             if NODE_MARKER_PATH.is_file():
@@ -710,6 +715,11 @@ class AxoniusService:
         tunneler_image = f'{DOCKERHUB_URL}alpine/socat'
         return self._pull_image(tunneler_image, repull, show_print)
 
+    def pull_scalyr_image(self, repull=False, show_print=True):
+        # scalyr agent image for further use
+        scalyr_image = f'{DOCKERHUB_URL}scalyr/scalyr-agent-docker-json'
+        return self._pull_image(scalyr_image, repull, show_print)
+
     def pull_container_alpine(self, repull=False, show_print=True):
         # Used for regular alpine containers (such as socat, openvpn, sshl)
         alpine_image = f'{DOCKERHUB_URL}alpine:3.11.6'
@@ -729,6 +739,12 @@ class AxoniusService:
         if tag:
             base_image = f'{base_image}:{tag}'
         return self._pull_image(base_image, repull, show_print)
+
+    def pull_manager_image(self, repull=False, tag=None, show_print=True):
+        manager_image = f'{DOCKERHUB_URL}axonius/axonius-manager'
+        if tag:
+            manager_image = f'{manager_image}:{tag}'
+        return self._pull_image(manager_image, repull, show_print)
 
     def build_libs(self, rebuild=False, image_tag=None, show_print=True):
         image_name = 'axonius/axonius-libs'

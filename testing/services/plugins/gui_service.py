@@ -1580,8 +1580,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         if self.is_dev:
             volumes.extend(super().volumes_override)
             return volumes
-        libs = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), '..', '..', '..', 'axonius-libs', 'src', 'libs'))
+        libs = os.path.abspath(os.path.join(self.libs_dir, 'libs'))
         volumes.extend([f'{libs}:{LIBS_PATH.as_posix()}:ro'])
 
         # extend volumes by mapping specifically each python file, to be able to debug much better.

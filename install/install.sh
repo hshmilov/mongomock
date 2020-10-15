@@ -30,8 +30,7 @@ fi
 if [[ $* == *--set-credentials* ]]; then
     echo "Setting all credentials."
     (
-    source ./prepare_python_env.sh
-    python3 ./devops/scripts/automate_dev/credentials_inputer.py
+    docker exec axonius-manager python3 ./devops/scripts/automate_dev/credentials_inputer.py
     )
 fi
 

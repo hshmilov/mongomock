@@ -1,8 +1,9 @@
 import json
+from pathlib import Path
 
-from axonius.consts.system_consts import CUSTOMER_CONF_PATH
-from scripts.instances.instances_consts import AXONIUS_SETTINGS_HOST_PATH
+from scripts.instances.instances_consts import AXONIUS_SETTINGS_HOST_PATH, CORTEX_PATH
 
+CUSTOMER_CONF_PATH = Path(CORTEX_PATH) / Path('.axonius_settings') / 'customer_conf.json'
 TUNNELED_ADAPTERS = 'tunneled_adapters'
 
 

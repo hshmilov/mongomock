@@ -105,6 +105,10 @@ class WeaveService(DockerService):
             super().start(mode=mode, allow_restart=allow_restart, rebuild=rebuild, hard=hard, show_print=show_print,
                           expose_port=expose_port, extra_flags=extra_flags,
                           docker_internal_env_vars=docker_internal_env_vars, run_env=my_env)
+            if is_using_weave() and is_weave_up():
+                connect_to_network_command = \
+                    f'docker network connect --alias {self.fqdn} {AXONIUS_NETWORK} {self.container_name}'
+                subprocess.check_call(shlex.split(connect_to_network_command))
         except subprocess.TimeoutExpired:
             print(
                 'Restarting container due TimeoutExpired exception on start (probably due to weave docker run issue.)')

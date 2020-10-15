@@ -87,70 +87,6 @@ fi
 export LC_ALL="en_US.UTF-8"
 export LC_CTYPE="en_US.UTF-8"
 
-
-#echo "Updating the sources..."
-#if [ -e /etc/apt/sources.list.d/webupd8team-ubuntu-java-xenial.list ]; then
-#    mv /etc/apt/sources.list.d/webupd8team-ubuntu-java-xenial.list /tmp
-#fi
-#if [ -e /var/lib/dpkg/info/oracle-java8-installer.postinst ]; then
-#    mv /var/lib/dpkg/info/oracle-java8-installer.postinst /tmp
-#fi
-#sed -i "s/deb cdrom.*//g" /etc/apt/sources.list    # remove cdrom sources; otherwise _wait_for_apt update fails
-#export DEBIAN_FRONTEND=noninteractive
-#dpkg --add-architecture i386
-subscription-manager repos --enable=rhel-7-server-extras-rpms
-sudo rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-_wait_for_yum -y update
-echo "Upgrading..."
-_wait_for_yum upgrade -yq
-echo "Upgrading Kernel..."
-_wait_for_yum install -y epel-release
-_wait_for_yum install -y wget yum-utils device-mapper-persistent-data lvm2 sshpass open-vm-tools stunnel htop moreutils gparted sysstat net-tools tmux nano vim curl make gcc git traceroute libffi-devel libxml2-devel libxslt-devel libcurl-devel psmisc
-_wait_for_yum groupinstall -y development
-_wait_for_yum install -y https://centos7.iuscommunity.org/ius-release.rpm
-_wait_for_yum install --skip-broken -y python36 python-pip python-devel python3-devel
-
-yumdownloader python36-devel.x86_64
-sudo rpm --import /etc/pki/rpm-gpg/*
-rpm -i --nodeps python36-devel-3.6.8-2.el7.ius.x86_64.rpm
-
-
-echo "Setting python3.6 as the default python and upgrading pip..."
-ln -sf /usr/bin/python2 /usr/local/bin/python
-ln -sf /usr/bin/python3.6 /usr/local/bin/python3
-python2 -m pip install --upgrade pip
-pip2 install --upgrade wheel
-python3 -m pip install --upgrade pip
-echo "Installing virtualenv and setuptools..."
-python3 -m pip uninstall pip
-_wait_for_yum reinstall -y python3-pip
-pip2 install virtualenv
-pip3 install virtualenv
-pip2 install --upgrade wheel
-pip2 install --upgrade setuptools
-pip3 install --upgrade setuptools
-pip3 install --upgrade wheel
-pip3 install ipython
-pip3 install netifaces==0.10.9
-pip3 install urllib3==1.13.1
-pip2 install urllib3==1.13.1
-pip3 install requests==2.22.0
-pip2 install requests==2.22.0
-pip3 install distro==1.4.0
-pip2 install distro==1.4.0
-
-#_wait_for_apt upgrade -yq -f linux-generic
-echo "Done upgrading"
-#_wait_for_apt install -yq apt-transport-https ca-certificates curl software-properties-common # required for https-repos
-#curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-#retry timeout 20 add-apt-repository \
-#   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-#   $(lsb_release -cs) \
-#   stable"
-#echo "deb http://nexus.axonius.lan:8081/repository/ppa.launchpad.net.jonathonf.python3-6.ubuntu/ xenial main" >> /etc/apt/sources.list
-#apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F06FC659
-echo "Installing various dependencies..."
-#_wait_for_apt install -yq moreutils gparted sysstat net-tools iputils-ping libpq-dev tmux screen nano vim curl libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev git libpango1.0-0 libcairo2 software-properties-common ssh libxmlsec1 ncdu traceroute libc6:i386 libstdc++6:i386
 echo "Installing docker-ce..."
 yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 _wait_for_yum install -y docker-ce
@@ -286,14 +222,6 @@ echo "*.*                                                     /var/log/syslog" >
 
 # Locking root user to ssh
 passwd --lock root
-
-# Install Zscaler root certificate
-set +e
-sudo cp ./uploads/ZscalerRootCertificate-2048-SHA256.crt /usr/local/share/ca-certificates/
-sudo chown root:root /usr/local/share/ca-certificates/ZscalerRootCertificate-2048-SHA256.crt
-sudo chmod 0444 /usr/local/share/ca-certificates/ZscalerRootCertificate-2048-SHA256.crt
-sudo update-ca-certificates
-set -e
 
 touch $INIT_FILE
 echo "Done successfully"

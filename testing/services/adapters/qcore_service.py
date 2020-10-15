@@ -121,11 +121,6 @@ class QcoreService(AdapterService):
             "query_type": "saved"
         })
 
-    @property
-    def exposed_ports(self):
-        return [(DOCKER_PORTS[self.container_name], 443),
-                (DOCKER_PORTS['qcore-mediator'], DOCKER_PORTS['qcore-mediator'])]
-
 
 @pytest.fixture(scope="module", autouse=True)
 def qcore_fixture(request):

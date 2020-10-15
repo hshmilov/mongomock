@@ -7,7 +7,7 @@ from utils import chown_folder
 def write_upgrade_test_customer_conf(data):
     path = CUSTOMER_CONF_PATH_UPGRADE_TESTS
     path.parent.mkdir(exist_ok=True, parents=True)
-    chown_folder(str(path.parent.resolve()), sudo=True)
+    chown_folder(str(path.parent.resolve()), sudo=False)
     path.write_text(json.dumps(data))
 
 

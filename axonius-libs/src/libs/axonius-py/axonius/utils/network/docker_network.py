@@ -1,5 +1,4 @@
 import ipaddress
-import json
 import logging
 import socket
 import subprocess
@@ -54,13 +53,6 @@ def has_addr_collision(domain):
         raise
 
     return False, 'No collision'
-
-
-def read_weave_network_range():
-    report = subprocess.check_output(f'/usr/local/bin/weave report'.split())
-    report = json.loads(report)
-    weave_netrowk_range = report['IPAM']['Range']
-    return weave_netrowk_range
 
 
 def run_cmd_in_container(container, cmd, timeout=60):

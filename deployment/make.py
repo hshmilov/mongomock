@@ -11,11 +11,11 @@ import imp
 import inspect
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import time
-import zipfile
 from pathlib import Path
 
 import boto3
@@ -26,7 +26,8 @@ import lists
 from devops.axonius_system import get_metadata
 from services.axonius_service import get_service
 from static_analysis.nvd_nist.nvd_update import NVD_ARTIFACTS_PATH
-from utils import (CORTEX_PATH, SOURCES_FOLDER_NAME, AutoOutputFlush,
+from utils import (CORTEX_PATH, SOURCES_FOLDER_NAME, INSTALLER_TEMP_DIR, AutoOutputFlush,
+
                    print_state)
 
 
@@ -68,6 +69,7 @@ def main():
             raise Exception('Output path already exists, pass --override to override the file')
 
     create_package(output_path, args.version, args.pull, args.rebuild, args.exclude, True, args.winpip, args.mode)
+    sys.exit(0)
 
 
 def create_package(output_path, version='', pull=False, rebuild=False, exclude=None, prod=True, winpip=False,
@@ -101,24 +103,34 @@ with AutoOutputFlush():
     # main_template = 'from IPython import embed\nembed()\n'  # helper template for debugging
     metadata = get_metadata(version=version)
     download_artifacts()
-    download_packages(winpip)
+    # download_packages(winpip)
     images_tar = get_images_tar(pull, rebuild, exclude, prod, tag)
     try:
-        with open(output_path, 'wb') as output_file:
-            output_file.write(b'#!/usr/bin/env python3.6\n')
-            with zipfile.ZipFile(output_file, 'w', compression=zipfile.ZIP_DEFLATED) as zip_file:
-                zip_file.writestr('__main__.py', main_template.encode('utf-8'))
-                zip_file.writestr(f'{SOURCES_FOLDER_NAME}/shared_readonly_files/__build_metadata',
-                                  metadata.encode('utf-8'))
+        if not Path(INSTALLER_TEMP_DIR).is_dir():
+            Path(INSTALLER_TEMP_DIR).mkdir()
+            Path(f'{INSTALLER_TEMP_DIR}/{SOURCES_FOLDER_NAME}').mkdir()
+        if not Path(f'{INSTALLER_TEMP_DIR}/{SOURCES_FOLDER_NAME}').is_dir():
+            Path(f'{INSTALLER_TEMP_DIR}/{SOURCES_FOLDER_NAME}').mkdir()
+        with open(f'{INSTALLER_TEMP_DIR}/__main__.py', 'wb') as fh:
+            fh.write(main_template.encode('utf-8'))
+        Path(f'{INSTALLER_TEMP_DIR}/{SOURCES_FOLDER_NAME}/shared_readonly_files').mkdir()
+        with open(f'{INSTALLER_TEMP_DIR}/{SOURCES_FOLDER_NAME}/shared_readonly_files/__build_metadata', 'wb') as fh:
+            fh.write(metadata.encode('utf-8'))
 
-                # placeholder for logs dir
-                zip_file.writestr(f'{SOURCES_FOLDER_NAME}/logs/nonce', ''.encode('utf-8'))
+        # placeholder for logs dir
+        Path(f'{INSTALLER_TEMP_DIR}/{SOURCES_FOLDER_NAME}/logs').mkdir()
+        Path(f'{INSTALLER_TEMP_DIR}/{SOURCES_FOLDER_NAME}/logs/nonce').touch()
 
-                add_source_folder(zip_file, os.path.basename(output_path), exclude)
-                zip_file.write(images_tar, 'images.tar')
-                print_state('Closing zip file')
+        add_source_folder(os.path.basename(output_path), exclude)
+        shutil.copy(images_tar, f'{INSTALLER_TEMP_DIR}/images.tar')
+        print_state('Finished copying')
+        print_state('Creating installer')
+        subprocess.check_output(['/usr/bin/makeself', '--gzip', INSTALLER_TEMP_DIR,
+                                 output_path, 'Axonius Setup', 'ORIGINAL_PWD=$PWD python3 __main__.py'])
+        assert os.path.exists(output_path)
     finally:
         os.remove(images_tar)
+        shutil.rmtree(INSTALLER_TEMP_DIR)
     print_state(f'Done, took {int(time.time() - start)} seconds - saved to {output_path}')
 
 
@@ -153,7 +165,9 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True, tag=None):
     if pull:
         rebuild = True
     images.append(axonius_system.pull_base_image(pull, tag, show_print=False))
+    images.append(axonius_system.pull_manager_image(pull, tag, show_print=False))
     images.append(axonius_system.pull_tunneler(pull, show_print=False))
+    images.append(axonius_system.pull_scalyr_image(pull, show_print=False))
     images.append(axonius_system.pull_curl_image(pull, show_print=False))
     images.append(axonius_system.pull_container_alpine(pull, show_print=False))
     images.extend(axonius_system.pull_weave_images(pull, show_print=False))
@@ -175,7 +189,7 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True, tag=None):
     return images
 
 
-def add_source_folder(zip_file: zipfile.ZipFile, output_file_name: str, exclude: list = None):
+def add_source_folder(output_file_name: str, exclude: list = None):
     """ add source folder CORTEX_PATH to zip_file under /SOURCES_FOLDER_NAME;
         first iterate over all files and sub-folders and prepare a list of white-listed files (variable files)
         then, call write_files to commit those files to zip_file.
@@ -248,10 +262,11 @@ def add_source_folder(zip_file: zipfile.ZipFile, output_file_name: str, exclude:
         for zip_rel_path, path in files:
             print(f'{index}.'.ljust(count_max_size) + zip_rel_path[len(header) + 1:])
             index += 1
-            zip_file.writestr(zip_rel_path, open(path, 'rb').read())
+            Path(os.path.dirname(zip_rel_path)).mkdir(parents=True, exist_ok=True)
+            shutil.copy(path, str(zip_rel_path))
 
     print_state(f'Collecting sources')
-    add_folder('', SOURCES_FOLDER_NAME)
+    add_folder('', f'{INSTALLER_TEMP_DIR}/{SOURCES_FOLDER_NAME}')
     print(f'  Collected {len(files)} source files')
     print_state(f'Compiling sources')
     write_files()

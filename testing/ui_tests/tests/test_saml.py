@@ -1,16 +1,14 @@
 import time
 import urllib
-import pathlib
-import tempfile
 import contextlib
 import collections
 from uuid import uuid4
 
 import docker
 import requests
-import netifaces
 
 from axonius.consts.gui_consts import PREDEFINED_ROLE_RESTRICTED, PREDEFINED_ROLE_VIEWER
+from ui_tests.tests.ui_test_base import _docker_host_address
 from ui_tests.tests.permissions_test_base import PermissionsTestBase
 
 
@@ -22,18 +20,7 @@ SamlServer = collections.namedtuple(
 
 TEST_GIVENNAME = 'test_givenname'
 TEST_SURNAME = 'test_surname'
-
-
-def _docker_host_address():
-    # This sucks and doesn't really belong here, I don't know where it should reside.
-    # We use it so Axonius will be able to access our identity provider.
-
-    # Output of netifaces.gateways()['default'] looks like
-    # {2: ('192.168.43.1', 'en0')}
-
-    # pylint: disable = I1101
-    default_interface_name = netifaces.gateways()['default'][netifaces.AF_INET][1]
-    return netifaces.ifaddresses(default_interface_name)[netifaces.AF_INET][0]['addr']
+AUTHSOURCES_PATH = '/home/ubuntu/cortex/logs/ui_logger/authsources.php'
 
 
 @contextlib.contextmanager
@@ -63,26 +50,25 @@ $config = array(
 );
 '''
 
-    with tempfile.TemporaryDirectory(dir='/tmp') as temporary_directory:
-        authsources_path = pathlib.Path(temporary_directory).joinpath('authsources.php')
-        authsources_path.write_text(authsources_data)
+    with open(AUTHSOURCES_PATH, 'w') as fh:
+        fh.write(authsources_data)
 
-        volumes = {str(authsources_path): {'bind': '/var/www/simplesamlphp/config/authsources.php', 'mode': 'rw'}}
+    volumes = {AUTHSOURCES_PATH: {'bind': '/var/www/simplesamlphp/config/authsources.php', 'mode': 'rw'}}
 
-        environment = {'SIMPLESAMLPHP_SP_ENTITY_ID': f'{base_url}/api/login/saml/metadata/',
-                       'SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE': f'{base_url}/api/login/saml/?acs',
-                       'SIMPLESAMLPHP_SP_SINGLE_LOGOUT_SERVICE': f'{base_url}/api/logout/'}
+    environment = {'SIMPLESAMLPHP_SP_ENTITY_ID': f'{base_url}/api/login/saml/metadata/',
+                   'SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE': f'{base_url}/api/login/saml/?acs',
+                   'SIMPLESAMLPHP_SP_SINGLE_LOGOUT_SERVICE': f'{base_url}/api/logout/'}
 
-        ports = {8080: 8080, 8443: 8443}
+    ports = {8080: 8080, 8443: 8443}
 
-        docker_client = docker.from_env()
-        container = docker_client.containers.run('kristophjunge/test-saml-idp',
-                                                 ports=ports, environment=environment, volumes=volumes, detach=True)
+    docker_client = docker.from_env()
+    container = docker_client.containers.run('kristophjunge/test-saml-idp',
+                                             ports=ports, environment=environment, volumes=volumes, detach=True)
 
-        try:
-            yield server_data
-        finally:
-            container.remove(v=True, force=True)
+    try:
+        yield server_data
+    finally:
+        container.remove(v=True, force=True)
 
 
 class TestSaml(PermissionsTestBase):
@@ -294,7 +280,7 @@ class TestSaml(PermissionsTestBase):
                                     PREDEFINED_ROLE_RESTRICTED)
 
         time.sleep(10)  # Allow settings to apply
-        response = requests.get(urllib.parse.urljoin('https://127.0.0.1', '/api/login/saml/metadata'))
+        response = requests.get(urllib.parse.urljoin('https://gui.axonius.local', '/api/login/saml/metadata'))
         response.raise_for_status()
 
         expected_url = urllib.parse.urljoin(external_url_test, '/api/login/saml/?acs')

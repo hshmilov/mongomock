@@ -249,7 +249,7 @@ def main(ami_id=None):
         # Start Selenium container
         instance_manager._InstanceManager__ssh_execute(axonius_instance,
                                                        'Start Selenium container',
-                                                       'cd /home/ubuntu/cortex; . ./prepare_python_env.sh; sh ./testing/test_credentials/docker_login.sh; python -c \'from services.standalone_services.selenium_service import SeleniumService; a = SeleniumService(); a.build(); a.take_process_ownership(); a.start()\'',
+                                                       'cd /home/ubuntu/cortex; docker exec axonius-manager sh ./testing/test_credentials/docker_login.sh; docker exec axonius-manager python3 -c \'from services.standalone_services.selenium_service import SeleniumService; a = SeleniumService(); a.build(); a.take_process_ownership(); a.start()\'',
                                                        append_ts=False)
         TC.print('Started selenium container on stack machine')
 
@@ -268,7 +268,7 @@ def main(ami_id=None):
         # Start Tunnel tests
         TC.print('Starting tunnel pytest')
         instance_manager._InstanceManager__ssh_execute(axonius_instance, 'Start tunnel tests',
-                                                       'cd /home/ubuntu/cortex; . ./prepare_python_env.sh; mkdir logs/TC_logs; cd ./testing/ui_tests; python3 -m pytest -v --junit-xml=/home/ubuntu/cortex/logs/TC_logs/artifacts.xml tests/test_tunnel.py &',
+                                                       'cd /home/ubuntu/cortex; sudo mkdir logs/TC_logs; docker exec -w /home/ubuntu/cortex/testing/ui_tests axonius-manager python3 -m pytest -v --junit-xml=/home/ubuntu/cortex/logs/TC_logs/artifacts.xml tests/test_tunnel.py &',
                                                        append_ts=False,
                                                        as_root=True,
                                                        timeout=15 * 60)
@@ -277,20 +277,19 @@ def main(ami_id=None):
         tries = 0
         time.sleep(20 * 60)
         axonius_instance.wait_for_ssh()
-        while True:
-            result = instance_manager._InstanceManager__ssh_execute(axonius_instance, 'Check tests status',
-                                                                    'ls -la /home/ubuntu/cortex/logs/TC_logs/artifacts.xml',
-                                                                    append_ts=False,
-                                                                    timeout=60)
-            tries += 1
-            if 'No such file or directory' in result and tries < 5:
-                time.sleep(60)
-            else:
+        for i in range(5):
+            try:
+                result = instance_manager._InstanceManager__ssh_execute(axonius_instance, 'Check tests status',
+                                                                        'ls -la /home/ubuntu/cortex/logs/TC_logs/artifacts.xml',
+                                                                        append_ts=False,
+                                                                        timeout=60)
                 break
+            except Exception:
+                time.sleep(60)
 
         TC.print('Lower permissions of artifacts')
         instance_manager._InstanceManager__ssh_execute(axonius_instance, 'Lower permissions of artifacts',
-                                                       'chown -R ubuntu:ubuntu /home/ubuntu/cortex/logs/TC_logs',
+                                                       'sudo chown -R ubuntu:ubuntu /home/ubuntu/cortex/logs/TC_logs',
                                                        as_root=True,
                                                        append_ts=False)
 

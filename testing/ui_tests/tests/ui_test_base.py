@@ -14,9 +14,9 @@ from retrying import retry
 from selenium import webdriver
 import selenium.common.exceptions
 from selenium.webdriver.support.wait import WebDriverWait
+import netifaces
 
 from devops.scripts.backup.axonius_full_backup_restore import backup
-import conftest
 
 from axonius.saas.input_params import read_saas_input_params
 from axonius.consts.core_consts import CORE_CONFIG_NAME
@@ -29,7 +29,6 @@ from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, LOGS_PATH_HOST
 from axonius.plugin_base import EntityType
 from axonius.utils.mongo_administration import truncate_capped_collection
 from services.axonius_service import get_service
-from services.ports import DOCKER_PORTS
 from test_credentials.test_gui_credentials import DEFAULT_USER, AXONIUS_AWS_TESTS_USER
 from ui_tests.pages.account_page import AccountPage
 from ui_tests.pages.adapters_page import AdaptersPage
@@ -58,6 +57,8 @@ SCREENSHOTS_FOLDER = os.path.join(ROOT_DIR, 'screenshots')
 LOGS_FOLDER = os.path.join(LOGS_PATH_HOST, 'ui_logger')
 BACKUPS_FOLDER = os.path.join(ROOT_DIR, 'backups')
 DOCKER_NETWORK_DEFAULT_GATEWAY = '172.17.0.1'
+CHROME = 'chrome'
+FIREFOX = 'firefox'
 
 
 def create_ui_tests_logger():
@@ -79,6 +80,16 @@ logger = create_ui_tests_logger()
 
 
 # pylint: disable=too-many-instance-attributes,no-value-for-parameter,no-member,access-member-before-definition,protected-access
+
+def _docker_host_address():
+    # This sucks and doesn't really belong here, I don't know where it should reside.
+    # We use it so Axonius will be able to access our identity provider.
+
+    # Output of netifaces.gateways()['default'] looks like
+    # {2: ('192.168.43.1', 'en0')}
+
+    # pylint: disable = I1101
+    return netifaces.gateways()['default'][netifaces.AF_INET][0]
 
 
 class TestBase:
@@ -118,10 +129,9 @@ class TestBase:
             @retry(retry_on_exception=should_retry, stop_max_attempt_number=3, wait_fixed=1000)
             def create_remote_driver():
                 remote_options = webdriver.ChromeOptions()
-                remote_port = DOCKER_PORTS['selenium-hub']
                 if incognito_mode:
                     remote_options.add_argument('--incognito')
-                return webdriver.Remote(command_executor=f'http://127.0.0.1:{remote_port}/wd/hub',
+                return webdriver.Remote(command_executor=f'http://grid.axonius.local:24444/wd/hub',
                                         options=remote_options,
                                         desired_capabilities=self._get_desired_capabilities(
                                             incognito_mode=incognito_mode)
@@ -136,11 +146,11 @@ class TestBase:
 
     @staticmethod
     def _get_desired_capabilities(incognito_mode=False):
-        if pytest.config.option.browser == conftest.CHROME:
+        if pytest.config.option.browser == CHROME:
             d = webdriver.DesiredCapabilities.CHROME
             d['goog:loggingPrefs'] = {'browser': 'ALL'}
             return d
-        if pytest.config.option.browser == conftest.FIREFOX:
+        if pytest.config.option.browser == FIREFOX:
             ff_profile = webdriver.FirefoxProfile()
             ff_profile.set_preference('security.insecure_field_warning.contextual.enabled', False)
             ff_profile.set_preference('security.insecure_password.ui.enabled', False)
@@ -155,7 +165,7 @@ class TestBase:
 
     @staticmethod
     def _get_local_browser(ui_tests_download_dir, incognito_mode=False):
-        if pytest.config.option.browser == conftest.CHROME:
+        if pytest.config.option.browser == CHROME:
             options = webdriver.ChromeOptions()
             prefs = {'download.default_directory': ui_tests_download_dir}
             options.add_experimental_option('prefs', prefs)
@@ -165,7 +175,7 @@ class TestBase:
             if incognito_mode:
                 options.add_argument('--incognito')
             return webdriver.Chrome(chrome_options=options)
-        if pytest.config.option.browser == conftest.FIREFOX:
+        if pytest.config.option.browser == FIREFOX:
             ff_opts = webdriver.firefox.options.Options()
             ff_caps = ff_opts.to_capabilities()
             if incognito_mode:

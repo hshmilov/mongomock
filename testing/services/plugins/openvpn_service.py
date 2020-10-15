@@ -1,12 +1,10 @@
 import subprocess
-import sys
 
 import docker
 
 from scripts.instances.instances_consts import VPN_DATA_DIR
 from scripts.instances.instances_consts import TUNNEL_RESOLV_FILE_HOST_PATH
 from scripts.instances.instances_consts import VPNNET_NETWORK
-from scripts.instances.network_utils import DEFAULT_DOCKER_TUNNEL_SUBNET_IP_RANGE
 
 from axonius.consts.system_consts import NODE_MARKER_PATH
 from services.docker_service import DockerService
@@ -27,8 +25,6 @@ OPENVPN_SETUP_COMMANDS = [
 class OpenvpnService(DockerService):
     # pylint: disable=line-too-long
     def start(self, *args, **kwargs):  # pylint: disable=arguments-differ
-        if 'linux' not in sys.platform.lower():
-            return
         try:
             TUNNEL_RESOLV_FILE_HOST_PATH.touch()
         except FileNotFoundError:
@@ -42,9 +38,6 @@ class OpenvpnService(DockerService):
             client = docker.from_env()
             container = client.containers.get(OPENVPN_CONTAINER_NAME)
             try:
-                subprocess.check_call(
-                    f'/sbin/iptables -t nat -I POSTROUTING 5 -p tcp -m tcp -d {DEFAULT_DOCKER_TUNNEL_SUBNET_IP_RANGE} -j MASQUERADE'.split())
-
                 for cmd in OPENVPN_SETUP_COMMANDS:
                     assert container.exec_run(privileged=True, cmd=cmd).exit_code == 0
 
@@ -61,17 +54,6 @@ class OpenvpnService(DockerService):
                 print('Error while executing commands on host machine in openvpn setup')
             except Exception as err:
                 print(f'Unknown error while executing commands on openvpn-service container {str(err)}')
-
-    # pylint: disable=line-too-long
-    def stop(self, **kwargs):
-        try:
-            subprocess.check_call(
-                f'/sbin/iptables -t nat -D POSTROUTING -p tcp -m tcp -d {DEFAULT_DOCKER_TUNNEL_SUBNET_IP_RANGE} -j MASQUERADE'.split())
-        except subprocess.CalledProcessError:
-            print('Error deleting the iptables masquerade rules')
-        except Exception as err:
-            print(f'Unknown error while executing commands on openvpn-service container {str(err)}')
-        super().stop(**kwargs)
 
     def is_up(self, *args, **kwargs):
         print(f'openvpn started ok')

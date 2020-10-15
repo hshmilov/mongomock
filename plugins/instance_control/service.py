@@ -20,12 +20,13 @@ from axonius.consts import instance_control_consts
 from axonius.consts.gui_consts import Signup
 from axonius.consts.instance_control_consts import (InstanceControlConsts,
                                                     UPLOAD_FILE_SCRIPTS_PATH, UPLOAD_FILE_SCRIPT_NAME,
-                                                    METRICS_INTERVAL_MINUTES, METRICS_SCRIPT_PATH,
-                                                    METRICS_ENV_FILE_PATH, MetricsFields, BOOT_CONFIG_FILE_PATH)
+                                                    METRICS_INTERVAL_MINUTES,
+                                                    MetricsFields, BOOT_CONFIG_FILE_PATH,
+                                                    METRICS_PATH, PASSWORD_GET_URL, UPGRADE_USER_NAME)
 from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME,
                                           PLUGIN_NAME,
                                           NODE_ID, GUI_PLUGIN_NAME, CORE_UNIQUE_NAME,
-                                          BOOT_CONFIGURATION_SCRIPT_FILENAME)
+                                          BOOT_CONFIGURATION_SCRIPT_FILENAME, AXONIUS_MANAGER_PLUGIN_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.mixins.triggerable import RunIdentifier, Triggerable
@@ -56,8 +57,8 @@ def get_ssh_connection() -> paramiko.SSHClient:
     """
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
-    key = paramiko.RSAKey.from_private_key_file('/home/axonius/app/rsa_keys')   # directly parse as rsa
-    client.connect(get_default_gateway_linux(), username='ubuntu', pkey=key)
+    key = paramiko.RSAKey.from_private_key_file('/home/axonius/app/rsa_keys/id_rsa')   # directly parse as rsa
+    client.connect(AXONIUS_MANAGER_PLUGIN_NAME, username='root', pkey=key)
     return client
 
 
@@ -205,6 +206,7 @@ class InstanceControlService(Triggerable, PluginBase):
         logging.info(f'Returning proxy settings')
         return jsonify(self._proxy_settings)
 
+    # pylint: disable=no-self-use
     @add_rule(InstanceControlConsts.PullUpgrade, methods=['GET'], should_authenticate=False)
     def pull_upgrade(self):
         logger.info(f'Starting download')
@@ -215,8 +217,7 @@ class InstanceControlService(Triggerable, PluginBase):
             f.write(r.content)
         logger.info(f'Download completed')
 
-        return log_file_and_return(self.__exec_command(f'mv /home/ubuntu/cortex/plugins/instance_control/upgrade.py '
-                                                       f'/home/ubuntu/'))
+        return 'Download completed'
 
     @add_rule(InstanceControlConsts.TriggerUpgrade, methods=['GET'], should_authenticate=False)
     def trigger_upgrade(self):
@@ -227,7 +228,8 @@ class InstanceControlService(Triggerable, PluginBase):
         logger.info(f'Running the upgrade')
         self.upgrade_started = True
         return log_file_and_return(
-            self.__exec_command(f'bash /home/ubuntu/cortex/devops/scripts/instances/run_upgrade_on_instance.sh'))
+            self.__upgrade_host()
+        )
 
     @add_rule(InstanceControlConsts.DescribeClusterEndpoint, methods=['GET'], should_authenticate=False)
     def describe_cluster(self):
@@ -267,7 +269,7 @@ class InstanceControlService(Triggerable, PluginBase):
         try:
             current_hostname = instance_control_consts.HOSTNAME_FILE_PATH.read_text().strip()
             logger.info(f'Start updating axonius node hostname, current:{current_hostname} new:{hostname} . . . ')
-            cmd = f'sudo hostnamectl set-hostname {hostname}'
+            cmd = f'hostnamectl set-hostname {hostname}'
             self.__exec_command_verbose(cmd)
 
             return_val = ''
@@ -306,10 +308,10 @@ class InstanceControlService(Triggerable, PluginBase):
         execution_script_path = Path(UPLOAD_FILE_SCRIPTS_PATH, UPLOAD_FILE_SCRIPT_NAME)
         # copy execution python script aka axcs
         local_file_name = '/home/ubuntu/axcs.py'
-        copy_cmd = f'sudo cp {execution_script_path} {local_file_name}'
+        copy_cmd = f'cp {execution_script_path} {local_file_name}'
         self.__exec_command_verbose(copy_cmd)
         # chmod the axcs
-        chmod_cmd = f'sudo chmod +x {local_file_name}'
+        chmod_cmd = f'chmod +x {local_file_name}'
         self.__exec_command_verbose(chmod_cmd)
         # run the axcs
         timestamp = datetime.datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S')
@@ -321,7 +323,7 @@ class InstanceControlService(Triggerable, PluginBase):
         logger.info(f'execute_file: got file to execute, follow up in host at '
                     f'{nohup_log_file_name}')
 
-        cmd = f'sudo nohup {local_file_name} {config_script_path} > {nohup_log_file_name} 2>&1 &'
+        cmd = f'nohup {local_file_name} {config_script_path} > {nohup_log_file_name} 2>&1 &'
         self.__exec_command_verbose(cmd)
         return True
 
@@ -329,14 +331,17 @@ class InstanceControlService(Triggerable, PluginBase):
         logger.info('Starting Thread: Sending instance data to core.')
         return_val = 'Success'
 
-        hostname = instance_control_consts.HOSTNAME_FILE_PATH.read_text().strip()
+        try:
+            hostname = instance_control_consts.HOSTNAME_FILE_PATH.read_text().strip()
 
-        result = self.request_remote_plugin(f'node/{self.node_id}', method='post', json={'key': 'hostname',
-                                                                                         'value': hostname})
-        if result.status_code != 200:
-            return_val = 'Failure'
-            logger.error(
-                f'Something went wrong while updating the node\'s hostname: {result.status_code}, {result.content}')
+            result = self.request_remote_plugin(f'node/{self.node_id}', method='post', json={'key': 'hostname',
+                                                                                             'value': hostname})
+            if result.status_code != 200:
+                return_val = 'Failure'
+                logger.error(
+                    f'Something went wrong while updating the node\'s hostname: {result.status_code}, {result.content}')
+        except Exception as e:
+            logger.exception(f'Something went wrong while updating the node\'s hostname: {e}')
 
         node_metrics = self._get_node_metrics()
 
@@ -352,8 +357,7 @@ class InstanceControlService(Triggerable, PluginBase):
         try:
             logger.info('Getting node metrics')
 
-            res = self.__exec_command(f'source {METRICS_ENV_FILE_PATH} && python3 {METRICS_SCRIPT_PATH}')\
-                .read().decode('utf-8').strip()
+            res = METRICS_PATH.read_text()
 
             if res:
                 metrics_result = json.loads(res)
@@ -408,6 +412,20 @@ class InstanceControlService(Triggerable, PluginBase):
         :return: stdout
         """
         _, stdout, _ = self.__host_ssh.exec_command(cmd, environment=environment)
+        return stdout
+
+    def __upgrade_host(self, environment: dict = None) -> paramiko.ChannelFile:
+        """
+        Executes a command on the host using ssh
+        :param cmd: command to execute
+        :return: stdout
+        """
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
+        upgrade_user_password = requests.get(f'{PASSWORD_GET_URL}{self.node_id}', verify=False).text
+
+        client.connect(get_default_gateway_linux(), username=UPGRADE_USER_NAME, password=upgrade_user_password)
+        _, stdout, _ = client.exec_command('id', environment=environment)
         return stdout
 
     @retry(wait_fixed=10000,

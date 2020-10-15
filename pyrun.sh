@@ -2,6 +2,5 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 cd $DIR
-source prepare_python_env.sh
-cd -
-python3 "$@"
+ARGS=$@
+docker exec axonius-manager /bin/bash -c "python3 ./devops/create_pth.py; python3 $ARGS"

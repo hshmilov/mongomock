@@ -24,6 +24,7 @@
       "image_description": "Axonius",
       "machine_type": "n1-standard-8",
       "ssh_username": "ubuntu",
+      "ssh_pty": true,
       "network": "axonius-office-vpc",
       "subnetwork": "private-subnet",
       "ssh_timeout": "4h"
@@ -60,6 +61,7 @@
       "subnet_id": "subnet-843a4cff",
       "ssh_username": "ubuntu",
       "ssh_password": "bringorder",
+      "ssh_pty": true,
       "ami_regions": "{{user `ami_regions`}}"
     },
     {
@@ -76,6 +78,7 @@
       "disk_discard": "unmap",
       "disk_detect_zeroes": "on",
       "ssh_username": "ubuntu",
+      "ssh_pty": true,
       "ssh_password": "bringorder",
       "vm_name": "axonius",
       "headless": true,
@@ -196,18 +199,20 @@
     },
     {
       "type": "shell",
-      "script": "./fetch_chef_secret_and_mark.sh"
+      "script": "./fetch_chef_secret_and_mark.sh",
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     },
     {
       "type": "shell",
-      "remote_folder": "/home/ubuntu",
+      "remote_folder": "/tmp",
       "inline": [
         "mkdir -p /etc/cron.d/",
         "cp uploads/cron.d/* /etc/cron.d/",
         "chmod +700 /etc/cron.d/*",
         "chown -R root:root /etc/cron.d/*",
-        "python3 uploads/create_pre_installed_crons.py",
-        "rm -rf uploads",
+        "chmod +x /home/ubuntu/uploads/create_pre_installed_crons.sh",
+        "/home/ubuntu/uploads/create_pre_installed_crons.sh",
+        "rm -rf /home/ubuntu/uploads",
         "cat /dev/null > /home/ubuntu/.bash_history"
       ],
       "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"

@@ -85,7 +85,9 @@ class GuiAliveTask(WatchdogTask):
 
             self.report_info(f'{self.name} is running')
             try:
-                response = requests.get(f'https://localhost:{INTERNAL_PORT}/api/signup', verify=False, timeout=(10, 20))
+                response = requests.get(f'https://gui.axonius.local/api/signup',
+                                        verify=False,
+                                        timeout=(10, 20))
                 if response.status_code != 200:
                     self.report_error(f'{ERROR_MSG} {response.status_code} {response.text}')
                 else:
@@ -134,7 +136,8 @@ class GuiAliveTask(WatchdogTask):
                                                   timeout=30 * 60,
                                                   stderr=helper,
                                                   stdout=helper)
-                            response = requests.get(f'https://localhost:{INTERNAL_PORT}/api/signup', verify=False,
+                            response = requests.get(f'https://gui.axonius.local/api/signup',
+                                                    verify=False,
                                                     timeout=(10, 20))
                             if response.status_code != 200:
                                 self.report_error(f'Gui is still down after re-raise')

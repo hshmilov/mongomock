@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -e # from now on exit on any error
+source bash_imports.sh
 
-source prepare_python_env.sh
-cd "$(dirname "$0")"
-cd devops
-python3 -u axonius_system.py $@
+if [ ! -f /.dockerenv ]; then
+  create_axonius_manager
+  docker exec axonius-manager ./axonius.sh $@
+  unset_docker_if_needed
+else
+  run_in_axonius_manager $@
+fi

@@ -12,7 +12,7 @@ def log(fmt, *args, **kwargs):
 
 
 def main():
-    db = MongoClient('127.0.0.1:27017', username='ax_user', password='ax_pass')
+    db = MongoClient('mongo.axonius.local:27017', username='ax_user', password='ax_pass')
 
     registered_plugins = list(db['core']['configs'].find({}))
     plugin_unique_names = [x['plugin_unique_name'] for x in registered_plugins]

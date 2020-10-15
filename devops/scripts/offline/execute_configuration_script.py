@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
+import os
+import shutil
 import subprocess
 import tarfile
+import traceback
 from pathlib import Path
 import sys
 
@@ -9,12 +12,13 @@ import sys
 
 def main():
     file_name = sys.argv[1] if len(sys.argv) > 1 else 'configuration_script.tar'
-    working_dir = Path().home()
+    working_dir = os.path.expanduser('~ubuntu')
+    os.chdir(working_dir)
     file_path = Path(working_dir, 'cortex/uploaded_files/', file_name)
     new_file_path = Path(working_dir, file_name)
     try:
         # get the uploaded tar file from fix location
-        file_path.replace(new_file_path)
+        shutil.move(str(file_path), str(new_file_path))
         # check tar file for original content
         all_files_valid = True
         with tarfile.open(new_file_path, 'r') as file:
@@ -34,8 +38,7 @@ def main():
             signature_file = Path(working_dir, 'axonius.sig')
             verify_configuration_script = Path(working_dir, 'cortex/devops/scripts/offline/', 'verify_configuration.py')
             try:
-                verify_configuration_script.chmod(0o755)
-                verify_command = subprocess.run([str(verify_configuration_script),
+                verify_command = subprocess.run(['python3', str(verify_configuration_script),
                                                  '--file', str(encrypted_script),
                                                  '--signature', str(signature_file)])
 
@@ -44,7 +47,7 @@ def main():
                     try:
                         print('axonius script valid')
                         runnable_script.chmod(0o755)
-                        subprocess.run(['sudo', 'bash', '-c', str(runnable_script)])
+                        subprocess.run(['bash', '-c', str(runnable_script)])
                         print('axonius script done')
                     except Exception as e:
                         print(f'axonius script error:{e}')

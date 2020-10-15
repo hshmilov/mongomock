@@ -16,7 +16,6 @@ from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.utils.debug import redprint, yellowprint, greenprint, blueprint
 from axonius.entities import EntityType
 from axonius.utils.host_utils import PYTHON_LOCKS_DIR, WATCHDOGS_ARE_DISABLED_FILE
-from scripts.instances.network_utils import run_tunnel_for_adapters_register, stop_tunnel_for_adapters_register
 from scripts.watchdog import watchdog_main
 from services.plugins.compliance_service import ComplianceService
 from services.plugins.reimage_tags_analysis_service import ReimageTagsAnalysisService
@@ -88,8 +87,6 @@ def usage():
     {name} kill [adapters] - kill all adapters
     {name} wd [kill/restart] - kill all watchdogs / restart all watchdogs
     {name} wd disable [x] - disable watchdogs for x minutes
-    {name} tc [run/stop] Run tunnel (mongo & core) to core 
-    {name} set_db [schema-version] [db_name] [schema_version] - e.g. set-db schema-version aggregator 46
     '''
 
 
@@ -604,15 +601,6 @@ def main():
             PYTHON_LOCKS_DIR.mkdir(parents=True, exist_ok=True)
             WATCHDOGS_ARE_DISABLED_FILE.write_text(str(time_to_disable))
             print(f'Disabled until {time_to_disable}')
-        else:
-            print(usage())
-            return -1
-
-    elif component == 'tc':
-        if action == 'run':
-            run_tunnel_for_adapters_register()
-        elif action == 'stop':
-            stop_tunnel_for_adapters_register()
         else:
             print(usage())
             return -1

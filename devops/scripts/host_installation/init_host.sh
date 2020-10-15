@@ -84,52 +84,29 @@ fi
 export LC_ALL="en_US.UTF-8"
 export LC_CTYPE="en_US.UTF-8"
 
-echo "Updating the sources..."
-if [ -e /etc/apt/sources.list.d/webupd8team-ubuntu-java-xenial.list ]; then
-    mv /etc/apt/sources.list.d/webupd8team-ubuntu-java-xenial.list /tmp
-fi
-if [ -e /var/lib/dpkg/info/oracle-java8-installer.postinst ]; then
-    mv /var/lib/dpkg/info/oracle-java8-installer.postinst /tmp
-fi
 sed -i "s/deb cdrom.*//g" /etc/apt/sources.list    # remove cdrom sources; otherwise _wait_for_apt update fails
 export DEBIAN_FRONTEND=noninteractive
-dpkg --add-architecture i386
-echo "### INITIAL SYSTEM UPDATE ###"
-_wait_for_apt -o Dpkg::Options::="--force-confnew" -o Dpkg::Options::="--force-confdef" update
-echo "Upgrading..."
-_wait_for_apt -o Dpkg::Options::="--force-confnew" -o Dpkg::Options::="--force-confdef" upgrade -yq -f
-echo "Done upgrading"
-
 echo -e "nameserver 10.0.2.68\n$(cat /etc/resolv.conf)" > /etc/resolv.conf
-_wait_for_apt install -yq apt-transport-https ca-certificates curl software-properties-common # required for https-repos
-echo "Installing docker"
+
+_wait_for_apt update
+_wait_for_apt install -yq apt-transport-https ca-certificates curl software-properties-common build-essential makeself moreutils socat sshpass nano vim curl traceroute tmux # required for https-repos
+echo "Adding docker repo"
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 retry timeout 20 add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
    $(lsb_release -cs) \
    stable"
 
-echo "Adding Golang Repository"
-curl -sSk https://nexus.pub.axonius.com/ppa_certs/golang.key | apt-key add -
-add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/golang $(lsb_release -cs) main"
-echo "Adding Python2.7 Repository"
-add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/python2.7 $(lsb_release -cs) main"
-add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/python2.7 $(lsb_release -cs)-security main"
-add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/python2.7 $(lsb_release -cs) universe"
-echo "Installing python3.6"
+echo "Add python3.6 key and repo"
 curl -sSk https://nexus.pub.axonius.com/ppa_certs/deadcert.key | apt-key add -
 source /etc/lsb-release
 add-apt-repository "deb https://axoniusreadonly:7wr7E6kfttdVgn5e@nexus.pub.axonius.com/repository/proxy-python3.6 $(lsb_release -cs) main"
 cd $SCRIPT_DIR
 cp ./uploads/nexus-apt /etc/apt/apt.conf.d/nexus
-_wait_for_apt update
-echo "Updating kernel"
-_wait_for_apt upgrade linux-generic linux-headers-generic linux-image-generic -yq
-echo "Installing various dependencies..."
-_wait_for_apt install -yq sshpass ntp open-vm-tools stunnel4 htop moreutils gparted sysstat python-apt python3-apt net-tools iputils-ping libpq-dev tmux screen nano vim curl python3-dev python-dev libffi-dev libxml2-dev libxslt-dev musl-dev make gcc tcl-dev tk-dev openssl git python libpango1.0-0 libcairo2 software-properties-common python-software-properties ssh libxmlsec1 ncdu traceroute libc6:i386 libstdc++6:i386 cntlm
-_wait_for_apt install -yq zip unzip
+
+
 echo "Installing python 3.6..."
-# unixodbc-dev https://github.com/mkleehammer/pyodbc/issues/276 is needed for pyodbc
+_wait_for_apt update
 _wait_for_apt install -yq python3.6 python3.6-dev python3.6-venv ipython python-pip htpdate unixodbc-dev
 curl -o /tmp/get-pip.py https://bootstrap.pypa.io/get-pip.py
 python3.6 /tmp/get-pip.py pip==19.3.1 setuptools==49.6.0
@@ -143,19 +120,11 @@ echo "Setting python3.6 as the default python and upgrading pip..."
 ln -sf /usr/bin/python2 /usr/local/bin/python
 ln -sf /usr/bin/python3.6 /usr/local/bin/python3
 cp ./uploads/pip.conf /etc/pip.conf
-python2 -m pip install --upgrade pip
-echo "Installing virtualenv and setuptools..."
-pip2 install virtualenv
-pip3 install virtualenv
-pip2 install --upgrade setuptools
-pip3 install ipython
-pip3 install netifaces==0.10.9
-pip3 install python-crontab==2.4.0
 
-echo "Installing golang"
-_wait_for_apt install -yq golang-go
+
 echo "Installing docker-ce..."
-_wait_for_apt install -yq --allow-downgrades docker-ce=5:19.03.9~3-0~ubuntu-xenial containerd.io=1.2.13-2
+_wait_for_apt update
+_wait_for_apt install -yq docker-ce containerd.io
 systemctl enable docker
 echo "Adding ubuntu to the docker group, please note that you must logout and login!"
 usermod -aG docker ubuntu
@@ -285,12 +254,16 @@ else
     rm scalyr-repo-bootstrap_1.2.2_all.deb
 fi
 
+#### Go patch TO DELETE after updating builds web####
+sudo /bin/bash -c 'echo -e "#!/bin/bash\necho OK;exit 0" > /usr/bin/go'
+sudo chmod +x /usr/bin/go
+
 # Install Zscaler root certificate
 set +e
-sudo cp ./uploads/ZscalerRootCertificate-2048-SHA256.crt /usr/local/share/ca-certificates/
-sudo chown root:root /usr/local/share/ca-certificates/ZscalerRootCertificate-2048-SHA256.crt
-sudo chmod 0444 /usr/local/share/ca-certificates/ZscalerRootCertificate-2048-SHA256.crt
-sudo update-ca-certificates
+cp ./uploads/ZscalerRootCertificate-2048-SHA256.crt /usr/local/share/ca-certificates/
+chown root:root /usr/local/share/ca-certificates/ZscalerRootCertificate-2048-SHA256.crt
+chmod 0444 /usr/local/share/ca-certificates/ZscalerRootCertificate-2048-SHA256.crt
+update-ca-certificates
 set -e
 
 touch $INIT_FILE

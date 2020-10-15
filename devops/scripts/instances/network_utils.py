@@ -4,15 +4,15 @@ import subprocess
 import shlex
 from pathlib import Path
 
-from axonius.consts.system_consts import NODE_MARKER_PATH, DB_KEY_PATH
+from axonius.consts.plugin_consts import CORE_UNIQUE_NAME, MONGO_UNIQUE_NAME, AXONIUS_MANAGER_PLUGIN_NAME
+from axonius.consts.system_consts import NODE_MARKER_PATH, DB_KEY_PATH, WEAVE_PATH
 from conf_tools import get_customer_conf_json
+from install_utils import get_weave_subnet_ip_range
 from scripts.instances.instances_consts import (MASTER_ADDR_HOST_PATH,
                                                 ENCRYPTION_KEY_HOST_PATH,
                                                 AXONIUS_SETTINGS_HOST_PATH,
                                                 WEAVE_NETWORK_SUBNET_KEY,
                                                 DOCKER_NETWORK_SUBNET_KEY, DOCKER_TUNNEL_SUBNET_KEY)
-from services.standalone_services.core_proxy_service import CoreProxyService
-from services.standalone_services.mongo_proxy_service import MongoProxyService
 from services.standalone_services.tunneler_service import TunnelerService
 from services.standalone_services.node_proxy_service import NodeProxyService
 DEFAULT_DOCKER_SUBNET_IP_RANGE = '172.18.254.0/24'
@@ -21,6 +21,7 @@ DEFAULT_DOCKER_TUNNEL_SUBNET_IP_RANGE = '171.18.0.0/16'
 DOCKER_NETOWRK_DEFAULT_DNS = '172.17.0.1'
 DOCKER_TUNNEL_INTERFACE_NAME = 'br-ax-vpnnet'
 DOCKER_BRIDGE_INTERFACE_NAME = 'br-ax-docker'
+DOCKER_BRIDGE_INSPECT_COMMAND = "docker network inspect bridge --format='{{(index .IPAM.Config 0).Gateway}}'"
 
 
 def get_docker_subnet_ip_range():
@@ -48,32 +49,26 @@ def get_tunnel_subnet_ip_rage():
     return vpnnet_subnet
 
 
-def get_weave_subnet_ip_range():
-    conf = get_customer_conf_json()
-
-    weave_subnet = conf.get(WEAVE_NETWORK_SUBNET_KEY, DEFAULT_WEAVE_SUBNET_IP_RANGE)
-
-    if WEAVE_NETWORK_SUBNET_KEY in conf:
-        print(f'Found custom weave network ip range: {weave_subnet}')
-    else:
-        print(f'Using default weave ip range {weave_subnet}')
-
-    return weave_subnet
-
-
-def write_to_file(data: str, marker_path: Path):
-    command = f'sudo /sbin/runuser -l ubuntu -c "echo \"{data}\" > {marker_path.absolute().as_posix()}"'
-    subprocess.check_call(shlex.split(command))
+def get_docker_bridge_default_gateway():
+    ip = DOCKER_NETOWRK_DEFAULT_DNS
+    try:
+        ip = subprocess.check_output(shlex.split(DOCKER_BRIDGE_INSPECT_COMMAND)).decode('utf-8').strip()
+        if not ip:
+            print('empty response from docker inspect command')
+            ip = DOCKER_NETOWRK_DEFAULT_DNS
+    except Exception as e:
+        print(f'error getting docker bridge default gateway {e}, using {ip}')
+    return ip
 
 
 def update_weave_connection_params(weave_encryption_key, master_ip):
-    write_to_file(weave_encryption_key, ENCRYPTION_KEY_HOST_PATH)
-    write_to_file(master_ip, MASTER_ADDR_HOST_PATH)
+    ENCRYPTION_KEY_HOST_PATH.write_text(weave_encryption_key)
+    MASTER_ADDR_HOST_PATH.write_text(master_ip)
     print('Done update weave connection params')
 
 
 def update_db_enc_key(db_encryption_key):
-    write_to_file(db_encryption_key, DB_KEY_PATH)
+    DB_KEY_PATH.write_text(db_encryption_key)
     print('Done update DB encryption key')
 
 
@@ -89,24 +84,26 @@ def run_proxy_socat():
     tunneler_service.start(allow_restart=True, show_print=False, mode='prod')
 
 
-def run_tunnel_for_adapters_register():
-    mongo_proxy = MongoProxyService()
-    mongo_proxy.take_process_ownership()
-    mongo_proxy.start(allow_restart=True, show_print=False, mode='prod')
-
-    core_proxy = CoreProxyService()
-    core_proxy.take_process_ownership()
-    core_proxy.start(allow_restart=True, show_print=False, mode='prod')
+def connect_axonius_manager_to_weave():
+    weave_attach_command = shlex.split(f'{WEAVE_PATH} attach {AXONIUS_MANAGER_PLUGIN_NAME}')
+    subprocess.check_call(weave_attach_command)
 
 
-def stop_tunnel_for_adapters_register():
-    mongo_proxy = MongoProxyService()
-    mongo_proxy.take_process_ownership()
-    mongo_proxy.stop()
+def weave_dns_lookup(hostname: str) -> str:
+    command = shlex.split(f'weave dns-lookup {hostname}')
+    return subprocess.check_output(command).decode('utf-8').splitlines()[0]
 
-    core_proxy = CoreProxyService()
-    core_proxy.take_process_ownership()
-    core_proxy.stop()
+
+def fix_node_axonius_manager_hosts():
+    connect_axonius_manager_to_weave()
+    hosts_file = Path('/etc/hosts')
+    hosts_data = hosts_file.read_text()
+    if CORE_UNIQUE_NAME in hosts_data:
+        return
+    core_ip = weave_dns_lookup(CORE_UNIQUE_NAME)
+    mongo_ip = weave_dns_lookup(MONGO_UNIQUE_NAME)
+    hosts_data = f'{hosts_data}{core_ip}\t{CORE_UNIQUE_NAME}\n{mongo_ip}\t{MONGO_UNIQUE_NAME}\n'
+    hosts_file.write_text(hosts_data)
 
 
 def connect_to_master(master_ip, weave_pass):
