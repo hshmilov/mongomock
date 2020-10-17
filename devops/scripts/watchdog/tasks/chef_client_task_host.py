@@ -12,7 +12,7 @@ def is_endpoint_false(endpoint):
     try:
         env = {'DOCKER_HOST': 'unix:///var/run/weave/weave.sock'}
         output = subprocess.check_output(
-            shlex.split(f'docker run --rm appropriate/curl -kfsSL https://gui.axonius.local:443/api/{endpoint}'),
+            shlex.split(f'docker run --rm appropriate/curl -kfsSL https://127.0.0.1:443/api/{endpoint}'),
             env=env, timeout=60 * 2)
         output = output.decode().strip().lower()
         return output != 'true'
