@@ -25,6 +25,15 @@
                 margin-bottom: 4px;
                 font-size: 11px;
             }
+
+            .x-date-edit {
+                .ant-calendar-picker-input {
+                    padding: 4px 6px;
+                }
+                .ant-calendar-picker-icon {
+                    visibility: hidden;
+                }
+            }
         }
 
         .buttons {
