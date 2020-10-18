@@ -101,6 +101,7 @@ fi
 echo "#### Populating with data finished"
 
 echo "#### Running before upgrade setups"
+docker exec axonius-manager testing/test_credentials/docker_login.sh
 set +e; timeout 3600 docker exec -w /home/ubuntu/cortex/testing axonius-manager python3 run_upgrade_tests.py --teardown-keep-db upgrade/before_upgrade -p no:testing/tests/conftest.py; set -e;
 
 echo "#### Before upgrade setups done"

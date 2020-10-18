@@ -10,6 +10,7 @@ AXONIUS_SH='/home/ubuntu/cortex/axonius.sh'
 CORTEX_PATH='/home/ubuntu/cortex'
 INSTANCE_CONTROL_SSH_KEYS='plugins/instance_control/rsa_keys'
 DEFAULT_ROOT_DOCKER_DIR='/var/lib/docker'
+TMP_ENV_FILE='/tmp/docker_env_file'
 
 DOCKER_NETWORK_NAME='axonius'
 CUSTOMER_CONF_PATH='.axonius_settings/customer_conf.json'
@@ -91,7 +92,11 @@ function create_axonius_manager {
     [ -f "${WEAVE_BIN_PATH}" ] && [ ! -d "${WEAVE_PATH}" ] && sudo mkdir "${WEAVE_PATH}"
     [ -d "${WEAVE_PATH}" ] && weave_mount="-v ${WEAVE_PATH}:${WEAVE_PATH}"
     [ "$(pwd)" != "$CORTEX_PATH" ] && pwd_mount="-v $(pwd):$(pwd)"
-    echo docker run -d -v "$DOCKER_SOCK":"$DOCKER_SOCK" -v "$DEFAULT_ROOT_DOCKER_DIR":"$DEFAULT_ROOT_DOCKER_DIR" "$weave_mount" "$pwd_mount" -e SERVICE_DIR="$(pwd)" -v "$(pwd)":/home/ubuntu/cortex -v "$(pwd)"/"$INSTANCE_CONTROL_SSH_KEYS":/root/.ssh --name="$DOCKER_NAME" --net="$DOCKER_NETWORK_NAME" --network-alias="$DOCKER_NAME" "$IMAGE_NAME" | /bin/sh
+    if [ -f $TMP_ENV_FILE ]; then
+      echo docker run -d -v "$DOCKER_SOCK":"$DOCKER_SOCK" -v "$DEFAULT_ROOT_DOCKER_DIR":"$DEFAULT_ROOT_DOCKER_DIR" "$weave_mount" "$pwd_mount" --env-file=$TMP_ENV_FILE -e SERVICE_DIR="$(pwd)" -v "$(pwd)":/home/ubuntu/cortex -v "$(pwd)"/"$INSTANCE_CONTROL_SSH_KEYS":/root/.ssh --name="$DOCKER_NAME" --net="$DOCKER_NETWORK_NAME" --network-alias="$DOCKER_NAME" "$IMAGE_NAME" | /bin/sh
+    else
+      echo docker run -d -v "$DOCKER_SOCK":"$DOCKER_SOCK" -v "$DEFAULT_ROOT_DOCKER_DIR":"$DEFAULT_ROOT_DOCKER_DIR" "$weave_mount" "$pwd_mount" -e SERVICE_DIR="$(pwd)" -v "$(pwd)":/home/ubuntu/cortex -v "$(pwd)"/"$INSTANCE_CONTROL_SSH_KEYS":/root/.ssh --name="$DOCKER_NAME" --net="$DOCKER_NETWORK_NAME" --network-alias="$DOCKER_NAME" "$IMAGE_NAME" | /bin/sh
+    fi
   fi
 }
 
