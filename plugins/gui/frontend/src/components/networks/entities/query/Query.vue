@@ -30,6 +30,7 @@
         @error="onError"
         @submit="() => updateQuery(query, true)"
         @reset="onReset"
+        @done="$emit('done', false)"
       />
     </div>
   </div>

@@ -24,6 +24,7 @@
         @change="onChangeFilter"
         @clear="clearFilter"
         @error="onError"
+        @done="$emit('done')"
       />
       <div
         v-if="!filterOutExpression.showIds && filterOutIdCount > 0"

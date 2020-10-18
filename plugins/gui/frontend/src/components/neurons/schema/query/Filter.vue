@@ -175,6 +175,7 @@ export default {
           fields: viewFields,
         },
       });
+      this.$emit('done');
     },
     reset() {
       this.filters.length = 0;
