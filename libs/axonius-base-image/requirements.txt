@@ -135,3 +135,4 @@ pyotp==2.3.0
 msrest==0.6.17
 cpe==1.2.1
 aiodnsresolver==0.0.140
+requests-ntlm2==6.2.7

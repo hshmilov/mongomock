@@ -117,3 +117,4 @@ segfault==0.0.1
 tabulate==0.8.7
 cpe==1.2.1
 aiodnsresolver==0.0.140
+requests-ntlm2==6.2.7
