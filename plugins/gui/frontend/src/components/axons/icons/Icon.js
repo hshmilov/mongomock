@@ -20,7 +20,7 @@ const categories = {
 
 export default {
   name: 'XIcon',
-  components: { AIcon },
+  functional: true,
   props: {
     ...AIcon.props,
     family: {
@@ -28,25 +28,24 @@ export default {
       default: '',
     },
   },
-  methods: {
-    getCustomSVGIcon(family, type) {
+  render(h, { props, listeners, data }) {
+    const getCustomSVGIcon = (family, type) => {
       const svgIconLense = _prop(`${family}.${type}`);
       return svgIconLense(categories);
-    },
-  },
-  render(h) {
+    };
     const createElement = h;
-    let props = { ...this.$props };
-    if (this.family) {
-      props = _omit(props, 'type');
-      _set(props, 'component', this.getCustomSVGIcon(this.family, this.type));
+    let newProps = { ...props };
+    if (props.family) {
+      newProps = _omit(props, 'type');
+      _set(newProps, 'component', getCustomSVGIcon(props.family, props.type));
     }
     return createElement(
-      'AIcon',
+      AIcon,
       {
-        class: 'x-icon',
-        props: { ...props },
-        on: { ...this.$listeners },
+        ...data,
+        class: [data.staticClass, data.class, 'x-icon'],
+        props: { ...newProps },
+        on: { ...listeners },
       },
     );
   },
