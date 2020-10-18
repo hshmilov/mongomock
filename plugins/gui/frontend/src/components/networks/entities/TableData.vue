@@ -303,7 +303,7 @@ export default {
     position: relative;
 
     .details-table-container {
-      min-width: 24px;
+      width: 24px;
 
       .x-icon:hover {
         color: $theme-orange;
