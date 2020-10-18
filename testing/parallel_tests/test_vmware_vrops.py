@@ -1,5 +1,3 @@
-import pytest
-
 # pylint: disable=unused-import
 from services.adapters.vmware_vrops_service import VmwareVropsService, vmware_vrops_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
@@ -31,23 +29,3 @@ class TestVmwareVropsAdapter(AdapterTestBase):
     @property
     def some_user_id(self):
         raise NotImplementedError()
-
-    @pytest.mark.skip('No test environment')
-    def test_fetch_devices(self):
-        pass
-
-    @pytest.mark.skip('No test environment')
-    def test_fetch_users(self):
-        pass
-
-    @pytest.mark.skip('No test environment')
-    def test_removing_adapter_creds_with_devices(self):
-        pass
-
-    @pytest.mark.skip('No test environment')
-    def test_removing_adapter_creds_with_users(self):
-        pass
-
-    @pytest.mark.skip('No test environment')
-    def test_check_reachability(self):
-        pass
