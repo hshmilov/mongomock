@@ -335,9 +335,11 @@ class SettingsPage(Page):
     def click_manage_users_settings(self):
         time.sleep(1.5)
         self.driver.find_element_by_css_selector(self.MANAGE_USERS_CSS).click()
+        self.wait_for_table_to_be_responsive()
 
     def click_manage_roles_settings(self):
         self.driver.find_element_by_css_selector(self.MANAGE_ROLES_CSS).click()
+        self.wait_for_table_to_be_responsive()
 
     def get_role_panel_title(self):
         element = self.driver.find_element_by_css_selector(self.ROLE_PANEL_TITLE_SELECTOR)

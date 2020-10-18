@@ -18,6 +18,7 @@ from axonius.utils.permissions_helper import (PermissionCategory,
                                               PermissionAction,
                                               PermissionValue,
                                               is_axonius_role)
+from gui.logic.filter_utils import filter_archived
 from gui.logic.login_helper import get_user_for_session
 from gui.okta_login import OidcData
 
@@ -390,10 +391,10 @@ def check_auth_api_key(api_key, api_secret):
     users_collection = PluginBase.Instance._get_collection(USERS_COLLECTION)
     roles_collection = PluginBase.Instance._get_collection(ROLES_COLLECTION)
 
-    user_from_db = users_collection.find_one({
+    user_from_db = users_collection.find_one(filter_archived({
         'api_key': api_key,
         'api_secret': api_secret
-    })
+    }))
 
     if not user_from_db:
         return None

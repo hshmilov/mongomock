@@ -34,6 +34,7 @@ from axonius.utils.permissions_helper import (PermissionAction,
                                               is_axonius_role)
 from axonius.utils.root_master.root_master import restore_from_s3_key
 from gui.logic.entity_data import entity_tasks, get_entity_data
+from gui.logic.filter_utils import filter_archived
 from gui.logic.historical_dates import all_historical_dates
 from gui.logic.routing_helper import check_permissions
 
@@ -97,10 +98,10 @@ def basic_authentication(func, required_permission: PermissionValue, enforce_per
             """
             This function is called to check if an api key and secret match
             """
-            user_from_db = users_collection.find_one({
+            user_from_db = users_collection.find_one(filter_archived({
                 'api_key': api_key,
                 'api_secret': api_secret
-            })
+            }))
 
             if not user_from_db:
                 return None, None
@@ -1152,7 +1153,7 @@ class APIMixin:
     @filtered_entities()
     @sorted_endpoint()
     @projected()
-    @api_add_rule(rule='devices', methods=['GET', 'POST'], required_permission=DEVICE_ASSETS_VIEW)
+    @api_add_rule(rule='devices', methods=['GET', 'POST'], required_permission=DEVICE_ASSETS_VIEW, skip_activity=True)
     def api_devices(self,
                     limit: int,
                     skip: int,
