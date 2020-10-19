@@ -260,5 +260,7 @@ class OpenvasConnection(RESTConnection):
             result_dict = auth_test.authenticate(self._username, self._password)
             result = result_dict.get('authenticate_response', result_dict)
             if result.get('@status', None) != '200':
-                message = f'Failed to authenticate! The response was: {result_dict}'
+                result_code = result.get('@status')
+                result_text = result.get('@status_text')
+                message = f'Server responded with error {result_code}: "{result_text}"'
                 raise RESTException(message)

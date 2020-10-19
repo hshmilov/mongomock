@@ -83,8 +83,8 @@ class OpenvasAdapter(AdapterBase):
                 pass
             return conn
         except Exception as e:
-            message = 'Error connecting to server {0}, reason: {1}'.format(
-                client_config['domain'], str(e))
+            message = 'Connection to server {0} failed. ' \
+                      'Please check configuration and credentials: {1} '.format(client_config['domain'], str(e))
             logger.exception(message)
             raise ClientConnectionException(message)
 
