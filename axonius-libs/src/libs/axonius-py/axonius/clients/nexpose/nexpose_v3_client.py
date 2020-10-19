@@ -462,7 +462,8 @@ class NexposeV3Client(NexposeClient):
 
     # pylint: disable=arguments-differ, too-many-locals, too-many-branches, too-many-statements
     @staticmethod
-    def parse_raw_device(device_raw, device_class, drop_only_ip_devices=False, fetch_vulnerabilities=False):
+    def parse_raw_device(device_raw, device_class, drop_only_ip_devices=False, fetch_vulnerabilities=False,
+                         site_name_exclude_list=None):
         last_seen = device_raw.get('history', [])[-1].get('date') if device_raw.get('history', []) else None
 
         last_seen = super(NexposeV3Client, NexposeV3Client).parse_raw_device_last_seen(last_seen)
@@ -489,6 +490,8 @@ class NexposeV3Client(NexposeClient):
             scans_raw = []
         for scan_raw in scans_raw:
             try:
+                if site_name_exclude_list and scan_raw.get('siteName') in site_name_exclude_list:
+                    return None
                 device.scans_data.append(ScanData(engine_name=scan_raw.get('engineName'),
                                                   duration=scan_raw.get('duration'),
                                                   status=scan_raw.get('status'),

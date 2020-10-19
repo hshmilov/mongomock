@@ -115,6 +115,11 @@ class NexposeAdapter(ScannerAdapterBase):
                     'title': 'Do not fetch devices with no MAC address and no hostname',
                     'type': 'bool'
                 },
+                {
+                    'name': 'site_name_exclude_list',
+                    'title': 'Site name exclude list',
+                    'type': 'string'
+                },
                 {  # if false, it will allow for invalid SSL certificates (but still uses HTTPS)
                     "name": VERIFY_SSL,
                     "title": "Verify SSL",
@@ -203,9 +208,11 @@ class NexposeAdapter(ScannerAdapterBase):
                     api_client_class = getattr(nexpose_clients, f"NexposeV{device_raw['API']}Client")
                 drop_only_ip_devices = client_config.get('drop_only_ip_devices') or False
                 fetch_vulnerabilities = client_config.get('fetch_vulnerabilities') or False
+                site_name_exclude_list = client_config.get('site_name_exclude_list')
                 device = api_client_class.parse_raw_device(device_raw, self._new_device_adapter,
                                                            drop_only_ip_devices=drop_only_ip_devices,
-                                                           fetch_vulnerabilities=fetch_vulnerabilities)
+                                                           fetch_vulnerabilities=fetch_vulnerabilities,
+                                                           site_name_exclude_list=site_name_exclude_list)
                 if device:
                     device.nexpose_hostname = nexpose_hostname
                     yield device

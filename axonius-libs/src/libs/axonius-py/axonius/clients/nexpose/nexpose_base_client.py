@@ -58,7 +58,8 @@ class NexposeClient(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def parse_raw_device(device_raw, device_class):
+    def parse_raw_device(device_raw, device_class, drop_only_ip_devices=False, fetch_vulnerabilities=False,
+                         site_name_exclude_list=None):
         """ Used to parse a single raw device that this client class returned.
 
         :param device_raw: The raw device data returned by this client class.
