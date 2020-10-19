@@ -3,7 +3,7 @@ import logging
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.utils.dynamic_fields import put_dynamic_field
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
@@ -27,6 +27,7 @@ class SplunkAdapter(AdapterBase, Configurable):
         device_type = Field(str, 'Device Type')
         splunk_source = Field(str, "Splunk Source")
         vpn_source_ip = Field(str, 'VPN Source IP')
+        agent_id = Field(str, 'Agent ID')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -223,6 +224,19 @@ class SplunkAdapter(AdapterBase, Configurable):
                         device.last_used_users = users
 
                     device.splunk_source = 'Windows Login'
+                elif 'Splunk agent version' in device_type:
+                    device.adapter_properties = [AdapterProperty.Manager.name]
+                    hostname = device_raw.get('hostname')
+                    if not hostname:
+                        logger.warning(f'Bad device no hostname {device_raw}')
+                        continue
+                    device.id = hostname + device_type
+                    device.hostname = hostname
+                    device.add_agent_version(agent=AGENT_NAMES.splunk,
+                                             version=device_raw.get('agent_version'))
+                    device.last_seen = parse_date(device_raw.get('last_seen'))
+                    device.agent_id = device_raw.get('agent_id')
+                    device.splunk_source = 'Splunk agent version'
                 elif 'Nexpose' in device_type:
                     device.adapter_properties = [AdapterProperty.Network.name,
                                                  AdapterProperty.Vulnerability_Assessment.name]
@@ -418,7 +432,9 @@ class SplunkAdapter(AdapterBase, Configurable):
         self.__fetch_plugins = {
             'nexpose': bool(config['fetch_nexpose']),
             'cisco': config['fetch_cisco'] if 'fetch_cisco' in config else True,
-            'win_logs_fetch_hours': int(config['win_logs_fetch_hours'])
+            'win_logs_fetch_hours': int(config['win_logs_fetch_hours']),
+            'splunk_agent_version': config['fetch_splunk_agent_version']
+            if 'fetch_splunk_agent_version' in config else False
         }
 
     @classmethod
@@ -459,6 +475,11 @@ class SplunkAdapter(AdapterBase, Configurable):
                     'name': 'fetch_cisco',
                     'title': 'Fetch devices from Cisco',
                     'type': 'bool'
+                },
+                {
+                    'name': 'fetch_splunk_agent_version',
+                    'type': 'bool',
+                    'title': 'Fetch Splunk agent version'
                 }
             ],
             "required": [
@@ -466,6 +487,7 @@ class SplunkAdapter(AdapterBase, Configurable):
                 "maximum_records",
                 'fetch_cisco',
                 'fetch_nexpose',
+                'fetch_splunk_agent_version',
                 'win_logs_fetch_hours'
             ],
             "pretty_name": "Splunk Configuration",
@@ -479,6 +501,7 @@ class SplunkAdapter(AdapterBase, Configurable):
             'maximum_records': 100000,
             'fetch_nexpose': False,
             'fetch_cisco': True,
+            'fetch_splunk_agent_version': False,
             'splunk_macros_list': None,
             'splunk_sw_macros_list': None,
             'win_logs_fetch_hours': 3

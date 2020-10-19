@@ -291,6 +291,15 @@ class SplunkConnection(object):
             logger.exception(f'Problem fetching with search {search}')
 
     @staticmethod
+    def splunk_agent_version(result):
+        raw_object = dict()
+        raw_object['last_seen'] = result[b'StatusTimestamp'].decode('utf-8')
+        raw_object['hostname'] = result[b'ComputerName'].decode('utf-8')
+        raw_object['agent_version'] = result[b'AgentVersion'].decode('utf-8')
+        raw_object['agent_id'] = result[b'SourceAgentID'].decode('utf-8')
+        return raw_object
+
+    @staticmethod
     def parse_win_events(result):
         raw_object = dict()
         raw_line = result[b'_raw'].decode('utf-8')
@@ -348,7 +357,7 @@ class SplunkConnection(object):
                                   f'General Macro {macro_str}',
                                   send_object_to_raw=True)
             return
-        fetch_cisco = fetch_plugins_dict.get('fetch_plugins_dict')
+        fetch_cisco = fetch_plugins_dict.get('cisco')
         if splunk_macros_list:
             for macro_str in splunk_macros_list:
                 yield from self.fetch(f'search `{macro_str}`',
@@ -416,7 +425,24 @@ class SplunkConnection(object):
                                   earliest,
                                   maximum_records_per_search,
                                   'Cisco client SIG')
-
+        if fetch_plugins_dict.get('splunk_agent_version'):
+            yield from self.fetch('search index=_internal source=*metrics.log* group=tcpin_connections '
+                                  '| stats latest(fwdType) as AgentType latest(version)'
+                                  ' as Version latest(os) as SystemTypeName latest(_time)'
+                                  ' as StatusTimestamp by hostname | convert ctime(StatusTimestamp) | '
+                                  'eval AgentVersion = tostring("v." + Version) | '
+                                  'eval ComputerName=upper(mvindex(split(hostname,"."),0)) | '
+                                  'eval AgentName="Splunk" | '
+                                  'eval AgentType=case(AgentType="uf","UniversalForwarder",'
+                                  'AgentType="full","EnterpriseForwarder",1=1,AgentType) | '
+                                  'eval SourceComputerKey=md5(ComputerName) | '
+                                  'eval SourceAgentID=md5(ComputerName+AgentName) | '
+                                  'table StatusTimestamp SourceComputerKey ComputerName '
+                                  'SourceAgentID AgentName AgentType AgentVersion',
+                                  SplunkConnection.splunk_agent_version,
+                                  earliest,
+                                  maximum_records_per_search,
+                                  'Splunk agent version')
         yield from self.fetch('search index=winevents sourcetype=DhcpSrvLog',
                               SplunkConnection.parse_dhcp,
                               earliest,

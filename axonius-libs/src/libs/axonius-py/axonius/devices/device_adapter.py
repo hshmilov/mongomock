@@ -46,7 +46,7 @@ AGENTS = namedtuple('Agents', (
     'sophos', 'symantec', 'symantec_cloud_workload', 'symantec_ee', 'symantec_12', 'tanium', 'tenable_io',
     'tripwire', 'truefort', 'guardicore', 'deep_security', 'illusive', 'bitdefender', 'avamar', 'cybereason', 'sysaid',
     'symantec_edr', 'ivanti_sc', 'twistlock', 'webroot', 'aqua', 'iboss', 'symantec_dlp', 'bitlocker', 'wazuh', 'wsus',
-    'microfocus_sa', 'contrast', 'illumio', 'cyberark_epm'
+    'microfocus_sa', 'contrast', 'illumio', 'cyberark_epm', 'splunk'
 ))
 
 AGENT_NAMES = AGENTS(
@@ -73,7 +73,7 @@ AGENT_NAMES = AGENTS(
     aqua='Aqua Enforcer', iboss='IBoss Agent', symantec_dlp='Symantec DLP Agent', guardicore='Guardicore Agent',
     deep_security='DeepSecurity Agent', wsus='WSUS Client', microfocus_sa='Microfocus Server Automation',
     contrast='Contrast Security Agent', symantec_edr='Symantec EDR Agent', illumio='Illumio ASP',
-    cyberark_epm='CyberArk EPM Agent'
+    cyberark_epm='CyberArk EPM Agent', splunk='Splunk Agent'
 )
 
 logger = logging.getLogger(f'axonius.{__name__}')
