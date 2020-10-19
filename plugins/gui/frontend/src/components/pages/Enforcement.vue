@@ -366,11 +366,13 @@ export default {
       this.enforcement = { ...this.enforcementData };
     },
     async saveEnforcementTrigger(successMessage) {
-      this.setModifiedTriggerDefinition();
-      await this.saveEnforcement(this.enforcement);
+      const triggers = this.getModifiedTriggers();
+      await this.saveEnforcement({ ...this.enforcement, triggers });
       this.message = successMessage;
       const { position } = this.triggerInProcess;
+      this.setEnforcementTriggers(triggers);
       this.selectTrigger(position);
+      this.triggerInEditingMode = false;
     },
     async deleteEnforcementTrigger(successMessage) {
       this.enforcement.triggers = [];
@@ -420,15 +422,19 @@ export default {
       this.triggerInProcess.position = i;
       this.triggerInProcess.definition = _cloneDeep(this.enforcement.triggers[i]);
     },
-    setModifiedTriggerDefinition() {
-      if (this.triggerInProcess.position === null) return;
-
+    getModifiedTriggers() {
+      if (this.triggerInProcess.position === null) {
+        return [];
+      }
       const { position } = this.triggerInProcess;
       if (this.triggerCount <= position) {
-        this.enforcement.triggers.push(this.triggerInProcess.definition);
-      } else {
-        this.enforcement.triggers[position] = this.triggerInProcess.definition;
+        return [...this.enforcement.triggers, this.triggerInProcess.definition];
       }
+      return this.enforcement.triggers.map((t, i) => (
+        i !== position ? t : this.triggerInProcess.definition));
+    },
+    setEnforcementTriggers(triggers) {
+      this.enforcement.triggers = triggers;
     },
     displayMessage(message) {
       this.message = message;

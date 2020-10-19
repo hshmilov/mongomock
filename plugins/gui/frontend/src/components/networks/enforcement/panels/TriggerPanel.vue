@@ -34,7 +34,7 @@
       </ASpin>
     </template>
     <template
-      v-if="isEditingMode"
+      v-if="isEditingMode && !triggerInSavingProcess"
       #panelFooter
     >
       <XButton
@@ -195,7 +195,6 @@ export default {
     },
     onSave() {
       this.triggerInSavingProcess = true;
-      this.toggleEditMode();
       this.$emit('save-enforcement-trigger', this.modifiedToastMessage);
     },
   },
