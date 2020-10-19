@@ -17,7 +17,7 @@ ROOT_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', '..', 
 LOGGED_IN_MARKER = Path(ROOT_DIR) / AXONIUS_SETTINGS_DIR_NAME / '.logged_in'
 GUI_LOG_PATH = os.path.join(LOGS_PATH_HOST, 'gui', 'gui.axonius.log')
 REPORTS_LOG_PATH = os.path.join(LOGS_PATH_HOST, 'reports', 'reports.axonius.log')
-LOGS_AFTER_UPGRADE_PATH = os.path.join(CORTEX_PATH, 'install_dir', 'cortex', 'logs')
+LOGS_AFTER_UPGRADE_PATH = os.path.join(CORTEX_PATH, 'logs')
 SYSTEM_SCHEDULER_LOG_PATH = os.path.join(LOGS_PATH_HOST, 'system-scheduler', 'system_scheduler.axonius.log')
 
 RESTRICTED_USERNAME = 'RestrictedUser'

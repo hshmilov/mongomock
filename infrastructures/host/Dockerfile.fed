@@ -1,5 +1,7 @@
 FROM axonius/axonius-base-image:fed
 
+ENV AX_MODE FED
+
 ########### Step 1 - Init host software #############
 COPY uploads/* /tmp/
 COPY ax_cli /tmp/ax_cli

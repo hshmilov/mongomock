@@ -11,6 +11,7 @@ docker pull nexus.pub.axonius.com/axonius/axonius-manager
 ./run_axonius_manager.sh
 docker exec axonius-manager testing/test_credentials/docker_login.sh
 tar czf /tmp/testing.tgz testing/
+tar czf /tmp/devops.tgz devops/
 
 function finish {
   exit_code=$?
@@ -85,9 +86,10 @@ if [ -f run_axonius_manager.sh ]; then
 else
   ./axonius.sh system up --all --restart --prod &> ../../logs/start_latest_stable.log
 fi
-cd ..
 
-cd ..
+sudo rm -rf testing/ devops/
+sudo tar xzf /tmp/testing.tgz && sudo tar xzf /tmp/devops.tgz
+cd ../../
 echo "#### Latest stable version installed"
 
 echo "#### Populate latest stable with data"
@@ -103,7 +105,7 @@ echo "#### Populating with data finished"
 echo "#### Running before upgrade setups"
 docker exec axonius-manager testing/test_credentials/docker_login.sh
 set +e; timeout 3600 docker exec -w /home/ubuntu/cortex/testing axonius-manager python3 run_upgrade_tests.py --teardown-keep-db upgrade/before_upgrade -p no:testing/tests/conftest.py; set -e;
-
+set +e; sudo cp /home/ubuntu/BuildAgent/work/cortex/install_dir/cortex/testing/account_data.tmp /home/ubuntu/BuildAgent/work/cortex/testing/; set -e
 echo "#### Before upgrade setups done"
 
 
@@ -121,7 +123,7 @@ pip -V
 cd ${install_dir}
 sudo chmod +x ${installer_name}
 sudo /bin/sh -c "./${installer_name} -- --master-only" 2>&1 > ../logs/upgrade_to_version.log &
-sleep 1000
+sleep 1500
 while [ $(tail -n 5 ../logs/upgrade_to_version.log | grep -c "Upgrader completed") -eq 0 ]; do
   sleep 60
 done
@@ -129,18 +131,17 @@ if [ $(grep -c "Upgrader completed - failure" ../logs/upgrade_to_version.log) -n
     echo "Upgrade failed!!!"
     exit 1
 fi
-cd ..
+cd cortex
+sudo /bin/sh -c "rm -rf testing/; cp /tmp/testing.tgz .; tar xzf testing.tgz; sudo chown -R ubuntu:ubuntu testing;"
+set +e; sudo cp /home/ubuntu/BuildAgent/work/cortex/testing/account_data.tmp /home/ubuntu/BuildAgent/work/cortex/install_dir/cortex/testing/; set -e
+sudo ./run_axonius_manager.sh
+cd ../..
 echo "#### Installed ${version}"
 
 echo "#### Running after upgrade tests"
 set +e; timeout 800 docker exec axonius-manager python3 devops/scripts/discover_now.py --wait; set -e
 pwd
-set +e; sudo cp /home/ubuntu/BuildAgent/work/cortex/testing/account_data.tmp /home/ubuntu/BuildAgent/work/cortex/install_dir/cortex/testing; set -e
-sudo /bin/sh -c "rm -rf testing/; cp /tmp/testing.tgz .; tar xzf testing.tgz; sudo chown -R ubuntu:ubuntu testing;"
-set +e; sudo cp /home/ubuntu/BuildAgent/work/cortex/install_dir/cortex/testing/account_data.tmp /home/ubuntu/BuildAgent/work/cortex/testing/; set -e
 ls -la ./testing/test_credentials/docker_login.sh
-
-sudo ./run_axonius_manager.sh
 ./testing/test_credentials/docker_login.sh
 docker exec axonius-manager /bin/sh ./testing/test_credentials/docker_login.sh
 docker pull nexus.pub.axonius.com/elgalu/selenium:3.141.59-p32

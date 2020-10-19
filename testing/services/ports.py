@@ -5,6 +5,7 @@ DOCKER_PORTS = {
     'mockingbird':                      1444,
     'selenium-hub':                     4444,
     'mongo-slave':                      4455,
+    'core':                             5050,
     'selenium-vnc':                     5900,
     'diag-w':                           6665,  # reserved
     'diag-l':                           6666,  # reserved

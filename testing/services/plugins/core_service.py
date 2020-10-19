@@ -37,6 +37,7 @@ from axonius.utils import datetime
 from axonius.utils.encryption.mongo_encrypt import MONGO_MASTER_KEY_SIZE
 from axonius.modules.plugin_settings import Consts
 from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PARAM
+from services.ports import DOCKER_PORTS
 from services.system_service import SystemService
 from services.updatable_service import UpdatablePluginMixin
 
@@ -48,6 +49,10 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
     def _migrate_db(self):
         super()._migrate_db()
         self._run_all_migrations()
+
+    @property
+    def exposed_ports(self):
+        return [(DOCKER_PORTS[CORE_UNIQUE_NAME], '443')] if os.getenv('PROD') != 'True' else []
 
     @db_migration(raise_on_failure=False)
     def _update_schema_version_1(self):

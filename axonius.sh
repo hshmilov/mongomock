@@ -4,7 +4,10 @@ source bash_imports.sh
 
 if [ ! -f /.dockerenv ]; then
   create_axonius_manager
-  docker exec axonius-manager ./axonius.sh $@
+  docker exec $DOCKER_NAME python3 ./devops/create_pth.py
+  docker exec $DOCKER_NAME ipython -c "exit()"
+  docker exec $DOCKER_NAME python3 ./devops/scripts/fast_axonius/install.py
+  docker exec $DOCKER_NAME ./axonius.sh $@
   unset_docker_if_needed
 else
   run_in_axonius_manager $@

@@ -23,9 +23,9 @@ class WatchdogTask:
         self.logfile = WATCHDOG_LOGS_DIR / f'{self.name}.watchdog.log'
         self.pidfile = WATCHDOG_LOGS_DIR / f'{self.name}.pid'
         if str(self.logfile).startswith('/tmp'):
-            self.logfile = Path('/proc/self/cwd').resolve() / '..' / '..' / '..' / 'logs' / 'watchdogs' / \
+            self.logfile = Path('/proc/self/cwd').resolve() / '..' / '..' / '..' / '..' / 'logs' / 'watchdogs' / \
                 f'{self.name}.watchdog.log'
-            self.pidfile = Path('/proc/self/cwd').resolve() / '..' / '..' / '..' / 'logs' / 'watchdogs' / \
+            self.pidfile = Path('/proc/self/cwd').resolve() / '..' / '..' / '..' / '..' / 'logs' / 'watchdogs' / \
                 f'{self.name}.pid'
         formatter = json_log_formatter.JSONFormatter()
         json_handler = logging.FileHandler(filename=self.logfile)

@@ -2,6 +2,7 @@ import glob
 import importlib
 import inspect
 import os
+import shlex
 import subprocess
 import sys
 import time
@@ -740,11 +741,20 @@ class AxoniusService:
             base_image = f'{base_image}:{tag}'
         return self._pull_image(base_image, repull, show_print)
 
+    @staticmethod
+    def change_image_tag(image_name, new_tag='latest'):
+        new_image_name = f'{image_name.split(":")[0]}:{new_tag}'
+        if new_image_name == image_name:
+            return image_name
+        subprocess.check_call(shlex.split(f'docker tag {image_name} {new_image_name}'))
+        return new_image_name
+
     def pull_manager_image(self, repull=False, tag=None, show_print=True):
         manager_image = f'{DOCKERHUB_URL}axonius/axonius-manager'
         if tag:
             manager_image = f'{manager_image}:{tag}'
-        return self._pull_image(manager_image, repull, show_print)
+        old_image_name = self._pull_image(manager_image, repull, show_print)
+        return self.change_image_tag(old_image_name)
 
     def build_libs(self, rebuild=False, image_tag=None, show_print=True):
         image_name = 'axonius/axonius-libs'

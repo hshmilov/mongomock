@@ -658,8 +658,7 @@ def main():
                 return {
                     'ui_' + test_module.split('/')[-1].split('.py')[0]:
                         'docker exec axonius-manager '
-                        'python3 -u ./testing/run_ui_tests.py -p no:testing/tests/conftest.py'
-
+                        'python3 -u ./testing/run_ui_tests.py -p no:testing/tests/conftest.py '
                         f'{all_extra_pytest_args} {os.path.join(DIR_MAP["ui"], test_module)}'
                     for test_module in ui_tests
                 }
