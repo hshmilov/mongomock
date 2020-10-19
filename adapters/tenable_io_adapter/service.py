@@ -277,11 +277,16 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         tags_raw = device_raw.get('tags')
         if not isinstance(tags_raw, list):
             tags_raw = []
+        found_key = False
         for tag_raw in tags_raw:
             try:
+                if self.__adapter_key_white_list and tag_raw.get('key') in self.__adapter_key_white_list:
+                    found_key = True
                 device.add_key_value_tag(tag_raw.get('key'), tag_raw.get('value'))
             except Exception:
                 logger.exception(f'Problem with tag raw {tag_raw}')
+        if self.__adapter_key_white_list and not found_key:
+            return None
         ipv4_raw = device_raw.get('ipv4s') or []
         ipv6_raw = device_raw.get('ipv6s') or []
         mac_addresses_raw = device_raw.get('mac_addresses') or []
@@ -514,6 +519,11 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     'type': 'string'
                 },
                 {
+                    'name': 'adapter_key_white_list',
+                    'title': 'Tag key whitelist',
+                    'type': 'string'
+                },
+                {
                     'name': 'fetch_agent_data',
                     'title': 'Fetch agent data',
                     'type': 'bool'
@@ -538,6 +548,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         return {
             'exclude_no_last_scan': False,
             'scan_id_white_list': None,
+            'adapter_key_white_list': None,
             'fetch_agent_data': True,
             'cancel_old_export_jobs': False
         }
@@ -546,6 +557,8 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         self.__exclude_no_last_scan = config.get('exclude_no_last_scan')
         self.__scan_id_white_list = config['scan_id_white_list'].split(',') \
             if config.get('scan_id_white_list') else None
+        self.__adapter_key_white_list = config['adapter_key_white_list'].split(',') \
+            if config.get('adapter_key_white_list') else None
         self.__fetch_agent_data = config['fetch_agent_data'] if 'fetch_agent_data' in config else True
         self.__cancel_old_export_jobs = config.get('cancel_old_export_jobs')
 

@@ -29,6 +29,9 @@ export const actionsMeta = {
   run_executable_linux: {
     title: 'Deploy on Linux Device',
   },
+  epo_tag_devices: {
+    title: 'Tag in McAfee ePolicy Orchestrator (ePO)'
+  },
   run_command_windows: {
     title: 'Deploy Files and Run Windows Shell Command',
   },
@@ -243,7 +246,7 @@ export const actionsMeta = {
   },
   isolate_edr: {
     title: 'Execute Endpoint Security Agent Action',
-    items: ['carbonblack_isolate', 'carbonblack_unisolate', 'cybereason_isolate', 'cybereason_unisolate', 'cybereason_tag', 'carbonblack_defense_change_policy', 'carbonblack_defense_quarantine', 'carbonblack_defense_unquarantine', 'sentinelone_initiate_scan_action', 'automox_install_update', 'desktop_central_do_som_action', 'limacharlie_isolate', 'limacharlie_unisolate'],
+    items: ['carbonblack_isolate', 'carbonblack_unisolate', 'cybereason_isolate', 'cybereason_unisolate', 'cybereason_tag', 'carbonblack_defense_change_policy', 'carbonblack_defense_quarantine', 'carbonblack_defense_unquarantine', 'sentinelone_initiate_scan_action', 'automox_install_update', 'desktop_central_do_som_action', 'limacharlie_isolate', 'limacharlie_unisolate', 'epo_tag_devices'],
   },
   scan_va: {
     title: 'Update VA Coverage',

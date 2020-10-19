@@ -40,7 +40,7 @@ class UdCsvAdapter(AdapterBase):
             return file_name, file_data
         except Exception as err:
             logger.exception(f'Error connecting to sqlite database')
-            raise ClientConnectionException(get_exception_string())
+            raise ClientConnectionException(get_exception_string(force_show_traceback=True))
 
     @staticmethod
     def _clients_schema():
@@ -62,7 +62,7 @@ class UdCsvAdapter(AdapterBase):
     # pylint:disable=arguments-differ
     @staticmethod
     def _query_devices_by_client(client_name, client_data):
-        file_name, csv_data = load_remote_data(client_data)
+        file_name, csv_data = client_data
         return make_dict_from_csv(csv_data)
 
     @staticmethod

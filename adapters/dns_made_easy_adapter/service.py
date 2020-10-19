@@ -1,3 +1,4 @@
+import ipaddress
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -366,6 +367,11 @@ class DnsMadeEasyAdapter(AdapterBase, Configurable):
 
             if record_type == 'A':
                 device.add_ips_and_macs(ips=record.get('value'))
+                try:
+                    if not ipaddress.ip_address(record.get('value')).is_private:
+                        device.add_public_ip(record.get('value'))
+                except Exception:
+                    pass
 
             try:
                 self._fill_dns_made_easy_device_fields(record, device_raw, device)

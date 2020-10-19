@@ -65,7 +65,7 @@ LOCAL_ADMIN_QUERY = 'select ResourceID, name0 , account0, domain0, Category0 fro
 LOCAL_ADMIN_QUERY_2 = 'select ResourceID, name0 , account0, domain0, Category0 from v_GS_CM_LOCALGROUPMEMBERS'
 DRIVERS_QUERY = 'select ResourceID, Name0, Description0, DriverVersion0 from v_GS_VIDEO_CONTROLLER'
 RAM_QUERY = 'select ResourceID, Capacity0 from v_GS_PHYSICAL_MEMORY'
-FILE_PRODUCT_QUERY = 'select ProductId, FileName, FilePath from v_GS_SoftwareFile'
+FILE_PRODUCT_QUERY = 'select ProductId, FileName, FilePath, ResourceID from v_GS_SoftwareFile'
 NETWORK_DRIVERS_QUERY = 'select ResourceID, DriverDesc0, DriverVersion0 , ProviderName0, DriverDate0 from v_GS_NETWORK_DRIVERS'
 NEW_SOFTWARE_QUERY = 'select ResourceID, ProductName, ProductVersion, CompanyName, ProductId from v_GS_SoftwareProduct'
 APPLICATION_ASSIGNMENT_QUERY = 'select ApplicationName, CollectionID from v_ApplicationAssignment '
@@ -79,3 +79,4 @@ CURRENT_COMPLIANCE_STATE_DICT = {'0': 'Compliance State Unknown',
                                  '1': 'Compliant',
                                  '2': 'Non-Compliant',
                                  '4': 'Error'}
+WORKSTATIONS_STATUS_QUERY = 'select LastHWScan, ResourceID from v_GS_WORKSTATION_STATUS'

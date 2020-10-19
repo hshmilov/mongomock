@@ -42,7 +42,7 @@ class FirebomAdapter(AdapterBase):
             return json_data
         except Exception:
             logger.exception(f'Error connecting Firebom')
-            raise ClientConnectionException(get_exception_string())
+            raise ClientConnectionException(get_exception_string(force_show_traceback=True))
 
     def _query_devices_by_client(self, client_name: str, client_data: dict):
         # This adapter is not yielding any devices. It is just parsing them and uploading them as a key-val dictionary.

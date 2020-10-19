@@ -28,6 +28,7 @@ from reports.action_types.base.limacharlie_unisolate import LimacharlieUnisolate
 from reports.action_types.base.cybereason_unisolate import CybereasonUnisolateAction
 from reports.action_types.base.disable_entity import DisableEntities
 from reports.action_types.base.enable_entity import EnableEntities
+from reports.action_types.base.epo_tag_devices import EpoTagAction
 from reports.action_types.base.run_cmd import RunCmd
 from reports.action_types.base.run_linux_ssh_scan import RunLinuxSSHScan
 from reports.action_types.base.shodan_enrichment import ShodanEnrichment
@@ -103,6 +104,7 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'update_ivanti_sm_computer': UpdateIvantiSmComputerAction,
     'create_sysaid_incident': SysaidIncidentAction,
     'slack_send_message': SlackSendMessageAction,
+    'epo_tag_devices': EpoTagAction,
     'carbonblack_defense_change_policy': CarbonblackDefenseChangePolicyAction,
     'cybereason_isolate': CybereasonIsolateAction,
     'limacharlie_isolate': LimacharlieIsolateAction,

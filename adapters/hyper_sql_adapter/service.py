@@ -60,7 +60,7 @@ class HyperSqlAdapter(AdapterBase, Configurable):
                       f'database: ' \
                       f'{client_config.get("database")}'
             logger.exception(message)
-            raise ClientConnectionException(get_exception_string())
+            raise ClientConnectionException(get_exception_string(force_show_traceback=True))
 
     def _query_devices_by_client(self, client_name, client_data: Tuple[HyperSQLConnection, dict, str]):
         """

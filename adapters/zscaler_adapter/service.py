@@ -53,7 +53,7 @@ class ZscalerAdapter(AdapterBase, Configurable):
                                        password=client_config['password'],
                                        rest_apikey=client_config.get('apikey'))
         with connection:
-            connection.connect_zapi()
+            connection.connect_api()
         return connection
 
     def _connect_client(self, client_config):

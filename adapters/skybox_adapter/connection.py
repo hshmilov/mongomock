@@ -65,7 +65,8 @@ class SkyboxConnection(RESTConnection):
             logger.exception(f'Problem connecting to vulnerabilities wsdl')
             self.vclient = None
 
-    def get_device_list(self):
+    # pylint: disable=arguments-differ
+    def get_device_list(self, fetch_fw=True):
         # The documentation does not specify any sign of pagination
         assets = serialize_object(self.client.service.findAssetsByNames(''))
         assets_status = assets.get('status') or {}
@@ -87,24 +88,25 @@ class SkyboxConnection(RESTConnection):
 
         # Fetch firewalls rules
         firewalls_rules_by_id = defaultdict(list)
-        try:
-            firewalls = serialize_object(self.client.service.findFirewallsByName(''))
-            if not isinstance(firewalls, dict):
-                logger.debug(f'Invalid firewalls type: {firewalls}')
-                raise Exception('Invalid firewalls type')
-            firewalls_list = firewalls.get('fwElements')
-            if not isinstance(firewalls_list, list):
-                logger.debug(f'Invalid firewalls_list type: {firewalls_list}')
-                raise Exception('Invalid firewalls type')
-            for firewall_element in firewalls_list:
-                firewall_id = firewall_element.get('id')
-                if firewall_id:
-                    firewall_access_rules = serialize_object(self.client.service.getAccessRules(firewall_element))
-                    if not (isinstance(firewall_access_rules, dict) and
-                            isinstance(firewall_access_rules.get('accessRules'), list)):
-                        continue
-                    firewalls_rules_by_id[str(firewall_id)].extend(firewall_access_rules.get('accessRules'))
-        except Exception:
-            logger.exception(f'Problem fetching firewall rules')
+        if fetch_fw:
+            try:
+                firewalls = serialize_object(self.client.service.findFirewallsByName(''))
+                if not isinstance(firewalls, dict):
+                    logger.debug(f'Invalid firewalls type: {firewalls}')
+                    raise Exception('Invalid firewalls type')
+                firewalls_list = firewalls.get('fwElements')
+                if not isinstance(firewalls_list, list):
+                    logger.debug(f'Invalid firewalls_list type: {firewalls_list}')
+                    raise Exception('Invalid firewalls type')
+                for firewall_element in firewalls_list:
+                    firewall_id = firewall_element.get('id')
+                    if firewall_id:
+                        firewall_access_rules = serialize_object(self.client.service.getAccessRules(firewall_element))
+                        if not (isinstance(firewall_access_rules, dict) and
+                                isinstance(firewall_access_rules.get('accessRules'), list)):
+                            continue
+                        firewalls_rules_by_id[str(firewall_id)].extend(firewall_access_rules.get('accessRules'))
+            except Exception:
+                logger.exception(f'Problem fetching firewall rules')
 
         return assets_raw, vulnerabilities_by_host, firewalls_rules_by_id

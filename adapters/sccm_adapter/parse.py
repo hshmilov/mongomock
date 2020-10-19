@@ -27,10 +27,22 @@ def _create_sccm_client_connection(client_config, devices_fetched_at_a_time) -> 
 
 
 # pylint: disable=too-many-locals, too-many-nested-blocks, too-many-branches, too-many-statements
-def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, device_id=None):
+def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, device_id=None,
+                                 fetch_legacy_sw_tables=False):
     client_data = _create_sccm_client_connection(client_config, devices_fetched_at_a_time)
     client_data.set_devices_paging(devices_fetched_at_a_time)
     with client_data:
+        wk_status_dict = dict()
+        try:
+            if not device_id:
+                for wk_status_data in client_data.query(consts.WORKSTATIONS_STATUS_QUERY):
+                    machine_id = wk_status_data.get('ResourceID')
+                    if not machine_id:
+                        continue
+                    wk_status_dict[machine_id] = wk_status_data
+        except Exception:
+            logger.warning(f'Problem with workstation status', exc_info=True)
+
         current_compliance_status_dict = dict()
         try:
             if not device_id:
@@ -389,29 +401,30 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
             logger.warning(f'Problem getting query software', exc_info=True)
 
         asset_program_dict = dict()
-        try:
-            for asset_program_data \
-                    in client_data.query(_wrap_query_with_resource_id(consts.QUERY_PROGRAM, device_id)):
-                asset_id = asset_program_data.get('ResourceID')
-                if not asset_id:
-                    continue
-                if asset_id not in asset_program_dict:
-                    asset_program_dict[asset_id] = []
-                asset_program_dict[asset_id].append(asset_program_data)
-        except Exception:
-            logger.warning(f'Problem getting query program', exc_info=True)
+        if fetch_legacy_sw_tables:
+            try:
+                for asset_program_data \
+                        in client_data.query(_wrap_query_with_resource_id(consts.QUERY_PROGRAM, device_id)):
+                    asset_id = asset_program_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in asset_program_dict:
+                        asset_program_dict[asset_id] = []
+                    asset_program_dict[asset_id].append(asset_program_data)
+            except Exception:
+                logger.warning(f'Problem getting query program', exc_info=True)
 
-        try:
-            for asset_program_data \
-                    in client_data.query(_wrap_query_with_resource_id(consts.QUERY_PROGRAM_2, device_id)):
-                asset_id = asset_program_data.get('ResourceID')
-                if not asset_id:
-                    continue
-                if asset_id not in asset_program_dict:
-                    asset_program_dict[asset_id] = []
-                asset_program_dict[asset_id].append(asset_program_data)
-        except Exception:
-            logger.warning(f'Problem getting query program', exc_info=True)
+            try:
+                for asset_program_data \
+                        in client_data.query(_wrap_query_with_resource_id(consts.QUERY_PROGRAM_2, device_id)):
+                    asset_id = asset_program_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in asset_program_dict:
+                        asset_program_dict[asset_id] = []
+                    asset_program_dict[asset_id].append(asset_program_data)
+            except Exception:
+                logger.warning(f'Problem getting query program', exc_info=True)
 
         drivers_dict = dict()
         try:
@@ -553,6 +566,8 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
                             product_id = new_asset_data.get('ProductId')
                             if not product_id or not product_files_dict.get(product_id):
                                 continue
+                            if product_files_dict.get(product_id).get('ResourceID') != device_raw.get('ResourceID'):
+                                continue
                             new_asset_data['file_data'] = product_files_dict[product_id]
                         except Exception:
                             logger.exception(f'Problem adding new sw asset {new_asset_data}')
@@ -580,6 +595,7 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
             device_raw['svc_data'] = svc_dict.get(device_raw.get('ResourceID'))
             device_raw['online_data'] = online_dict.get(device_raw.get('ResourceID'))
             device_raw['guard_compliance_data'] = guard_compliance_dict.get(device_raw.get('ResourceID'))
+            device_raw['wk_status_data'] = wk_status_dict.get(device_raw.get('ResourceID'))
             device_raw['top_data'] = asset_top_dict.get(device_raw.get('ResourceID'))
             device_raw['compliance_data'] = compliance_dict.get(device_raw.get('ResourceID'))
             device_raw['bios_data'] = asset_bios_dict.get(device_raw.get('ResourceID'))

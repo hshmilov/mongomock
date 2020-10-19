@@ -17,8 +17,11 @@ class CiscoMerakiConnection(RESTConnection):
                                   },
                          **kwargs)
         self._permanent_headers['X-Cisco-Meraki-API-Key'] = self._apikey
+        self.sleep_between_requests_in_sec = 0
 
     def _meraki_get(self, path, url_params=None):
+        if self.sleep_between_requests_in_sec:
+            time.sleep(self.sleep_between_requests_in_sec)
         for try_ in range(MAX_RATE_LIMIT_TRY):
             response = self._get(path, url_params=url_params,
                                  raise_for_status=False,
@@ -154,7 +157,8 @@ class CiscoMerakiConnection(RESTConnection):
         return serial_statuses_dict
 
     # pylint: disable=arguments-differ
-    def get_device_list(self, fetch_history=False):
+    def get_device_list(self, fetch_history=False, sleep_between_requests_in_sec=0):
+        self.sleep_between_requests_in_sec = sleep_between_requests_in_sec
         organizations = [str(organization_raw['id']) for organization_raw in self._meraki_get('organizations')
                          if organization_raw.get('id')]
         serial_statuses_dict = self._get_device_statuses(organizations)

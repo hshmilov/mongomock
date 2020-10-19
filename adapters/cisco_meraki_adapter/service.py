@@ -122,7 +122,11 @@ class CiscoMerakiAdapter(AdapterBase, Configurable):
         if exclude_no_vlan_clients:
             vlan_exclude_list.append(None)
         with connection:
-            for deivce_raw, device_type in connection.get_device_list(fetch_history=self.__fetch_history):
+            sleep_time = self.__sleep_between_requests_in_sec or 0
+            if not isinstance(sleep_time, int):
+                sleep_time = 0
+            for deivce_raw, device_type in connection.get_device_list(fetch_history=self.__fetch_history,
+                                                                      sleep_between_requests_in_sec=sleep_time):
                 yield deivce_raw, device_type, vlan_exclude_list
 
     @staticmethod
@@ -471,7 +475,12 @@ class CiscoMerakiAdapter(AdapterBase, Configurable):
                     'name': 'fetch_history',
                     'title': 'Fetch clients URLs history',
                     'type': 'bool'
-                }
+                },
+                {
+                    'name': 'sleep_between_requests_in_sec',
+                    'type': 'integer',
+                    'title': 'Time in seconds to sleep between each request'
+                },
             ],
             'required': [
                 'fetch_history'
@@ -483,8 +492,10 @@ class CiscoMerakiAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'fetch_history': False
+            'fetch_history': False,
+            'sleep_between_requests_in_sec': 0,
         }
 
     def _on_config_update(self, config):
         self.__fetch_history = config['fetch_history']
+        self.__sleep_between_requests_in_sec = config.get('sleep_between_requests_in_sec')

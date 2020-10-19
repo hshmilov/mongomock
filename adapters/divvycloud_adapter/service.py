@@ -67,7 +67,7 @@ class DivvycloudAdapter(AdapterBase):
 
             connection = DivvyCloudConnection(domain=domain,
                                               verify_ssl=client_config.get("verify_ssl"),
-                                              port=client_config.get('port', consts.DEFAULT_PORT),
+                                              port=client_config.get('port') or consts.DEFAULT_PORT,
                                               username=client_config['username'],
                                               password=client_config['password'],
                                               headers={
@@ -102,7 +102,8 @@ class DivvycloudAdapter(AdapterBase):
                     "name": "port",
                     "title": "Port",
                     "type": "integer",
-                    "format": "port"
+                    "format": "port",
+                    'default': consts.DEFAULT_PORT
                 },
                 {
                     "name": "username",

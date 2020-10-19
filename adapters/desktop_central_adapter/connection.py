@@ -25,7 +25,7 @@ class DesktopCentralConnection(RESTConnection):
                 connection_dict['auth_type'] = consts.DOMAIN_AUTHENTICATION
                 connection_dict['domainName'] = self._username_domain
 
-            response = self._post('api/1.3//desktop/authentication', body_params=connection_dict)
+            response = self._post('api/1.3/desktop/authentication', body_params=connection_dict)
             if (('message_response' not in response or 'status' not in response or 'message_version' not in response or
                  'message_version' not in response) or (response['status'] != 'success')):
                 raise RESTException(f'Unknown connection error in authentication {str(response)}')

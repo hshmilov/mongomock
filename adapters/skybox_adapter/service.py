@@ -9,6 +9,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, JsonStringFormat, ListField
 from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.datetime import parse_date
+from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import format_ip, format_ip_raw
 from skybox_adapter.connection import SkyboxConnection
@@ -78,7 +79,7 @@ class FirewallAccessRule(SmartJsonClass):
     source_network_interfaces = ListField(str, 'Source Network Interfaces')
 
 
-class SkyboxAdapter(AdapterBase):
+class SkyboxAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         device_type = Field(str, 'Skybox Device Type')
@@ -122,8 +123,7 @@ class SkyboxAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -133,7 +133,7 @@ class SkyboxAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(fetch_fw=self.__fetch_fw)
 
     @staticmethod
     def _clients_schema():
@@ -343,6 +343,8 @@ class SkyboxAdapter(AdapterBase):
                     )
                 except Exception:
                     logger.exception(f'Problem adding Firewall Rules')
+            if not self.__fetch_fw:
+                device.firewall_access_rules = []
 
             device.set_raw(device_raw)
             return device
@@ -360,3 +362,29 @@ class SkyboxAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_fw',
+                    'title': 'Fetch firewall rules',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'fetch_fw'
+            ],
+            'pretty_name': 'Skybox Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_fw': True
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_fw = config['fetch_fw']

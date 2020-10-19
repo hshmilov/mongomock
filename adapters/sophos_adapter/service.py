@@ -1,4 +1,5 @@
 # pylint: disable=too-many-instance-attributes
+import hashlib
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -22,7 +23,9 @@ class SophosAdapter(AdapterBase):
         super().__init__(*args, config_file_path=get_local_config_file(__file__), **kwargs)
 
     def _get_client_id(self, client_config):
-        return client_config['domain']
+        api_declassified = hashlib.md5(client_config['authorization'].encode('utf-8')).hexdigest()
+        api_declassified_2 = hashlib.md5(client_config['apikey'].encode('utf-8')).hexdigest()
+        return client_config['domain'] + '_' + api_declassified + '_' + api_declassified_2
 
     @staticmethod
     def _test_reachability(client_config):

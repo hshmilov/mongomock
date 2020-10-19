@@ -119,6 +119,7 @@ class SccmAdapter(AdapterBase, Configurable):
         last_offline_time = Field(datetime.datetime, 'Last Offline Time')
         access_mp = Field(str, 'Access MP')
         guard_compliance_state = Field(str, 'Credential Guard Compliance State')
+        last_hw_scan = Field(datetime.datetime, 'Last Hardware Scan')
         current_compliance_status = ListField(CurrentComplianceStatus, 'Current Compliance Status')
         primary_owner_name = Field(str, 'Primary Owner Name')
         primary_owner_contact = Field(str, 'Primary Owner Contact')
@@ -177,7 +178,8 @@ class SccmAdapter(AdapterBase, Configurable):
                     (
                         client_data,
                         self.__devices_fetched_at_a_time,
-                        None
+                        None,
+                        self.__fetch_legacy_sw_tables
                     ),
                     {}
                 )
@@ -339,7 +341,14 @@ class SccmAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'problem adding memory stuff to {device_raw}')
                 device_manufacturer = None
-
+                try:
+                    if isinstance(device_raw['wk_status_data'], dict):
+                        wk_status_data = device_raw['wk_status_data']
+                        if not isinstance(wk_status_data, dict):
+                            wk_status_data = {}
+                        device.last_hw_scan = parse_date(wk_status_data.get('LastHWScan'))
+                except Exception:
+                    logger.exception(f'Problem getting wk status data dor {device_raw}')
                 try:
                     if isinstance(device_raw['guard_compliance_data'], dict):
                         guard_compliance_data = device_raw['guard_compliance_data']
@@ -827,9 +836,14 @@ class SccmAdapter(AdapterBase, Configurable):
                     'name': 'machine_domain_whitelist',
                     'title': 'Machine domain whitelist',
                     'type': 'string'
+                },
+                {
+                    'name': 'fetch_legacy_sw_tables',
+                    'type': 'bool',
+                    'title': 'Fetch v_GS_ADD_REMOVE_PROGRAMS software legacy table'
                 }
             ],
-            "required": ['drop_no_last_seen', 'exclude_ipv6', 'devices_fetched_at_a_time'],
+            "required": ['drop_no_last_seen', 'exclude_ipv6', 'devices_fetched_at_a_time', 'fetch_legacy_sw_tables'],
             "pretty_name": "SCCM Configuration",
             "type": "array"
         }
@@ -838,6 +852,7 @@ class SccmAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'exclude_ipv6': False,
+            'fetch_legacy_sw_tables': False,
             'drop_no_last_seen': False,
             'devices_fetched_at_a_time': 1000,
             'machine_domain_whitelist': None
@@ -849,3 +864,5 @@ class SccmAdapter(AdapterBase, Configurable):
         self.__drop_no_last_seen = config.get('drop_no_last_seen') or False
         self.__machine_domain_whitelist = config.get('machine_domain_whitelist').lower().split(',') \
             if config.get('machine_domain_whitelist') else None
+        self.__fetch_legacy_sw_tables = config.get('fetch_legacy_sw_tables') \
+            if 'fetch_legacy_sw_tables' in config else False

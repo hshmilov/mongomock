@@ -71,6 +71,7 @@ ALLOWED_VAR_CHARACTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01
 N_CHAR_EXTENSION = 8
 DEFAULT_VERSION_EXTENSION = '00000000'
 DEFAULT_LINUX_VERSION_EPOCH = '0'
+DUPLICATES_NAMES = ['SYSOPS-MACBOOK-PRO.LOCAL']
 BAD_SERIALS = ['INVALID', 'NON-UNIQUES/N', '0', 'SYSTEMSERIALNUMBER', 'TOBEFILLEDBYO.E.M.', 'VIRTUAL',
                'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN', '-', '0123456789', 'NA-VIRTUAL',
                '0123456789ABCDEF', 'NONE', 'VMWARE', '(VM)', 'SUN', 'NO INFORMATION', 'VIRTUAL SERVER']
@@ -936,6 +937,7 @@ def hostname_not_problematic(adapter_device):
              and 'iphone' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'ipad' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'blank' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'ios' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'loaner' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'macbook-air' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'mac-mini' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
@@ -956,6 +958,7 @@ def hostname_not_problematic(adapter_device):
              and 'delete' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'wix-mbp' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'playtikas-macbook-pro' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'sysops-macbook-pro' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'wixs-macbook-pro' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'unknown' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'spare' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
@@ -1327,7 +1330,7 @@ BAD_ASSETS = ['dev', 'localhost', 'delete', 'deleted', 'na', 'macbook-air',
 
 
 def is_asset_before_host_device(adapter_device):
-    if adapter_device.get('plugin_name') in ['service_now_adapter', 'gce_adapter']:
+    if adapter_device.get('plugin_name') in ['service_now_adapter', 'gce_adapter', 'g_naapi_adapter']:
         return True
     return False
 
@@ -1338,7 +1341,9 @@ def get_asset_snow_or_host(adapter_device):
     else:
         asset = get_hostname(adapter_device)
     if asset:
-        if is_start_with_valid_ip(asset) or ' ' in asset or asset.split('.')[0].lower().strip() in BAD_ASSETS:
+        if asset.split('.')[0].lower().strip() in BAD_ASSETS:
+            return None
+        if is_start_with_valid_ip(asset) or ' ' in asset:
             return asset
         return asset.split('.')[0].lower().strip()
     return None
@@ -1355,12 +1360,15 @@ def compare_snow_asset_hosts(adapter_device1, adapter_device2):
 def get_asset_or_host(adapter_device):
     asset = get_asset_name(adapter_device) or get_hostname(adapter_device)
     if asset:
+        if asset.split('.')[0].lower().strip() in BAD_ASSETS:
+            return None
         asset = asset.upper()
         if asset.startswith('MAC-') or asset.startswith('MAC_'):
             asset = 'MAC' + asset[4:]
         if asset.startswith('MACMBP-') or asset.startswith('MACMBP_'):
             asset = 'MACMBP' + asset[7:]
-        if is_start_with_valid_ip(asset) or ' ' in asset or asset.split('.')[0].lower().strip() in BAD_ASSETS:
+
+        if is_start_with_valid_ip(asset) or ' ' in asset:
             return asset
         return asset.split('.')[0].lower().strip()
     return None
@@ -1506,6 +1514,8 @@ def dangerous_asset_names_do_not_contradict(adapter_device1, adapter_device2):
             and not is_dangerous_asset_names_adapter(adapter_device2):
         return True
     else:
+        if get_hostname(adapter_device1) in DUPLICATES_NAMES or get_hostname(adapter_device2) in DUPLICATES_NAMES:
+            return True
         if is_dangerous_asset_names_adapter(adapter_device1):
             if adapter_device2.get('plugin_name') in ['jamf_adapter']:
                 return True
@@ -1549,6 +1559,8 @@ def is_hostname_condradict_ok_adapter(adapter_device):
 
 
 def hostnames_do_not_contradict(adapter_device1, adapter_device2):
+    if get_hostname(adapter_device1) in DUPLICATES_NAMES or get_hostname(adapter_device2) in DUPLICATES_NAMES:
+        return True
     if not get_hostname(adapter_device1) or not get_hostname(adapter_device2) \
             or is_hostname_condradict_ok_adapter(adapter_device1) or is_hostname_condradict_ok_adapter(adapter_device2):
         return True

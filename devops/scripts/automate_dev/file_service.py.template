@@ -43,7 +43,7 @@ class {capital_adapter_name}Adapter(AdapterBase):
             return file_name, file_data
         except Exception as err:
             logger.exception(f'Error connecting to sqlite database')
-            raise ClientConnectionException(get_exception_string())
+            raise ClientConnectionException(get_exception_string(force_show_traceback=True))
 
     @staticmethod
     def _clients_schema():

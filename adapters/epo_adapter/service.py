@@ -9,6 +9,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
 from axonius.mixins.configurable import Configurable
+from axonius.plugin_base import add_rule, return_error
 from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
@@ -261,6 +262,39 @@ class EpoAdapter(AdapterBase, Configurable):
     def _refetch_device(self, client_id, client_data, device_id):
         for device in self._parse_raw_data(self._search_computer_name(client_data, device_id)):
             return device
+
+    @add_rule('tag_devices', methods=['POST'])
+    def tag_devices(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+        epo_dict = self.get_request_data_as_object()
+        success = False
+        try:
+            for client_id in self._clients:
+                try:
+                    result_status = self.tag_devices_internal(client_id, epo_dict)
+                    success = success or result_status
+                    if success is True:
+                        return '', 200
+                except Exception:
+                    logger.exception(f'Could not connect to {client_id}')
+        except Exception as e:
+            logger.exception('Got exception while adding tags')
+            return str(e), 400
+        return 'Failure', 400
+
+    def tag_devices_internal(self, client_id, epo_dict):
+        apply = epo_dict.get('apply')
+        tag_name = epo_dict.get('tag_name')
+        machine_names = epo_dict.get('machine_names').get(client_id)
+        client_data = self._get_client_config_by_client_id(client_id)
+        mc = client(parse_url(client_data[EPO_HOST]).host, client_data[EPO_PORT],
+                    client_data[USER], client_data[PASS])
+        action = 'system.applyTag' if apply else 'system.clearTag'
+        mc.run(action, names=','.join(machine_names), tagName=tag_name)
+        for device_id in machine_names:
+            self._refetch_device(client_id, client_data, device_id)
+        return True
 
     def _query_devices_by_client(self, client_name, client_data):
         mc = client(parse_url(client_data[EPO_HOST]).host, client_data[EPO_PORT],
