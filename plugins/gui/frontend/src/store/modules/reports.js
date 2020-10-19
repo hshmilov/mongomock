@@ -24,57 +24,14 @@ export const reports = {
         field: '', desc: true,
       },
     },
-    /* Data of Report currently being configured */
-    current: { fetching: false, data: {}, error: '' },
-  },
-
-  mutations: {
-    [SET_REPORT](state, reportData) {
-      /*
-        Set given data, if given, or a new Report otherwise, as Report in the handle
-     */
-      if (reportData) {
-        if (reportData === 'Report restricted') {
-          state.current.data = { error: reportData };
-        } else {
-          state.current.data = { ...reportData };
-        }
-      } else {
-        state.current.data = {};
-      }
-    },
   },
   actions: {
-    [FETCH_REPORT]({ dispatch, commit }, reportId) {
-      /*
-        Ask server for a complete, specific report, if given an actual ID.
-        Set the response as the report in handling.
-        Otherwise, initialize a new report to handle.
-     */
-      if (!reportId || reportId === 'new') {
-        return new Promise((resolve) => {
-          commit(SET_REPORT);
-          resolve();
-        });
-      }
-
-      return dispatch(REQUEST_API, {
-        rule: `reports/${reportId}`,
-      }).then((response) => {
-        if (response.status === 200 && response.data) {
-          commit(SET_REPORT, response.data);
-        } else {
-          commit(SET_REPORT);
-        }
-      });
-    },
     [SAVE_REPORT]({ dispatch }, report) {
       /*
         Update the existing reports table and Remove the current report from the store
      */
       const handleSuccess = () => {
         dispatch(FETCH_DATA_CONTENT, { module: 'reports', skip: 0 });
-        dispatch(FETCH_REPORT);
       };
 
       if (report.uuid && report.uuid !== 'new') {
@@ -120,7 +77,6 @@ export const reports = {
      */
       const handleSuccess = (id) => {
         dispatch(FETCH_DATA_CONTENT, { module: 'reports', skip: 0 });
-        dispatch(FETCH_REPORT, id);
       };
 
       return dispatch(REQUEST_API, {

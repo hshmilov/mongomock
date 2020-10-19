@@ -306,7 +306,8 @@ class DevicesPage(EntitiesPage):
         assert any(text in x for x in all_data)
 
     def check_search_text_result_in_column(self, text, column_name):
-        self.wait_for_table_to_load()
+        self.wait_for_table_to_be_responsive()
+        self.find_query_search_input().click()
         all_data = self.get_all_data_proper()
         column_data = [x[column_name] for x in all_data]
         assert len(column_data)
@@ -330,12 +331,12 @@ class DevicesPage(EntitiesPage):
     def select_specific_search(self, name):
         self.open_search_list()
         self.select_specific_search_by_name(name)
-        self.wait_for_table_to_load()
+        self.wait_for_table_to_be_responsive()
 
     def search(self, value):
         self.fill_filter(value)
         self.enter_search()
-        self.wait_for_table_to_load()
+        self.wait_for_table_to_be_responsive()
 
     def find_save_as_user_search_default_button(self, search_name=''):
         if search_name:

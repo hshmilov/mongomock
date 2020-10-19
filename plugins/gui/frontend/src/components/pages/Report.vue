@@ -232,6 +232,7 @@ import { FETCH_DASHBOARD_SPACES } from '../../store/modules/dashboard';
 import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../store/modules/onboarding';
 import { REPORT_GENERATED } from '../../constants/getting-started';
 import { DATE_FORMAT } from '../../store/getters';
+import { fetchReport } from '@api/reports'
 
 export default {
   name: 'XReport',
@@ -279,12 +280,6 @@ export default {
   },
   computed: {
     ...mapState({
-      reportData(state) {
-        return state.reports.current.data;
-      },
-      reportFetching(state) {
-        return state.reports.current.fetching;
-      },
       dashboardSpaces(state) {
         const customSpaces = state.dashboard.spaces.data
           .filter((space) => space.type === SpaceTypesEnum.custom);
@@ -314,9 +309,7 @@ export default {
       return this.$route.params.id;
     },
     name() {
-      if (!this.reportData || !this.reportData.name) return 'New Report';
-
-      return this.reportData.name;
+      return this.report.name;
     },
     hideTestNow() {
       if (!this.report.last_generated) {
@@ -444,15 +437,20 @@ export default {
     },
   },
   async created() {
-    this.loading = true;
     if (this.canViewDashboard) {
       await this.fetchDashboard();
     }
-    if (!this.reportFetching && (!this.reportData.uuid || this.reportData.uuid !== this.id)) {
-      this.loading = true;
-      await this.fetchReport(this.id);
+    if (this.id === 'new') {
+      return;
     }
-    if (this.reportData.error) {
+    this.loading = true;
+    try {
+      this.report = await fetchReport(this.id);
+      this.initData();
+    } catch (error) {
+      if (!error.response.status === 401) {
+        throw error;
+      }
       Modal.confirm({
         title: 'This report cannot be viewed.',
         content: 'You are missing permissions for at least one dashboard space included in this report.',
@@ -461,8 +459,6 @@ export default {
         centered: true,
         onOk: () => this.exit(),
       });
-    } else {
-      this.initData();
     }
     this.loading = false;
   },
@@ -477,7 +473,6 @@ export default {
       removeToaster: REMOVE_TOASTER,
     }),
     ...mapActions({
-      fetchReport: FETCH_REPORT,
       saveReport: SAVE_REPORT,
       runReport: RUN_REPORT,
       downloadReport: DOWNLOAD_REPORT,
@@ -485,51 +480,48 @@ export default {
       milestoneCompleted: SET_GETTING_STARTED_MILESTONE_COMPLETION,
     }),
     initData() {
-      if (this.reportData && this.reportData.name) {
-        this.report = this.reportData ? { ...this.reportData } : {};
-        if (this.report.views === undefined) {
-          this.report.views = [];
-        }
-        if (this.report.views.length === 0) {
-          this.report.views.push({ entity: '', name: '' });
-        }
-        if (!this.report.spaces) {
-          this.report.spaces = [];
-        }
-        if (!this.report.period_config) {
-          this.report.period_config = {
-            send_time: '08:00',
-            week_day: weekDays[0].name,
-            monthly_day: monthDays[0].name,
-          };
-        }
+      if (this.report.views === undefined) {
+        this.report.views = [];
+      }
+      if (this.report.views.length === 0) {
+        this.report.views.push({ entity: '', name: '' });
+      }
+      if (!this.report.spaces) {
+        this.report.spaces = [];
+      }
+      if (!this.report.period_config) {
+        this.report.period_config = {
+          send_time: '08:00',
+          week_day: weekDays[0].name,
+          monthly_day: monthDays[0].name,
+        };
+      }
 
-        if (!this.report.mail_properties.mailMessage) {
-          this.report.mail_properties.mailMessage = '';
-        }
+      if (!this.report.mail_properties.mailMessage) {
+        this.report.mail_properties.mailMessage = '';
+      }
 
-        if (this.report.spaces.length > 0 && this.canViewDashboard) {
-          const validDashboardSpaces = this.dashboardSpaces
-            .reduce((map, space) => ({ ...map, [space.name]: space.title }), {});
-          this.report.spaces = this.report.spaces.filter((space) => validDashboardSpaces[space]);
-          if (this.report.spaces.length === 0) {
-            this.report.include_dashboard = false;
-          }
+      if (this.report.spaces.length > 0 && this.canViewDashboard) {
+        const validDashboardSpaces = this.dashboardSpaces
+          .reduce((map, space) => ({ ...map, [space.name]: space.title }), {});
+        this.report.spaces = this.report.spaces.filter((space) => validDashboardSpaces[space]);
+        if (this.report.spaces.length === 0) {
+          this.report.include_dashboard = false;
         }
-        if (this.report.last_generated == null) {
-          this.isLatestReport = false;
+      }
+      if (this.report.last_generated == null) {
+        this.isLatestReport = false;
+      } else {
+        if (this.report.add_scheduling && this.report.mail_properties.emailList.length > 0) {
+          this.canSendEmail = true;
+        }
+        const formattedDate = formatDate(this.report.last_generated, undefined, this.dateFormat);
+        if (formattedDate !== this.report.last_generated) {
+          this.lastGenerated = `Last generated: ${formattedDate}`;
+          this.lastGeneratedTitle = `${this.lastGenerated} ${getTimeZoneDiff()}`;
+          this.isLatestReport = true;
         } else {
-          if (this.report.add_scheduling && this.report.mail_properties.emailList.length > 0) {
-            this.canSendEmail = true;
-          }
-          const formattedDate = formatDate(this.report.last_generated, undefined, this.dateFormat);
-          if (formattedDate !== this.report.last_generated) {
-            this.lastGenerated = `Last generated: ${formattedDate}`;
-            this.lastGeneratedTitle = `${this.lastGenerated} ${getTimeZoneDiff()}`;
-            this.isLatestReport = true;
-          } else {
-            this.isLatestReport = false;
-          }
+          this.isLatestReport = false;
         }
       }
       this.validateSavedQueries();

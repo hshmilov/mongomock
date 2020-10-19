@@ -12,8 +12,7 @@ from apscheduler.triggers.cron import CronTrigger
 from bson import ObjectId
 from dateutil import tz
 from dateutil.relativedelta import relativedelta
-from flask import (jsonify,
-                   request, make_response)
+from flask import (jsonify, request)
 from urllib3.util.url import parse_url
 from werkzeug.wrappers import Response
 
@@ -137,18 +136,23 @@ class Reports:
         return jsonify(reports_collection.count_documents(mongo_filter))
 
     def _is_restricted_by_role(self, report_to_check):
-        spaces = report_to_check.get('spaces', [])
-        for space_id in spaces:
-            space = self._dashboard_spaces_collection.find_one({
-                '_id': ObjectId(space_id)
-            })
-            # in case the space was deleted we allow the view because no data available
-            if space:
-                user_role = str(self.get_user_role_id())
-                space_roles = space.get('roles', [])
-                space_access = space.get('public', True)
-                if not space_access and user_role not in space_roles:
-                    return True
+        report_spaces = report_to_check.get('spaces', [])
+        report_spaces_query = {
+            '_id': {
+                '$in': [ObjectId(space_id) for space_id in report_spaces]
+            }
+        } if report_spaces else {
+            'type': {
+                '$ne': DASHBOARD_SPACE_TYPE_PERSONAL
+            }
+        }
+        spaces = self._dashboard_spaces_collection.find(report_spaces_query)
+        for space in spaces:
+            user_role = str(self.get_user_role_id())
+            space_roles = space.get('roles', [])
+            space_access = space.get('public', True)
+            if not space_access and user_role not in space_roles:
+                return True
         return False
 
     @gui_route_logged_in('<report_id>', methods=['GET'])
@@ -169,7 +173,7 @@ class Reports:
             return return_error(f'Report with id {report_id} was not found', 400)
 
         if not self.is_admin_user() and self._is_restricted_by_role(report):
-            return make_response('Report restricted')
+            return return_error('Report restricted', 401)
 
         return jsonify(beautify_db_entry(report))
 

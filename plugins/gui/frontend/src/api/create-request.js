@@ -3,7 +3,7 @@ import store from '@store/index';
 import _merge from 'lodash/merge';
 import { INIT_USER } from '@store/modules/auth';
 
-export default (uri, baseOptions = {}) => async ({
+export default (uri, baseOptions = {}, throwError) => async ({
   method = 'GET',
   data,
   binary,
@@ -44,7 +44,7 @@ export default (uri, baseOptions = {}) => async ({
   try {
     return await axiosClient(allOptions);
   } catch (error) {
-    if (error && error.response) {
+    if (!throwError && error && error.response) {
       const errorMessage = error.response.data.message;
       if (error.response.status === 401) {
         store.commit(INIT_USER, { fetching: false, error: errorMessage });

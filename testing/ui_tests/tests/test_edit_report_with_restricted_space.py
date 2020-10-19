@@ -19,7 +19,9 @@ class TestEditReportWithRestrictedSpace(PermissionsTestBase):
         self.reports_page.switch_to_page()
         self.reports_page.create_report(ReportConfig(report_name=self.TEST_REPORT_NAME, add_dashboard=True,
                                                      spaces=[self.TEST_SPACE_NAME]))
-        self.reports_page.wait_for_table_to_load()
+        self.reports_page.wait_for_table_to_be_responsive()
+        another_report_name = f'{self.TEST_REPORT_NAME} again'
+        self.reports_page.create_report(ReportConfig(report_name=another_report_name, add_dashboard=True))
         self.reports_page.click_report(self.TEST_REPORT_NAME)
         self.reports_page.wait_for_spinner_to_end()
         assert not self.reports_page.is_dashboard_checkbox_disabled()
@@ -33,4 +35,9 @@ class TestEditReportWithRestrictedSpace(PermissionsTestBase):
                    tolerated_exceptions_list=[NoSuchElementException])
         self.reports_page.click_restricted_report_modal_confirm()
         self.reports_page.wait_for_table_to_be_responsive()
+        self.reports_page.click_report(another_report_name)
+        self.reports_page.wait_for_spinner_to_end()
+        wait_until(self.reports_page.is_restricted_report_modal_exist,
+                   tolerated_exceptions_list=[NoSuchElementException])
+        self.reports_page.click_restricted_report_modal_confirm()
         self.login_page.logout_and_login_with_admin()

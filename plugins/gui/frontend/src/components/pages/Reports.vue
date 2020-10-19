@@ -85,10 +85,9 @@ export default {
   },
   methods: {
     ...mapActions({
-      removeReports: REMOVE_REPORTS, fetchReport: FETCH_REPORT,
+      removeReports: REMOVE_REPORTS,
     }),
     navigateReport(reportId) {
-      this.fetchReport(reportId);
       this.$router.push({ path: `/${this.name}/${reportId}` });
     },
     remove() {
