@@ -777,16 +777,23 @@ class QualysScansConnection(RESTConnection):
             if not (isinstance(response.get('ASSET_GROUP_LIST_OUTPUT'), dict)
                     and isinstance(response.get('ASSET_GROUP_LIST_OUTPUT').get('RESPONSE'), dict)
                     and isinstance(response.get('ASSET_GROUP_LIST_OUTPUT').get('RESPONSE').get('ASSET_GROUP_LIST'),
-                                   dict)
-                    and isinstance(
-                        response.get('ASSET_GROUP_LIST_OUTPUT').get(
-                            'RESPONSE').get('ASSET_GROUP_LIST').get('ASSET_GROUP'),
-                        list)):
+                                   dict)):
                 logger.error(f'response is not in the correct format {response}')
                 return asset_group_by_id
 
-            asset_groups = response.get('ASSET_GROUP_LIST_OUTPUT').get('RESPONSE').get('ASSET_GROUP_LIST').get(
-                'ASSET_GROUP')
+            if isinstance(
+                    response.get('ASSET_GROUP_LIST_OUTPUT').get('RESPONSE').get('ASSET_GROUP_LIST').get('ASSET_GROUP'),
+                    dict):
+                asset_groups = [response.get('ASSET_GROUP_LIST_OUTPUT').get('RESPONSE').get('ASSET_GROUP_LIST').get(
+                    'ASSET_GROUP')]
+            elif isinstance(
+                    response.get('ASSET_GROUP_LIST_OUTPUT').get('RESPONSE').get('ASSET_GROUP_LIST').get('ASSET_GROUP'),
+                    list):
+                asset_groups = response.get('ASSET_GROUP_LIST_OUTPUT').get('RESPONSE').get('ASSET_GROUP_LIST').get(
+                    'ASSET_GROUP')
+            else:
+                logger.error(f'response has unexpected format {response}')
+                return asset_group_by_id
 
             number_of_asset_groups = 0
 

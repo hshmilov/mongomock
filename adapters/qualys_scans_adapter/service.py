@@ -793,7 +793,11 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                                     asset_group.ip_set = []
                                     if isinstance(asset_group_raw.get('IP_SET'), dict):
                                         if isinstance(asset_group_raw.get('IP_SET').get('IP'), list):
-                                            asset_group.ip_set.extend(asset_group_raw.get('IP_SET').get('IP'))
+                                            for ip_raw in asset_group_raw.get('IP_SET').get('IP'):
+                                                if isinstance(ip_raw, str):
+                                                    asset_group.ip_set.append(ip_raw)
+                                                elif isinstance(ip_raw, dict) and isinstance(ip_raw.get('#text'), str):
+                                                    asset_group.ip_set.append(ip_raw.get('#text'))
                                         if isinstance(asset_group_raw.get('IP_SET').get('IP'), str):
                                             asset_group.ip_set.append(asset_group_raw.get('IP_SET').get('IP'))
 
