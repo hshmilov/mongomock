@@ -625,6 +625,8 @@ class AggregatorService(Triggerable, PluginBase):
             if isinstance(device_id, dict):
                 device_id = device_id.get(AXONIUS_INTERNAL_ID)
             device_data = self.devices_db.find_one({AXONIUS_INTERNAL_ID: device_id})
+            if not device_data:
+                continue
             for preferred_field in PREFERRED_FIELDS:
                 specific_property = preferred_field[SPECIFIC_DATA_PREFIX_LENGTH:].replace(PREFERRED_SUFFIX, '')
                 if specific_property.find('.') != -1:
