@@ -100,7 +100,7 @@ class TaniumSqConnection(tanium.connection.TaniumConnection):
             'max_hours': client_config.get('sq_max_hours', MAX_HOURS),
             'no_results_wait': client_config.get('no_results_wait', NO_RESULTS_WAIT),
             'page_sleep': page_sleep,
-            'page_size': page_sleep,
+            'page_size': page_size,
         }
         try:
             for name in self._sq_names(sq_names=client_config['sq_name']):
