@@ -9,7 +9,7 @@
     :centered="true"
     @cancel="handleDismiss"
   >
-    <p>Move to Space</p>
+    <p>Move to space</p>
     <p>
       <ASelect
         id="select_space"
@@ -178,7 +178,7 @@ export default {
 <style lang="scss">
   #move_or_copy {
     .ant-select {
-       width: 200px;
+       width: 360px;
     }
   }
 </style>

@@ -164,7 +164,9 @@ export default {
 
 <style lang="scss">
 .edit-space-modal {
-  width: 490px;
+  .ant-modal-content {
+    width: 490px;
+  }
   .ant-form-item {
     margin-bottom: 0;
   }
