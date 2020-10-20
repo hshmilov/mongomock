@@ -1412,6 +1412,11 @@
     "link": "https://docs.axonius.com/docs/illumio-asp",
     "description": "Illumio Adaptive Security Platform (ASP) is a software solution that secures computing platforms in cloud, on-prem or hybrid environments without any dependency on the underlying network."
   },
+  "bmc_atrium_adapter": {
+    "title": "BMC Atrium CMDB",
+    "link": "https://docs.axonius.com/docs/bmc-atrium-cmdb",
+    "description": "BMC Atrium CMDB stores information about the configuration items (CIs) in your IT environment and the relationships between them."
+  },
   "cisco_prime_adapter": {
     "title": "Cisco Prime",
     "link": "https://docs.axonius.com/docs/cisco-prime",
