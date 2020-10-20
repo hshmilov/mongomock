@@ -20,6 +20,7 @@
       <div
         v-if="isActive"
         class="x-dropdown-bg"
+        :style="overlayPositionStyling"
         @click="close"
       />
     </div>
@@ -62,6 +63,20 @@ export default {
         return `w-${this.size}`;
       }
       return '';
+    },
+    overlayPositionStyling() {
+      const closestDrawerAncestor = this.$el.closest('.ant-drawer');
+      if (!closestDrawerAncestor) {
+        return {};
+      }
+      let { top } = closestDrawerAncestor.getBoundingClientRect();
+      top = `-${top}px`;
+      return {
+        top,
+        right: '-24px',
+        left: 'auto',
+        height: 'calc(100vh - 24px)',
+      };
     },
   },
   updated() {
@@ -144,7 +159,10 @@ export default {
       } else {
         top = dropdownInputBottom;
       }
-
+      const closestDrawerAncestor = this.$el.closest('.ant-drawer');
+      if (closestDrawerAncestor) {
+        top -= closestDrawerAncestor.getBoundingClientRect().top;
+      }
       styles.top = `${top}px`;
       this.contentStyle = styles;
     },
