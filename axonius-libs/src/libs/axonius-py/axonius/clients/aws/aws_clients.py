@@ -282,7 +282,7 @@ def get_boto3_client_by_session(
         https_proxy: str
 ):
     aws_config = Config(proxies={'https': https_proxy}) if https_proxy else None
-    return session.client(client_name, region_name=region_name.lower(), config=aws_config)
+    return session.client(client_name, region_name=region_name.lower() if region_name else None, config=aws_config)
 
 
 def get_paginated_continuation_token_api(func):
