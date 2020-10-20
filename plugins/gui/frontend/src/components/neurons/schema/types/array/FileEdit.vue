@@ -27,9 +27,8 @@
         :class="{'error-border': error}"
       >
         <div class="file__name">{{ fileName }}</div>
-        <div class="file__remove">
+        <div v-if="!readOnly && value && value.filename" class="file__remove">
           <XButton
-            v-if="!readOnly && value"
             type="link"
             @click="removeFile"
           >x</XButton>
@@ -71,7 +70,7 @@ export default {
   },
   computed: {
     fileName() {
-      return this.value ? this.value.filename : 'No file chosen';
+      return this.value && this.value.filename ? this.value.filename : 'No file chosen';
     },
   },
   data() {
@@ -140,6 +139,7 @@ export default {
       left: 0;
       top: 0;
       z-index: 0;
+      display: none;
     }
 
     .x-button.ant-btn-link {
