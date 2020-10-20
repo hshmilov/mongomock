@@ -9,6 +9,10 @@ module.exports = (env) => ({
   entry: {
     main: path.resolve(__dirname, 'src/main.js'),
   },
+  output: {
+    path: path.join(__dirname, 'dist'),
+    filename: 'version.json'
+  },
   module: {
     rules: [
       {
@@ -46,6 +50,7 @@ module.exports = (env) => ({
       '@directives': path.resolve(__dirname, 'src/directives'),
       '@plugins': path.resolve(__dirname, 'src/plugins'),
       '@mixins': path.resolve(__dirname, 'src/mixins'),
+      '@helpers': path.resolve(__dirname, 'src/helpers'),
       vue$: 'vue/dist/vue.esm.js',
       Logos: path.resolve(__dirname, '../../../axonius-libs/src/libs/axonius-py/axonius/assets/logos/'),
     },

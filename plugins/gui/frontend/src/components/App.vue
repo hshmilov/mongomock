@@ -56,6 +56,7 @@ import {
   mapState, mapGetters, mapMutations, mapActions,
 } from 'vuex';
 import _get from 'lodash/get';
+import CheckVersion from '@helpers/check_version';
 import { FETCH_FETURE_FLAGS } from '@store/modules/settings';
 import { SHOW_TOASTER_MESSAGE } from '../store/mutations';
 import XTopBar from './networks/navigation/TopBar.vue';
@@ -67,6 +68,7 @@ import XTunnelConnectionModal from './neurons/popover/TunnelConnectionModal.vue'
 import XToast from './axons/popover/Toast.vue';
 import Icon from './axons/icons/Icon';
 import sessionTimeoutMixin from '../mixins/session_timeout';
+
 
 import { GET_USER } from '../store/modules/auth';
 import { IS_EXPIRED } from '../store/getters';
@@ -175,6 +177,7 @@ export default {
     },
   },
   async mounted() {
+    CheckVersion().initVersionCheck();
     GettingStartedPubSub.$on(
       'getting-started-open-state',
       this.changeChecklistOpenState,

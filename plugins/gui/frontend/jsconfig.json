@@ -16,6 +16,7 @@
           "@mixins/*": ["./src/mixins/*"],
           "@constants/*": ["./src/constants/*"],
           "@directives/*": ["./src/directives/*"],
+          "@helpers/*": ["./src/helpers/*"]
       }
     },
     "exclude": ["node_modules"]

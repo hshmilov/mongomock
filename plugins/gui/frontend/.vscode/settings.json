@@ -13,6 +13,8 @@
     "@store": "${workspaceRoot}/src/store",
     "@constants": "${workspaceRoot}/src/constants",
     "@directives": "${workspaceRoot}/src/directives",
+    "@mixins": "${workspaceRoot}/src/mixins",
+    "@helpers": "${workspaceRoot}/src/helpers"
   },
   "eslint.validate": [
     "javascript",

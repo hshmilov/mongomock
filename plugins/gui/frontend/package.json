@@ -5,14 +5,15 @@
   "author": "Shira",
   "private": true,
   "scripts": {
-    "build": "webpack --config webpack.prod.js",
-    "dev": "webpack --config webpack.dev.js",
+    "build": "webpack --config webpack.prod.js && npm run post:build",
+    "dev": "webpack --config webpack.dev.js && npm run",
     "dev-watch": "webpack --config webpack.dev.js --watch --progress",
     "start": "webpack-dev-server --config webpack.server.js",
     "lint": "eslint --ext .js,.vue src",
     "storybook": "start-storybook -p 6006",
     "build-storybook": "build-storybook",
-    "build:stats": "webpack --config webpack.prod.js --json > stats.json"
+    "build:stats": "webpack --config webpack.prod.js --json > stats.json",
+    "post:build": "node post-build.js"
   },
   "dependencies": {
     "@mdi/js": "4.6.95",
