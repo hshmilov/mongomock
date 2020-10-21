@@ -23,12 +23,31 @@ function retry {
 
 echo "Logging to docker hub and pulling axonius-base-image"
 source testing/test_credentials/docker_login.sh
-retry time docker pull nexus.pub.axonius.com/axonius/axonius-base-image
-retry time docker pull nexus.pub.axonius.com/axonius/axonius-manager
 echo "Pulling Weave images"
 retry time docker pull nexus.pub.axonius.com/weaveworks/weave:2.7.0
 retry time docker pull nexus.pub.axonius.com/weaveworks/weaveexec:2.7.0
 retry time docker pull nexus.pub.axonius.com/weaveworks/weavedb
+if [[ $* == *rebuild_base_image* ]]; then
+  echo "Rebuilding axonius-base-image"
+  cd libs/axonius-base-image
+  docker build -t axonius/axonius-base-image .
+  docker tag axonius/axonius-base-image nexus.pub.axonius.com/axonius/axonius-base-image
+  echo "Finished rebuilding axonius-base-image"
+  cd ../../
+  cd infrastructures/host
+  echo "Rebuilding axonius-manager"
+  source build.sh
+  docker tag axonius/axonius-manager nexus.pub.axonius.com/axonius/axonius-manager
+  echo "Finished rebuilding axonius-manager"
+  cd ../../
+else
+  echo "Pulling axonius-base-image"
+  retry time docker pull nexus.pub.axonius.com/axonius/axonius-base-image
+  retry time docker pull nexus.pub.axonius.com/axonius/axonius-manager
+fi
+
+
+
 # Note! prepare_setup.py should be the last thing in the script, since the return value
 # of the whole script will be its return value. The CI uses this return value to know if
 # we continue to the other stages.

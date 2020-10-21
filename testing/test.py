@@ -106,7 +106,7 @@ def tp_execute(list_of_execs: List[Tuple[Callable, Tuple, Dict, object]], tp_ins
 
 class InstanceManager:
     def __init__(self, cloud, instance_type, number_of_instances, image_tag=None,
-                 base_image_name=DEFAULT_BASE_IMAGE_NAME, log_response_body=False):
+                 base_image_name=DEFAULT_BASE_IMAGE_NAME, log_response_body=False, rebuild_base_image=False):
         self.cloud = cloud
         self.instance_type = instance_type
         self.number_of_instances = number_of_instances
@@ -116,6 +116,7 @@ class InstanceManager:
         self.__group_name = None
         self.__image_tag = image_tag
         self.log_response_body = log_response_body
+        self.rebuild_base_image = rebuild_base_image
 
         execute(f'rm -rf {ARTIFACTS_DIR_ABSOLUTE}')
         if not os.path.exists(ARTIFACTS_DIR_ABSOLUTE):
@@ -272,7 +273,8 @@ class InstanceManager:
         # Since we just installed docker, re-connect.
         base_instance.wait_for_ssh()
 
-        prepare_ci_cmd = 'cd /home/ubuntu/cortex/; ./prepare_ci_env.sh --cache-images'
+        prepare_ci_cmd = 'cd /home/ubuntu/cortex/; ./prepare_ci_env.sh --cache-images ' \
+                         f'{"--rebuild_base_image" if self.rebuild_base_image else ""}'
         if self.__image_tag:
             prepare_ci_cmd = f'{prepare_ci_cmd} --image-tag {self.__image_tag}'
 
@@ -547,7 +549,7 @@ def main():
     parser.add_argument('--log-response-body', type=str, default='No',
                         help='Should response body be logged (makes the test slower)? (Yes/No)',
                         choices=['yes', 'no', 'Yes', 'No'])
-
+    parser.add_argument('--rebuild_base_image', nargs='*', help='Rebuild base-image-name locally')
     try:
         args = parser.parse_args()
     except AttributeError:
@@ -576,10 +578,13 @@ def main():
 
     group_name = os.environ['BUILD_NUMBER'] if 'BUILD_NUMBER' in os.environ else f'Local test ({socket.gethostname()})'
     # test_group_name_as_env = group_name.replace('"', '-').replace('$', '-').replace('#', '-')
-
+    is_rebuild_base_image = '--rebuild_base_image' in all_extra_pytest_args.split()
+    if is_rebuild_base_image:
+        all_extra_pytest_args = all_extra_pytest_args.replace('--rebuild_base_image', '')
     if args.action == 'run':
         instance_manager = InstanceManager(args.cloud, args.instance_type, args.number_of_instances, args.image_tag,
-                                           args.base_image_name, args.log_response_body.lower() == 'yes')
+                                           args.base_image_name, args.log_response_body.lower() == 'yes',
+                                           is_rebuild_base_image)
         try:
             instance_manager.prepare_all(group_name)
             print(f'Is running under teamcity: {TC.is_in_teamcity()}')

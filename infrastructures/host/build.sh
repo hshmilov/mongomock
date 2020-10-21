@@ -14,6 +14,6 @@ cp ./libs/axonius-base-image/requirements2.txt ./infrastructures/host/uploads/
 cp -r ./api/axoniussdk ./infrastructures/host/
 cp -r ./devops/ax_cli ./infrastructures/host/
 
-cd ./infrastructures/host && docker build . -t $DOCKER_NAME
+cd ./infrastructures/host && docker build . -t axonius/$DOCKER_NAME
 cd ./uploads/ && rm -f login.c login.py nexus-apt pip.conf weave-2.7.0 ZscalerRootCertificate-2048-SHA256.crt requirements.txt requirements2.txt
 cd ../ && rm -rf axoniussdk ax_cli

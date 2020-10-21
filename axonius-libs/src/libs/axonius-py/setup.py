@@ -35,6 +35,6 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
     ],
     long_description="""Will install all Axonius libs. For example, the PluginBase class""",
-    install_requires=['json_log_formatter==0.2.0', 'Flask==0.12.2', 'Werkzeug==0.16.0'],
+    install_requires=['json_log_formatter==0.2.0', 'Flask==1.1.2', 'Werkzeug==0.16.0'],
     data_files=[('axonius', ['axonius/oui.csv'])]
 )
