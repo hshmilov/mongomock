@@ -160,12 +160,23 @@ class AxoniusService:
             subprocess.check_call(['docker', 'network', 'rm', cls._DOCKER_NETWORK_NAME], stdout=subprocess.PIPE)
 
     @staticmethod
+    def delete_old_weave_container():
+        docker_client = docker.DockerClient()
+        try:
+            container = docker_client.containers.get('weave')
+            if container:
+                container.remove()
+        except docker.errors.NotFound:
+            return
+
+    @staticmethod
     def create_weave_network(subnet_ip_range: str):
         """
         Creating a new weave network using weave script
         :param subnet_ip_range: weave network subnet
         :return: None
         """
+        AxoniusService.delete_old_weave_container()
         encryption_key = get_encryption_key()
         print(f'Creating weave network')
         # this command should launch weave network
