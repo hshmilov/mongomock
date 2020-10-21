@@ -29,6 +29,8 @@ cd /home/ubuntu
 ./axonius_install.py -- --first-time
 cd cortex
 ./machine_boot.sh
-cd ..
+cd devops/scripts/watchdog/
+./run_host_tasks.sh
+cd ../../../../
 chown -R ubuntu:ubuntu cortex
 rm -rf /home/ubuntu/axonius_install.py
