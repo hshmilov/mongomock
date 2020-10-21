@@ -2,6 +2,7 @@ from axonius.utils.serial_csv.constants import MAX_ROWS_LEN
 from services.adapters.csv_service import CsvService
 from services.adapters.wmi_service import WmiService
 from test_credentials.test_csv_credentials import CSV_FIELDS
+from test_credentials.test_cylance_credentials import cylance_json_file_mock_credentials
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from ui_tests.tests.ui_consts import (AD_MISSING_AGENTS_QUERY_NAME, CSV_NAME,
@@ -248,3 +249,15 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
         assert remainder_value == num_of_devices_in_tooltip - int(1)
         # reset to default value
         self.change_values_count_per_column_to_be_val('2')
+
+    def test_column_filter_with_complex_field(self):
+        self.adapters_page.add_json_server(cylance_json_file_mock_credentials, run_discovery_at_last=False,
+                                           last_seen_threshold_hours='0')
+        self.devices_page.switch_to_page()
+
+        fields = 'specific_data.data.agent_versions,specific_data.data.agent_versions.adapter_name'
+        field_filters = {'specific_data.data.agent_versions.adapter_name': [{'include': True, 'term': 'aaaaaa'}]}
+        result = self.devices_page.generate_csv('devices', fields, field_filters=field_filters)
+        assert result == b'\xef\xbb\xbf\xef\xbb\xbf"Aggregated: Agent Versions: Name",' \
+                         b'"Aggregated: Agent Versions: Version","Aggregated: Agent Versions: Status",' \
+                         b'"Aggregated: Agent Versions: Name"\r\n"Cylance Agent","2.0.1490","",""\r\n'

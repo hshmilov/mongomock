@@ -57,6 +57,7 @@ class DevicesPage(EntitiesPage):
     FIELD_ADAPTER_TAGS = 'Adapter Tags'
     FIELD_ADAPTER_PROPERTIES = 'Adapter Properties'
     FIELD_LAST_SEEN = 'Last Seen'
+    FIELD_ADAPTER_CONNECTIONS = 'Adapter Connections'
     FIELD_HOSTNAME_TITLE = 'Host Name'
     FIELD_HOSTNAME_NAME = 'hostname'
     FIELD_ASSET_NAME = 'Asset Name'
@@ -69,6 +70,8 @@ class DevicesPage(EntitiesPage):
     FIELD_FIREWALL_RULES_FROM_PORT = 'Firewall Rules: From port'
     FIELD_ADAPTER_CONNECTION_LABEL = 'Adapter Connection Label'
     PREFERRED_HOSTNAME_FIELD = 'Preferred Host Name'
+    AGENT_VERSIONS_FIELD = 'Agent Versions'
+    AGENT_VERSIONS_NAME_FIELD = 'Agent Versions: Name'
     PREFERRED_FIELDS = [PREFERRED_HOSTNAME_FIELD, 'Preferred OS Type', 'Preferred OS Distribution',
                         'Preferred MAC Address', 'Preferred IPs']
     VALUE_OS_WINDOWS = 'Windows'
