@@ -34,8 +34,8 @@ class OpenstackAdapter(AdapterBase):
             client.disconnect()
             return client
         except ClientConnectionException as err:
-            logger.error('Failed to connect to client {0} using config: {1}'.format(
-                self._get_client_id(client_config), client_config))
+            logger.exception('Failed to connect to client {0}'.format(
+                self._get_client_id(client_config)))
             raise
 
     def _query_devices_by_client(self, client_name, session):

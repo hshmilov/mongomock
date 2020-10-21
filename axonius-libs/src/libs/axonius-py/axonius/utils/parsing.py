@@ -72,8 +72,8 @@ N_CHAR_EXTENSION = 8
 DEFAULT_VERSION_EXTENSION = '00000000'
 DEFAULT_LINUX_VERSION_EPOCH = '0'
 DUPLICATES_NAMES = ['SYSOPS-MACBOOK-PRO.LOCAL']
-BAD_SERIALS = ['INVALID', 'NON-UNIQUES/N', '0', 'SYSTEMSERIALNUMBER', 'TOBEFILLEDBYO.E.M.', 'VIRTUAL',
-               'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN', '-', '0123456789', 'NA-VIRTUAL',
+BAD_SERIALS = ['INVALID', 'NON-UNIQUES/N', '0', '1', 'SYSTEMSERIALNUMBER', 'TOBEFILLEDBYO.E.M.', 'VIRTUAL',
+               'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN', '-', '0123456789', 'NA-VIRTUAL', 'TBD', 'X',
                '0123456789ABCDEF', 'NONE', 'VMWARE', '(VM)', 'SUN', 'NO INFORMATION', 'VIRTUAL SERVER']
 
 
@@ -1235,6 +1235,8 @@ def get_bios_serial_or_serial(adapter_device):
             serial = None
         if serial and serial.upper().strip().replace(' ', '') in BAD_SERIALS:
             serial = None
+        if serial and len(serial) < 4:
+            return None
     return serial
 
 
@@ -1299,7 +1301,7 @@ def get_serial(adapter_device):
     serial = (adapter_device['data'].get('device_serial') or '').strip()
     if serial \
             and serial.upper().strip().replace(' ', '') not in BAD_SERIALS \
-            and 'VMWARE' not in serial.upper().strip():
+            and 'VMWARE' not in serial.upper().strip() and len(serial) > 3:
         return serial.upper()
     return None
 

@@ -95,7 +95,9 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
                     product_id = file_data.get('ProductId')
                     if not product_id:
                         continue
-                    product_files_dict[product_id] = file_data
+                    if product_id not in product_files_dict:
+                        product_files_dict[product_id] = []
+                    product_files_dict[product_id].append(file_data)
         except Exception:
             logger.warning(f'Problem with product file dict', exc_info=True)
 
@@ -566,9 +568,11 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
                             product_id = new_asset_data.get('ProductId')
                             if not product_id or not product_files_dict.get(product_id):
                                 continue
-                            if product_files_dict.get(product_id).get('ResourceID') != device_raw.get('ResourceID'):
-                                continue
-                            new_asset_data['file_data'] = product_files_dict[product_id]
+                            product_list = product_files_dict.get(product_id)
+                            for product_data_raw in product_list:
+                                if product_data_raw.get('ResourceID') != device_raw.get('ResourceID'):
+                                    continue
+                                new_asset_data['file_data'] = product_data_raw
                         except Exception:
                             logger.exception(f'Problem adding new sw asset {new_asset_data}')
             except Exception:

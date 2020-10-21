@@ -65,6 +65,7 @@ class StaticCorrelatorService(CorrelatorBase):
                          'last_seen', 'bios_serial', 'domain', 'cloud_provider', 'friendly_name', 'fetch_type',
                          'cloud_id', 'ad_name', 'ad_distinguished_name', 'fw_ip', 'basic_device_id',
                          'paloalto_device_type', 'public_ips', 'u_alias', 'customer', 'file_name',
+                         'route53_ec2_instance_id',
                          'azure_display_name', 'uuid', 'device_type', 'resource_id', 'sccm_server', 'agent_uuid',
                          'last_used_users', 'nessus_no_scan_id', 'private_dns_name', 'macs_no_ip', 'tanium_type',
                          'node_id', 'azure_ad_id', 'azure_device_id', 'fetch_proto', 'fqdn', 'solarwinds_ip',

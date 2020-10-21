@@ -15,6 +15,7 @@ from axonius.clients.rest.connection import RESTConnection
 
 class FireeyeHxAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
+        gui_url = Field(str, 'Gui Url')
         excluded_from_containment = Field(bool, 'Excluded From Containment')
         reported_clone = Field(bool, 'Reported Clone')
         fips = Field(str, 'FIPS')
@@ -50,6 +51,9 @@ class FireeyeHxAdapter(AdapterBase):
         recent_triage_id = Field(str, 'Recent Triage Id')
         recent_triage_state = Field(str, 'Recent Triage State')
         intel_version = Field(str, 'Intel Version')
+        last_alert_timestamp = Field(datetime.datetime, 'Last Alert Timestamp')
+        last_audit_timestamp = Field(datetime.datetime, 'Last Audit Timestamp')
+        last_exploit_block_timestamp = Field(datetime.datetime, 'Last Exploit Block Timestamp')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -150,6 +154,7 @@ class FireeyeHxAdapter(AdapterBase):
                 device.id = device_raw.get("_id", "")
                 if device.id == "":
                     continue
+                device.gui_url = device_raw.get('gui_url')
                 try:
                     ip_address = device_raw.get("primary_ip_address") or ""
                     mac_address = device_raw.get("primary_mac")
@@ -250,6 +255,9 @@ class FireeyeHxAdapter(AdapterBase):
                     device.malware_false_positive_alerts = device_stats.get('malware_false_positive_alerts')
                     device.malware_quarantined_count = device_stats.get('malware_quarantined_count')
                     device.presence_hits_count = device_stats.get('presence_hits_count')
+                    device.last_alert_timestamp = parse_date(device_raw.get('last_alert_timestamp'))
+                    device.last_audit_timestamp = parse_date(device_raw.get('last_audit_timestamp'))
+                    device.last_exploit_block_timestamp = parse_date(device_raw.get('last_exploit_block_timestamp'))
 
                 except Exception:
                     logger.exception(f'Problem adding stats {device_raw}')

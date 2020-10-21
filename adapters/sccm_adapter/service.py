@@ -20,7 +20,7 @@ from sccm_adapter.parse import sccm_query_devices_by_client, _create_sccm_client
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-DESKTOP_CHASIS_VALUE = ['3', '4', '6', '7', '15']
+DESKTOP_CHASIS_VALUE = ['3', '4', '6', '7', '15', '30', '31', '32']
 LAPTOP_CHASIS_VALUE = ['8', '9', '10', '21']
 CHASIS_VALUE_FULL_DICT = {
     '1': 'Virtual Machine',
@@ -47,6 +47,9 @@ CHASIS_VALUE_FULL_DICT = {
     '22': 'Storage Chassis',
     '23': 'Rack Mount Unit',
     '24': 'Sealed-Case PC',
+    '30': 'Tablet',
+    '31': 'Convertible',
+    '32': 'Detachable',
 }
 COMPLIANCE_STATUS_DICT = {'0': 'Detection Status Unknown',
                           '1': 'Not Applicable',

@@ -2,6 +2,8 @@ import re
 import logging
 from axonius.correlator_engine_base import CorrelatorEngineBase
 from axonius.correlator_base import does_entity_have_field
+from axonius.plugin_base import PluginBase
+from axonius.utils.parsing import is_domain_valid
 
 
 from axonius.entities import EntityType
@@ -11,6 +13,29 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 NORMALIZED_MAIL = 'normalized_mail'
 BAD_USER_NAMES = ['NULL NULL']
+DOMAIN_TO_DNS_DICT = dict()
+
+
+# pylint: disable=global-statement
+def _refresh_domain_to_dns_dict():
+    try:
+        global DOMAIN_TO_DNS_DICT
+        DOMAIN_TO_DNS_DICT = PluginBase.Instance.get_global_keyval('ldap_nbns_to_dns') or {}
+    except Exception:
+        logger.exception(f'Warning - could not refresh domain dns dict')
+
+
+def get_user_domain(adapter_device):
+    domain = adapter_device['data'].get('domain')
+    if domain and is_domain_valid(domain):
+        try:
+            domain_dns_name = DOMAIN_TO_DNS_DICT.get(domain.lower())
+            if domain_dns_name:
+                return domain_dns_name.upper()
+        except Exception:
+            pass
+        return domain.upper()
+    return None
 
 
 def get_ad_upn(adapter_data):
@@ -90,13 +115,6 @@ def get_ad_display_name_username(adapter_data):
     username = get_username(adapter_data)
     if username:
         return username
-    return None
-
-
-def get_user_domain(adapter_data):
-    user_domain = adapter_data['data'].get('domain')
-    if user_domain:
-        return user_domain.lower().strip()
     return None
 
 
@@ -406,6 +424,7 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                       CorrelationReason.StaticAnalysis)
 
     def _raw_correlate(self, entities):
+        _refresh_domain_to_dns_dict()
         normalized_entities = list(normalize_adapter_users(entities))
         if self._correlation_config and self._correlation_config.get('correlate_only_on_username_domain') is True:
             yield from self._correlate_username_domain(normalized_entities)

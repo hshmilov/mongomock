@@ -74,7 +74,10 @@ class BeyondTrustAdapter(AdapterBase, Configurable):
         )
 
         with connection:
-            pass  # check that the connection credentials are valid
+            for _ in connection.query(DEVICES_QUERY):
+                break
+            for _ in connection.query(DOMAINS_QUERY):
+                break
         return connection
 
     def _connect_client(self, client_config):

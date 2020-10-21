@@ -15,6 +15,15 @@ class FireeyeHxConnection(RESTConnection):
             raise RESTException("No user name or password")
 
     def get_device_list(self):
+        base_gui_url = RESTConnection.build_url(self._url, url_base_prefix='')
+        for device_raw in self.get_device_list_inner():
+            if not device_raw.get('_id'):
+                logger.warning(f'Bad device with no id {device_raw}')
+                continue
+            device_raw['gui_url'] = base_gui_url + '/hx/#/hosts/' + str(device_raw['_id'])
+            yield device_raw
+
+    def get_device_list_inner(self):
         device_list_response = self._get('hosts', url_params={'offset': 0, 'limit': consts.DEVICES_PER_PAGE})
         devices_count = device_list_response["data"]["total"]
         yield from device_list_response["data"]["entries"]

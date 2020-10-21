@@ -896,6 +896,22 @@ def compare_cp_esx_csv(adapter_device1, adapter_device2):
     return False
 
 
+def get_ec2_id_route53(adapter_device):
+    if not adapter_device.get('plugin_name') == 'aws_adapter':
+        return None
+    if adapter_device['data'].get('aws_device_type') == 'EC2':
+        return adapter_device['data'].get('id')
+    return adapter_device['data'].get('route53_ec2_instance_id')
+
+
+def compare_ec2_id_route53(adapter_device1, adapter_device2):
+    asset1 = get_ec2_id_route53(adapter_device1)
+    asset2 = get_ec2_id_route53(adapter_device2)
+    if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
+
+
 def esx_and_csv(adapter_device1, adapter_device2):
     if adapter_device1.get('plugin_name') == 'csv_adapter' and adapter_device2.get('plugin_name') == 'esx_adapter':
         return True
@@ -989,6 +1005,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [],
                                       [esx_and_csv],
                                       {'Reason': 'They have the cp esx csv'},
+                                      CorrelationReason.StaticAnalysis)
+
+    def _corelate_ec2_id_route53(self, adapters_to_correlate):
+        logger.info('Starting to ec2_id_route53')
+        filtered_adapters_list = filter(get_ec2_id_route53, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_ec2_id_route53],
+                                      [compare_ec2_id_route53],
+                                      [],
+                                      [],
+                                      {'Reason': 'They have same ec2 route 53 i-id'},
                                       CorrelationReason.StaticAnalysis)
 
     def _correlate_alias_hostname(self, adapters_to_correlate):
@@ -1621,6 +1648,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
             yield from self._correlate_v_dash_name(adapters_to_correlate)
             yield from self._correlate_alias_hostname(adapters_to_correlate)
         yield from self._correlate_cp_esx_csv(adapters_to_correlate)
+        yield from self._corelate_ec2_id_route53(adapters_to_correlate)
 
         # let's find devices by, hostname, and ip:
         yield from self._correlate_hostname_ip(adapters_to_correlate)

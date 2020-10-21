@@ -83,7 +83,12 @@ def parse_raw_data_inner_route53(
                     stripped_dns_name = stripped_dns_name[len('dualstack'):]
                 stripped_dns_name = stripped_dns_name.strip('.')
                 device.dns_names.append(stripped_dns_name)
-
+            try:
+                for dns_name_raw in device.dns_names:
+                    if dns_name_raw.startswith('i-'):
+                        device.route53_ec2_instance_id = dns_name_raw.split('.')[0]
+            except Exception:
+                pass
             device.route53_data.append(
                 AWSRoute53Record(
                     resource_type=record_raw.get('Type'),
