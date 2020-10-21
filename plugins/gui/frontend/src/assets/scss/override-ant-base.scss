@@ -134,6 +134,11 @@ input[type='text'], input[type='password'], input[type='number'] {
   padding-left: 0px;
 }
 
+// ACollapse
+.ant-collapse-borderless {
+  background-color: transparent;
+}
+
 /****************************************************/
 // Global ant-design-vue Components Styles -- END //
 /****************************************************/
