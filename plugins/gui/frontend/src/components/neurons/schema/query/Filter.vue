@@ -167,7 +167,9 @@ export default {
       if (this.viewFields.includes(columnName)) {
         viewFields = this.viewFields.filter((column) => column !== columnName);
       } else {
-        viewFields = [...this.viewFields, columnName];
+        // insert column to second place, so it will be easier to see with query wizard open
+        viewFields = [...this.viewFields];
+        viewFields.splice(1, 0, columnName);
       }
       this.updateView({
         module: this.module,
