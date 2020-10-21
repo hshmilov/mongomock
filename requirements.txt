@@ -43,7 +43,7 @@ netstruct==1.1.2
 construct==2.9.25
 netmiko==2.4.1
 dpkt==1.9.1
-mongomock==3.9.0
+mongomock==3.20.0
 pyOpenSSL==17.5.0
 numpy==1.14.2
 username-generator==2.0.0
