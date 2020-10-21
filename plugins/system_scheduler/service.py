@@ -1109,8 +1109,9 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
             clients_to_trigger = {}
             # get adapter connections without enabled custom connection discovery
-            for adapter_unique_name in DiscoveryCustomScheduler.get_plugin_unique_names(adapter_name):
-                adapter_clients = DiscoveryCustomScheduler.get_adapter_clients(adapter_unique_name)
+            for adapter_unique_name in \
+                    DiscoveryCustomScheduler.get_plugin_unique_names(self.mongo_client, adapter_name):
+                adapter_clients = DiscoveryCustomScheduler.get_adapter_clients(self.mongo_client, adapter_unique_name)
                 for client in adapter_clients:
                     connection_discovery = client.get(CONNECTION_DISCOVERY, {})
                     if not connection_discovery.get(ENABLE_CUSTOM_DISCOVERY):
@@ -1165,7 +1166,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 logger.info(f'Installer is in progress, '
                             f'not triggering custom discovery connection for {adapter_name}:{client_id}')
                 return
-            for adapter_unique_name in DiscoveryCustomScheduler.get_plugin_unique_names(adapter_name):
+            for adapter_unique_name in \
+                    DiscoveryCustomScheduler.get_plugin_unique_names(self.mongo_client, adapter_name):
                 try:
                     # we are triggering the adapter with this unique job name
                     # because we dont want triggerable to think these jobs are duplicates

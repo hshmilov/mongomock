@@ -5,16 +5,15 @@ from apscheduler.job import Job
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
+from pymongo import MongoClient
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.adapter_consts import CLIENT_ID
 from axonius.consts.plugin_consts import ENABLE_CUSTOM_DISCOVERY, \
     CONNECTION_DISCOVERY, DISCOVERY_REPEAT_TYPE, DISCOVERY_REPEAT_ON_WEEKDAYS, DISCOVERY_REPEAT_EVERY_DAY, \
-    DISCOVERY_RESEARCH_DATE_TIME, DISCOVERY_REPEAT_ON, DISCOVERY_REPEAT_EVERY, CLIENTS_COLLECTION, DISCOVERY_REPEAT_RATE
+    DISCOVERY_RESEARCH_DATE_TIME, DISCOVERY_REPEAT_ON, DISCOVERY_REPEAT_EVERY, CLIENTS_COLLECTION, \
+    DISCOVERY_REPEAT_RATE, CORE_UNIQUE_NAME
 from axonius.db.db_client import get_db_client
-
-from axonius.plugin_base import PluginBase
-
 logger = logging.getLogger(f'axonius.{__name__}')
 
 MINUTES_IN_HOUR = 60
@@ -89,44 +88,48 @@ class DiscoveryCustomScheduler:
         return None
 
     @staticmethod
-    def get_adapter_clients(adapter_unique_name: str) -> List[Dict]:
+    def get_adapter_clients(db: MongoClient, adapter_unique_name: str) -> List[Dict]:
         """
+        :param db:
         :param adapter_unique_name: Adapter unique name
         :return: Returns all the clients from the adapter
         """
-        return PluginBase.Instance.mongo_client[adapter_unique_name][CLIENTS_COLLECTION] \
+        return db[adapter_unique_name][CLIENTS_COLLECTION] \
             .find({}, projection={CONNECTION_DISCOVERY: 1, CLIENT_ID: 1, '_id': 1})
 
     @staticmethod
-    def get_adapter_custom_discovery_clients(adapter_unique_name: str) -> List[Dict]:
+    def get_adapter_custom_discovery_clients(db: MongoClient, adapter_unique_name: str) -> List[Dict]:
         """
+        :param db:
         :param adapter_unique_name: Adapter unique name
         :return: Returns all the clients from the adapter
         """
-        return PluginBase.Instance.mongo_client[adapter_unique_name][CLIENTS_COLLECTION] \
+        return db[adapter_unique_name][CLIENTS_COLLECTION] \
             .find({
-                ENABLE_CUSTOM_DISCOVERY: True
+                f'{CONNECTION_DISCOVERY}.{ENABLE_CUSTOM_DISCOVERY}': True
             }, projection={CONNECTION_DISCOVERY: 1, CLIENT_ID: 1, '_id': 1})
 
     @staticmethod
-    def get_adapter_client(adapter_unique_name: str, client_id: str) -> Dict:
+    def get_adapter_client(db: MongoClient, adapter_unique_name: str, client_id: str) -> Dict:
         """
+        :param db:
         :param client_id: client unique id
         :param adapter_unique_name: Adapter unique name
         :return: return the client from the adapter
         """
-        return PluginBase.Instance.mongo_client[adapter_unique_name][CLIENTS_COLLECTION].find_one({
+        return db[adapter_unique_name][CLIENTS_COLLECTION].find_one({
             'client_id': client_id
         }, projection={CONNECTION_DISCOVERY: 1, CLIENT_ID: 1, '_id': 1})
 
     @staticmethod
-    def get_plugin_unique_names(plugin_name: str) -> List:
+    def get_plugin_unique_names(db: MongoClient, plugin_name: str) -> List:
         """
         get plugin unique names for plugin
+        :param db: mongo client
         :param plugin_name: plugin name
         :return:
         """
-        for plugin in PluginBase.Instance.core_configs_collection.find({
+        for plugin in db[CORE_UNIQUE_NAME]['configs'].find({
                 'plugin_name': plugin_name
         }, projection={
             'plugin_unique_name': 1

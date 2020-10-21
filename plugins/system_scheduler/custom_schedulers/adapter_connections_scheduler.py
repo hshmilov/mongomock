@@ -22,10 +22,10 @@ class CustomConnectionsScheduler(DiscoveryCustomScheduler):
         :param client_id: client unique id
         :return: crontrigger instance
         """
-        adapter_unique_names = self.get_plugin_unique_names(adapter_name)
+        adapter_unique_names = self.get_plugin_unique_names(self.db, adapter_name)
         # iterating plugin unique names
         for adapter_unique_name in adapter_unique_names:
-            client = self.get_adapter_client(adapter_unique_name, client_id)
+            client = self.get_adapter_client(self.db, adapter_unique_name, client_id)
             if not client:
                 continue
             connection_discovery = client.get(CONNECTION_DISCOVERY, {})
@@ -47,10 +47,10 @@ class CustomConnectionsScheduler(DiscoveryCustomScheduler):
         )
         # iterating plugins with custom discovery enabled
         for adapter in all_plugins_with_custom_connection_discovery_enabled:
-            adapter_unique_names = self.get_plugin_unique_names(adapter)
+            adapter_unique_names = self.get_plugin_unique_names(self.db, adapter)
             # iterating plugin unique names
             for adapter_unique_name in adapter_unique_names:
-                clients = self.get_adapter_custom_discovery_clients(adapter_unique_name)
+                clients = self.get_adapter_custom_discovery_clients(self.db, adapter_unique_name)
                 # iterating plugin connections
                 for client in clients:
                     try:
