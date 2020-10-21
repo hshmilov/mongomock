@@ -339,6 +339,7 @@ PREFERRED_FIELDS = ('specific_data.data.hostname_preferred',
                     'specific_data.data.os.build_preferred',
                     'specific_data.data.network_interfaces.mac_preferred',
                     'specific_data.data.network_interfaces.ips_preferred',
+                    'specific_data.data.network_interfaces.locations_preferred',
                     'specific_data.data.device_model_preferred',
                     'specific_data.data.domain_preferred')
 ADAPTER_CONNECTIONS_FIELD = 'Adapter Connections'

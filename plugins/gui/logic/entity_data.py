@@ -168,6 +168,11 @@ def get_entity_data(entity_type: EntityType, entity_id, history_date: datetime =
             'type': 'string'
         },
         {
+            'name': 'network_interfaces.locations_preferred',
+            'title': 'Preferred Location Name',
+            'type': 'string'
+        },
+        {
             'name': 'network_interfaces.ips_preferred',
             'title': 'Preferred IPs',
             'type': 'string'

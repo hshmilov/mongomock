@@ -1335,6 +1335,14 @@ def entity_fields(entity_type: EntityType):
             'type': 'string'
         },
         {
+            'name': 'specific_data.data.network_interfaces.locations_preferred',
+            'title': 'Preferred Location Name',
+            'items': {
+                'type': 'string'
+            },
+            'type': 'array'
+        },
+        {
             'name': 'specific_data.data.network_interfaces.ips_preferred',
             'title': 'Preferred IPs',
             'filterable': True,
