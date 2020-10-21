@@ -22,7 +22,8 @@ from axonius.utils.permissions_helper import (PermissionAction,
                                               PermissionValue)
 from axonius.utils.revving_cache import (NoCacheException,
                                          rev_cached, CACHE_CALL_LIMIT)
-from gui.logic.dashboard_data import (adapter_data, generate_dashboard, generate_dashboard_historical)
+from gui.logic.dashboard_data import (adapter_data, generate_dashboard, generate_dashboard_historical,
+                                      is_dashboard_paginated)
 from gui.logic.fielded_plugins import get_fielded_plugins
 from gui.logic.filter_utils import filter_archived
 from gui.logic.historical_dates import (all_historical_dates,
@@ -314,7 +315,7 @@ class Dashboard(Charts, Notifications):
         return str(insert_result.inserted_id)
 
     @staticmethod
-    def _process_initial_dashboard_data(dashboard_data: list) -> Dict[str, object]:
+    def _process_initial_dashboard_data(dashboard_data: list, paginated: bool = True) -> Dict[str, object]:
         """
         Truncates the given data to allow viewing the beginning and end of the values, if more than 100
 
@@ -325,6 +326,8 @@ class Dashboard(Charts, Notifications):
         data_limit, data_tail_limit = 50, -50
         if data_length <= 100:
             data_limit, data_tail_limit = 100, data_length
+        if not paginated:
+            data_limit, data_tail_limit = data_length, data_length
         return {
             'data': dashboard_data[:data_limit],
             'data_tail': dashboard_data[data_tail_limit:],
@@ -453,7 +456,8 @@ class Dashboard(Charts, Notifications):
                     if generated_dashboard:
                         yield {
                             **generated_dashboard,
-                            **self._process_initial_dashboard_data(generated_dashboard.get('data', [])),
+                            **self._process_initial_dashboard_data(generated_dashboard.get('data', []),
+                                                                   is_dashboard_paginated(generated_dashboard)),
                         }
                 if not generate_data or not generated_dashboard:
                     yield {

@@ -25,7 +25,7 @@ from gui.logic.dashboard_data import (fetch_chart_segment,
                                       fetch_chart_segment_historical,
                                       fetch_chart_adapter_segment,
                                       fetch_chart_adapter_segment_historical,
-                                      generate_dashboard_historical)
+                                      generate_dashboard_historical, is_dashboard_paginated)
 from gui.logic.routing_helper import gui_route_logged_in, gui_section_add_rules
 from gui.routes.dashboard.dashboard import generate_dashboard
 
@@ -333,7 +333,8 @@ class Charts:
             dashboard_data = [data for data in dashboard_data
                               if search.lower() in self.get_string_value(data['name']).lower()]
         if not skip:
-            truncated_dashboard_data = self._process_initial_dashboard_data(dashboard_data)
+            truncated_dashboard_data = self._process_initial_dashboard_data(dashboard_data,
+                                                                            is_dashboard_paginated(generated_dashboard))
             if not got_from_db_cache and generated_dashboard:
                 try:
                     self._set_db_cached_data(panel_id, truncated_dashboard_data)

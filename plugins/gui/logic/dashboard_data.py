@@ -1548,3 +1548,10 @@ def _sort_dashboard_data(data, selected_sort_by, selected_sort_order, default_ch
     return sorted(data, key=lambda x: (x[value_field], str(x[name_field]).upper()), reverse=should_reverse) \
         if sort_by == SortType.VALUE.value \
         else sorted(data, key=lambda x: str(x[name_field]).upper(), reverse=should_reverse)
+
+
+def is_dashboard_paginated(generated_dashboard):
+    metric = generated_dashboard.get('metric')
+    if metric:
+        return ChartMetrics[metric] != ChartMetrics.timeline
+    return True
