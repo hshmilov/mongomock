@@ -67,8 +67,10 @@ export const requestApi = async ({ commit }, payload) => {
     method: payload.method || 'GET',
     url: payload.rule,
     data,
-    responseType: binary ? 'arraybuffer' : 'appliaction/json',
   };
+  if (binary) {
+    requestConfig.responseType = 'arraybuffer';
+  }
 
   try {
     const response = await axiosClient(requestConfig);
