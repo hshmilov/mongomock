@@ -89,7 +89,7 @@ export DEBIAN_FRONTEND=noninteractive
 echo -e "nameserver 10.0.2.68\n$(cat /etc/resolv.conf)" > /etc/resolv.conf
 
 _wait_for_apt update
-_wait_for_apt install -yq apt-transport-https ca-certificates curl software-properties-common build-essential makeself moreutils socat sshpass nano vim curl traceroute tmux # required for https-repos
+_wait_for_apt install -yq apt-transport-https ca-certificates curl software-properties-common open-vm-tools build-essential makeself moreutils socat sshpass nano vim curl traceroute tmux # required for https-repos
 echo "Adding docker repo"
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 retry timeout 20 add-apt-repository \
