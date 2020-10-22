@@ -6,6 +6,7 @@ from failover_cluster_adapter.consts import MAX_SUBPROCESS_TIMEOUT, WMI_NAMESPAC
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.utils.parsing import get_exception_string
+from axonius.utils.json import from_json
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -31,19 +32,20 @@ class FailoverClusterConnection(RESTConnection):
             raise RESTException('No username or password')
 
         # this command checks for the presence of the required
-        # Get-ClusterNode module. A string will be returned, but JSON
-        # indicates a successful execution.
-        command = f'powershell.exe -c Get-Command Get-ClusterNode ' \
-                  f'-ErrorAction Stop | ConvertTo-Json'
-        commands = [{'type': 'query', 'args': [command]}]
+        # Get-ClusterNode module and its version number. A string will
+        # be returned, but JSON indicates a successful execution.
+        command = f'powershell.exe -c (Get-Command Get-ClusterNode).Name + " " + ' \
+                  f'(Get-Command Get-ClusterNode).Version.Major + " " + ' \
+                  f'(Get-Command Get-ClusterNode).Version.Minor'
+
+        commands = [{'type': 'shell', 'args': [command]}]
+
         try:
             response = self._execute_wmi_command(commands)
             logger.debug(f'Initial Connect: {response}')
-            if not isinstance(response, str):
-                raise ValueError(f'Got a non-string response: {response}')
 
-            if not response.startswith('{'):
-                message = f'Get-ClusterNode is not installed: {response}'
+            if response[0]['status'] != 'ok':
+                message = f'Error in connect, got output {response}'
                 logger.warning(message)
                 raise ValueError(message)
 
@@ -124,22 +126,88 @@ class FailoverClusterConnection(RESTConnection):
 
         return commands_json
 
-    def _paginated_device_get(self):
+    # pylint: disable=line-too-long
+    def _device_get(self):
         """
-        Pure Powershell:
-            $clusterNodes = Get-ClusterNode;
-            ForEach($item in $clusterNodes)
-            {Get-VM -ComputerName $item.Name; }
-        :return:
-        """
-        try:
-            command = f'powershell.exe -c Get-ClusterNode | ConvertTo-Json'
-            commands = [{'type': 'query', 'args': [command]}]
+        Cluster Properties:
+            https://docs.microsoft.com/en-us/previous-versions/windows/desktop/mscs/cluster-common-properties
+        Node Properties:
+            https://docs.microsoft.com/en-us/previous-versions/windows/desktop/mscs/node-common-properties
 
-            response = self._execute_wmi_command(commands)
-            logger.info(f'paginated response (single cluster): '
-                        f'{response}, default')
-            yield response, self._domain
+        Failover Cluster Powershell Cmdlets:
+            https://docs.microsoft.com/en-us/powershell/module/failoverclusters/?view=win10-ps
+        Get-Cluster:
+            https://docs.microsoft.com/en-us/powershell/module/failoverclusters/get-cluster?view=win10-ps
+        Get-ClusterNode:
+            https://docs.microsoft.com/en-us/powershell/module/failoverclusters/Get-ClusterNode?view=win10-ps
+        Get-ClusterResource:
+            https://docs.microsoft.com/en-us/powershell/module/failoverclusters/get-clusterresource?view=win10-ps
+
+        This was an example I found on the web, but I don't see how it might work:
+        https://cloudcompanyapps.com/2019/03/07/powershell-get-all-running-vms-in-a-failover-cluster/
+            $clusterNodes = Get-ClusterNode;
+            ForEach($item in $clusterNodes) {Get-VM -ComputerName $item.Name}
+
+        if the command below doesn't work, you can do this to get the node names:
+        Get-ClusterNode --Cluster devhv01
+
+        more information/ideas:
+        https://stackoverflow.com/questions/21409249/powershell-how-to-return-all-the-vms-in-a-hyper-v-cluster
+        """
+        commands = list()
+        try:
+            # get a list of dicts in the format of [{'Name': 'node_name'},...]
+            get_node_list = f'powershell.exe -c Get-ClusterNode ^| Select Name ^| ConvertTo-Json'
+            commands = [{'type': 'shell', 'args': [get_node_list]}]
+
+            node_list_response = self._execute_wmi_command(commands)
+
+            if node_list_response[0]['status'] != 'ok':
+                message = f'Failed to run Get-ClusterNode command through ' \
+                          f'WMI/PowerShell: Got {node_list_response}'
+                logger.error(message)
+                return
+
+            nodes_list_data = node_list_response[0].get('data')
+            if not nodes_list_data:
+                message = f'Malformed raw data. Expected a list, got ' \
+                          f'{type(nodes_list_data)}: {str(nodes_list_data)}'
+                logger.warning(message)
+                raise ValueError(message)
+
+            nodes = from_json(nodes_list_data)
+
+            # use the node name to pull data about that node
+            for node in nodes:
+                node_name = node.get('Name')
+                if not isinstance(node_name, str):
+                    logger.warning(f'Malformed node name. Expected a string, '
+                                   f'got {type(node_name)}: {str(node_name)}')
+                    continue
+
+                get_node_resources = f'powershell.exe -c Get-ClusterNode -Name {node_name} ^| Get-ClusterResource ^| ConvertTo-Json'
+                commands = [{'type': 'shell', 'args': [get_node_resources]}]
+
+                logger.debug(f'Fetching {node_name}')
+                node_response = self._execute_wmi_command(commands)
+
+                if node_response[0]['status'] != 'ok':
+                    message = f'Failed to run Get-ClusterNode command through ' \
+                              f'WMI/PowerShell: Got {node_response}'
+                    logger.error(message)
+                    return
+
+                raw_node_data = node_response[0].get('data')
+                if not raw_node_data:
+                    message = f'Malformed raw node data from Get-ClusterNade: ' \
+                              f'{str(node_response)}'
+                    logger.warning(message)
+                    continue
+
+                device_data_raw = from_json(raw_node_data)
+
+                # data is the only item in a list, so yield only the dict
+                yield device_data_raw[0]
 
         except Exception:
             logger.exception(f'Invalid request made while paginating '
@@ -148,7 +216,7 @@ class FailoverClusterConnection(RESTConnection):
 
     def get_device_list(self):
         try:
-            yield from self._paginated_device_get()
+            yield from self._device_get()
         except RESTException as err:
             logger.exception(str(err))
             raise
