@@ -25,11 +25,16 @@ def get_pypi_reqs():
             reqs = parse_requirements(files, session=False)
             packs = [str(pack_list.req) for pack_list in reqs]
             b = b + packs
-        splitter = [a.split('==')[0].lower() for a in b]
+
+        # Format is usually PACKAGE_NAME==VERSION
+        # PIP supports using `[SOME_NAME]` to signify installing extra dependencies (usually with support for feature
+        # SOME_NAME, so, we strip it down.
+        splitter = [a.split('==')[0].split('[')[0].lower() for a in b]
         for package_name in splitter:
             if package_name == 'pylint':
                 continue
             response = requests.get('https://pypi.org/pypi/' + package_name + '/json')
+            response.raise_for_status()
             csv_line = f'{package_name}, {re.sub(",", " ", response.json()["info"]["license"])}, {re.sub(",", " ", response.json()["info"]["summary"])} {", Linking Exception" if package_name == "uwsgi" else ""}\n'
             print(csv_line)
             outputfille.write(csv_line)
