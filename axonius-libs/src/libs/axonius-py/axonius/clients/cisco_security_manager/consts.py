@@ -1,0 +1,17 @@
+MAX_NUMBER_OF_DEVICES = 20000000
+
+SESSION_REFRESH_TIME_SEC = 900  # 15 Minutes
+
+DEFAULT_ASYNC_CHUNKS = 50
+
+URL_BASE_PREFIX = 'nbi'
+URL_API_LOGIN_SUFFIX = 'login'
+URL_API_LOGIN_REQUEST_ROOT = 'csm:loginRequest'
+URL_API_REFRESH_TOKEN_SUFFIX = 'ping'
+URL_API_REFRESH_TOKEN_ROOT = 'pingRequest'
+URL_API_DEVICE_LIST = 'configservice/getDeviceListByType'
+URL_API_DEVICE_LIST_ROOT = 'deviceListByCapabilityRequest'
+URL_API_DEVICE_BY_GUID = 'configservice/getDeviceConfigByGID'
+URL_API_DEVICE_GUID_ROOT = 'deviceConfigByGIDRequest'
+
+VALID_RESPONSE = (200, 201, 202, 204)

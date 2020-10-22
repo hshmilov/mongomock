@@ -1004,8 +1004,13 @@
   },
   "cisco_amp_adapter": {
     "title": "Cisco Advanced Malware Protection (AMP)",
-    "link": "https://docs.axonius.com/docs/cisco-advanced-malware-protection-amp",
+    "link": "https://docs.axonius.com/docs/cisco-advanced-malware-proteciton-amp",
     "description": "Cisco Advanced Malware Protection (AMP) includes threat intelligence, sandboxing, and malware blocking to detect, contain, and remove malware."
+  },
+  "cisco_security_manager_adapter": {
+    "title": "Cisco Security Manager - BETA",
+    "link": "https://docs.axonius.com/docs/cisco-security-manager",
+    "description": "Cisco Security Manager provides policy enforcement and rapid troubleshooting of security events, offering summarized reports across the security deployment."
   },
   "claroty_adapter": {
     "title": "Claroty",
