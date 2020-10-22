@@ -56,7 +56,7 @@
     "description": "Red Hat Satellite is a system management solution used to deploy, configure, and maintain systems across physical, virtual, and cloud environments."
   },
   "failover_cluster_adapter": {
-    "title": "Windows Server Failover Clustering (WSFC) - BETA",
+    "title": "Windows Server Failover Clustering (WSFC)",
     "link": "https://docs.axonius.com/docs/wsfc",
     "description": "Windows Server Failover Clustering (WSFC) is a feature of the Windows Server platform for improving the high availability (HA) of applications and services. WSFC is the successor to Microsoft Cluster Service (MSCS)."
   },
@@ -883,7 +883,7 @@
     "description": "SaltStack Open Source is open-source software for event-driven security, cloud and configuration management."
   },
   "ibm_qradar_adapter": {
-    "title": "IBM QRadar - BETA",
+    "title": "IBM QRadar",
     "link": "https://docs.axonius.com/docs/ibm-qradar",
     "description": "IBM QRadar is a Security Information and Event Management (SIEM) solution that enables security teams to detect, prioritize and response to threats across the enterprise."
   },
