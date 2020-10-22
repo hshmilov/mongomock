@@ -810,6 +810,32 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         self._update_client_status(client_name, 'success')
         return to_json({'devices_count': devices_count, 'users_count': users_count})
 
+    def _report_adapter_error(self, err, client_name):
+        error_msg = f'Adapter {self.plugin_name} had connection error' \
+            f' to server with the ID {client_name}. Error is {str(err)}'
+        self.create_notification(error_msg)
+        if self.mail_sender and self._adapter_errors_mail_address:
+            email = self.mail_sender.new_email('Axonius - Adapter Stopped Working',
+                                               self._adapter_errors_mail_address.split(','))
+            email.send(error_msg)
+        if self._adapter_errors_webhook:
+            try:
+                resposne = requests.post(url=self._adapter_errors_webhook,
+                                         json={'error_message': error_msg},
+                                         headers={'Content-Type': 'application/json',
+                                                  'Accept': 'application/json'},
+                                         verify=False)
+                resposne.raise_for_status()
+            except Exception:
+                logger.exception(f'Problem sending webhook')
+        try:
+            opsgenie_connection = self.get_opsgenie_connection()
+            if opsgenie_connection:
+                with opsgenie_connection:
+                    opsgenie_connection.create_alert(message=error_msg)
+        except Exception:
+            logger.exception(f'Proble with Opsgenie message')
+
     def _handle_insert_and_parse_exceptions(self, client_name, execption):
         """
         Handles all the possiable exceptions during parsing the raw devices and users
@@ -832,31 +858,8 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 self._clients[client_name] = self.__connect_client_facade(current_client['client_config'])
         except Exception as e2:
             # No connection to attempt querying
-            error_msg = f'Adapter {self.plugin_name} had connection error' \
-                        f' to server with the ID {client_name}. Error is {str(e2)}'
-            self.create_notification(error_msg)
+            self._report_adapter_error(e2, client_name)
             self._log_activity_connection_failure(client_name, execption)
-            if self.mail_sender and self._adapter_errors_mail_address:
-                email = self.mail_sender.new_email('Axonius - Adapter Stopped Working',
-                                                   self._adapter_errors_mail_address.split(','))
-                email.send(error_msg)
-            if self._adapter_errors_webhook:
-                try:
-                    resposne = requests.post(url=self._adapter_errors_webhook,
-                                             json={'error_message': error_msg},
-                                             headers={'Content-Type': 'application/json',
-                                                      'Accept': 'application/json'},
-                                             verify=False)
-                    resposne.raise_for_status()
-                except Exception:
-                    logger.exception(f'Problem sending webhook')
-            try:
-                opsgenie_connection = self.get_opsgenie_connection()
-                if opsgenie_connection:
-                    with opsgenie_connection:
-                        opsgenie_connection.create_alert(message=error_msg)
-            except Exception:
-                logger.exception(f'Proble with Opsgenie message')
 
             logger.exception(f'Problem establishing connection for client {client_name}. Reason: {str(e2)}')
             log_metric(logger, metric_name=Adapters.CONNECTION_ESTABLISH_ERROR,
@@ -1732,14 +1735,19 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
             timeout = self.__fetching_timeout
             timeout = timeout.total_seconds() if timeout else None
 
+            is_success = True
             try:
-                self._clients[client_id] = self.__connect_client_facade(self._get_client_config_by_client_id(client_id))
+                current_client_config = self._get_client_config_by_client_id(client_id)
+                is_success = current_client_config.get('status') == 'success'
+                self._clients[client_id] = self.__connect_client_facade(current_client_config)
                 self._update_client_status(client_id, 'success')
                 if self._connect_via_tunnel:
                     self._trigger_remote_plugin(GUI_PLUGIN_NAME, 'tunnel_is_up', blocking=False)
             except Exception as e:
                 self._clients[client_id] = None
                 self._update_client_status(client_id, 'error', str(e))
+                if is_success:
+                    self._report_adapter_error(e, client_id)
                 raise
             if not parse_after_fetch or thread_safe:
                 _raw_data = func_timeout.func_timeout(
