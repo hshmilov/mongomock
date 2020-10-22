@@ -29,6 +29,7 @@ from scripts.maintenance_tools.cluster_upgrader import shutdown_adapters, downlo
 from services.plugins.httpd_service import HttpdService
 from services.standalone_services.node_proxy_service import NodeProxyService
 from services.standalone_services.tunneler_service import TunnelerService
+from services.weave_service import is_weave_up
 from utils import (AXONIUS_DEPLOYMENT_PATH,
                    print_state,
                    run_cmd)
@@ -40,7 +41,8 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
     # If this is a master and it should upgrade the entire master
     if not first_time and not NODE_MARKER_PATH.is_file() and not master_only:
         print_state('Upgrading entire cluster')
-        connect_axonius_manager_to_weave()
+        if is_weave_up():
+            connect_axonius_manager_to_weave()
         cluster_data = read_cluster_data()
         if cluster_data:
             node_instances = [instance for instance in cluster_data['instances']
