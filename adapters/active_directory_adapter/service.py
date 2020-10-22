@@ -132,6 +132,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         cost_center_description = Field(str, 'Cost Center Description')
         division = Field(str, 'Division')
         division_code = Field(str, 'Division Code')
+        businiss_unit_code = Field(str, 'Business Unit Code')
+        business_area_code = Field(str, 'Business Area Code')
         se_business_role = Field(str, 'SE Business Role')
         se_business_unit_name = Field(str, 'SE Business Unit Name')
         sw_hw_segment = Field(str, 'SE HW Segment')
@@ -142,6 +144,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         director_two = Field(str, 'Director Two')
         location = Field(str, 'Location')
         vice_president = Field(str, 'Vice President')
+        building = Field(str, 'Building')
+        floor = Field(str, 'Floor')
+        room = Field(str, 'Room')
 
     def __init__(self):
 
@@ -872,7 +877,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 user.user_country = user_raw.get("co")
                 user.first_name = user_raw.get('givenName')
                 user.last_name = user_raw.get('sn')
-                user.employee_id = user_raw.get('employeeID')
+                user.employee_id = user_raw.get('employeeID') or user_raw.get('umwEmployeeID')
+                user.building = user_raw.get('umwBuilding')
+                user.floor = user_raw.get('umwFloor')
+                user.room = user_raw.get('umwRoom')
                 user.employee_number = user_raw.get('employeeNumber')
                 user.employee_type = user_raw.get('employeeType') or user_raw.get('amdocs-employee-type-code')
                 user.mobile = user_raw.get('mobile')
@@ -882,7 +890,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                     user.cost_center = user_raw.get('costCenter')
                     user.cost_center_description = user_raw.get('costCenterDescription')
                     user.division = user_raw.get('division') or user_raw.get('amdocs-division')
-                    user.division_code = user_raw.get('divisionCode') or user_raw.get('amdocs-division-code')
+                    user.division_code = user_raw.get('divisionCode') \
+                        or user_raw.get('amdocs-division-code') or user_raw.get('abbDivShortName ')
+                    user.businiss_unit_code = user_raw.get('abbBuShortName')
+                    user.business_area_code = user_raw.get('abbBaShortName')
                     user.se_business_role = user_raw.get('sEbusinessRole')
                     user.se_business_unit_name = user_raw.get('sEbusinessUnitName')
                     user.sw_hw_segment = user_raw.get('sEHWSegment')

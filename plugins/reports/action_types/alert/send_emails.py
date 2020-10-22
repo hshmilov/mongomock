@@ -186,19 +186,19 @@ class SendEmailsAction(ActionTypeAlert):
         except Exception:
             logger.exception(f'Problem adding changes csv')
 
-        image_cid = make_msgid()
-
-        with open(f'{LOGOS_PATH}/logo/axonius.png', 'rb') as img:
-
-            # know the Content-Type of the image
-            maintype, subtype = mimetypes.guess_type(img.name)[0].split('/')
-
-            # attach it
-            email.add_logos_attachments(img.read(), maintype=maintype, subtype=subtype, cid=image_cid)
         if self._config.get('send_only_custom'):
             mail_content = self._config.get('emailBody') or ''
             email.send(mail_content.replace('\n', '\n<br>'))
         else:
+            image_cid = make_msgid()
+
+            with open(f'{LOGOS_PATH}/logo/axonius.png', 'rb') as img:
+
+                # know the Content-Type of the image
+                maintype, subtype = mimetypes.guess_type(img.name)[0].split('/')
+
+                # attach it
+                email.add_logos_attachments(img.read(), maintype=maintype, subtype=subtype, cid=image_cid)
             reason = self._get_trigger_description()
             period = self.__get_period_description()
 

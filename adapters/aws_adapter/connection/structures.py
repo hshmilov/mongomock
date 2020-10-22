@@ -814,6 +814,7 @@ class OnlyAWSDeviceAdapter(AWSAdapter):
     route53_zone_id = Field(str, 'Route53 Zone ID')
     route53_zone_name = Field(str, 'Route53 Zone Name')
     route53_zone_is_private = Field(bool, 'Route53 Zone is Private')
+    route53_ec2_instance_id = Field(str, 'Route53 EC2 Instance ID')
     route53_data = ListField(AWSRoute53Record, 'Route53 Record')
     dns_names = ListField(str, 'Associated DNS')
 

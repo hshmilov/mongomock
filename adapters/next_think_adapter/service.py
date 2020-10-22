@@ -47,6 +47,7 @@ class NextThinkAdapter(AdapterBase):
     @staticmethod
     def _test_reachability(client_config):
         return RESTConnection.test_reachability(client_config.get('domain'),
+                                                port=client_config['port'],
                                                 https_proxy=client_config.get('https_proxy'))
 
     @staticmethod

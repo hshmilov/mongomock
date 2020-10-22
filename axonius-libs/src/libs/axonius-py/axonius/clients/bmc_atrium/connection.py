@@ -19,8 +19,11 @@ class BmcAtriumConnection(RESTConnection):
         if not (self._username and self._password):
             raise RESTException('No username or password')
         response = self._post('jwt/login', url_params={'username': self._username, 'password': self._password},
-                              extra_headers={'Content-Type': 'application/x-www-form-urlencoded'})
-        self._session_headers['Authorization'] = f'AR-JWT {response}'
+                              extra_headers={'Content-Type': 'application/x-www-form-urlencoded'},
+                              use_json_in_body=False,
+                              use_json_in_response=False)
+        token = response.decode('utf-8')
+        self._session_headers['Authorization'] = f'AR-JWT {token}'
         self._get('arsys/v1.0/entry/AST:ComputerSystem',
                   url_params={'offset': 0,
                               'limit': DEVICE_PER_PAGE,

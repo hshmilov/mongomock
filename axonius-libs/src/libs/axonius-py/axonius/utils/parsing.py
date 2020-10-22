@@ -303,7 +303,7 @@ def figure_out_os(s):
 
     os_type = None
     distribution = None
-    linux_names = ['linux', 'ubuntu', 'canonical', 'red hat',
+    linux_names = ['linux', 'ubuntu', 'canonical', 'red hat', 'unix',
                    'debian', 'fedora', 'centos', 'oracle', 'opensuse', 'rhel server', 'sles', 'gentoo', 'arch']
 
     ios_devices = ['iphone', 'ipad', 'apple']
@@ -955,6 +955,8 @@ def hostname_not_problematic(adapter_device):
              and 'macbook-pro_root' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'dev' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'test' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'test1' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'qa' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'delete' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'wix-mbp' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'playtikas-macbook-pro' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
@@ -970,10 +972,6 @@ def hostname_not_problematic(adapter_device):
 def is_sccm_or_ad(adapter_device):
     return adapter_device.get('plugin_name') == 'active_directory_adapter' or \
         adapter_device.get('plugin_name') == 'sccm_adapter'
-
-
-def is_snow_device(adapter_device):
-    return adapter_device.get('plugin_name') == 'service_now_adapter'
 
 
 def is_from_deeps_tenable_io_or_aws(adapter_device):
@@ -1332,7 +1330,8 @@ BAD_ASSETS = ['dev', 'localhost', 'delete', 'deleted', 'na', 'macbook-air',
 
 
 def is_asset_before_host_device(adapter_device):
-    if adapter_device.get('plugin_name') in ['service_now_adapter', 'gce_adapter', 'g_naapi_adapter']:
+    if adapter_device.get('plugin_name') in ['service_now_adapter', 'service_now_sql_adapter',
+                                             'service_now_akana_adapter' 'gce_adapter', 'g_naapi_adapter']:
         return True
     return False
 
