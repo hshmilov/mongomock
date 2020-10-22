@@ -63,6 +63,7 @@
               :allow-create-new="false"
               :hide-quick-selections="false"
               :menu-props="{maxWidth: 230}"
+              :custom-sort="categoriesSort"
               @change="fetchAllData"
             />
           </div>
@@ -360,6 +361,9 @@ export default {
     },
     rulesSort(item1, item2) {
       return item1.toLowerCase().localeCompare(item2.toLowerCase(), undefined, { numeric: true });
+    },
+    categoriesSort(item1, item2) {
+      return item1.toLowerCase().localeCompare(item2.toLowerCase());
     },
     prepareActiveRulesMap() {
       // Instead of updating all rules in db, will update only relevant rules.

@@ -188,12 +188,16 @@ export default {
   watch: {
     $route(to) {
       this.currentRuleId = to.params.id;
+      if (!this.currentRuleId) {
+        this.isPanelOpen = false;
+      }
     },
   },
   mounted() {
     const { id } = this.$route.params;
     if (id) {
       this.currentRuleId = id;
+      this.isPanelOpen = true;
     }
   },
   methods: {

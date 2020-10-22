@@ -42,7 +42,9 @@ module.exports = (env) => merge(common(env), {
   devServer: {
     contentBase: './',
     hot: true,
-    historyApiFallback: true,
+    historyApiFallback: {
+      disableDotRule: true,
+    },
   },
   plugins: [
     new webpack.HotModuleReplacementPlugin(),

@@ -18,7 +18,7 @@
         />
       </template>
       <div
-        v-if="selectionCount"
+        v-if="selectionCount && multipleRowSelection"
         slot="state"
         class="selection"
       >
