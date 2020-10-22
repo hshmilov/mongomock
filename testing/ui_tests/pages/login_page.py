@@ -152,10 +152,10 @@ class LoginPage(Page):
     def make_getting_started_disappear(self):
         try:
             self.wait_for_element_present_by_css('.md-overlay')
+            self.click_getting_started_overlay()
         except Exception:
             # if overlay does not exist, most probably logged in user is not admin
             return
-        self.click_getting_started_overlay()
 
     def assert_logged_in(self):
         with pytest.raises(NoSuchElementException):
