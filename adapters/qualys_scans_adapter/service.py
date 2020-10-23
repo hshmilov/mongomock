@@ -928,6 +928,17 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             device.tracking_method = device_raw.get('trackingMethod')
             if self.__fetch_vulnerabilities_data is False:
                 device_raw.pop('vuln', None)
+            try:
+                for source_raw in (device_raw.get('sourceInfo') or {}).get('list') or []:
+                    azure_data = source_raw.get('AzureAssetSourceSimple')
+                    if azure_data:
+                        mac = azure_data.get('macAddress')
+                        if mac:
+                            device.add_nic(mac=mac)
+                        device.cloud_provider = 'Azure'
+                        device.cloud_id = azure_data.get('vmId')
+            except Exception:
+                logger.exception(f'Problem with source info')
             device.set_raw(device_raw)
             if not tags_ok:
                 return None

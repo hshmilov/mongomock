@@ -815,6 +815,16 @@ def igar_with_no_serial(adapter_device):
     return False
 
 
+def remove_qualys_no_mac_with_cloud_id(adapter_device):
+    if not adapter_device.get('plugin_name') in ['qualys_scans_adapter']:
+        return True
+    if not get_cloud_data(adapter_device):
+        return True
+    if adapter_device.get(NORMALIZED_MACS):
+        return True
+    return False
+
+
 def get_host_asset_azure_ad(adapter_device):
     asset = get_asset_or_host_full(adapter_device)
     if asset:
@@ -1165,6 +1175,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         filtered_adapters_list = filter(get_fqdn_or_hostname,
                                         filter(get_normalized_ip, adapters_to_correlate))
         filtered_adapters_list = filter(igar_with_no_serial, filtered_adapters_list)
+        filtered_adapters_list = filter(remove_qualys_no_mac_with_cloud_id, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_fqdn_or_hostname],
                                       [compare_fqdn_or_hostname],
@@ -1180,6 +1191,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         filtered_adapters_list = filter(get_normalized_hostname_str,
                                         filter(get_normalized_ip, adapters_to_correlate))
         filtered_adapters_list = filter(igar_with_no_serial, filtered_adapters_list)
+        filtered_adapters_list = filter(remove_qualys_no_mac_with_cloud_id, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_normalized_hostname_str],
                                       [compare_device_normalized_hostname],
@@ -1488,6 +1500,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         logger.info('Starting to correlate on Asset-Host')
         filtered_adapters_list = filter(get_asset_or_host, adapters_to_correlate)
         filtered_adapters_list = filter(igar_with_no_serial, filtered_adapters_list)
+        filtered_adapters_list = filter(remove_qualys_no_mac_with_cloud_id, filtered_adapters_list)
         inner_rules = [not_wifi_adapters, macs_do_not_contradict,
                        asset_hostnames_do_not_contradict_and_no_chef,
                        serials_do_not_contradict]
@@ -1512,6 +1525,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         logger.info('Starting to correlate on Asset-Host Email')
         filtered_adapters_list = filter(get_asset_or_host, adapters_to_correlate)
         filtered_adapters_list = filter(igar_with_no_serial, filtered_adapters_list)
+        filtered_adapters_list = filter(remove_qualys_no_mac_with_cloud_id, filtered_adapters_list)
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_asset_or_host],
                                       [compare_asset_hosts],
@@ -1532,6 +1546,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         logger.info('Starting to correlate on snowAsset-Host')
         filtered_adapters_list = filter(get_asset_snow_or_host, filter(get_normalized_ip, adapters_to_correlate))
         filtered_adapters_list = filter(igar_with_no_serial, filtered_adapters_list)
+        filtered_adapters_list = filter(remove_qualys_no_mac_with_cloud_id, filtered_adapters_list)
+
         return self._bucket_correlate(list(filtered_adapters_list),
                                       [get_asset_snow_or_host],
                                       [compare_snow_asset_hosts],
