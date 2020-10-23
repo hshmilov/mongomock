@@ -48,6 +48,8 @@ class BmcAtriumAdapter(AdapterBase):
         except RESTException as e:
             message = 'Error connecting to client with domain {0}, reason: {1}'.format(
                 client_config.get('domain'), str(e))
+            if 'Max retries exceeded with' in str(e):
+                message = f'Server {0} is unreachable'.format(client_config.get('domain'))
             logger.exception(message)
             raise ClientConnectionException(message)
 

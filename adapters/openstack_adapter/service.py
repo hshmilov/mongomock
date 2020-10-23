@@ -42,9 +42,20 @@ class OpenstackAdapter(AdapterBase):
         session.connect()
         try:
             for device in session.get_devices():
-                flavor = session.get_flavor(device)
-                image = session.get_image(device)
-                yield (device, flavor, image)
+                try:
+                    flavor = None
+                    try:
+                        flavor = session.get_flavor(device)
+                    except Exception:
+                        logger.debug(f'Problem with flavour', exc_info=True)
+                    image = None
+                    try:
+                        image = session.get_image(device)
+                    except Exception:
+                        logger.debug(f'Problem with image', exc_info=True)
+                    yield (device, flavor, image)
+                except Exception:
+                    logger.exception(f'Problem with device')
         finally:
             session.disconnect()
 

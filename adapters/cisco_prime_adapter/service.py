@@ -34,8 +34,8 @@ class CiscoPrimeAdapter(AdapterBase):
             client.connect()
             return client
         except ClientConnectionException as err:
-            error_message = 'Failed to connect to client {0} using config: {1}'.format(
-                self._get_client_id(client_config), client_config
+            error_message = 'Failed to connect to client {0} '.format(
+                self._get_client_id(client_config)
             )
             logger.error(error_message)
             raise

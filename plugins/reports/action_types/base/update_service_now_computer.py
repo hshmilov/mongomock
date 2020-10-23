@@ -61,6 +61,16 @@ class UpdateServicenowComputerAction(ActionTypeBase):
                     'name': 'ax_snow_fields_map',
                     'type': 'string',
                     'title': 'Axonius to ServiceNow field mapping'
+                },
+                {
+                    'name': 'use_first_ip_only',
+                    'title': 'Use first IP address only',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'ips_delimiter',
+                    'title': 'IP addresses delimiter',
+                    'type': 'string'
                 }
             ],
             'required': [
@@ -81,7 +91,9 @@ class UpdateServicenowComputerAction(ActionTypeBase):
             'password': None,
             'https_proxy': None,
             'extra_fields': None,
-            'verify_ssl': True
+            'verify_ssl': True,
+            'ips_delimiter': '/',
+            'use_first_ip_only': False
         })
 
     # pylint: disable=too-many-arguments
@@ -209,7 +221,10 @@ class UpdateServicenowComputerAction(ActionTypeBase):
                         for nic in nics:
                             ips = nic.get('ips')
                             if ip_address_raw is None and ips and isinstance(ips, list):
-                                ip_address_raw = ','.join(ips)
+                                ips_delimiter = self._config.get('ips_delimiter') or '/'
+                                if self._config.get('use_first_ip_only'):
+                                    ips = [ips[0]]
+                                ip_address_raw = ips_delimiter.join(ips)
                             mac = nic.get('mac')
                             if mac_address_raw is None and mac and isinstance(mac, str):
                                 mac_address_raw = mac
