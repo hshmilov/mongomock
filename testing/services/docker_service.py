@@ -299,7 +299,7 @@ class DockerService(AxonService):
         env_variables.extend(['--env', f'PACKAGE_NAME={self.package_name}'])
         env_variables.extend(['--env', f'SERVICE_CLASS_NAME={self.service_class_name}'])
         env_variables.extend(['--env', f'UWSGI_THREADS={self.get_max_uwsgi_threads}'])
-        if int(self._get_sysctl_value('net.core.somaxconn', '-1')) < self.get_max_uwsgi_threads:
+        if int(self._get_sysctl_value('net.core.somaxconn', '-1')) < self.get_uwsgi_max_listen_conns:
             env_variables.extend(['--env', f'UWSGI_LISTEN={self.get_uwsgi_max_listen_conns}'])
         env_variables.extend(['--env', f'UWSGI_PROCESSES={self.get_max_uwsgi_processes}'])
         env_variables.extend(['--env', f'MONGO_MAXPOOLSIZE={self.mongo_maxpoolsize}'])
