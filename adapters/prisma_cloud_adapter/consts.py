@@ -11,6 +11,7 @@ class CloudInstances(Enum):
 DEVICE_PER_PAGE = 200
 MAX_NUMBER_OF_DEVICES = 2000000
 
+DEFAULT_HOURS_FILTER = 7 * 24  # 7 Days in hours
 TOKEN_VALID_TIME = 600  # API docs - 10 minutes
 
 URL_API_FORMAT = '{}://{}'

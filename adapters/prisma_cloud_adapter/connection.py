@@ -8,8 +8,9 @@ from prisma_cloud_adapter.consts import TOKEN_VALID_TIME, DEVICE_PER_PAGE, QUERI
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+# pylint: disable=invalid-triple-quote
 class PrismaCloudConnection(RESTConnection):
-    """ rest client for PrismaCloud adapter """
+    """ REST client for PrismaCloud adapter """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, url_base_prefix='',
@@ -30,7 +31,7 @@ class PrismaCloudConnection(RESTConnection):
             if not isinstance(response, dict) or 'token' not in response:
                 raise RESTException(f'Login failed, received invalid response: {response}')
 
-            self._session_refresh = datetime.datetime.now() + datetime.timedelta(seconds=(TOKEN_VALID_TIME - 50))
+            self._session_refresh = datetime.datetime.now() + datetime.timedelta(seconds=(TOKEN_VALID_TIME - 300))
             self._session_headers = {
                 'x-redlock-auth': response.get('token')
             }
@@ -47,7 +48,7 @@ class PrismaCloudConnection(RESTConnection):
             if not isinstance(response, dict) or 'token' not in response:
                 raise RESTException(f'Refresh token failed, received invalid response: {response}')
 
-            self._session_refresh = datetime.datetime.now() + datetime.timedelta(seconds=(TOKEN_VALID_TIME - 50))
+            self._session_refresh = datetime.datetime.now() + datetime.timedelta(seconds=(TOKEN_VALID_TIME - 300))
             self._session_headers = {
                 'x-redlock-auth': response.get('token')
             }
@@ -70,17 +71,18 @@ class PrismaCloudConnection(RESTConnection):
             raise ValueError(f'Error: Invalid response from server, please check domain or credentials')
 
     # pylint: disable=too-many-nested-blocks,logging-format-interpolation
-    def _paginated_get(self):
+    def _paginated_get(self, hours_filter: int):
         try:
             for query, cloud_type in QUERIES:
+                total_object_fetched = 0
                 body_params = {
                     'limit': DEVICE_PER_PAGE,
                     'query': query,
                     'timeRange': {
                         'type': 'relative',
                         'value': {
-                            'amount': 7,
-                            'unit': 'day'
+                            'amount': hours_filter,
+                            'unit': 'hour'
                         }
                     }
                 }
@@ -93,6 +95,7 @@ class PrismaCloudConnection(RESTConnection):
 
                 for instance in (response.get('data').get('items') or []):
                     yield instance, cloud_type
+                    total_object_fetched += 1
 
                 next_page_token = response.get('data').get('nextPageToken')
 
@@ -108,15 +111,18 @@ class PrismaCloudConnection(RESTConnection):
                         break
                     for instance in response.get('items'):
                         yield instance, cloud_type
+                        total_object_fetched += 1
 
                     next_page_token = response.get('nextPageToken')
 
+                logger.info(f'Got total of {total_object_fetched} of {cloud_type}')
         except Exception as err:
             logger.exception(f'Invalid request made, {str(err)}')
             raise
 
     def _get_policies_ids(self):
         try:
+            total_fetched_policies = 0
             body_params = BODY_PARAMS
             body_params['filters'].append({
                 'name': 'alert.status',
@@ -125,6 +131,7 @@ class PrismaCloudConnection(RESTConnection):
             })
 
             policies_ids = set()
+            self._refresh_token()
             response = self._post('alert/policy',  body_params=body_params)
 
             if not isinstance(response, list):
@@ -134,7 +141,9 @@ class PrismaCloudConnection(RESTConnection):
             for policy in response:
                 if policy.get('policyId'):
                     policies_ids.add(policy.get('policyId'))
+                    total_fetched_policies += 1
 
+            logger.info(f'Got total of {total_fetched_policies} policies')
             return list(policies_ids)
         except Exception as err:
             logger.exception(f'Failed fetching Security Group policies ids, {str(err)}')
@@ -146,6 +155,7 @@ class PrismaCloudConnection(RESTConnection):
             return
 
         try:
+            total_security_groups = 0
             existing_devices = {}
             for policy_id in policies_ids:
                 body_params = BODY_PARAMS
@@ -157,6 +167,7 @@ class PrismaCloudConnection(RESTConnection):
                     'operator': '='
                 })
                 while True:
+                    self._refresh_token()
                     response = self._post('v2/alert', body_params=body_params)
 
                     if not isinstance(response.get('items'), list):
@@ -173,6 +184,7 @@ class PrismaCloudConnection(RESTConnection):
                         if item.get('resource').get('rrn'):
                             existing_devices[item.get('resource').get('rrn')] = True
                         yield item.get('resource'), CloudInstances.SECURITYGROUP.value
+                        total_security_groups += 1
 
                     if not response.get('nextPageToken'):
                         break
@@ -182,16 +194,19 @@ class PrismaCloudConnection(RESTConnection):
                         'limit': DEVICE_PER_PAGE,
                         'pageToken': next_page_token
                     }
-
+            logger.info(f'Got total of {total_security_groups} of security groups')
         except Exception as err:
             logger.exception(f'Invalid request made, {str(err)}')
             raise
 
-    def get_device_list(self):
-        self._refresh_token()
+    # pylint: disable=arguments-differ
+    def get_device_list(self, hours_filter: int):
         try:
-            yield from self._paginated_get()
+            yield from self._paginated_get(hours_filter=hours_filter)
+        except RESTException as err:
+            logger.exception(f'Failed paginating Prisma Cloud cloud devices. {str(err)}')
+
+        try:
             yield from self._paginated_security_groups()
         except RESTException as err:
-            logger.exception(str(err))
-            raise
+            logger.exception(f'Failed paginating Prisma Cloud security groups. {str(err)}')

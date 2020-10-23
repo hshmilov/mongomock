@@ -7,10 +7,11 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import int_or_none
 from prisma_cloud_adapter.connection import PrismaCloudConnection
 from prisma_cloud_adapter.client_id import get_client_id
 from prisma_cloud_adapter.structures import PrismaCloudInstance
-from prisma_cloud_adapter.consts import URL_API_FORMAT, CloudInstances
+from prisma_cloud_adapter.consts import URL_API_FORMAT, CloudInstances, DEFAULT_HOURS_FILTER
 from prisma_cloud_adapter.structures import EC2Instance, AzureInstance, GCPInstance, SecurityGroup, SecurityRule, \
     SharedFields
 
@@ -69,8 +70,8 @@ class PrismaCloudAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    # pylint: disable=arguments-differ
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -79,8 +80,15 @@ class PrismaCloudAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Server
         """
+        hours_filter = DEFAULT_HOURS_FILTER
+        if self._last_seen_timedelta:
+            # Convert seconds to hours -> seconds / seconds in 1 hour
+            hours_filter = int_or_none(self._last_seen_timedelta.seconds / 3600) or DEFAULT_HOURS_FILTER
+
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(
+                hours_filter=hours_filter
+            )
 
     @staticmethod
     def _clients_schema():
