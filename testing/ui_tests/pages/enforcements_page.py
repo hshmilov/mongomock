@@ -749,16 +749,17 @@ class EnforcementsPage(EntitiesPage):
         self.add_deploy_software(enforcement_name)
         self.create_trigger(enforcement_view)
 
-    def create_run_wmi_enforcement(self, *regkeys):
+    def create_run_wmi_enforcement(self, *regkeys, trigger_query=ENFORCEMENT_WMI_SAVED_QUERY_NAME):
         self.switch_to_page()
         self.create_basic_enforcement(ENFORCEMENT_WMI_EVERY_CYCLE)
         self.add_run_wmi_scan(*regkeys, name=ENFORCEMENT_WMI_EVERY_CYCLE)
         self.add_tag_entities(name='Great Success', tag='Great Success', action_cond=self.SUCCESS_ACTIONS_TEXT)
-        self.create_trigger(ENFORCEMENT_WMI_SAVED_QUERY_NAME)
+        self.create_trigger(trigger_query)
         self.switch_to_page()
         self.wait_for_table_to_be_responsive()
 
-    def create_run_wmi_scan_on_each_cycle_enforcement(self):
+    def create_run_wmi_scan_on_each_cycle_enforcement(self, query_name=ENFORCEMENT_WMI_SAVED_QUERY_NAME,
+                                                      query_expression=ENFORCEMENT_WMI_SAVED_QUERY):
         # First, check if we have it.
         self.switch_to_page()
         try:
@@ -768,8 +769,8 @@ class EnforcementsPage(EntitiesPage):
         except Exception:
             pass
         self.test_base.devices_page.switch_to_page()
-        self.test_base.devices_page.run_filter_and_save(ENFORCEMENT_WMI_SAVED_QUERY_NAME, ENFORCEMENT_WMI_SAVED_QUERY)
-        self.create_run_wmi_enforcement()
+        self.test_base.devices_page.run_filter_and_save(query_name, query_expression)
+        self.create_run_wmi_enforcement(trigger_query=query_name)
 
     def add_deploying_consequences(self, enforcement_name, success_tag_name, failure_tag_name, failure_isolate_name):
         self.switch_to_page()

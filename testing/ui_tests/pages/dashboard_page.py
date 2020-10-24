@@ -917,6 +917,16 @@ class DashboardPage(BasePage):
             histogram_data.append(self.get_histogram_line_from_histogram(histogram, i + 1).text)
         return histogram_data
 
+    def get_histogram_key_values(self, histogram):
+        data = {}
+        chart_items = self.get_histogram_items_on_pagination(histogram)
+
+        for item in chart_items:
+            val_key = item.text.split('\n')
+            data[val_key[1]] = val_key[0]
+
+        return data
+
     @staticmethod
     def get_pie_chart_slices(pie_chart):
         return pie_chart.find_elements_by_css_selector('.wrapper svg g text')
@@ -1496,3 +1506,9 @@ class DashboardPage(BasePage):
 
     def assert_is_add_new_chart_card(self, card):
         assert card.find_element_by_css_selector(self.ADD_NEW_CARD_BUTTON_CSS)
+
+    def get_histogram_chart_values(self, chart_name):
+        histogram_card = self.get_card(chart_name)
+        chart = self.get_histogram_chart_from_card(histogram_card)
+        data = self.get_histogram_key_values(chart)
+        return data

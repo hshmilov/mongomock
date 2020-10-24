@@ -537,7 +537,6 @@ testing/test_credentials/test_google_mdm_credentials.py
 testing/test_credentials/test_gotoassist_credentials.py
 testing/test_credentials/test_hyper_v_credentials.py
 testing/test_credentials/test_infinite_sleep_credentials.py
-testing/test_credentials/test_kaseya_credentials.py
 testing/test_credentials/test_openstack_credentials.py
 testing/test_credentials/test_puppet_credentials.py
 testing/test_credentials/test_solarwinds_orion_credentials.py

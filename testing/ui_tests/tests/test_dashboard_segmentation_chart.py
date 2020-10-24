@@ -1,10 +1,30 @@
 from ui_tests.tests.test_dashboard_chart_base import TestDashboardChartBase
-from ui_tests.tests.ui_consts import (OS_TYPE_OPTION_NAME)
+from ui_tests.tests.ui_consts import (OS_TYPE_OPTION_NAME, TAGS_FIELD_NAME, DEVICES_MODULE)
 
 
 class TestDashboardSegmentationChart(TestDashboardChartBase):
-
     TEST_SEGMENTATION_TITLE = 'test segmentation'
+    TEST_TAGS_SEGMENTATION_TITLE = 'Test tags segmentation'
+
+    TEST_TAG_WINDOWS = 'test_win_tag'
+    TEST_TAG_GCP = 'test_gcp_tag'
+
+    def _create_tags_by_search_term(self, tags_dict):
+        expected_values = {}
+
+        for tag_name, search_term in tags_dict.items():
+            self.devices_page.search(search_term)
+            self.devices_page.toggle_select_all_rows_checkbox()
+            expected_values[tag_name] = self.devices_page.get_table_count()
+
+            self.devices_page.open_actions_menu()
+            self.devices_page.click_actions_tag_button()
+            self.devices_page.fill_tags_input_text(tag_name)
+            self.devices_page.click_create_new_tag_link_button()
+            self.devices_page.click_tag_save_button()
+            self.devices_page.wait_for_success_tagging_message(expected_values[tag_name])
+
+        return expected_values
 
     def test_segmentation_pie_total_values(self):
         self.base_page.run_discovery()
@@ -56,3 +76,22 @@ class TestDashboardSegmentationChart(TestDashboardChartBase):
         # compare histograms_item_titles of pagination with data grabbed from devices table
         self.dashboard_page.assert_data_devices_fit_pagination_data(histogram_titles_list, host_names_list)
         self.dashboard_page.remove_card(self.TEST_SEGMENTATION_TITLE)
+
+    def test_segmentation_tags(self):
+        tags = {
+            self.TEST_TAG_WINDOWS: 'WIN',
+            self.TEST_TAG_GCP: 'gcp'
+        }
+        self.base_page.run_discovery()
+        self.devices_page.switch_to_page()
+        expected_vals = self._create_tags_by_search_term(tags)
+
+        self.dashboard_page.switch_to_page()
+        self.dashboard_page.add_segmentation_card(DEVICES_MODULE, TAGS_FIELD_NAME,
+                                                  self.TEST_TAGS_SEGMENTATION_TITLE,
+                                                  include_empty=False)
+        self.dashboard_page.wait_for_spinner_to_end()
+        data_dict = self.dashboard_page.get_histogram_chart_values(self.TEST_TAGS_SEGMENTATION_TITLE)
+
+        for tag_name in expected_vals:
+            assert int(data_dict[tag_name]) == expected_vals[tag_name]
