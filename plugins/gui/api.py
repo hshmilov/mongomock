@@ -1225,12 +1225,12 @@ class APIMixin:
     @filtered_entities()
     @api_add_rule(rule='devices/labels', methods=['GET'], required_permission=DEVICE_ASSETS_VIEW)
     def api_get_device_labels(self, mongo_filter):
-        return self._entity_labels(self.devices_db, self.devices, mongo_filter)
+        return self._entity_labels(self.devices_db, self.devices, mongo_filter, EntityType.Devices)
 
     @filtered_entities()
     @api_add_rule(rule='devices/labels', methods=['POST', 'DELETE'], required_permission=DEVICE_ASSETS_UPDATE)
     def api_update_device_labels(self, mongo_filter):
-        return self._entity_labels(self.devices_db, self.devices, mongo_filter)
+        return self._entity_labels(self.devices_db, self.devices, mongo_filter, EntityType.Devices)
 
     @api_add_rule(rule='devices/destroy', methods=['POST'], required_permission=DEVICE_ASSETS_UPDATE)
     def api_devices_destroy(self):
@@ -1318,12 +1318,12 @@ class APIMixin:
     @filtered_entities()
     @api_add_rule(rule='users/labels', methods=['GET'], required_permission=USER_ASSETS_VIEW)
     def api_get_user_labels(self, mongo_filter):
-        return self._entity_labels(self.users_db, self.users, mongo_filter)
+        return self._entity_labels(self.users_db, self.users, mongo_filter, EntityType.Users)
 
     @filtered_entities()
     @api_add_rule(rule='users/labels', methods=['POST', 'DELETE'], required_permission=USER_ASSETS_UPDATE)
     def api_update_user_labels(self, mongo_filter):
-        return self._entity_labels(self.users_db, self.users, mongo_filter)
+        return self._entity_labels(self.users_db, self.users, mongo_filter, EntityType.Users)
 
     @api_add_rule(rule='users/destroy', methods=['POST'], required_permission=USER_ASSETS_UPDATE)
     def api_users_destroy(self):

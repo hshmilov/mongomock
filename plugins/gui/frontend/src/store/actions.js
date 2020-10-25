@@ -121,6 +121,11 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
 
   module.count.data = undefined;
 
+  let useCacheEntry = true;
+  if (payload.useCacheEntry !== undefined) {
+    useCacheEntry = payload.useCacheEntry;
+  }
+
   if (payload.isExperimentalAPI && ['users', 'devices'].includes(path) && view.query.search !== null) {
     // eslint-disable-next-line consistent-return
     await dispatch(REQUEST_API, {
@@ -139,6 +144,7 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
       data: {
         filter: view.query.filter,
         history: view.historical,
+        use_cache_entry: useCacheEntry,
       },
       payload,
     });
@@ -151,6 +157,7 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
           filter: view.query.filter,
           history: view.historical,
           quick: true,
+          use_cache_entry: useCacheEntry,
         },
         payload,
       });
@@ -182,6 +189,8 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
         });
     }
 
+    params.push(`use_cache_entry=${useCacheEntry.toString()}`);
+
     dispatch(REQUEST_API, {
       rule: `${path}/count?${params.join('&')}`,
       type: UPDATE_DATA_COUNT,
@@ -211,6 +220,9 @@ const createPostContentRequest = (state, payload) => {
   }
   if (payload.limit !== undefined) {
     params.limit = payload.limit;
+  }
+  if (payload.useCacheEntry !== undefined) {
+    params.use_cache_entry = payload.useCacheEntry;
   }
   const fields = payload.fields || _get(view, 'fields', []);
   if (fields.length) {
@@ -308,7 +320,12 @@ export const fetchDataContent = async ({ state, dispatch }, payload) => {
   const getCount = !(payload.getCount === false);
 
   if (!payload.skip && module.count !== undefined && getCount) {
-    await dispatch(FETCH_DATA_COUNT, { module: payload.module, endpoint: payload.endpoint, isExperimentalAPI: payload.isExperimentalAPI });
+    await dispatch(FETCH_DATA_COUNT, {
+      module: payload.module,
+      endpoint: payload.endpoint,
+      isExperimentalAPI: payload.isExperimentalAPI,
+      useCacheEntry: payload.useCacheEntry,
+    });
   }
 
   const { view } = module;
@@ -803,5 +820,18 @@ export const fetchInvalidReferences = ({ state, dispatch, commit }, payload) => 
       uuid: payload.uuid,
       validReferences: references,
     });
+  });
+};
+
+export const RESET_QUERY_CACHE = 'RESET_QUERY_CACHE';
+export const resetQueryCache = ({ state, dispatch }, payload) => {
+  const module = getModule(state, payload);
+  if (!module) return;
+  return dispatch(REQUEST_API, {
+    rule: `${payload.module}/reset_cache`,
+    method: 'POST',
+    data: {
+      filter: payload.filter,
+    },
   });
 };

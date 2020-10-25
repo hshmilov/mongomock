@@ -116,3 +116,5 @@ export const ActionModalComponentByNameEnum = {
   [ModalActionsEnum.filter_out_from_query_result]: 'XFilterOutModal',
   [ModalActionsEnum.add_custom_data]: 'XAddCustomDataModal',
 };
+
+export const ENTITIES_PAGES_LIMIT = 7;

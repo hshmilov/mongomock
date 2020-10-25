@@ -39,7 +39,7 @@ class TestDevicesSimpleQuery(TestBase):
         self.dashboard_page.switch_to_page()
         self.base_page.run_discovery()
         self.devices_page.switch_to_page()
-        self.devices_page.wait_for_table_to_load()
+        self.devices_page.wait_for_table_to_be_responsive()
 
         self.devices_page.click_row_checkbox()
 

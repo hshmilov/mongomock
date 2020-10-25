@@ -171,6 +171,7 @@ def build_images(pull=False, rebuild=False, exclude=None, prod=True, tag=None):
     images.append(axonius_system.pull_curl_image(pull, show_print=False))
     images.append(axonius_system.pull_container_alpine(pull, show_print=False))
     images.extend(axonius_system.pull_weave_images(pull, show_print=False))
+    images.extend(axonius_system.pull_redis_image(pull, tag, show_print=False))
     print_state(f'Building all images')
     images.append(axonius_system.build_libs(rebuild, image_tag=tag, show_print=False))
     services = [name for name, variable in axonius_system.get_all_plugins()]

@@ -34,6 +34,7 @@ from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.axonius_query_language import parse_filter, parse_filter_non_entities
 from axonius.utils.revving_cache import rev_cached_entity_type
+from axonius.utils.cache.entities_cache import entities_count_redis_cached
 from axonius.utils.threading import singlethreaded
 from axonius.utils.dict_utils import is_filter_in_value, make_hash
 from axonius.utils import serial_csv
@@ -253,7 +254,7 @@ def filtered_entities():
             filter_expr = None
             try:
                 content = self.get_request_data_as_object() if request.method == 'POST' else request.args
-                filter_expr = content.get('filter')
+                filter_expr = content.get('filter') or None
                 history_date = content.get('history')
 
                 path_parts = request.path.strip('/').split('/')
@@ -640,6 +641,25 @@ def metadata():
     return wrap
 
 
+def entities_cache():
+    """
+    Decorator stating if the endpoint should use redis cache or not
+    """
+
+    def wrap(func):
+        @functools.wraps(func)
+        def actual_wrapper(self, *args, **kwargs):
+            data = self.get_request_data_as_object() if request.method == 'POST' else request.args
+            use_cache_entry = get_boolean_parameter_value(data, 'use_cache_entry')
+            if not isinstance(use_cache_entry, bool):
+                use_cache_entry = True
+            return func(self, use_cache_entry=use_cache_entry, *args, **kwargs)
+
+        return actual_wrapper
+
+    return wrap
+
+
 def return_api_format():
     """
     The property 'api_format', sent in the request data, is added as an argument to the decorated method
@@ -723,6 +743,20 @@ def get_entities_count(entities_filter,
     if is_adapter_where_query:
         return entity_collection.count(processed_filter)
     return entity_collection.count_documents(processed_filter)
+
+
+@entities_count_redis_cached()
+def get_entities_count_cached(entity_collection,
+                              entity_type,
+                              entities_filter,
+                              history_date: datetime = None,
+                              quick: bool = False,
+                              is_date_filter_required: bool = False):
+    """
+    see get_entities_count.
+    Note, that entity_type is not used here, but it's needed inside the cache class.
+    """
+    return get_entities_count(entities_filter, entity_collection, history_date, quick, is_date_filter_required)
 
 
 # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements,too-many-locals

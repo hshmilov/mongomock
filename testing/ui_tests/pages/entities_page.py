@@ -3,6 +3,7 @@ import logging
 import re
 import time
 import typing
+from datetime import datetime
 
 import requests
 from retrying import retry
@@ -269,6 +270,9 @@ class EntitiesPage(Page):
     REMOVE_FIELD_FROM_COLUMNS = 'Remove Field from Columns'
 
     COLUMN_SORT_CONTAINER_CSS = '.sort-container'
+
+    RESET_CACHE_CSS = '.reset-cache'
+    CACHE_LAST_UPDATED_CSS = '.table-header .table-td-content-last_updated'
 
     @property
     def url(self):
@@ -2002,3 +2006,10 @@ class EntitiesPage(Page):
         button.click()
         self.assert_toggle_column(button, disabled=False, add=exist_in_table)
         assert (field in self.get_columns_header_text()) != exist_in_table
+
+    def reset_queries_cache(self):
+        self.driver.find_element_by_css_selector(self.RESET_CACHE_CSS).click()
+
+    def get_query_cache_last_updated(self):
+        last_updated_text = self.driver.find_element_by_css_selector(self.CACHE_LAST_UPDATED_CSS).text
+        return datetime.strptime(last_updated_text, '%Y-%m-%d %H:%M:%S')

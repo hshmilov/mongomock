@@ -424,6 +424,7 @@ class TestBase:
         if not pytest.config.option.teardown_keep_db:
             self._clean_db()
         self.quit_browser()
+        self.axonius_system.flush_redis_entities_cache()
         logger.info(f'finishing teardown_method {method.__name__}')
 
     def quit_browser(self):

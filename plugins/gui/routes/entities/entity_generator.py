@@ -7,15 +7,15 @@ from itertools import islice
 from flask import (jsonify,
                    make_response, request)
 
-from axonius.consts.gui_consts import FILE_NAME_TIMESTAMP_FORMAT, ACTIVITY_PARAMS_COUNT, FeatureFlagsNames
+from axonius.consts.gui_consts import FILE_NAME_TIMESTAMP_FORMAT, ACTIVITY_PARAMS_COUNT, FeatureFlagsNames, GuiCache
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
 from axonius.plugin_base import EntityType, return_error
-from axonius.utils.db_querying_helper import get_entities
+from axonius.utils.db_querying_helper import get_entities, clear_entities_query_cache
 from axonius.utils.gui_helpers import (historical, paginated,
                                        filtered_entities, sorted_endpoint,
                                        projected, filtered_fields,
                                        entity_fields, search_filter,
-                                       schema_fields as schema, metadata, return_api_format)
+                                       schema_fields as schema, metadata, return_api_format, entities_cache)
 from axonius.utils.json_encoders import iterator_jsonify
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from axonius.utils.threading import GLOBAL_RUN_AND_FORGET
@@ -52,6 +52,7 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @projected()
         @filtered_fields()
         @metadata()
+        @entities_cache()
         @gui_route_logged_in(methods=['GET', 'POST'], required_permission=PermissionValue.get(
             PermissionAction.View, permission_category), skip_activity=True)
         def get(self, limit, skip, mongo_filter, mongo_sort,
@@ -59,10 +60,17 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                 field_filters,
                 excluded_adapters,
                 get_metadata: bool = True,
-                include_details: bool = False):
-            iterable, cursor_obj = self._get_entities(excluded_adapters, field_filters, history, include_details, limit,
-                                                      mongo_filter, mongo_projection, mongo_sort, skip)
-
+                include_details: bool = False,
+                use_cache_entry: bool = True):
+            is_cache_enabled = self._system_settings.get(GuiCache.root_key, {}).get(GuiCache.enabled, False)
+            ttl = self._system_settings.get(GuiCache.root_key, {}).get(GuiCache.ttl, 60) * 60
+            iterable, cursor_obj, cache_last_updated = self._get_entities(excluded_adapters, field_filters, history,
+                                                                          include_details, limit, mongo_filter,
+                                                                          mongo_projection, mongo_sort, skip,
+                                                                          use_cache=True,
+                                                                          use_cache_entry=use_cache_entry,
+                                                                          is_cache_enabled=is_cache_enabled,
+                                                                          cache_ttl=ttl)
             if get_metadata:
                 asset_count = self._get_assets_count(
                     entity_type=self.entity_type,
@@ -75,6 +83,8 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                 page_meta['size'] = len(assets)
                 return jsonify({'page': page_meta, 'assets': assets})
 
+            if is_cache_enabled:
+                return jsonify({'entities': iterable, 'cache_last_updated': cache_last_updated})
             return iterator_jsonify(iterable)
 
         @allow_experimental()
@@ -93,8 +103,10 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                        excluded_adapters,
                        get_metadata: bool = True,
                        include_details: bool = False):
-            iterable, cursor_obj = self._get_entities(excluded_adapters, field_filters, history, include_details, limit,
-                                                      mongo_filter, mongo_projection, mongo_sort, skip, use_cursor=True)
+            iterable, cursor_obj, _ = self._get_entities(excluded_adapters, field_filters, history,
+                                                         include_details, limit, mongo_filter,
+                                                         mongo_projection, mongo_sort, skip, use_cursor=True,
+                                                         use_cache=False)
             assets = [asset for asset in islice(iterable, limit)]
             if get_metadata:
                 page_meta = get_page_metadata(skip=skip,
@@ -107,7 +119,10 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
             return iterator_jsonify(iterable)
 
         def _get_entities(self, excluded_adapters, field_filters, history, include_details, limit, mongo_filter,
-                          mongo_projection, mongo_sort, skip, use_cursor=False):
+                          mongo_projection, mongo_sort, skip, use_cursor=False, use_cache=False,
+                          use_cache_entry=True,
+                          is_cache_enabled=False,
+                          cache_ttl=None):
             request_data = self.get_request_data_as_object() if request.method == 'POST' else request.args
             # Filter all _preferred fields because they're calculated dynamically, instead filter by original values
             mongo_sort = {x.replace('_preferred', ''): mongo_sort[x] for x in mongo_sort}
@@ -118,17 +133,22 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                 limit,
                 mongo_sort,
                 mongo_projection)
-            iterable, cursor_obj = get_entities(limit, skip, mongo_filter, mongo_sort, mongo_projection,
-                                                self.entity_type,
-                                                default_sort=self._system_settings.get(
-                                                    'defaultSort'),
-                                                history_date=history,
-                                                include_details=include_details,
-                                                field_filters=field_filters,
-                                                excluded_adapters=excluded_adapters,
-                                                use_cursor=use_cursor,
-                                                cursor_id=request_data.get('cursor', None)
-                                                )
+            iterable, cursor_obj, cache_last_updated = \
+                get_entities(limit, skip, mongo_filter, mongo_sort,
+                             mongo_projection,
+                             self.entity_type,
+                             default_sort=self._system_settings.get('defaultSort'),
+                             history_date=history,
+                             include_details=include_details,
+                             field_filters=field_filters,
+                             excluded_adapters=excluded_adapters,
+                             use_cursor=use_cursor,
+                             cursor_id=request_data.get('cursor', None),
+                             use_cache=use_cache,
+                             use_cache_entry=use_cache_entry,
+                             is_cache_enabled=is_cache_enabled,
+                             cache_ttl=cache_ttl)
+
             # allow compare only if compare flag is on adn ExperimentalAPI is off (we don't execute twice)
             if self.feature_flags_config().get(FeatureFlagsNames.BandicootCompare, False) \
                     and not self.feature_flags_config().get(FeatureFlagsNames.ExperimentalAPI, False):
@@ -136,7 +156,7 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                 logger.info('Executing query compare async')
                 # extract request and transfer it to threaded function to compare with bandicoot
                 GLOBAL_RUN_AND_FORGET.submit(compare_results, self.entity_type, request_data, iterable)
-            return iterable, cursor_obj
+            return iterable, cursor_obj, cache_last_updated
 
         @gui_route_logged_in('history_dates')
         def entities_history_dates(self):
@@ -184,13 +204,22 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @allow_experimental(count=True)
         @filtered_entities()
         @historical()
+        @entities_cache()
         @gui_route_logged_in('count', methods=['GET', 'POST'], required_permission=PermissionValue.get(
             PermissionAction.View, permission_category), skip_activity=True)
-        def get_count(self, mongo_filter, history: datetime):
+        def get_count(self, mongo_filter, history: datetime, use_cache_entry: bool = True):
             content = self.get_request_data_as_object()
             quick = content.get('quick') or request.args.get('quick')
             quick = quick == 'True'
-            mongo_result = str(self._get_entity_count(self.entity_type, mongo_filter, history, quick))
+            is_cache_enabled = self._system_settings.get(GuiCache.root_key, {}).get(GuiCache.enabled, False)
+            ttl = self._system_settings.get(GuiCache.root_key, {}).get(GuiCache.ttl, 60) * 60
+            mongo_result = str(self._get_entity_count_cached(self.entity_type,
+                                                             mongo_filter,
+                                                             history,
+                                                             quick,
+                                                             is_cache_enabled,
+                                                             use_cache_entry,
+                                                             ttl))
             # allow compare only if compare flag is on adn ExperimentalAPI is off (we don't execute twice)
             if not quick and self.feature_flags_config().get(FeatureFlagsNames.BandicootCompare, False) \
                     and not self.feature_flags_config().get(FeatureFlagsNames.ExperimentalAPI, False):
@@ -210,7 +239,7 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
             db, namespace = (self.devices_db, self.devices) if self.entity_type == EntityType.Devices else \
                 (self.users_db, self.users)
             return self._entity_labels(
-                db, namespace, mongo_filter)
+                db, namespace, mongo_filter, self.entity_type)
 
         @filtered_entities()
         @gui_route_logged_in('labels', methods=['POST', 'DELETE'], required_permission=PermissionValue.get(
@@ -219,7 +248,7 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
             db, namespace = (self.devices_db, self.devices) if self.entity_type == EntityType.Devices else \
                 (self.users_db, self.users)
             return self._entity_labels(
-                db, namespace, mongo_filter)
+                db, namespace, mongo_filter, self.entity_type)
 
         @filtered_entities()
         @gui_route_logged_in('disable', methods=['POST'])
@@ -352,5 +381,12 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
             if m:
                 return EntityType(m.group(1))
             return None
+
+        @filtered_entities()
+        @gui_route_logged_in(rule='reset_cache', methods=['POST'], required_permission=PermissionValue.get(
+            PermissionAction.View, permission_category), skip_activity=True)
+        def reset_query_cache(self, mongo_filter):
+            clear_entities_query_cache(mongo_filter, self.entity_type)
+            return ''
 
     return Entity

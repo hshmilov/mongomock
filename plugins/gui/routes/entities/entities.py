@@ -20,6 +20,7 @@ from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import EntityType, return_error
 from axonius.types.correlation import (MAX_LINK_AMOUNT, CorrelationReason,
                                        CorrelationResult)
+from axonius.utils.db_querying_helper import clear_entities_query_cache
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from axonius.utils.gui_helpers import (add_labels_to_entities,
                                        get_entity_labels, entity_fields, get_connected_user_id,
@@ -337,7 +338,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
             not_archived_saved_queries, {'name': 1, '_id': 0}
         )
 
-    def _entity_labels(self, db, namespace, mongo_filter):
+    def _entity_labels(self, db, namespace, mongo_filter, entity_type):
         """
         GET Find all tags that currently belong to devices, to form a set of current tag values
         POST Add new tags to the list of given devices
@@ -373,6 +374,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
             logger.exception(f'Tagging did not complete')
             return return_error(f'Tagging did not complete. First error: {e}', 400)
 
+        clear_entities_query_cache(mongo_filter, entity_type)
         return str(len(internal_axon_ids)), 200
 
     def _delete_entities_by_internal_axon_id(self, entity_type: EntityType, entities_selection, mongo_filter):
@@ -399,7 +401,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
             }
         })
         self._trigger('clear_dashboard_cache', blocking=False)
-
+        clear_entities_query_cache(mongo_filter, entity_type)
         return jsonify({'count': str(deleted_result.deleted_count)})
 
     def _save_query_to_history(self, entity_type: EntityType, view_filter, skip, limit, sort, projection):
@@ -526,6 +528,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         self._save_field_names_to_db(entity_type)
         self._trigger('clear_dashboard_cache', blocking=False)
         entity_fields.clean_cache()
+        clear_entities_query_cache(mongo_filter, entity_type)
         return '', 200
 
     def _get_entity_hyperlinks(self, entity_type: EntityType) -> Dict[str, str]:
@@ -560,6 +563,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
             'original_entities': internal_axon_ids,
             'user_id': get_connected_user_id()
         }, reason=CorrelationReason.UserManualLink)
+        clear_entities_query_cache(mongo_filter, entity_type)
         return self.link_adapters(entity_type, correlation, entities_candidates_hint=list(internal_axon_ids))
 
     def _unlink_axonius_entities(self, entity_type: EntityType, mongo_filter):
@@ -598,7 +602,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
             for adapter in adapters[:-1]:
                 # Unlink all adapters except the last
                 self.unlink_adapter(entity_type, adapter[PLUGIN_UNIQUE_NAME], adapter['data']['id'])
-
+        clear_entities_query_cache(mongo_filter, entity_type)
         return ''
 
     def run_actions(self, action_data, mongo_filter):

@@ -67,16 +67,16 @@
           </div>
           <AMenu slot="overlay">
             <AMenuItem
-              key="0"
               id="saveChanges"
+              key="0"
               :disabled="!valid || selectedView.predefined || !canUpdate"
               @click="onSaveClicked"
             >Save
             </AMenuItem>
             <AMenuItem
+              id="discardChanges"
               key="1"
               @click="reloadSelectedView"
-              id="discardChanges"
             >Discard Changes
             </AMenuItem>
           </AMenu>
@@ -228,7 +228,6 @@ export default {
       saveView: SAVE_DATA_VIEW,
       fetchInvalidReferences: FETCH_QUERY_INVALID_REFERENCES,
     }),
-
     resetQuery: _debounce(function resetQuery() {
       const resetView = defaultViewForReset(this.module, this.userFieldsGroups.default);
       this.updateView(resetView);

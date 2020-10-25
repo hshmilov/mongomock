@@ -38,6 +38,7 @@ import {
   SAVE_TUNNEL_PROXY_SETTINGS, saveTunnelProxySettings,
   SAVE_SYSTEM_DEFAULT_COLUMNS, saveSystemDefaultColumns,
   FETCH_QUERY_INVALID_REFERENCES, fetchInvalidReferences,
+  RESET_QUERY_CACHE, resetQueryCache,
 } from './actions';
 import {
   TOGGLE_SIDEBAR, toggleSidebar,
@@ -223,6 +224,7 @@ export default new Vuex.Store({
     [SAVE_TUNNEL_PROXY_SETTINGS]: saveTunnelProxySettings,
     [SAVE_SYSTEM_DEFAULT_COLUMNS]: saveSystemDefaultColumns,
     [FETCH_QUERY_INVALID_REFERENCES]: fetchInvalidReferences,
+    [RESET_QUERY_CACHE]: resetQueryCache,
   },
   modules: {
     /*

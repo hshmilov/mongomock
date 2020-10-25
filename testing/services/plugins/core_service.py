@@ -1,19 +1,22 @@
 # pylint: disable=too-many-lines
-import base64
+from base64 import b64encode
 import os
 import datetime
 from collections import defaultdict
 import traceback
 import re
+import random
 from multiprocessing.pool import ThreadPool
 from threading import Lock
 
+import OpenSSL
 import requests
 from pymongo.collection import Collection
 from pymongo import UpdateOne
 
 from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
-from axonius.consts.system_consts import WEAVE_NETWORK, DB_KEY_PATH, AXONIUS_SETTINGS_PATH
+from axonius.consts.system_consts import WEAVE_NETWORK, DB_KEY_PATH, AXONIUS_SETTINGS_PATH, REDIS_PASSWORD_KEY, \
+    REDIS_CONF_FILE_PATH, REDIS_SETTINGS_PATH, REDIS_CA_PATH, REDIS_CRT_PATH, REDIS_KEY_PATH
 from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_LEGACY_COLLECTION, GUI_PLUGIN_NAME, \
     AXONIUS_SETTINGS_DIR_NAME, GUI_SYSTEM_CONFIG_COLLECTION, NODE_ID, PLUGIN_NAME, \
     PLUGIN_UNIQUE_NAME, CORE_UNIQUE_NAME, NOTIFICATIONS_COLLECTION, AUDIT_COLLECTION, PASSWORD_MANGER_CYBERARK_VAULT, \
@@ -36,6 +39,8 @@ from axonius.utils.hash import get_preferred_quick_adapter_id
 from axonius.utils import datetime
 from axonius.utils.encryption.mongo_encrypt import MONGO_MASTER_KEY_SIZE
 from axonius.modules.plugin_settings import Consts
+from axonius.redis.redis_encrypt import REDIS_PASSWORD_SIZE
+from axonius.plugin_base import random_string
 from services.plugin_service import PluginService, API_KEY_HEADER, UNIQUE_KEY_PARAM
 from services.ports import DOCKER_PORTS
 from services.system_service import SystemService
@@ -1191,6 +1196,13 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
             self.db.plugins.get_plugin_settings(plugin_name).configurable_configs[DISCOVERY_CONFIG_NAME] = \
                 config
 
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_32(self):
+        print('Upgrade to schema 32')
+        password = self.create_redis_password()
+        self.create_redis_conf_file(password)
+        self.create_redis_certs()
+
     def migrate_adapter_advanced_settings_to_connection(
             self,
             adapter_name: str,
@@ -1294,12 +1306,113 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
                 AXONIUS_SETTINGS_PATH.mkdir(exist_ok=True)
                 with open(DB_KEY_PATH, 'wb') as f:
                     key = os.urandom(MONGO_MASTER_KEY_SIZE)
-                    f.write(base64.b64encode(key))
+                    f.write(b64encode(key))
                 DB_KEY_PATH.chmod(0o646)
             except Exception as e:
                 print(f'Error writing db encryption key: {e}')
                 if DB_KEY_PATH.is_file():
                     DB_KEY_PATH.unlink()
+
+    @staticmethod
+    def create_redis_password():
+        """
+        Create redis password file if it not exists
+        :return: None
+        """
+        key = None
+        if not REDIS_PASSWORD_KEY.is_file():
+            try:
+                REDIS_SETTINGS_PATH.mkdir(parents=True, exist_ok=True)
+                with open(REDIS_PASSWORD_KEY, 'w') as f:
+                    key = random_string(REDIS_PASSWORD_SIZE)
+                    f.write(key)
+                REDIS_PASSWORD_KEY.chmod(0o646)
+            except Exception as e:
+                print(f'Error writing redis password: {e}')
+                if REDIS_PASSWORD_KEY.is_file():
+                    REDIS_PASSWORD_KEY.unlink()
+        return key
+
+    def create_redis_conf_file(self, password):
+        """
+        Create redis password file if it not exists
+        :return: None
+        """
+        if not REDIS_CONF_FILE_PATH.is_file():
+            try:
+                if not password:
+                    password = random_string(REDIS_PASSWORD_SIZE)
+                REDIS_SETTINGS_PATH.mkdir(parents=True, exist_ok=True)
+                with open(REDIS_CONF_FILE_PATH, 'w') as f:
+                    redis_conf = self.redis.get_conf_file(password)
+                    f.write(redis_conf)
+                REDIS_CONF_FILE_PATH.chmod(0o646)
+            except Exception as e:
+                print(f'Error writing redis conf file: {e}')
+                if REDIS_CONF_FILE_PATH.is_file():
+                    REDIS_CONF_FILE_PATH.unlink()
+
+    @staticmethod
+    def create_redis_certs():
+        if not REDIS_KEY_PATH.is_file() or not REDIS_CRT_PATH.is_file() or not REDIS_CA_PATH.is_file():
+            try:
+                # create ca.key
+                ca_key = OpenSSL.crypto.PKey()
+                ca_key.generate_key(OpenSSL.crypto.TYPE_RSA, 4096)
+
+                # Generate redis.csr
+                ca_csr = OpenSSL.crypto.X509Req()
+                ca_csr.get_subject().CN = 'Axonius Certificate Authority'
+                ca_csr.set_pubkey(ca_key)
+                ca_csr.sign(ca_key, 'sha256')  # This is redis.key
+
+                # create ca.crt
+                ca_cert = OpenSSL.crypto.X509()
+                ca_cert.set_serial_number(random.randrange(100000))
+                ca_cert.gmtime_adj_notBefore(0)
+                ca_cert.gmtime_adj_notAfter(10 * 365 * 24 * 60 * 60)  # 10 years
+                ca_cert.set_issuer(ca_csr.get_subject())
+                ca_cert.set_subject(ca_csr.get_subject())
+                ca_cert.set_pubkey(ca_key)
+                ca_cert.sign(ca_key, 'sha256')
+                ca_cert_pem_file = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, ca_cert)
+
+                # create redis.key
+                redis_key = OpenSSL.crypto.PKey()
+                redis_key.generate_key(OpenSSL.crypto.TYPE_RSA, 4096)
+                redis_key_pem = OpenSSL.crypto.dump_privatekey(OpenSSL.crypto.FILETYPE_PEM, redis_key)
+
+                # Generate redis.csr
+                redis_csr = OpenSSL.crypto.X509Req()
+                redis_csr.get_subject().CN = 'Axonius Redis Certificate Authority'
+                redis_csr.set_pubkey(redis_key)
+                redis_csr.sign(redis_key, 'sha256')  # This is redis.key
+
+                # Generate redis.crt
+                redis_cert = OpenSSL.crypto.X509()
+                redis_cert.set_serial_number(random.randrange(100000))
+                redis_cert.gmtime_adj_notBefore(0)
+                redis_cert.gmtime_adj_notAfter(10 * 365 * 24 * 60 * 60)  # 10 years
+                redis_cert.set_issuer(ca_cert.get_subject())
+                redis_cert.set_subject(redis_csr.get_subject())
+                redis_cert.set_pubkey(redis_csr.get_pubkey())
+                redis_cert.sign(ca_key, 'sha256')
+                redis_cert_pem_file = OpenSSL.crypto.dump_certificate(OpenSSL.crypto.FILETYPE_PEM, redis_cert)
+
+                with open(REDIS_KEY_PATH, 'wb') as fh:
+                    fh.write(redis_key_pem)
+                with open(REDIS_CRT_PATH, 'wb') as fh:
+                    fh.write(redis_cert_pem_file)
+                with open(REDIS_CA_PATH, 'wb') as fh:
+                    fh.write(ca_cert_pem_file)
+            except Exception as e:
+                print(f'Error creating redis certs: {e}')
+                if REDIS_KEY_PATH.is_file():
+                    REDIS_KEY_PATH.unlink()
+                if REDIS_CRT_PATH.is_file():
+                    REDIS_CRT_PATH.unlink()
+                if REDIS_CA_PATH.is_file():
+                    REDIS_CA_PATH.unlink()
 
     @staticmethod
     def _get_password_fields_from_adapter_schema(adapter_client_schema: dict) -> list:

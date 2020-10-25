@@ -15,9 +15,10 @@ from scripts.instances.instances_consts import GENERATED_RESOLV_CONF_PATH
 from axonius.consts.plugin_consts import (AXONIUS_SETTINGS_DIR_NAME,
                                           NODE_ID_ENV_VAR_NAME,
                                           NODE_ID_FILENAME,
-                                          DB_KEY_ENV_VAR_NAME)
+                                          DB_KEY_ENV_VAR_NAME,
+                                          REDIS_PASSWORD_VAR_NAME)
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
-                                          WEAVE_NETWORK, DB_KEY_PATH)
+                                          WEAVE_NETWORK, DB_KEY_PATH, REDIS_PASSWORD_KEY)
 from axonius.utils.debug import COLOR, magentaprint
 from conf_tools import get_tunneled_dockers, get_customer_conf_json
 from services.axon_service import AxonService, TimeoutException
@@ -314,6 +315,8 @@ class DockerService(AxonService):
             env_variables.extend(['--env', f'{NODE_ID_ENV_VAR_NAME}={node_id}'])
         if DB_KEY_PATH.is_file():
             env_variables.extend(['--env', f'{DB_KEY_ENV_VAR_NAME}={DB_KEY_PATH.read_text().strip()}'])
+        if REDIS_PASSWORD_KEY.is_file():
+            env_variables.extend(['--env', f'{REDIS_PASSWORD_VAR_NAME}={REDIS_PASSWORD_KEY.read_text().strip()}'])
         return env_variables
 
     @property
@@ -401,7 +404,7 @@ class DockerService(AxonService):
 
         cmd = ' '.join(docker_up)
         # do not print database key
-        normalized_command = re.sub(rf'(--env {DB_KEY_ENV_VAR_NAME}=\S*)', '', cmd)
+        normalized_command = re.sub(rf'(--env ({DB_KEY_ENV_VAR_NAME}|{REDIS_PASSWORD_VAR_NAME})=\S*)', '', cmd)
         print(f'{normalized_command}')
 
         docker_run_process = subprocess.Popen(docker_up, cwd=self.service_dir, env=run_env, stdout=subprocess.PIPE,

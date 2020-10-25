@@ -41,6 +41,7 @@ from services.debug_template import (py_charm_debug_port_template,
 from services.plugins.mongo_service import MongoService
 from services.ports import DOCKER_PORTS
 from services.weave_service import WeaveService
+from services.standalone_services.redis_service import RedisService
 from test_helpers.exceptions import DockerException
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 from test_helpers.log_tester import LogTester
@@ -63,6 +64,7 @@ class PluginService(WeaveService):
             self.service_class_name += 'Service'
         self.plugin_name = os.path.basename(self.service_dir)
         self.db = MongoService()
+        self.redis = RedisService()
         if self.container_name == CORE_UNIQUE_NAME:
             self.core = self
         else:

@@ -113,7 +113,7 @@ export const getDataSchemaByName = (state) => (module) => getDataSchemaList(stat
 export const AUTO_QUERY = 'AUTO_QUERY';
 export const autoQuery = (state) => {
   if (!state.configuration || !state.configuration.data || !state.configuration.data.system) return true;
-  return state.configuration.data.system.autoQuery;
+  return state.configuration.data.system.autoQuery && !state.configuration.data.system.cache_settings.enabled;
 };
 
 export const EXACT_SEARCH = 'EXACT_SEARCH';

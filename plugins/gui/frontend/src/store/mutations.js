@@ -101,7 +101,14 @@ export const updateDataContent = (state, payload) => {
   if (!payload.data) {
     return;
   }
+
   let payloadData = payload.data;
+  if (payloadData.cache_last_updated) {
+    // Cached result.
+    content.cache_last_updated = payloadData.cache_last_updated;
+    payloadData = payload.data.entities;
+  }
+
   if (payload.isExperimentalAPI && payloadData.data !== undefined) {
     // eslint-disable-next-line no-underscore-dangle
     payloadData = payload.data.data[payload.module].map((item) => (item._compatibilityAPI || {}));

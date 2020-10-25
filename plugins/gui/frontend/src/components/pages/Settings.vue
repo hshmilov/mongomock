@@ -175,6 +175,7 @@ import { mapState, mapActions, mapMutations } from 'vuex';
 import _cloneDeep from 'lodash/cloneDeep';
 import _findIndex from 'lodash/findIndex';
 import _get from 'lodash/get';
+import _set from 'lodash/set';
 
 import { SAVE_PLUGIN_CONFIG, LOAD_PLUGIN_CONFIG } from '@store/modules/settings';
 import { UPDATE_SYSTEM_CONFIG, SHOW_TOASTER_MESSAGE } from '@store/mutations';
@@ -183,6 +184,7 @@ import { GET_USER } from '@store/modules/auth';
 
 import XUsersManagement from '@networks/settings-tabs/users-management/index.vue';
 import { validateEmail } from '@constants/validations';
+import { updateComplianceComments } from '@api/compliance';
 import XRolesTable from '../networks/settings-tabs/roles-management/index.vue';
 import XPage from '../axons/layout/Page.vue';
 import XTabs from '../axons/tabs/Tabs.vue';
@@ -315,6 +317,12 @@ export default {
     canEditRoles() {
       return this.$can(this.$permissionConsts.categories.Settings,
         this.$permissionConsts.actions.Update, this.$permissionConsts.categories.Roles);
+    },
+    isCacheEnabled() {
+      return _get(this.guiSettings, 'config.system_settings.cache_settings.enabled', false);
+    },
+    isAutoQueryEnabled() {
+      return _get(this.guiSettings, 'config.system_settings.autoQuery', false);
     },
   },
   async created() {
@@ -518,6 +526,46 @@ export default {
         this.message = 'Saved Successfully';
       } else {
         this.message = `Error: ${response.data.message}`;
+      }
+    },
+  },
+  watch: {
+    isCacheEnabled(value) {
+      if (value && this.isAutoQueryEnabled) {
+        this.$safeguard.show({
+          text: `Enabling the 'Cache Setting' will disable the 'Perform a query every keypress' setting.
+                 Do you wish to continue?`,
+          confirmText: 'Yes',
+          onConfirm: async () => {
+            const config = { ...this.guiSettings.config };
+            _set(config, 'system_settings.autoQuery', false);
+            this.guiSettings = { ...this.guiSettings, config };
+          },
+          onCancel: async () => {
+            const config = { ...this.guiSettings.config };
+            _set(config, 'system_settings.cache_settings.enabled', false);
+            this.guiSettings = { ...this.guiSettings, config };
+          },
+        });
+      }
+    },
+    isAutoQueryEnabled(value) {
+      if (value && this.isCacheEnabled) {
+        this.$safeguard.show({
+          text: `Enabling the 'Perform a query every keypress' setting will disable 'Cache Setting'.
+                 Do you wish to continue?`,
+          confirmText: 'Yes',
+          onConfirm: async () => {
+            const config = { ...this.guiSettings.config };
+            _set(config, 'system_settings.cache_settings.enabled', false);
+            this.guiSettings = { ...this.guiSettings, config };
+          },
+          onCancel: async () => {
+            const config = { ...this.guiSettings.config };
+            _set(config, 'system_settings.autoQuery', false);
+            this.guiSettings = { ...this.guiSettings, config };
+          },
+        });
       }
     },
   },

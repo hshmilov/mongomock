@@ -42,6 +42,7 @@ class SettingsPage(Page):
     EVALUATE_ROLE_ASSIGNMENT_ON_DDL = 'label[for=evaluate_role_assignment_on] + div.x-select'
     DISABLE_REMEMBER_ME = 'Disable \'Remember me\''
     SESSION_TIMEOUT_LABEL = 'Enable session timeout'
+    QUERIES_CACHE_LABEL = 'Enable caching on recently used queries'
     GETTING_STARTED_LABEL = 'Enable Getting Started with Axonius checklist'
     GLOBAL_SSL_LABEL = 'Configure custom SSL certificate'
     REMOTE_SUPPORT_LABEL_OLD = 'Remote Support - Warning: turning off this feature prevents Axonius from' \
@@ -302,6 +303,8 @@ class SettingsPage(Page):
 
     ABOUT_PAGE_DATE_KEYS = [ABOUT_PAGE_BUILD_DATE_LABEL, ABOUT_PAGE_CONTRACT_EXPIRY_DATE_LABEL]
     NEXT_DAYS_COUNT = 30
+
+    QUERIES_CACHE_TTL_CSS = '#ttl'
 
     @property
     def url(self):
@@ -1407,6 +1410,9 @@ class SettingsPage(Page):
     def find_session_timeout_toggle(self):
         return self.find_checkbox_by_label(self.SESSION_TIMEOUT_LABEL)
 
+    def find_queries_cache_toggle(self):
+        return self.find_checkbox_by_label(self.QUERIES_CACHE_LABEL)
+
     def set_session_timeout(self, enabled, timeout):
         self.switch_to_page()
         self.click_gui_settings()
@@ -1838,3 +1844,20 @@ class SettingsPage(Page):
                         get_datetime_format_by_gui_date(date_format)) == self.about_page_get_label_value_by_key(key)
                 else:
                     assert value == self.about_page_get_label_value_by_key(key)
+
+    def approve_queries_cache_safeguard(self):
+        safeguard_modal = self.driver.find_element_by_css_selector(self.DIALOG_OVERLAY_ACTIVE_CSS)
+        self.click_button(self.YES_BUTTON, context=safeguard_modal)
+        self.wait_for_element_absent_by_css(self.DIALOG_OVERLAY_ACTIVE_CSS)
+
+    def toggle_queries_cache(self, make_yes=True, ttl=None):
+        self.switch_to_page()
+        self.click_gui_settings()
+        self.click_toggle_button(self.find_queries_cache_toggle(), make_yes=make_yes, window=TAB_BODY)
+        if make_yes:
+            # wait for modal to appear.
+            time.sleep(1)
+            self.approve_queries_cache_safeguard()
+        if ttl:
+            self.fill_text_field_by_css_selector(self.QUERIES_CACHE_TTL_CSS, ttl)
+        self.save_and_wait_for_toaster()

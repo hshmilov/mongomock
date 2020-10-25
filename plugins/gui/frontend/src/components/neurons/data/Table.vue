@@ -36,6 +36,10 @@
         <div>]</div>
       </div>
       <slot
+        slot="cache"
+        name="cache"
+      />
+      <slot
         slot="actions"
         name="actions"
       />
@@ -127,11 +131,17 @@ import _isEmpty from 'lodash/isEmpty';
 import _find from 'lodash/find';
 import _matchesProperty from 'lodash/matchesProperty';
 import { UPDATE_DATA_VIEW, UPDATE_DATA_VIEW_FILTER } from '@store/mutations';
-import { FETCH_DATA_CONTENT } from '@store/actions';
+import { FETCH_DATA_CONTENT, RESET_QUERY_CACHE } from '@store/actions';
+import { ENTITIES_PAGES_LIMIT } from '@constants/entities';
 import _capitalize from 'lodash/capitalize';
+import { Divider as ADivider, Icon as AIcon } from 'ant-design-vue';
+import _debounce from 'lodash/debounce';
+import _get from 'lodash/get';
+import XStringView from '@neurons/schema/types/string/StringView.vue';
 import XTableWrapper from '../../axons/tables/TableWrapper.vue';
 import XTable from '../../axons/tables/Table.vue';
 import XTableData from './TableData';
+
 
 export default {
   name: 'XDataTable',
@@ -139,6 +149,9 @@ export default {
     XTableWrapper,
     XTable,
     XTableData,
+    ADivider,
+    XStringView,
+    AIcon,
   },
   props: {
     module: {
@@ -218,6 +231,10 @@ export default {
       type: Number,
       default: 0,
     },
+    useCache: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -231,6 +248,9 @@ export default {
         return this.module.split('/').reduce((moduleState, key) => moduleState[key], state);
       },
       refresh(state) {
+        if (this.useCache) {
+          return 30;
+        }
         if (!state.configuration
                   || !state.configuration.data
                   || !state.configuration.data.system) return 0;
@@ -441,6 +461,9 @@ export default {
   beforeDestroy() {
     clearTimeout(this.timer);
   },
+  created() {
+    this.$set(this.content, 'cache_last_updated', '');
+  },
   methods: {
     ...mapMutations({
       updateView: UPDATE_DATA_VIEW,
@@ -448,8 +471,9 @@ export default {
     }),
     ...mapActions({
       fetchContent: FETCH_DATA_CONTENT,
+      resetQueryCache: RESET_QUERY_CACHE,
     }),
-    fetchContentPages(loading, getCount, isRefresh) {
+    fetchContentPages(loading, getCount, isRefresh, useCacheEntry) {
       if (!isRefresh) {
         this.resetScrollPosition();
       }
@@ -461,17 +485,17 @@ export default {
         this.loading = true;
       }
       if (!this.pageLinkNumbers || this.pageLinkNumbers.length <= 1) {
-        // Fetch at least 5 pages - in case pageSize is 20, there will enough data to change to 100
-        return this.fetchContentSegment(0, this.pageSize * 5, getCount, isRefresh);
+        return this.fetchContentSegment(0, this.pageSize * ENTITIES_PAGES_LIMIT, getCount, isRefresh, useCacheEntry);
       }
       return this.fetchContentSegment(
         this.pageLinkNumbers[0] * this.pageSize,
-        this.pageLinkNumbers.length * this.pageSize,
+        this.pageSize * ENTITIES_PAGES_LIMIT,
         getCount,
         isRefresh,
+        useCacheEntry,
       );
     },
-    fetchContentSegment(skip, limit, getCount, isRefresh) {
+    fetchContentSegment(skip, limit, getCount, isRefresh, useCacheEntry) {
       return this.fetchContent({
         module: this.module,
         endpoint: this.endpoint,
@@ -481,6 +505,7 @@ export default {
         isRefresh,
         isExperimentalAPI: this.experimentalApi,
         fields: this.fetchFields,
+        useCacheEntry,
       }).then(() => {
         if (!this.content.fetching) {
           this.loading = false;
@@ -522,7 +547,7 @@ export default {
         return;
       }
       const fetchAuto = () => {
-        this.fetchContentPages(false, true, true).then(() => {
+        this.fetchContentPages(false, true, undefined, this.useCache).then(() => {
           if (this._isDestroyed) return;
           this.timer = setTimeout(fetchAuto, this.refresh * 1000);
         });
@@ -562,6 +587,14 @@ export default {
       const fieldFormat = this.getSchemaFieldFormat(field);
       return fieldFormat === 'date-time' || fieldFormat === 'date' || fieldFormat === 'time';
     },
+    resetCache: _debounce(async function resetCache() {
+      const filter = _get(this.view, 'query.filter', null);
+      await this.resetQueryCache({
+        module: this.module,
+        filter: filter && filter.length ? filter : null,
+      });
+      this.fetchContentPages(true, true);
+    }, 400, { leading: true, trailing: false }),
   },
 };
 </script>
@@ -569,6 +602,20 @@ export default {
 <style lang="scss">
   .x-data-table {
     height: 100%;
+
+    .separator {
+      background-color: $theme-black;
+      top: -0.01em;
+      margin: 0 10px;
+    }
+
+    .last-updated-title {
+      margin: 0 5px 0 5px;
+    }
+
+    .reset-cache {
+      padding-left: 10px;
+    }
 
     .selection {
       display: flex;

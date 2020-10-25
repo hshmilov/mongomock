@@ -78,7 +78,7 @@ from axonius.plugin_base import EntityType, PluginBase, random_string
 from axonius.thread_pool_executor import LoggedThreadPoolExecutor
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.files import get_local_config_file
-from axonius.utils.gui_helpers import (get_entities_count, get_connected_user_id)
+from axonius.utils.gui_helpers import (get_entities_count, get_connected_user_id, get_entities_count_cached)
 from axonius.utils.permissions_helper import (get_admin_permissions, get_viewer_permissions,
                                               is_role_admin, is_axonius_role,
                                               PermissionCategory, PermissionAction, get_permissions_structure,
@@ -956,11 +956,31 @@ class GuiService(Triggerable,
                             ],
                             'required': ['enabled', 'timeout', 'disable_remember_me'],
                             'type': 'array'
+                        },
+                        {
+                            'name': 'cache_settings',
+                            'title': 'Cache Settings',
+                            'items': [
+                                {
+                                    'name': 'enabled',
+                                    'title': 'Enable caching on recently used queries',
+                                    'type': 'bool'
+                                },
+                                {
+                                    'name': 'ttl',
+                                    'title': 'Cache Time-to-Live (TTL) in minutes',
+                                    'type': 'number',
+                                    'default': 60,
+                                    'max': 20160
+                                }
+                            ],
+                            'required': ['enabled', 'ttl'],
+                            'type': 'array'
                         }
                     ],
                     'required': ['refreshRate', 'defaultNumOfEntitiesPerPage',
                                  'defaultSort', 'autoQuery', 'exactSearch', 'requireConnectionLabel',
-                                 'defaultColumnLimit', 'datetime_format'],
+                                 'defaultColumnLimit', 'datetime_format', 'cache_settings'],
                     'name': SYSTEM_SETTINGS,
                     'title': 'System Settings',
                     'type': 'array'
@@ -1009,6 +1029,10 @@ class GuiService(Triggerable,
                     'enabled': False,
                     'timeout': 1440
                 },
+                'cache_settings': {
+                    'enabled': False,
+                    'ttl': 60
+                },
                 'datetime_format': 'YYYY-MM-DD',
                 'defaultSort': True,
                 'autoQuery': True,
@@ -1031,6 +1055,22 @@ class GuiService(Triggerable,
             history_date=history,
             quick=quick,
             is_date_filter_required=is_date_filter_required))
+
+    def _get_entity_count_cached(self, entity, mongo_filter, history,
+                                 quick, is_cache_enabled, use_cache_entry, cache_ttl):
+        col, is_date_filter_required = self.get_appropriate_view(history, entity)
+        # pylint: disable=unexpected-keyword-arg
+        count, _ = get_entities_count_cached(
+            col,
+            entity,
+            mongo_filter,
+            history_date=history,
+            quick=quick,
+            is_date_filter_required=is_date_filter_required,
+            is_cache_enabled=is_cache_enabled,
+            use_cache_entry=use_cache_entry,
+            cache_ttl=cache_ttl)
+        return str(count)
 
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         if job_name == 'clear_dashboard_cache':

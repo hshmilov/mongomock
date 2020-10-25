@@ -298,6 +298,11 @@ class Signup:
     ApiKeysField = 'api_keys'
 
 
+class GuiCache:
+    root_key = 'cache_settings'
+    enabled = 'enabled'
+    ttl = 'ttl'
+
 
 # DO NOT MOVE THESE CREDS FROM THIS FILE. we need the in test AND prod AND inside the docker!
 SIGNUP_TEST_CREDS = {Signup.CompanyField: 'test_company',

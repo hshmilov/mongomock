@@ -132,6 +132,7 @@ class Page:
     ANTD_RANGE_PICKER_POPUP_FROM_INPUT_CSS = '.ant-calendar-range-left .ant-calendar-input'
     ANTD_RANGE_PICKER_POPUP_TO_INPUT_CSS = '.ant-calendar-range-right .ant-calendar-input '
     DIALOG_OVERLAY_CSS = '.v-dialog'
+    DIALOG_OVERLAY_ACTIVE_CSS = '.v-dialog.v-dialog--active'
     FEEDBACK_MODAL_MESSAGE_XPATH = './/div[contains(@class, \'t-center\')' \
                                    ' and .//text()[normalize-space()=\'{message}\']]'
     FEEDBACK_MODAL_CANCEL_BUTTON_ID = 'feedback_modal_cancel'
@@ -139,6 +140,7 @@ class Page:
     SAVE_BUTTON = 'Save'
     SAVE_AS_BUTTON = 'Save As'
     OK_BUTTON = 'OK'
+    YES_BUTTON = 'Yes'
     REMOVE_BUTTON = 'Remove'
     DELETE_BUTTON = 'Delete'
     DEACTIVATE_BUTTON = 'Deactivate'

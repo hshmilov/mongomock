@@ -65,6 +65,7 @@ class TestRealtime(TestBase):
         time.sleep(40)
 
         # verify the adapter has brought the device by the RT cycle
+        self.axonius_system.flush_redis_entities_cache()
         self.devices_page.switch_to_page()
         self.devices_page.refresh_table()
 

@@ -50,6 +50,7 @@ from services.plugins.system_scheduler_service import SystemSchedulerService
 from services.plugins.master_proxy_service import MasterProxyService
 from services.standalone_services.remote_mongo_proxy_service import RemoteMongoProxyService
 from services.standalone_services.tunneler_service import TunnelerService
+from services.standalone_services.redis_service import RedisService
 from services.weave_service import is_weave_up, is_using_weave
 from test_helpers.parallel_runner import ParallelRunner
 from test_helpers.utils import try_until_not_thrown
@@ -57,6 +58,7 @@ from test_helpers.utils import try_until_not_thrown
 DNS_REGISTER_POOL_SIZE = 5
 CORE_ADDRESS = 'https://core.axonius.local'
 REMOTE_CORE_WAIT_TIMEOUT = 20 * 60
+from axonius.consts.plugin_consts import AXONIUS_MANAGER_SETTINGS_PATH
 
 
 def get_service():
@@ -70,6 +72,7 @@ class AxoniusService:
 
     def __init__(self):
         self.db = MongoService()
+        self.redis = RedisService()
         self.core = CoreService()
         self.aggregator = AggregatorService()
         self.scheduler = SystemSchedulerService()
@@ -87,6 +90,7 @@ class AxoniusService:
             self.instance_mode == InstancesModes.remote_mongo.value else None
 
         self.axonius_services = [self.db,
+                                 self.redis,
                                  self.core,
                                  self.aggregator,
                                  self.scheduler,
@@ -737,6 +741,13 @@ class AxoniusService:
         alpine_image = f'{DOCKERHUB_URL}alpine:3.11.6'
         return self._pull_image(alpine_image, repull, show_print)
 
+    def pull_redis_image(self, repull=False, tag=None, show_print=True):
+        if tag.lower() == 'fed':
+            redis_image = f'{DOCKERHUB_URL}axonius/redis_fed:latest'
+        else:
+            redis_image = f'{DOCKERHUB_URL}redis:6.0.8'
+        return self._pull_image(redis_image, repull, show_print)
+
     @staticmethod
     def _is_adapter_via_tunnel(adapter_name):
         if not CUSTOMER_CONF_PATH.is_file():
@@ -848,3 +859,15 @@ class AxoniusService:
         if entity == EntityType.Users:
             return self.db.get_collection(self.gui.plugin_name, USERS_DIRECT_REFERENCES_COLLECTION).delete_many({})
         return None
+
+    def get_redis_client(self):
+        return self.redis.get_client(0, axonius_settings_path=AXONIUS_MANAGER_SETTINGS_PATH)
+
+    def flush_redis_entities_cache(self):
+        self.get_redis_client().flushdb()
+
+    def get_number_of_cached_entries(self):
+        self.get_redis_client().dbsize()
+
+    def get_cache_entries_with_pattern(self, pattern):
+        return list(self.get_redis_client().scan_iter(pattern))

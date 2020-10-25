@@ -12,15 +12,18 @@ from dataclasses import dataclass
 from cachetools import LRUCache
 from funcy import chunks
 import pymongo
+from pymongo.collection import Collection
 from pymongo.errors import PyMongoError
 
 from axonius.consts.gui_consts import MAX_SORTED_FIELDS, MIN_SORTED_FIELDS
 from axonius.utils.get_plugin_base_instance import plugin_base_instance
+from axonius.utils.cache.entities_cache import entities_redis_cached
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH
 from axonius.utils.axonius_query_language import convert_db_entity_to_view_entity, parse_filter, \
     convert_db_projection_to_view, replace_saved_queries_ids
 from axonius.utils.gui_helpers import parse_entity_fields, get_historized_filter, \
-    FIELDS_TO_PROJECT, FIELDS_TO_PROJECT_FOR_GUI, get_sort, nongui_beautify_db_entry, get_entities_count
+    FIELDS_TO_PROJECT, FIELDS_TO_PROJECT_FOR_GUI, get_sort, nongui_beautify_db_entry, get_entities_count,\
+    get_entities_count_cached
 from axonius.entities import EntityType
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -226,22 +229,64 @@ def get_db_projection(db_projection, sort):
     return db_projection, sort
 
 
-def _get_entities_raw(entity_type: EntityType,
+@entities_redis_cached()
+def _get_entities_raw_cached(entity_views_db: Collection,
+                             entity_type: EntityType,
+                             view_filter: dict,
+                             is_date_filter_required: bool = False,
+                             db_projection: dict = None,
+                             limit: int = None,
+                             skip: int = None,
+                             sort: dict = None,
+                             default_sort: bool = False,
+                             history_date: datetime = None) -> Tuple[Iterator[dict], datetime]:
+    """
+    Please Note that when calling this method, the first two arguments are the ttl and is_cache_enabled which are used
+    inside the cache decorator.
+    :param entity_views_db:
+    :param entity_type:
+    :param view_filter:
+    :param is_date_filter_required:
+    :param db_projection:
+    :param limit:
+    :param skip:
+    :param sort:
+    :param default_sort:
+    :param history_date:
+    :return:
+    """
+    return list(_get_entities_raw(
+        entity_views_db=entity_views_db,
+        entity_type=entity_type,
+        view_filter=view_filter,
+        is_date_filter_required=is_date_filter_required,
+        db_projection=db_projection,
+        limit=limit,
+        skip=skip,
+        sort=sort,
+        default_sort=default_sort,
+        history_date=history_date,
+    ))
+
+
+def _get_entities_raw(entity_views_db: Collection,
+                      entity_type: EntityType,
                       view_filter: dict,
+                      is_date_filter_required: bool,
                       db_projection: dict = None,
                       limit: int = None,
                       skip: int = None,
                       sort: dict = None,
                       default_sort: bool = False,
                       history_date: datetime = None,
-                      ) -> Iterator[dict]:
+                      ) -> Tuple[Iterator[dict]]:
     """
     See get_entities for explanation of the parameters
+    return entities iterator, and the cache last updated time stamp if using cache.
     """
     if db_projection:
         db_projection, sort = get_db_projection(db_projection, sort)
 
-    entity_views_db, is_date_filter_required = plugin_base_instance().get_appropriate_view(history_date, entity_type)
     # if we defaulted to normal history collection, add historized_filter
     if history_date and is_date_filter_required:
         view_filter = get_historized_filter(view_filter, history_date)
@@ -284,7 +329,7 @@ def convert_entities_to_frontend_entities(data_list: Iterable[dict],
                                       field_filters=field_filters, excluded_adapters=excluded_adapters)
 
 
-# pylint: disable=R0913
+# pylint: disable=R0913,too-many-locals
 
 
 def get_entities(limit: int,
@@ -302,7 +347,11 @@ def get_entities(limit: int,
                  excluded_adapters: dict = None,
                  cursor_id: str = None,
                  use_cursor: bool = False,
-                 ) -> Tuple[Iterable[dict], CursorMeta]:
+                 use_cache: bool = False,
+                 use_cache_entry: bool = True,
+                 is_cache_enabled: bool = False,
+                 cache_ttl: int = None,
+                 ) -> Tuple[Iterable[dict], CursorMeta, datetime]:
     """
     Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
     :param limit: the max amount of entities to return
@@ -319,6 +368,11 @@ def get_entities(limit: int,
     :param excluded_adapters: Filter fields' values to those that are from specific adapters
     :param use_cursor: whether to use cursor based pagination
     :param cursor_id: cursor_id for getting next results set
+    :param use_cache: is to use redis cached entities or not.
+    :param use_cache_entry when use_cache is True, we sometimes wish to recalculate the results without using the stored
+    cached value.
+    :param is_cache_enabled indicates whether to keep all requests or only latest in redis cache when using cache.
+    :param cache_ttl the ttl for each cache key
     :return:
     """
     if run_over_projection:
@@ -336,31 +390,86 @@ def get_entities(limit: int,
     skip = skip or 0
 
     if use_cursor:
-        cursor_obj = _get_all_entities_raw(
-            entity_type=entity_type,
-            view_filter=view_filter,
-            db_projection=db_projection,
-            cursor_id=cursor_id,
-            sort=sort,
-            skip=skip,
-            limit=limit,
-            default_sort=default_sort,
-            history_date=history_date,
-        )
+        return _get_entities_with_cursor(entity_type, view_filter, db_projection, cursor_id, sort, skip, limit,
+                                         default_sort, history_date, projection, ignore_errors, include_details,
+                                         field_filters, excluded_adapters)
+    if use_cache:
+        return _get_iterable_entities_cached(entity_type, view_filter, db_projection, sort, skip, limit,
+                                             default_sort, history_date, projection, ignore_errors, include_details,
+                                             field_filters, excluded_adapters, is_cache_enabled,
+                                             use_cache_entry, cache_ttl)
+    return _get_iterable_entities(entity_type, view_filter, db_projection, sort, skip, limit,
+                                  default_sort, history_date, projection, ignore_errors, include_details,
+                                  field_filters, excluded_adapters)
 
-        entities = convert_entities_to_frontend_entities(
-            data_list=cursor_obj.data_list,
-            projection=projection,
-            ignore_errors=ignore_errors,
-            include_details=include_details,
-            field_filters=field_filters,
-            excluded_adapters=excluded_adapters,
-        )
-        return entities, cursor_obj
 
-    data_list = _get_entities_raw(
+def _get_entities_with_cursor(entity_type, view_filter, db_projection, cursor_id, sort, skip, limit,
+                              default_sort, history_date, request_projection, ignore_errors, include_details,
+                              field_filters, excluded_adapters):
+    cursor_obj = _get_all_entities_raw(
         entity_type=entity_type,
         view_filter=view_filter,
+        db_projection=db_projection,
+        cursor_id=cursor_id,
+        sort=sort,
+        skip=skip,
+        limit=limit,
+        default_sort=default_sort,
+        history_date=history_date,
+    )
+
+    entities = convert_entities_to_frontend_entities(
+        data_list=cursor_obj.data_list,
+        projection=request_projection,
+        ignore_errors=ignore_errors,
+        include_details=include_details,
+        field_filters=field_filters,
+        excluded_adapters=excluded_adapters,
+    )
+    return entities, cursor_obj
+
+
+def _get_iterable_entities_cached(entity_type, view_filter, db_projection, sort, skip, limit,
+                                  default_sort, history_date, request_projection, ignore_errors, include_details,
+                                  field_filters, excluded_adapters, is_cache_enabled, use_cache_entry, cache_ttl):
+    entity_views_db, is_date_filter_required = plugin_base_instance().get_appropriate_view(history_date, entity_type)
+    # pylint: disable=unexpected-keyword-arg
+    data_list, last_updated = _get_entities_raw_cached(
+        entity_views_db,
+        entity_type,
+        view_filter,
+        is_date_filter_required=is_date_filter_required,
+        db_projection=db_projection,
+        limit=limit,
+        skip=skip,
+        sort=sort,
+        default_sort=default_sort,
+        history_date=history_date,
+        use_cache_entry=use_cache_entry,
+        cache_ttl=cache_ttl,
+        is_cache_enabled=is_cache_enabled,
+    )
+
+    fe_entities = convert_entities_to_frontend_entities(
+        data_list=data_list,
+        projection=request_projection,
+        ignore_errors=ignore_errors,
+        include_details=include_details,
+        field_filters=field_filters,
+        excluded_adapters=excluded_adapters)
+
+    return fe_entities, None, last_updated
+
+
+def _get_iterable_entities(entity_type, view_filter, db_projection, sort, skip, limit,
+                           default_sort, history_date, request_projection, ignore_errors, include_details,
+                           field_filters, excluded_adapters):
+    entity_views_db, is_date_filter_required = plugin_base_instance().get_appropriate_view(history_date, entity_type)
+    data_list = _get_entities_raw(
+        entity_views_db=entity_views_db,
+        entity_type=entity_type,
+        view_filter=view_filter,
+        is_date_filter_required=is_date_filter_required,
         db_projection=db_projection,
         limit=limit,
         skip=skip,
@@ -369,14 +478,15 @@ def get_entities(limit: int,
         history_date=history_date,
     )
 
-    return (convert_entities_to_frontend_entities(
+    fe_entities = convert_entities_to_frontend_entities(
         data_list=data_list,
-        projection=projection,
+        projection=request_projection,
         ignore_errors=ignore_errors,
         include_details=include_details,
         field_filters=field_filters,
-        excluded_adapters=excluded_adapters,
-    ), None)
+        excluded_adapters=excluded_adapters)
+
+    return fe_entities, None, None
 
 
 def perform_axonius_query(entity: EntityType,
@@ -395,8 +505,9 @@ def perform_axonius_query(entity: EntityType,
     :param sort: additional parameter
     :return: an iterator for all the devices as they would been seen in the DB
     """
-    return _get_entities_raw(entity, parse_filter(query, entity=entity), db_projection=projection,
-                             limit=limit, skip=skip, sort=sort)
+    entity_views_db, is_date_filter_required = plugin_base_instance().get_appropriate_view(None, entity)
+    return _get_entities_raw(entity_views_db, entity, parse_filter(query, entity=entity), is_date_filter_required,
+                             db_projection=projection, limit=limit, skip=skip, sort=sort)
 
 
 def iterate_axonius_entities(entity: EntityType,
@@ -425,13 +536,13 @@ def perform_saved_view(entity: EntityType, saved_view: dict, **kwargs) -> Iterat
     :param entity: The entity type
     :param saved_view: the saved view, as it is in the DB
     :param kwargs: additional parameters to "find"
+    :param use_cache use entities redis cache or not
     :return: an iterator for all the devices as they would been seen in the DB
     """
     parsed_query_filter = replace_saved_queries_ids(saved_view['view']['query']['filter'], entity)
     mongo_sort = get_sort(saved_view['view'])
 
-    return perform_axonius_query(entity, parsed_query_filter,
-                                 sort=mongo_sort, **kwargs)
+    return perform_axonius_query(entity, parsed_query_filter, sort=mongo_sort, **kwargs)
 
 
 def perform_saved_view_converted(entity: EntityType,
@@ -482,3 +593,14 @@ def perform_saved_view_by_id(entity: EntityType,
     if saved_view is None:
         raise ValueError(f'Missing query with id {saved_view_id}')
     return perform_saved_view(entity, saved_view, **kwargs)
+
+
+def clear_entities_query_cache(view_filter: Dict, entity_type: EntityType):
+    """
+    Remove all cache entries for a specific aql
+    :param view_filter:
+    :param entity_type:
+    :return:
+    """
+    _get_entities_raw_cached.remove_from_cache(entity_type, view_filter)
+    get_entities_count_cached.remove_from_cache(entity_type, view_filter)

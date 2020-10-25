@@ -22,8 +22,30 @@
           :filterable="true"
           :on-click-row="configEntity"
           :experimental-api="isExperimentalAPI"
+          :use-cache="useCache"
           @input="updateSelection"
         >
+          <template
+            v-if="useCache"
+            #cache
+          >
+            <ADivider
+              class="separator"
+              type="vertical"
+            />
+            <AIcon type="clock-circle" />
+            <span class="last-updated-title"> Last updated: </span>
+            <XStringView
+              :schema="DEFAULT_DATE_SCHEMA"
+              :value="cacheLastUpdated"
+            />
+            <XButton
+              title="Refresh Query"
+              type="link"
+              class="reset-cache"
+              @click="resetCache"
+            > <AIcon type="sync" /> </XButton>
+          </template>
           <slot
             slot="actions"
             name="actions"
@@ -61,6 +83,7 @@ import {
 import { getUserTableColumnGroups } from '@api/user-preferences';
 import _isEmpty from 'lodash/isEmpty';
 import { defaultFields, getEntityPermissionCategory } from '@constants/entities';
+import { DEFAULT_DATE_SCHEMA } from '@store/modules/constants';
 import _get from 'lodash/get';
 
 import XQuery from './query/Query.vue';
@@ -68,18 +91,20 @@ import XTable from '../../neurons/data/Table.vue';
 import XTableData from './TableData.vue';
 import XEntitiesActionMenu from './ActionMenu.vue';
 import XTableOptionMenu from './TableOptionMenu.vue';
+import { Divider as ADivider, Icon as AIcon } from 'ant-design-vue';
+import XStringView from '@neurons/schema/types/string/StringView.vue';
 
 import { GET_DATA_SCHEMA_BY_NAME, GET_SYSTEM_COLUMNS } from '../../../store/getters';
 import { UPDATE_DATA_VIEW } from '../../../store/mutations';
 import {
   FETCH_DATA_FIELDS, FETCH_DATA_CURRENT, FETCH_DATA_HYPERLINKS,
-} from '../../../store/actions'
+} from '../../../store/actions';
 import { LAZY_FETCH_ADAPTERS_CLIENT_LABELS } from '../../../store/modules/adapters';
 
 export default {
   name: 'XEntityTable',
   components: {
-    XQuery, XTable, XTableData, XEntitiesActionMenu, XTableOptionMenu,
+    XQuery, XTable, XTableData, XEntitiesActionMenu, XTableOptionMenu, ADivider, AIcon, XStringView,
   },
   props: {
     module: {
@@ -123,6 +148,12 @@ export default {
         const featureFlagsConfigs = _get(state, 'settings.configurable.gui.FeatureFlags.config', null);
         return (featureFlagsConfigs && featureFlagsConfigs.experimental_api);
       },
+      useCache(state) {
+        return _get(state.configuration, 'data.system.cache_settings.enabled', false);
+      },
+      cacheLastUpdated(state) {
+        return state[this.module].content.cache_last_updated;
+      },
     }),
     permissionCategory() {
       return getEntityPermissionCategory(this.module);
@@ -150,6 +181,8 @@ export default {
     },
   },
   async created() {
+    this.DEFAULT_DATE_SCHEMA = DEFAULT_DATE_SCHEMA;
+
     this.fetchDataHyperlinks({ module: this.module });
     await this.fetchConnectionLabels();
     // get all saved user defined columns group
@@ -225,6 +258,9 @@ export default {
     },
     filterViewFields(fields) {
       return fields.filter((fieldName) => this.schemaFieldsByName[fieldName]);
+    },
+    resetCache() {
+      this.$refs.table.resetCache();
     },
   },
 };

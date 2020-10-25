@@ -21,6 +21,7 @@
         >({{ count }})</div>
         <slot name="state" />
       </div>
+      <slot v-if="!loading" name="cache" />
       <div class="table-error">{{ error }}</div>
       <div class="actions">
         <slot name="actions" />
