@@ -66,6 +66,18 @@ def get_username_prefix(adapter_data):
     return username.split('@')[0]
 
 
+def get_username_employee_id(adapter_data):
+    return get_employee_id(adapter_data) or get_username(adapter_data)
+
+
+def compare_username_employee_id(adapter_data1, adapter_data2):
+    username_1 = get_username_employee_id(adapter_data1)
+    username_2 = get_username_employee_id(adapter_data2)
+    if not username_1 or not username_2:
+        return True
+    return username_1 == username_2
+
+
 def compare_username_prefix(adapter_data1, adapter_data2):
     username_1 = get_username_prefix(adapter_data1)
     username_2 = get_username_prefix(adapter_data2)
@@ -414,13 +426,13 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
         Correlate Employee ID
         """
         logger.info('Starting to correlate on Emloyee ID')
-        filtered_adapters_list = filter(get_employee_id, entities)
+        filtered_adapters_list = filter(get_username_employee_id, entities)
         return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_username_employee_id],
+                                      [compare_username_employee_id],
                                       [get_employee_id],
-                                      [compare_employee_id],
-                                      [is_cherwell],
                                       [],
-                                      {'Reason': 'They have the same Employee ID'},
+                                      {'Reason': 'They have the same Employee ID or Emp id-username'},
                                       CorrelationReason.StaticAnalysis)
 
     def _raw_correlate(self, entities):

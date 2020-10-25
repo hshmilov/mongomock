@@ -270,7 +270,8 @@ class AzureAdAdapter(AdapterBase, Configurable):
                 logger.exception(f'Can not parse last sync date time')
 
             device.ad_on_premise_trust_type = raw_device_data.get('trustType')
-            device.figure_os(raw_device_data.get('operatingSystem', ''))
+            device.figure_os((raw_device_data.get('operatingSystem') or '') + ' '
+                             + (raw_device_data.get('operatingSystemVersion') or ''))
             try:
                 build = raw_device_data.get('operatingSystemVersion')
                 if build and build.startswith('10.0.'):

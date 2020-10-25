@@ -56,6 +56,7 @@ class AzureAdapter(AdapterBase, Configurable):
         then returning those at the end of the function. I'd then need to pick
         those up in _query_devices_by_client and iterate through them
         """
+        cloud_name = client_config.get(AZURE_CLOUD_ENVIRONMENT)
         azure_stack_hub_proxy_settings_value = client_config.get(AZURE_STACK_HUB_PROXY_SETTINGS)
         azure_stack_hub_proxy_settings = AzureStackHubProxySettings.ProxyOnlyAuth
         _azure_rest_client = None
@@ -148,7 +149,7 @@ class AzureAdapter(AdapterBase, Configurable):
                     metadata_dict['subscription_name'] = subscription_data.get('displayName')
                 account_id = client_config.get(AZURE_TENANT_ID) or 'unknown-tenant-id'
                 metadata_dict['azure_account_id'] = account_id
-                connections.append((connection, metadata_dict))
+                connections.append((connection, metadata_dict, cloud_name))
 
             except Exception as err:
                 message = f'Error connecting to azure with subscription_id (subscription),' \
@@ -436,7 +437,7 @@ class AzureAdapter(AdapterBase, Configurable):
     def _query_devices_by_client(self, client_name, client_data_all):
         for connection in client_data_all:
             try:
-                (client_data, metadata) = connection
+                (client_data, metadata, cloud_name) = connection
             except Exception:
                 logger.exception(f'Failed to process a connection: {str(connection)}')
                 continue
@@ -444,7 +445,7 @@ class AzureAdapter(AdapterBase, Configurable):
             subscription_id = metadata.get('subscription')
             logger.info(f'Querying vms for subscription {subscription_id}')
             try:
-                yield client_data.get_virtual_machines(), metadata
+                yield client_data.get_virtual_machines(), metadata, cloud_name
             except Exception as e:
                 logger.exception(f'Failed to query VMs for subscription {metadata.get("subscription")}: {str(e)}')
                 continue
@@ -455,11 +456,12 @@ class AzureAdapter(AdapterBase, Configurable):
     def _parse_raw_data(self, devices_raw_data_all):
         raw_software_updates = {}
 
-        for devices_raw_data, metadata in devices_raw_data_all:
+        for devices_raw_data, metadata, cloud_name in devices_raw_data_all:
             for device_raw in devices_raw_data:
                 device = self._new_device_adapter()
                 device_id = device_raw['id']
                 device.id = device_id
+                device.cloud_name = cloud_name
                 device.resources_group = None
                 if device_id and '/resourceGroups/' in device_id:
                     device.resources_group = device_id[device_id.find('/resourceGroups/') +

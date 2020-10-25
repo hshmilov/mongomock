@@ -45,6 +45,9 @@ class AirwatchAdapter(AdapterBase, Configurable):
         compliance_status = Field(str, 'Compliance Status')
         compliance_summaries = ListField(DeviceCompliance, 'Compliance Summary')
         compromised_status = Field(bool, 'Compromised Status')
+        ethernet_ip_address = Field(str, 'Ethernet IP Address')
+        wifi_ip_address = Field(str, 'Wifi IP Address')
+        cellular_ip_address = Field(str, 'Cellular IP Address')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -250,7 +253,7 @@ class AirwatchAdapter(AdapterBase, Configurable):
                         mac_address = None
                     else:
                         macs.append(mac_address)
-                    ipaddresses_raw = network_raw.get('IPAddress') or []
+                    ipaddresses_raw = network_raw.get('IPAddress') or {}
                     ipaddresses = []
                     falsed_ips = ['0.0.0.0', '127.0.0.1', '', None]
                     for ipaddress_raw in ipaddresses_raw:
@@ -258,6 +261,9 @@ class AirwatchAdapter(AdapterBase, Configurable):
                             ipaddresses.append(ipaddresses_raw[ipaddress_raw])
                     if ipaddresses != [] or mac_address is not None:
                         device.add_ips_and_macs(macs=macs, ips=ipaddresses)
+                    device.ethernet_ip_address = ipaddresses_raw.get('EthernetIPAddress')
+                    device.wifi_ip_address = ipaddresses_raw.get('WifiIPAddress')
+                    device.cellular_ip_address = ipaddresses_raw.get('CellularIPAddress')
                 except Exception:
                     logger.exception('Problem adding nic to Airwatch')
                 device.device_serial = device_raw.get('SerialNumber')

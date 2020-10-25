@@ -2,6 +2,7 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.mixins.configurable import Configurable
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.utils.files import get_local_config_file
@@ -13,7 +14,7 @@ from knowbe4_adapter.structures import Knowbe4UserInstance, SecurityTestResult, 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class Knowbe4Adapter(AdapterBase):
+class Knowbe4Adapter(AdapterBase, Configurable):
     class MyUserAdapter(Knowbe4UserInstance):
         pass
 
@@ -210,7 +211,10 @@ class Knowbe4Adapter(AdapterBase):
                 return None
             user.id = str(user_id) + '_' + (user_raw.get('email') or '')
             user.mail = user_raw.get('email')
-            user.user_status = user_raw.get('status')
+            user_status = user_raw.get('status')
+            if self.__white_list_user_status and user_status not in self.__white_list_user_status:
+                return None
+            user.user_status = user_status
             user.employee_number = user_raw.get('employee_number')
             user.first_name = user_raw.get('first_name')
             user.last_name = user_raw.get('last_name')
@@ -249,3 +253,29 @@ class Knowbe4Adapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.UserManagement]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'white_list_user_status',
+                    'title': 'User status whitelist',
+                    'type': 'string'
+                }
+            ],
+            'required': [
+            ],
+            'pretty_name': 'Know4be Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'white_list_user_status': None
+        }
+
+    def _on_config_update(self, config):
+        self.__white_list_user_status = config.get('white_list_user_status').lower().split(',') \
+            if config.get('white_list_user_status') else None

@@ -50,6 +50,7 @@ class AzureSoftwareUpdate(SmartJsonClass):
 
 
 class AzureDeviceInstance(DeviceAdapter, AzureAdapterEntity):
+    cloud_name = Field(str, 'Cloud Name')
     account_tag = Field(str, 'Account Tag')
     location = Field(str, 'Azure Location')
     instance_type = Field(str, 'Azure Instance Type')
