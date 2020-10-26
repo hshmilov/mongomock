@@ -1,6 +1,7 @@
 import os
 
 from services.weave_service import WeaveService
+from services.ports import DOCKER_PORTS
 from axonius.consts.plugin_consts import AXONIUS_SETTINGS_DIR_NAME, AXONIUS_SETTINGS_PATH
 from axonius.redis.redis_client import get_db_client
 
@@ -59,4 +60,8 @@ tls-ca-cert-file {redis_ca_crt}
 
     @staticmethod
     def get_client(db, axonius_settings_path=None):
-        return get_db_client(db=db, axonius_settings_path=axonius_settings_path)
+        return get_db_client(host='redis', db=db, axonius_settings_path=axonius_settings_path)
+
+    @property
+    def exposed_ports(self):
+        return [(DOCKER_PORTS['redis'], DOCKER_PORTS['redis'])] if os.getenv('PROD') != 'True' else []

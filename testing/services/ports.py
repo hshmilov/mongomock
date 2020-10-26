@@ -15,5 +15,6 @@ DOCKER_PORTS = {
     'httpd-service':                    8889,  # reserved
     'tunneler':                         9958,
     'mongo':                            27017,
-    'mockingbird-db':                   28017
+    'mockingbird-db':                   28017,
+    'redis':                            6379
 }

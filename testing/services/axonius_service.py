@@ -8,6 +8,7 @@ import sys
 import time
 from datetime import datetime, timedelta
 from multiprocessing.pool import ThreadPool
+from pathlib import Path
 
 import docker
 import pytest
@@ -28,7 +29,7 @@ from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           NODE_MARKER_PATH,
                                           WEAVE_PATH, WEAVE_VERSION, DOCKERHUB_URL, USING_WEAVE_PATH,
-                                          CUSTOMER_CONF_PATH)
+                                          CUSTOMER_CONF_PATH, CORTEX_PATH)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
 from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME
@@ -58,7 +59,6 @@ from test_helpers.utils import try_until_not_thrown
 DNS_REGISTER_POOL_SIZE = 5
 CORE_ADDRESS = 'https://core.axonius.local'
 REMOTE_CORE_WAIT_TIMEOUT = 20 * 60
-from axonius.consts.plugin_consts import AXONIUS_MANAGER_SETTINGS_PATH
 
 
 def get_service():
@@ -861,7 +861,8 @@ class AxoniusService:
         return None
 
     def get_redis_client(self):
-        return self.redis.get_client(0, axonius_settings_path=AXONIUS_MANAGER_SETTINGS_PATH)
+        settings_path = Path(CORTEX_PATH) / '.axonius_settings'
+        return self.redis.get_client(0, axonius_settings_path=settings_path)
 
     def flush_redis_entities_cache(self):
         self.get_redis_client().flushdb()

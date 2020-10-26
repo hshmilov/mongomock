@@ -910,7 +910,7 @@ class APIMixin:
             projection=mongo_projection,
         )
 
-        entities, cursor_obj = get_entities(
+        entities, cursor_obj, _ = get_entities(
             limit=limit,
             skip=skip,
             view_filter=mongo_filter,

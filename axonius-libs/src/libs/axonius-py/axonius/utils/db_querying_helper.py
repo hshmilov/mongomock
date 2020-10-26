@@ -5,7 +5,7 @@ import math
 
 from collections import defaultdict
 from datetime import datetime
-from typing import Iterable, Dict, Iterator, Tuple
+from typing import Iterable, Dict, Iterator, Tuple, Optional
 from bson import ObjectId
 
 from dataclasses import dataclass
@@ -279,7 +279,7 @@ def _get_entities_raw(entity_views_db: Collection,
                       sort: dict = None,
                       default_sort: bool = False,
                       history_date: datetime = None,
-                      ) -> Tuple[Iterator[dict]]:
+                      ) -> Iterator[dict]:
     """
     See get_entities for explanation of the parameters
     return entities iterator, and the cache last updated time stamp if using cache.
@@ -314,7 +314,7 @@ def convert_entities_to_frontend_entities(data_list: Iterable[dict],
                                           include_details: bool = False,
                                           field_filters: dict = None,
                                           excluded_adapters: dict = None,
-                                          ) -> Iterable[dict]:
+                                          ) -> Iterator[dict]:
     """
     Converts db like entities to frontend accepted entities.
     See get_entities for parameters
@@ -351,7 +351,7 @@ def get_entities(limit: int,
                  use_cache_entry: bool = True,
                  is_cache_enabled: bool = False,
                  cache_ttl: int = None,
-                 ) -> Tuple[Iterable[dict], CursorMeta, datetime]:
+                 ) -> Tuple[Iterable[dict], Optional[CursorMeta], Optional[datetime]]:
     """
     Get Axonius data of type <entity_type>, from the aggregator which is expected to store them.
     :param limit: the max amount of entities to return
@@ -426,7 +426,7 @@ def _get_entities_with_cursor(entity_type, view_filter, db_projection, cursor_id
         field_filters=field_filters,
         excluded_adapters=excluded_adapters,
     )
-    return entities, cursor_obj
+    return entities, cursor_obj, None
 
 
 def _get_iterable_entities_cached(entity_type, view_filter, db_projection, sort, skip, limit,
