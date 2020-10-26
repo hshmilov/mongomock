@@ -8,6 +8,8 @@ find . -type d -exec chmod 755 {} \;
 ./run_axonius_manager.sh
 ./pyrun.sh ./devops/scripts/instances/system_boot.py
 
+cd /home/ubuntu/cortex/devops/scripts/watchdog && ./run_host_tasks.sh &
+
 # Add iptables rule for self-serve machines
 curl -s -m 5 -I -o /dev/null http://169.254.169.254/2009-04-04/user-data 2>&1 > /dev/null
 if [[ $? -eq 0 && $(curl -s -m 5 -I http://169.254.169.254/2009-04-04/user-data | grep -c 200) -eq 1 ]]; then
