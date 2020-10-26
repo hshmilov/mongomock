@@ -25,19 +25,40 @@ class AxoniusDict(Mapping):
         return self._storage.get(key, default) or default
 
 
-def is_filter_in_value(value, filters):
+# pylint: disable=too-many-return-statements
+def is_filter_in_value(value, term, include):
     """
     Check recursively if any string value inside given item, has the current field's filter
     """
     if isinstance(value, str):
-        return all((f['term'].lower() in value.lower()) == f['include'] if isinstance(f, dict) and 'term' in f else
-                   f.lower() in value.lower()
-                   for f in filters)
+        return (term.lower() in value.lower()) == include
+    if isinstance(value, int):
+        return (term.lower() in str(value)) == include
     if isinstance(value, list):
-        return any(is_filter_in_value(item, filters) for item in value)
+        if include:
+            return any(is_filter_in_value(item, term, include) for item in value)
+        return all(is_filter_in_value(item, term, include) for item in value)
     if isinstance(value, dict):
-        return any(is_filter_in_value(item, filters) for key, item in value.items())
+        if include:
+            return any(is_filter_in_value(item, term, include) for key, item in value.items())
+        return all(is_filter_in_value(item, term, include) for key, item in value.items())
     return False
+
+
+def filter_value(value, filters):
+    for column_filter in filters:
+        term = column_filter.get('term', '')
+        include = column_filter.get('include', True)
+        if isinstance(value, list):
+            value = [item for item in value if is_filter_in_value(item, term, include)]
+        if isinstance(value, dict):
+            # complex field - should check for all it's values an return the whole object only
+            # if all sub fields are matching the filter.
+            value = {key: item for (key, item) in value.items()
+                     if is_filter_in_value(item, term, include)}
+        else:
+            value = value if is_filter_in_value(value, term, include) else None
+    return value
 
 
 def make_hash(obj):

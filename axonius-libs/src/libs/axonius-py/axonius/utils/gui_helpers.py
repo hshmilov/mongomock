@@ -36,7 +36,7 @@ from axonius.utils.axonius_query_language import parse_filter, parse_filter_non_
 from axonius.utils.revving_cache import rev_cached_entity_type
 from axonius.utils.cache.entities_cache import entities_count_redis_cached
 from axonius.utils.threading import singlethreaded
-from axonius.utils.dict_utils import is_filter_in_value, make_hash
+from axonius.utils.dict_utils import filter_value, make_hash
 from axonius.utils import serial_csv
 from axonius.plugin_exceptions import SessionInvalid
 
@@ -1013,10 +1013,7 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
 
         if val is not None and (not isinstance(val, (str, list)) or len(val)):
             if field_filters and field_filters.get(field_path):
-                if isinstance(val, list):
-                    val = [item for item in val if is_filter_in_value(item, field_filters[field_path])]
-                elif not is_filter_in_value(val, field_filters[field_path]):
-                    val = ''
+                val = filter_value(val, field_filters[field_path]) or ''
 
             field_to_value[field_path] = val
 
@@ -1050,8 +1047,7 @@ def parse_entity_fields(entity_datas, fields, include_details=False, field_filte
                 field_detail = specific_adapters_values[adapter_num][0]
 
             if field_filters and field_filters.get(field_path):
-                if not is_filter_in_value(field_detail, field_filters[field_path]):
-                    field_detail = None
+                field_detail = filter_value(field_detail, field_filters[field_path])
             field_details.append(field_detail)
         field_to_value[f'{field_path}_details'] = field_details
 

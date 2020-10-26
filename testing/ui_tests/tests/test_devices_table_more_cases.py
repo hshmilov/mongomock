@@ -129,7 +129,7 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
             result = self.devices_page.generate_csv('devices', fields,
                                                     excluded_adapters=excluded_adapters, field_filters=field_filters)
 
-            self.devices_page.assert_csv_match_ui_data(result)
+            self.devices_page.assert_csv_match_ui_data(result, max_rows=20)
 
             self.adapters_page.clean_adapter_servers(CSV_NAME, True)
 

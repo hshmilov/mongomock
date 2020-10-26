@@ -24,11 +24,11 @@
         />
       </div>
       <div
+        v-if="!hasFilter && (filterVisible || Boolean(filterColumnName === field.name))"
         class="filter"
         @click.stop="toggleColFilter"
       >
         <VIcon
-          v-if="!hasFilter && (filterVisible || Boolean(filterColumnName === field.name))"
           :class="{filterable: true, disabled: filterDisabled, active: Boolean(filterColumnName === field.name)}"
         >
           $vuetify.icons.filterable
