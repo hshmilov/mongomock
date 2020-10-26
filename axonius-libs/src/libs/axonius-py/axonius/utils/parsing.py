@@ -745,7 +745,7 @@ def parse_date_with_timezone(datetime_to_parse, time_zone):
         datetime_to_parse = str(datetime_to_parse)
         d = datetime.datetime.strptime(datetime_to_parse, '%Y-%m-%d %H:%M:%S')
         timezone = pytz.timezone(time_zone)
-        d = timezone.localize(d)
+        d = timezone.localize(d, is_dst=True)
 
         # Sometimes, this would be a fake date (see is_date_real). in this case return None
         return d if is_date_real(d) else None
