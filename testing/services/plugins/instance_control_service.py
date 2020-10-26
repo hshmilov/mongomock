@@ -54,7 +54,7 @@ class InstanceControlService(PluginService):
     @property
     def volumes_override(self):
         volumes = [f'{self.rsa_keys}:/home/axonius/app/rsa_keys',
-                   f'/etc/hostname:{HOSTNAME_FILE_PATH}:ro', f'{self.service_dir}/metrics:/home/axonius/app/metrics']
+                   f'/etc/hostname:{HOSTNAME_FILE_PATH}', f'{self.service_dir}/metrics:/home/axonius/app/metrics']
         volumes.extend(super().volumes_override)
         return volumes
 

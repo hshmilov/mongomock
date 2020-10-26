@@ -267,26 +267,23 @@ class InstanceControlService(Triggerable, PluginBase):
         update instance hostname by calling hostnamectl set-hostname.
         """
         try:
+            hostname_change_file = '/home/ubuntu/cortex/uploaded_files/hostname_change'
             current_hostname = instance_control_consts.HOSTNAME_FILE_PATH.read_text().strip()
             logger.info(f'Start updating axonius node hostname, current:{current_hostname} new:{hostname} . . . ')
-            cmd = f'hostnamectl set-hostname {hostname}'
+            cmd = f'/bin/sh -c "echo {hostname} > {hostname_change_file}"'
             self.__exec_command_verbose(cmd)
 
-            return_val = ''
-
             for file_sync_retry in range(5):
-                resp = self.__exec_command('cat /etc/hostname')
-                current_hostname = resp.read().decode('utf-8').strip()
-                if current_hostname == hostname:
-                    logger.debug(f'Hostname {hostname} updated sucessfuly ')
-                    return 'Success'
-                logger.debug(f'Retry {file_sync_retry}  verification for /etc/hostname updated,'
-                             f' current:{current_hostname}  new:{hostname}')
-                if file_sync_retry > 2:
+                # Theoretically that best way to do the validation is map the /etc/hostname file from
+                # the host to the container, but because every change in hostname causing the file to re-create
+                # and therefore change the inode originally mapped to the docker container, so we just check that
+                # the task deleted the original hostname_change file in order to make sure it worked
+                # We decided that mapping the whole /etc folder in order to solve this it too dangerous
+                if Path(hostname_change_file).exists():
                     time.sleep(3)
-                else:
-                    time.sleep(1)
-
+                instance_control_consts.HOSTNAME_FILE_PATH.write_text(f'{hostname}\n')
+                logger.debug(f'Hostname {hostname} updated successfully')
+                return 'Success'
             logger.error(f'Hostname {hostname} failed name changed verification')
             return return_error(f'verify etc/hostname is updated failed  ', 500)
         except Exception:
