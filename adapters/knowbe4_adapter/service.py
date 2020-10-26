@@ -266,7 +266,7 @@ class Knowbe4Adapter(AdapterBase, Configurable):
             ],
             'required': [
             ],
-            'pretty_name': 'Know4be Configuration',
+            'pretty_name': 'Know4Be4 Configuration',
             'type': 'array'
         }
 

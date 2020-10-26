@@ -1120,7 +1120,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                 or cb_defense_basic_id_condradict(x, y) \
                                 or 'vmware' in mac_manufacturer.lower() \
                                 or mac_manufacturer in ['(Realtek (UpTech? also reported))'] \
-                                or not cloud_id_do_not_contradict(x, y):
+                                or not cloud_id_do_not_contradict(x, y) \
+                                or not serials_do_not_contradict(x, y):
                             logger.debug(f'Added to blacklist {mac} for X {x} and Y {y}')
                             mac_blacklist.add(mac)
                             break

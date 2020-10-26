@@ -176,7 +176,7 @@ class CrowdStrikeConnection(RESTConnection):
                         for device in devices:
                             device.setdefault('groups_data', []).append(group_data)
             except Exception:
-                logger.error('Error getting device groups')
+                logger.exception('Error getting device groups')
 
     def get_vulnerabilities_data(self, device_data: dict, vulnerabilities_ids: List[str]) -> None:
         """

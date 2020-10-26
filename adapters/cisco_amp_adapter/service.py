@@ -6,6 +6,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState, AGENT_NAMES
 from axonius.fields import Field
+from axonius.utils.parsing import is_domain_valid
 from axonius.utils.files import get_local_config_file
 from cisco_amp_adapter import consts
 from cisco_amp_adapter.connection import CiscoAMPConnection
@@ -116,7 +117,12 @@ class CiscoAmpAdapter(AdapterBase):
                     continue
 
                 device.id = guid
-                device.hostname = raw_device_data.get('hostname')
+                hostname = raw_device_data.get('hostname')
+                device.hostname = hostname
+                if hostname:
+                    domain = '.'.join(hostname.split('.')[1:])
+                    if is_domain_valid(domain):
+                        device.domain = domain
                 device.set_raw(raw_device_data)
 
                 if raw_device_data.get('active'):

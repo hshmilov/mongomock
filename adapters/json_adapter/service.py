@@ -253,6 +253,15 @@ class JsonAdapter(AdapterBase):
             self._parse_device_nics(device, gen_values)
 
             try:
+                security_patches = gen_values.get('security_patch')
+                if isinstance(security_patches, str) and security_patches:
+                    security_patches = security_patches.split(',')
+                    for security_patch in security_patches:
+                        device.add_security_patch(security_patch_id=security_patch)
+            except Exception:
+                logger.warning(f'Problem with security_patch', exc_info=True)
+
+            try:
                 cve_ids = gen_values.get('cve_id')
                 if isinstance(cve_ids, str) and cve_ids:
                     cve_ids = cve_ids.split(',')

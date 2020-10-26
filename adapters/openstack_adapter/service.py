@@ -1,10 +1,12 @@
 # pylint: disable=import-error
 import logging
+import datetime
 logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter, Field
 from axonius.utils.files import get_local_config_file
 from openstack_adapter.client import OpenStackClient
+from axonius.utils.datetime import parse_date
 from urllib3.util.url import parse_url
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
@@ -14,6 +16,20 @@ class OpenstackAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         status = Field(str, "Status")
         image_name = Field(str, "Image name")
+        role = Field(str, 'Role')
+        uai = Field(str, 'UAI')
+        alternate_contacts = Field(str, 'Alternate Contacts')
+        app = Field(str, 'Application')
+        cloud_location_zone = Field(str, 'Cloud Location Zone')
+        criticality = Field(str, 'Criticality')
+        env = Field(str, 'Environment')
+        realrolename = Field(str, 'Real Role Name')
+        region = Field(str, 'Region')
+        scalr_version = Field(str, 'Scalr Version')
+        vm_state = Field(str, 'VM State')
+        image_create_time = Field(datetime.datetime, 'Image Creation Time')
+        image_update_time = Field(datetime.datetime, 'Image Update Time')
+        image_uai = Field(str, 'Image UAI')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -107,21 +123,56 @@ class OpenstackAdapter(AdapterBase):
         # add basic info
         device = self._new_device_adapter()
         device.id = raw_device['id'] + '_' + (raw_device.get('name') or '')
-        device.name = raw_device['name']
-        device.status = raw_device['status']
+        device.name = raw_device.get('name')
+        device.status = raw_device.get('status')
+        device.role = raw_device.get('Role') or raw_device.get('role')
+        device.uai = raw_device.get('UAI') or raw_device.get('uai')
+        device.alternate_contacts = raw_device.get('alternate_contacts')
+        device.app = raw_device.get('app')
+        device.cloud_location_zone = raw_device.get('cloud_location_zone')
+        device.criticality = raw_device.get('criticality')
+        device.env = raw_device.get('env')
+        device.email = raw_device.get('owner_email')
+        device.realrolename = raw_device.get('realrolename')
+        device.region = raw_device.get('region')
+        device.scalr_version = raw_device.get('scalr_version')
+        device.vm_state = raw_device.get('vm_state')
 
         # if the device has image
         if image:
-            device.image_name = image['name']
+            try:
+                device.image_name = image.get('name')
+                device.image_create_time = parse_date(image.get('created_at'))
+                device.image_update_time = parse_date(image.get('updated_at'))
+                device.image_uai = image.get('uai')
+            except Exception:
+                logger.exception(f'Problem with image')
 
         # if the machine has flavor
         if flavor:
-            device.total_physical_memory = flavor['ram'] / 1024
-            device.number_of_processes = flavor['vcpus']
+            try:
+                try:
+                    device.total_physical_memory = flavor['ram'] / 1024
+                except Exception:
+                    pass
+                try:
+                    device.number_of_processes = flavor['vcpus']
+                except Exception:
+                    pass
+                if flavor.get('disk'):
+                    device.add_hd(total_size=flavor.get('disk'))
+            except Exception:
+                logger.exception(f'Problem with flavor')
 
         # iterate the nics and add them
-        for mac, ip_address in OpenStackClient.get_nics(raw_device).items():
-            device.add_nic(mac, ip_address)
+        try:
+            for mac, ip_address in OpenStackClient.get_nics(raw_device).items():
+                try:
+                    device.add_nic(mac, ip_address)
+                except Exception:
+                    logger.exception(f'Problem getting mac ip')
+        except Exception:
+            logger.exception(f'Problem getting nics')
 
         device.set_raw(
             {"device": raw_device, "flavor": flavor, "image": image})

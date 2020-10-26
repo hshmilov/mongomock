@@ -35,6 +35,7 @@ IDENTIFIERS = {
     'networkinterfaces': ['networkinterfaces'],
     'etcissue': ['etcissue'],
     'cve_id': ['cve', 'cveid', 'cvelist'],
+    'security_patch': ['securitypatch'],
     'email': ['email', 'mail'],
     'cloud_id': ['cloudid'],
     'cloud_provider': ['cloudprovider', 'cloudprovidor'],
