@@ -257,5 +257,12 @@ chmod 0444 /usr/local/share/ca-certificates/ZscalerRootCertificate-2048-SHA256.c
 update-ca-certificates
 set -e
 
+echo "install Node.js v15.x"
+curl -sL https://deb.nodesource.com/setup_15.x | bash - && \
+    apt-get install -y nodejs && nodejs -v && node -v && npm -v
+
+echo "install eslint"
+npm i eslint -g
+
 touch $INIT_FILE
 echo "Done successfully"
