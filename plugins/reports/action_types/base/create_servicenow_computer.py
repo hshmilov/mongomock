@@ -81,12 +81,23 @@ class ServiceNowComputerAction(ActionTypeBase):
                     'name': 'ips_delimiter',
                     'title': 'IP addresses delimiter',
                     'type': 'string'
+                },
+                {
+                    'name': 'use_first_mac_only',
+                    'title': 'Use first MAC address only',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'mac_delimiter',
+                    'title': 'MAC addresses delimiter',
+                    'type': 'string'
                 }
             ],
             'required': [
                 'use_adapter',
                 'verify_ssl',
-                'use_first_ip_only'
+                'use_first_ip_only',
+                'use_first_mac_only',
             ],
             'type': 'array'
         }
@@ -106,7 +117,9 @@ class ServiceNowComputerAction(ActionTypeBase):
             'verify_ssl': True,
             'identifyreconcile_endpoint': None,
             'ips_delimiter': '/',
-            'use_first_ip_only': False
+            'use_first_ip_only': False,
+            'mac_delimiter': '/',
+            'use_first_mac_only': True
         })
 
     # pylint: disable=too-many-arguments,too-many-branches
@@ -187,6 +200,11 @@ class ServiceNowComputerAction(ActionTypeBase):
             'adapters.data.name': 1,
             'adapters.data.os.type': 1,
             'adapters.data.device_serial': 1,
+            'preferred_fields.hostname_preferred': 1,
+            'preferred_fields.os.type_preferred': 1,
+            'preferred_fields.os.distribution_preferred': 1,
+            'preferred_fields.network_interfaces.mac_preferred': 1,
+            'preferred_fields.network_interfaces.ips_preferred': 1,
             'adapters.data.device_manufacturer': 1,
             'adapters.data.network_interfaces.mac': 1,
             'adapters.data.network_interfaces.ips_v4': 1
@@ -253,7 +271,33 @@ class ServiceNowComputerAction(ActionTypeBase):
                                 ax_snow_values_map_dict[snow_field] = snow_value
                     except Exception:
                         logger.exception(f'Problem with translating dict')
-                # Make sure that we have name
+                try:
+                    preferred_fields = entry.get('preferred_fields')
+                    if not isinstance(preferred_fields, dict):
+                        preferred_fields = {}
+                    hostname_preferred = preferred_fields.get('hostname_preferred')
+                    if hostname_preferred:
+                        name_raw = hostname_preferred
+                    type_preferred = (preferred_fields.get('os') or {}).get('type_preferred')
+                    distribution_preferred = (preferred_fields.get('os') or {}).get('distribution_preferred')
+                    if type_preferred and distribution_preferred:
+                        type_preferred = f'{type_preferred} {distribution_preferred}'
+                    if type_preferred:
+                        os_raw = type_preferred
+                    network_interfaces = (preferred_fields.get('network_interfaces') or {})
+                    mac_preferred = network_interfaces.get('mac_preferred') or []
+                    if mac_preferred:
+                        mac_delimiter = self._config.get('mac_delimiter') or '/'
+                        if self._config.get('use_first_mac_only') or 'use_first_mac_only' not in self._config:
+                            mac_address_raw = mac_preferred[0]
+                        else:
+                            mac_address_raw = mac_delimiter.join(mac_preferred)
+                    ips_preferred = network_interfaces.get('ips_preferred') or []
+                    if ips_preferred:
+                        ip_address_raw = ips_preferred
+
+                except Exception:
+                    logger.exception(f'Problem with preferred fields')
                 if not ip_address_raw:
                     ip_address_raw = None
                 else:

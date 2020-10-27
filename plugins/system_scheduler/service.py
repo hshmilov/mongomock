@@ -183,7 +183,9 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         if self.__correlation_lock.acquire(False):
             try:
                 logger.info(f'Running correlation')
+                self.log_activity(AuditCategory.Correlation, AuditAction.Start)
                 self._run_plugins(self._get_plugins(PluginSubtype.Correlator), 72 * 3600)
+                self.log_activity(AuditCategory.Correlation, AuditAction.End)
                 logger.info(f'Done running correlation')
                 return True
             finally:
@@ -864,9 +866,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 if not self.run_correlations():
                     #  If the correlation was not run because there is an existing one already running, then wait
                     # for it to finish, only then transition to next phase.
-                    logger.info(f'Other correlation is in place. Blocking until it is finished..')
-                    with self.__correlation_lock:
-                        logger.info(f'Other correlation has finished')
+                    logger.info(f'Other correlation is in place. Continue')
                 self._request_gui_dashboard_cache_clear()
                 self._trigger_remote_plugin(AGGREGATOR_PLUGIN_NAME, 'calculate_preferred_fields', blocking=True)
             except Exception:

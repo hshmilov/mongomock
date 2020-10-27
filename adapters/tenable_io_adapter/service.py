@@ -46,6 +46,8 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         agent_uuid = Field(str, 'Agent UUID')
         risk_factor = Field(str, 'Risk Factor')
         scans_data = ListField(ScanData, 'Scans Data')
+        aws_account_id = Field(str, 'AWS Account ID')
+        aws_instance_id = Field(str, 'AWS Instance ID')
 
         def add_tenable_vuln(self, **kwargs):
             self.plugin_and_severities.append(TenableVulnerability(**kwargs))
@@ -267,6 +269,12 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         device.id = device_id
         device.asset_uuid = device_id
         device.has_agent = bool(device_raw.get('has_agent'))
+        device.aws_account_id = device_raw.get('aws_account_id')
+        aws_instance_id = device_raw.get('aws_instance_id') or device_raw.get('aws_ec2_instance_id')
+        device.aws_instance_id = aws_instance_id
+        if aws_instance_id:
+            device.cloud_id = aws_instance_id
+            device.cloud_provider = 'AWS'
         device.last_seen = parse_date(device_raw.get('last_seen'))
         device.risk_factor = device_raw.get('risk_factor')
         device.agent_uuid = device_raw.get('agent_uuid')

@@ -151,7 +151,8 @@ class JumpcloudAdapter(AdapterBase):
                 if isinstance(device_raw.get('networkInterfaces'), list):
                     for nic in device_raw.get('networkInterfaces'):
                         try:
-                            if nic.get('address') and not nic.get('name') == 'lo':
+                            if nic.get('address') and nic.get('name') not in ['lo', 'lo0', 'lo1'] \
+                                    and not nic.get('internal'):
                                 device.add_nic(ips=[nic.get('address')], name=nic.get('name'))
                         except Exception:
                             logger.exception(f'Problem adding nic {nic}')

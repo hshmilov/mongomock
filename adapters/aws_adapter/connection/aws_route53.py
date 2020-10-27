@@ -87,6 +87,8 @@ def parse_raw_data_inner_route53(
                 for dns_name_raw in device.dns_names:
                     if dns_name_raw.startswith('i-'):
                         device.route53_ec2_instance_id = dns_name_raw.split('.')[0]
+                    elif dns_name_raw.startswith('ec2-'):
+                        device.add_nic(ips=['.'.join(dns_name_raw.split('.')[0].split('-')[1:])])
             except Exception:
                 pass
             device.route53_data.append(

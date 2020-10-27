@@ -7,6 +7,7 @@ class AuditCategory(Enum):
     UserSession = 'session'
     Discovery = 'discovery'
     CustomDiscovery = 'custom_discovery'
+    Correlation = 'correlation'
     ConnectionCustomDiscovery = 'connection_custom_discovery'
     GettingStarted = 'getting_started'
     Adapters = 'adapters'
@@ -49,6 +50,7 @@ class AuditAction(Enum):
     AddComment = 'add_comment'
     EditComment = 'edit_comments'
     DeleteComment = 'delete_comments'
+    End = 'end'
 
 
 class AuditType(Enum):

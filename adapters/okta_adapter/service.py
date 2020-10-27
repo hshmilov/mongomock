@@ -67,7 +67,9 @@ class OktaAdapter(AdapterBase, Configurable):
     def _query_users_by_client(self, client_name, client_data):
         return client_data.get_users(self.__parallel_requests,
                                      fetch_apps=self.__fetch_apps,
+                                     fetch_groups=self.__fetch_groups,
                                      fetch_factors=self.__fetch_factors,
+                                     sleep_between_requests_in_sec=self.__sleep_between_requests_in_sec,
                                      fetch_logs=self.__fetch_logs)
 
     def _clients_schema(self):
@@ -236,6 +238,11 @@ class OktaAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'fetch_groups',
+                    'title': 'Fetch users groups',
+                    'type': 'bool'
+                },
+                {
                     'name': 'fetch_factors',
                     'title': 'Fetch users authentication factors',
                     'type': 'bool'
@@ -244,6 +251,11 @@ class OktaAdapter(AdapterBase, Configurable):
                     'name': 'parallel_requests',
                     'title': 'Number of parallel requests',
                     'type': 'integer'
+                },
+                {
+                    'name': 'sleep_between_requests_in_sec',
+                    'type': 'integer',
+                    'title': 'Time in seconds to sleep between each request'
                 },
                 {
                     'name': 'fetch_logs',
@@ -255,6 +267,7 @@ class OktaAdapter(AdapterBase, Configurable):
                 'fetch_apps',
                 'parallel_requests',
                 'fetch_factors',
+                'fetch_groups',
                 'fetch_logs'
             ],
             'pretty_name': 'Okta Configuration',
@@ -268,7 +281,9 @@ class OktaAdapter(AdapterBase, Configurable):
             'fetch_factors': False,
             'fetch_logs': False,
             'parallel_requests': 75,
-            'email_domain_whitelist': None
+            'email_domain_whitelist': None,
+            'sleep_between_requests_in_sec': None,
+            'fetch_groups': True
         }
 
     def _on_config_update(self, config):
@@ -276,5 +291,7 @@ class OktaAdapter(AdapterBase, Configurable):
         self.__parallel_requests = config['parallel_requests']
         self.__fetch_factors = config.get('fetch_factors')
         self.__fetch_logs = config.get('fetch_logs')
+        self.__sleep_between_requests_in_sec = config.get('sleep_between_requests_in_sec') or 0
+        self.__fetch_groups = config.get('fetch_groups') if 'fetch_groups' in config else True
         self.__email_domain_whitelist = config['email_domain_whitelist'].lower().split(',') \
             if config.get('email_domain_whitelist') else None

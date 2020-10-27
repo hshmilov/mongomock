@@ -72,12 +72,34 @@ class CherwellCreateComputerAction(ActionTypeBase):
                     'name': 'ax_cherwell_fields_map',
                     'type': 'string',
                     'title': 'Axonius to Cherwell field mapping'
+                },
+                {
+                    'name': 'use_first_ip_only',
+                    'title': 'Use first IP address only',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'ips_delimiter',
+                    'title': 'IP addresses delimiter',
+                    'type': 'string'
+                },
+                {
+                    'name': 'use_first_mac_only',
+                    'title': 'Use first MAC address only',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'mac_delimiter',
+                    'title': 'MAC addresses delimiter',
+                    'type': 'string'
                 }
             ],
             'required': [
                 'use_adapter',
                 'verify_ssl',
-                'bus_ob_id'
+                'bus_ob_id',
+                'use_first_ip_only',
+                'use_first_mac_only',
             ],
             'type': 'array'
         }
@@ -95,7 +117,11 @@ class CherwellCreateComputerAction(ActionTypeBase):
             'ax_cherwell_fields_map': None,
             'verify_ssl': False,
             'client_id': None,
-            'bus_ob_id': IT_ASSET_BUS_OB_ID
+            'bus_ob_id': IT_ASSET_BUS_OB_ID,
+            'ips_delimiter': '/',
+            'use_first_ip_only': False,
+            'mac_delimiter': '/',
+            'use_first_mac_only': True
         })
 
     # pylint: disable=too-many-arguments
@@ -179,6 +205,11 @@ class CherwellCreateComputerAction(ActionTypeBase):
             'adapters.data.id': 1,
             'adapters.data.name': 1,
             'adapters.data.bus_ob_id': 1,
+            'preferred_fields.hostname_preferred': 1,
+            'preferred_fields.os.type_preferred': 1,
+            'preferred_fields.os.distribution_preferred': 1,
+            'preferred_fields.network_interfaces.mac_preferred': 1,
+            'preferred_fields.network_interfaces.ips_preferred': 1,
             'adapters.data.bus_ob_rec_id': 1,
             'adapters.data.bus_ob_public_id': 1,
             'adapters.data.os.type': 1,
@@ -254,6 +285,44 @@ class CherwellCreateComputerAction(ActionTypeBase):
                                 ax_cherwell_values_map_dict[cherwell_field] = cherwell_value
                     except Exception:
                         logger.exception(f'Problem with translating dict')
+                try:
+                    preferred_fields = entry.get('preferred_fields')
+                    if not isinstance(preferred_fields, dict):
+                        preferred_fields = {}
+                    hostname_preferred = preferred_fields.get('hostname_preferred')
+                    if hostname_preferred:
+                        name_raw = hostname_preferred
+                    type_preferred = (preferred_fields.get('os') or {}).get('type_preferred')
+                    distribution_preferred = (preferred_fields.get('os') or {}).get('distribution_preferred')
+                    if type_preferred and distribution_preferred:
+                        type_preferred = f'{type_preferred} {distribution_preferred}'
+                    if type_preferred:
+                        os_raw = type_preferred
+                    network_interfaces = (preferred_fields.get('network_interfaces') or {})
+                    mac_preferred = network_interfaces.get('mac_preferred') or []
+                    if mac_preferred:
+                        mac_delimiter = self._config.get('mac_delimiter') or '/'
+                        if self._config.get('use_first_mac_only') or 'use_first_mac_only' not in self._config:
+                            mac_address_raw = mac_preferred[0]
+                        else:
+                            mac_address_raw = mac_delimiter.join(mac_preferred)
+                    ips_preferred = network_interfaces.get('ips_preferred') or []
+                    if ips_preferred:
+                        ip_address_raw = ips_preferred
+
+                except Exception:
+                    logger.exception(f'Problem with preferred fields')
+                if not ip_address_raw:
+                    ip_address_raw = None
+                else:
+                    ip_address_raw_list = []
+                    for ip in ip_address_raw:
+                        if ip not in ['127.0.0.1']:
+                            ip_address_raw_list.append(ip)
+                            if self._config.get('use_first_ip_only'):
+                                break
+                    ips_delimiter = self._config.get('ips_delimiter') or '/'
+                    ip_address_raw = ips_delimiter.join(ip_address_raw_list)
                 # Make sure that we have name
                 if name_raw is None and asset_name_raw is None:
                     results.append(EntityResult(entry['internal_axon_id'], False, 'Device With No Name'))

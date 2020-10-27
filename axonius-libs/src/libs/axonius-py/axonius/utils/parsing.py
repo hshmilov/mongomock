@@ -812,7 +812,7 @@ def extract_all_ips(network_ifs):
         return
     for network_if in network_ifs:
         for ip in network_if.get(IPS_FIELD) or []:
-            if ip not in ['127.0.0.1']:
+            if ip not in ['127.0.0.1', '::1', 'fe80::1', '192.0.2.1', 'fe80::aede:48ff:fe00:1122']:
                 yield ip
 
 

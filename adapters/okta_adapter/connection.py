@@ -28,6 +28,7 @@ class OktaConnection:
         self.__api_key = api_key
         self.__parallel_requests = PARALLEL_REQUESTS_DEFAULT
         self.__https_proxy = https_proxy
+        self._sleep_between_requests_in_sec = 0
 
     # pylint: disable=W0102
     def __make_request(self, api='', params={}, forced_url=None):
@@ -43,9 +44,12 @@ class OktaConnection:
         headers = {
             'Authorization': f'SSWS {self.__api_key}'
         }
+        if self._sleep_between_requests_in_sec:
+            time.sleep(self._sleep_between_requests_in_sec)
         response = requests.get(forced_url or uritools.urijoin(self.__base_url, api), params=params,
                                 headers=headers, proxies={'https': self.__https_proxy}, timeout=get_default_timeout())
         if response.status_code == 429:
+            logger.info(f'Got 429 going to sleep')
             time.sleep(DEFAULT_SLEEP_TIME)
             response = requests.get(forced_url or uritools.urijoin(self.__base_url, api), params=params,
                                     headers=headers, proxies={'https': self.__https_proxy},
@@ -204,7 +208,8 @@ class OktaConnection:
 
     # pylint: disable=R1702,R0912,R0915
     def get_users(self, parallel_requests, fetch_apps=False, fetch_factors=False,
-                  fetch_logs=False) -> Iterable[dict]:
+                  fetch_logs=False, fetch_groups=True,
+                  sleep_between_requests_in_sec=0) -> Iterable[dict]:
         """
         Fetches all users
         :return: iterable of dict
@@ -233,7 +238,8 @@ class OktaConnection:
                     user_raw['log_data'] = users_to_logs.get((user_raw.get('profile') or {}).get('login'))
 
             return users_page, response
-
+        if sleep_between_requests_in_sec:
+            self._sleep_between_requests_in_sec = sleep_between_requests_in_sec
         if parallel_requests <= 0:
             parallel_requests = PARALLEL_REQUESTS_DEFAULT
         self.__parallel_requests = parallel_requests
@@ -258,9 +264,10 @@ class OktaConnection:
                         logger.exception(f'Problem with log {log_raw}')
             except Exception:
                 logger.exception(f'Problem getting logs')
-
-        logger.info('Starting to get groups')
-        users_to_group = self._add_object_to_users('groups')
+        users_to_group = dict()
+        if fetch_groups:
+            logger.info('Starting to get groups')
+            users_to_group = self._add_object_to_users('groups')
         users_to_apps = dict()
         if fetch_apps:
             logger.info('Starting to get apps')

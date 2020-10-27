@@ -1183,7 +1183,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       [],
                                       [ips_do_not_contradict_or_mac_intersection, macs_do_not_contradict,
                                        not_wifi_adapters, agent_uuid_do_not_contradict, customer_do_not_contradict,
-                                       cloud_id_do_not_contradict],
+                                       cloud_id_do_not_contradict, serials_do_not_contradict],
                                       {'Reason': 'They have the same hostname_fqdn and IPs or MACs'},
                                       CorrelationReason.StaticAnalysis)
 
