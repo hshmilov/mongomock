@@ -7,7 +7,7 @@
       module="audit"
       endpoint="settings/audit"
       title="Items"
-      :fields="fields"
+      :fields="FIELDS"
     >
       <template
         #search="{ onSearch, tableTitle, tableModule, tableView }"
@@ -44,6 +44,7 @@ import { Icon } from 'ant-design-vue';
 import XTableSearchFilters from '@neurons/inputs/TableSearchFilters.vue';
 import XPage from '@axons/layout/Page.vue';
 import XTable from '@neurons/data/Table.vue';
+import { auditFields } from '@constants/audit';
 
 export default {
   name: 'XAudit',
@@ -52,35 +53,11 @@ export default {
   },
   data() {
     return {
-      fields: [{
-        name: 'type',
-        title: 'Type',
-        type: 'string',
-        format: 'icon',
-      }, {
-        name: 'date',
-        title: 'Date',
-        type: 'string',
-        format: 'date-time',
-      }, {
-        name: 'user',
-        title: 'User',
-        type: 'string',
-      }, {
-        name: 'action',
-        title: 'Action',
-        type: 'string',
-      }, {
-        name: 'category',
-        title: 'Category',
-        type: 'string',
-      }, {
-        name: 'message',
-        title: 'Message',
-        type: 'string',
-      }],
       exportTableInProgress: false,
     };
+  },
+  created() {
+    this.FIELDS = auditFields;
   },
   methods: {
     ...mapActions({

@@ -402,20 +402,10 @@ export default {
           title: '',
           type: 'string',
           format: 'icon',
-          useCustomIcons: false,
-          iconsProperties: {
-            theme: 'filled',
-            textToIcon: {
-              success: 'check-circle',
-              error: 'close-circle',
-              inactive: 'pause-circle',
-              processing: 'warning',
-            },
-            iconTooltip: {
-              success: 'Active and connected',
-              error: 'Active with error',
-              inactive: 'Inactive',
-            },
+          iconTooltip: {
+            success: 'Active and connected',
+            error: 'Active with error',
+            inactive: 'Inactive',
           },
         },
         {

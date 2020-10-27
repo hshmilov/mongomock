@@ -18,11 +18,9 @@
   >
   <XIcon
     v-else-if="schema.format && schema.format === 'icon'"
-    :family="xIconFamily"
-    :theme="xIconTheme"
-    :type="xIconType"
     :title="xIconTitle"
     :class="`icon-${value}`"
+    v-bind="xIconProps"
   />
   <div
     v-else-if="schema.format && schema.format === 'status'"
@@ -55,8 +53,8 @@
 import { mapGetters } from 'vuex';
 import { formatDate } from '@constants/utils';
 import { DATE_FORMAT } from '@store/getters';
+import { antIconsProperties } from '@constants/icons';
 import _get from 'lodash/get';
-import _isNil from 'lodash/isNil';
 
 export default {
   name: 'XStringView',
@@ -78,18 +76,18 @@ export default {
     ...mapGetters({
       dateFormat: DATE_FORMAT,
     }),
-    xIconFamily() {
-      return _isNil(this.schema.useCustomIcons) ? 'symbol' : null;
-    },
-    xIconTheme() {
-      return _get(this.schema, 'iconsProperties.theme', null);
-    },
-    xIconType() {
-      return _get(this.schema, `iconsProperties.textToIcon.${this.value}`, this.value);
+    xIconProps() {
+      if (this.ICONS_PROPERTIES_BY_VALUE[this.value]) {
+        return this.ICONS_PROPERTIES_BY_VALUE[this.value];
+      }
+      return { family: 'symbol', type: this.value };
     },
     xIconTitle() {
-      return _get(this.schema, `iconsProperties.iconTooltip.${this.value}`, null);
+      return _get(this.schema, `iconTooltip.${this.value}`, null);
     },
+  },
+  created() {
+    this.ICONS_PROPERTIES_BY_VALUE = antIconsProperties;
   },
   methods: {
     formatUsername(value) {
