@@ -138,7 +138,7 @@ chmod 777 *
 # The public up has only port 443 open but the private one is completely open.
 # This is done this way for getting the credentials of the raised adapters (more precisely to query the core register endpoint to get registered adapters.
 # This should be changed in the future when the system matures for security reasons and others.
-./install.sh {install_params} --clean --run-system {set_credentials}
+./install.sh {install_params} --clean --run-system {set_credentials} --set-debug-passwords
 cd /home/ubuntu/cortex
 rm .git*
 chown -R ubuntu:ubuntu *

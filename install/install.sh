@@ -34,6 +34,13 @@ if [[ $* == *--set-credentials* ]]; then
     )
 fi
 
+if [[ $* == *--set-debug-passwords* ]]; then
+    echo "Setting debug passwords for Axonius users."
+    (
+    docker exec axonius-manager python3 ./devops/scripts/automate_dev/set_default_axonius_users.py
+    )
+fi
+
 if [[ $* == *--clean* ]]; then
     echo "Removing anything irrelevant.."
     (
