@@ -64,7 +64,7 @@ CSV_LIST = [
     },
     {
         'name': 'John',
-        'csv_Serial': 'Serial2',
+        'csv_Serial': 'Serial1',
         'csv_OS': 'Windows',
         'csv_MAC_Address': '11:22:22:33:11:33',
         'csv_Office': 'Office',
@@ -115,4 +115,4 @@ USERS_CLIENT_FILES = [
     }
 ]
 
-SOME_DEVICE_ID = 'user_Serial2'
+SOME_DEVICE_ID = 'user_Serial1'
