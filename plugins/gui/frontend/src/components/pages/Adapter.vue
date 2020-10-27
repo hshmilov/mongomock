@@ -575,7 +575,7 @@ export default {
         adapterId: this.adapterId,
         clientId: this.serverModal.serverName,
         serverData: this.serverModal.serverData,
-        connectionLabel: this.serverModal.connectionLabel,
+        connectionLabel: this.serverModal.connectionLabel.trim(),
         instanceId: this.serverModal.instanceId,
         instanceIdPrev: this.serverModal.instanceIdPrev,
         uuid: this.serverModal.uuid,
