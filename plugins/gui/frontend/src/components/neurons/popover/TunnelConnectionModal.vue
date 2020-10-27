@@ -73,9 +73,9 @@ export default {
 </script>
 
 <style lang="scss">
-.ant-modal-root {
+.ant-modal-root.tunnel-modal {
   .ant-modal-wrap {
-    .ant-modal.tunnel-modal {
+    .ant-modal {
       .ant-modal-content {
         width: 465px;
         .ant-modal-body {
