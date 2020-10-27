@@ -447,7 +447,7 @@ export default {
           }
 
           .cis-select {
-            width: 450px;
+            width: 460px;
           }
         }
 
