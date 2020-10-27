@@ -50,7 +50,7 @@ class TestPrivateQuery(TestBase):
         self._test_private_query_appearing(private_viewer_adder_query_name)
 
         # Check 6:
-        self._test_chart_with_private_query()
+        self._test_chart_with_private_query(private_viewer_adder_query_name)
 
     def _test_admin_private_query(self):
         public_admin_query = self.PUBLIC_QUERY_SAVE_NAME.format(user_name='Admin')
@@ -130,7 +130,11 @@ class TestPrivateQuery(TestBase):
                                                  {'module': 'Devices', 'query': private_viewer_adder_query_name}],
                                                 self.CHART_NAME)
 
-    def _test_chart_with_private_query(self):
+    def _test_chart_with_private_query(self, private_viewer_adder_query_name):
+        self.dashboard_page.edit_card(self.CHART_NAME)
+        assert self.dashboard_page.get_chart_view_selected_value() == private_viewer_adder_query_name
+        assert self.dashboard_page.get_chart_view_selected_value(1) == private_viewer_adder_query_name
+        self.dashboard_page.click_card_cancel()
         self.dashboard_page.open_move_or_copy_card(self.CHART_NAME)
         spaces = self.dashboard_page.get_all_spaces_for_move_or_copy()
         assert (len(spaces) == 1 and spaces[0] == DASHBOARD_SPACE_PERSONAL)

@@ -353,6 +353,10 @@ class DashboardPage(BasePage):
         self.select_option_from_multiple(index, self.SELECT_VIEW_NAME_CSS, self.DROPDOWN_TEXT_BOX_CSS,
                                          self.DROPDOWN_SELECTED_OPTION_CSS, view_name)
 
+    def get_chart_view_selected_value(self, index=0):
+        trigger_css = f'{self.SELECT_VIEW_NAME_CSS}{self.DROPDOWN_FIELD_VALUE_CSS}'
+        return self.driver.find_elements_by_css_selector(trigger_css)[index].text
+
     def select_intersection_chart_first_query(self, query):
         self.select_option(
             self.INTERSECTION_CHART_FIRST_QUERY_DROP_DOWN_CSS,
@@ -463,7 +467,6 @@ class DashboardPage(BasePage):
                                 sort_by='value', sort_order='desc'):
         self.open_new_card_wizard()
         self.select_chart_metric('Query Comparison')
-        views_list = self.get_views_list()
         self.driver.find_element_by_css_selector(f'#{chart_type}').click()
 
         for index, module_query in enumerate(module_query_list):

@@ -77,6 +77,7 @@
         :panel="chart"
         :space="activeSpaceId"
         :edit-mode="true"
+        :is-personal-space="isPersonalSpace"
         @close="displayEditChartModal = false"
         @update="onChartUpdated"
       />
