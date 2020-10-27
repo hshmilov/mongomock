@@ -2,11 +2,12 @@ import glob
 import os
 import threading
 
-import mongomock
+from mongomock import MongoClient
 import pytest
 import urllib3
 
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.modules.common import AxoniusCommon
 from axonius.plugin_base import EntityType
 from static_analysis.nvd_nist.nvd_search import NVDSearcher
 from static_analysis.nvd_nist.nvd_update import (ARTIFACT_FOLDER,
@@ -47,11 +48,11 @@ def mock_mongo(entries):
     :param entries:
     :return:
     """
-    client = mongomock.MongoClient()
+    client = MongoClient()
     collection = client.db.collection
     for entry in entries:
         collection.insert(entry)
-    return collection
+    return client
 
 
 def generate_device(cve, software):
@@ -182,7 +183,7 @@ def test_wrong_input_variable_type(nvd_searcher):
 
 # pylint: disable=super-init-not-called
 class MockStaticAnalysisService(StaticAnalysisService):
-    def __init__(self, nvd_searcher, devices_db=None):
+    def __init__(self, nvd_searcher, client: MongoClient=None):
         self.__nvd_lock = threading.Lock()
         self.__nvd_searcher = nvd_searcher
         # pylint: disable=invalid-name
@@ -193,8 +194,9 @@ class MockStaticAnalysisService(StaticAnalysisService):
         self.plugin_unique_name = 'mock_static'
         self.plugin_name = 'static_analysis'
         self._fetch_empty_vendor_software_vulnerabilites = True
-        if devices_db:
-            self.devices_db = devices_db
+        if client:
+            self.devices_db = client.db.collection
+            self.common = AxoniusCommon(client)
 
     @staticmethod
     def new_device_adapter():
@@ -220,8 +222,8 @@ def test_axonius_mongodb_filtering(nvd_searcher):
     entries_to_filter_out = [consts.ENTRY_NEITHER_CVES_NOR_SOFTWARE]
     entries = entries_to_enrich + entries_to_filter_out
 
-    collection = mock_mongo(entries)
-    mock_sa = MockStaticAnalysisService(nvd_searcher, collection)
+    client = mock_mongo(entries)
+    mock_sa = MockStaticAnalysisService(nvd_searcher, client)
 
     returned_entries = list(mock_sa._StaticAnalysisService__get_devices_with_software_or_cves())
 
@@ -320,8 +322,8 @@ def test_device_with_cves_only(nvd_searcher):
     :param nvd_searcher:
     :return:
     """
-    collection = mock_mongo([consts.ENTRY_SOFTWARE_CVES_ONLY])
-    mock_sa = MockStaticAnalysisService(nvd_searcher, collection)
+    client = mock_mongo([consts.ENTRY_SOFTWARE_CVES_ONLY])
+    mock_sa = MockStaticAnalysisService(nvd_searcher, client)
     returned_entries = list(mock_sa._StaticAnalysisService__get_devices_with_software_or_cves())
 
     # Filter should get just the one entry
@@ -349,8 +351,8 @@ def test_device_with_installed_software_only(nvd_searcher):
     :param nvd_searcher:
     :return:
     """
-    collection = mock_mongo([consts.ENTRY_INSTALLED_SOFTWARE_ONLY])
-    mock_sa = MockStaticAnalysisService(nvd_searcher, collection)
+    client = mock_mongo([consts.ENTRY_INSTALLED_SOFTWARE_ONLY])
+    mock_sa = MockStaticAnalysisService(nvd_searcher, client)
     returned_entries = list(mock_sa._StaticAnalysisService__get_devices_with_software_or_cves())
 
     # Filter should get just the one entry
@@ -384,8 +386,8 @@ def test_device_with_cves_and_installed_software(nvd_searcher):
     :param nvd_searcher:
     :return:
     """
-    collection = mock_mongo([consts.ENTRY_BOTH_CVES_AND_SOFTWARE])
-    mock_sa = MockStaticAnalysisService(nvd_searcher, collection)
+    client = mock_mongo([consts.ENTRY_BOTH_CVES_AND_SOFTWARE])
+    mock_sa = MockStaticAnalysisService(nvd_searcher, client)
     returned_entries = list(mock_sa._StaticAnalysisService__get_devices_with_software_or_cves())
 
     # Filter should get just the one entry
@@ -422,8 +424,8 @@ def test_device_with_two_adapters_correlated(nvd_searcher):
     :param nvd_searcher:
     :return:
     """
-    collection = mock_mongo([consts.ENTRY_WITH_TWO_ADAPTERS_CORRELATED])
-    mock_sa = MockStaticAnalysisService(nvd_searcher, collection)
+    client = mock_mongo([consts.ENTRY_WITH_TWO_ADAPTERS_CORRELATED])
+    mock_sa = MockStaticAnalysisService(nvd_searcher, client)
     returned_entries = list(mock_sa._StaticAnalysisService__get_devices_with_software_or_cves())
 
     # Filter should get just the one entry
@@ -461,8 +463,8 @@ def test_device_adapter_removed_and_different_cves(nvd_searcher):
     :param nvd_searcher:
     :return:
     """
-    collection = mock_mongo([consts.ENTRY_WITH_ADAPTER_REMOVED_AND_DIFFERENT_CVES])
-    mock_sa = MockStaticAnalysisService(nvd_searcher, collection)
+    client = mock_mongo([consts.ENTRY_WITH_ADAPTER_REMOVED_AND_DIFFERENT_CVES])
+    mock_sa = MockStaticAnalysisService(nvd_searcher, client)
     returned_entries = list(mock_sa._StaticAnalysisService__get_devices_with_software_or_cves())
 
     # These cves are from a prior enrichment and should be removed from the device
@@ -503,8 +505,8 @@ def test_device_adapter_removed_and_no_cves(nvd_searcher):
     :return:
     """
     entries = [consts.ENTRY_WITH_ADAPTER_REMOVED_AND_NO_CVES]
-    collection = mock_mongo(entries)
-    mock_sa = MockStaticAnalysisService(nvd_searcher, collection)
+    client = mock_mongo(entries)
+    mock_sa = MockStaticAnalysisService(nvd_searcher, client)
     returned_entries = list(mock_sa._StaticAnalysisService__get_devices_with_software_or_cves())
 
     created_device = mock_sa.create_device_with_enriched_cves(device=returned_entries[0])
@@ -528,8 +530,8 @@ def test_device_has_virtual_host_field(nvd_searcher):
     entries = [consts.ENTRY_WITH_VMWARE_CORRELATED_DEVICE,
                consts.ENTRY_WITH_HYPER_V_MAC_ADDRESS,
                consts.ENTRY_WITH_NOT_VIRUAL_HOST]
-    collection = mock_mongo(entries)
-    mock_sa = MockStaticAnalysisService(nvd_searcher, collection)
+    client = mock_mongo(entries)
+    mock_sa = MockStaticAnalysisService(nvd_searcher, client)
     returned_entries = list(mock_sa._get_devices_with_virtual_host_positive())
     assert returned_entries == []
     assert mock_sa._is_device_virtual(entries[0])

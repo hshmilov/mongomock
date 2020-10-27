@@ -539,9 +539,9 @@ class GuiService(Triggerable,
                     if data.get('should_replace_query_names', False):
                         logger.debug(f'replacing query names with ids for: {name}')
                         query_view = self._replace_predefined_query_references(
-                            self.gui_dbs.entity_query_views_db_map[entity_type], data['view'])
+                            self.common.data.entity_views_collection[entity_type], data['view'])
                     self._insert_view(
-                        self.gui_dbs.entity_query_views_db_map[entity_type],
+                        self.common.data.entity_views_collection[entity_type],
                         name,
                         json.loads(query_view),
                         data.get('description', ''),
@@ -727,7 +727,7 @@ class GuiService(Triggerable,
             for action in self.enforcements_saved_actions_collection.find({}, projection={'_id': False}):
                 log_metric(logger, SystemMetric.EC_ACTION_RAW, dumps(action))
 
-            for view_type, view_collection in self.gui_dbs.entity_query_views_db_map.items():
+            for view_type, view_collection in self.common.data.entity_views_collection.items():
                 log_metric(logger,
                            SystemMetric.STORED_VIEWS_COUNT,
                            metric_value=view_collection.count_documents(filter_archived({

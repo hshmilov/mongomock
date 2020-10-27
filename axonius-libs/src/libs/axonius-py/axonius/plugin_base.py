@@ -63,7 +63,7 @@ from axonius.clients.opsgenie.connection import OpsgenieConnection
 from axonius.clients.opsgenie.consts import OPSGENIE_DEFAULT_DOMAIN
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.thycotic_vault.connection import ThycoticVaultConnection
-from axonius.consts.adapter_consts import IGNORE_DEVICE, CLIENT_ID, CONNECTION_LABEL
+from axonius.consts.adapter_consts import IGNORE_DEVICE, CLIENT_ID
 from axonius.consts.core_consts import ACTIVATED_NODE_STATUS, CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (CORRELATION_REASONS,
                                        HAS_NOTES,
@@ -105,7 +105,7 @@ from axonius.consts.plugin_consts import (
     TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW, TUNNEL_PROXY_SETTINGS, DISCOVERY_CONFIG_NAME, ADAPTER_DISCOVERY,
     ENABLE_CUSTOM_DISCOVERY, CONNECTION_DISCOVERY, NOTES_DATA_TAG, PASSWORD_EXPIRATION_SETTINGS, DEVICES_DB, USERS_DB,
     HISTORICAL_DEVICES_DB_VIEW, HISTORICAL_USERS_DB_VIEW, USER_ADAPTERS_HISTORICAL_RAW_DB,
-    DEVICE_ADAPTERS_HISTORICAL_RAW_DB, DEVICES_FIELDS, USERS_FIELDS, ADAPTERS_CLIENTS_LABELS, USER_ADAPTERS_RAW_DB,
+    DEVICE_ADAPTERS_HISTORICAL_RAW_DB, DEVICES_FIELDS, USERS_FIELDS, USER_ADAPTERS_RAW_DB,
     DEVICE_ADAPTERS_RAW_DB, REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME, PASSWORD_EXPIRATION_DAYS, CLIENTS_COLLECTION,
     PASSWORD_MANGER_AWS_SM_VAULT, AWS_SM_ACCESS_KEY_ID, AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION, CLIENT_ACTIVE,
     CALCULATE_PREFERRED_FIELDS_INTERVAL)
@@ -343,9 +343,7 @@ def return_error(error_message, http_status=500, additional_data=None, non_prod_
     return jsonify({'status': 'error', 'message': error_message, 'additional_data': additional_data}), http_status
 
 
-# entity_query_views_db_map   - map between EntityType and views collection from the GUI (e.g. user_views)
-GuiDB = namedtuple('GuiDB', ['entity_query_views_db_map', 'entity_saved_queries_direct',
-                             'entity_saved_queries_indirect'])
+GuiDB = namedtuple('GuiDB', ['entity_saved_queries_direct', 'entity_saved_queries_indirect'])
 
 
 def recalculate_adapter_oldness(adapter_list: list, entity_type: EntityType):
@@ -663,9 +661,6 @@ class PluginBase(Configurable, Feature, ABC):
         gui_db_connection = self._get_db_connection()[GUI_PLUGIN_NAME]
 
         self.gui_dbs = GuiDB({
-            EntityType.Users: gui_db_connection['user_views'],
-            EntityType.Devices: gui_db_connection['device_views'],
-        }, {
             EntityType.Users: gui_db_connection['user_views_direct'],
             EntityType.Devices: gui_db_connection['device_views_direct'],
         }, {
@@ -714,7 +709,6 @@ class PluginBase(Configurable, Feature, ABC):
             self.__first_time_inserter = None
 
         self.device_id_db = self.aggregator_db_connection['current_devices_id']
-        self.adapter_client_labels_db = self.aggregator_db_connection[ADAPTERS_CLIENTS_LABELS]
 
         # the execution monitor has its own mechanism. this thread will make exceptions if we run it in execution,
         # since it will try to reject functions and not promises.
@@ -4763,23 +4757,6 @@ class PluginBase(Configurable, Feature, ABC):
         for key, val in client_config.items():
             if val:
                 client_config[key] = self.db_decrypt(val)
-
-    @rev_cached(ttl=3600 * 6)
-    def clients_labels(self) -> dict:
-        """
-        :return: dictionary of connection label to tuple of client_id , plugin_unique_name
-        { connection_label  : [ (client_id,plugin_unique_name) ] }
-        """
-        clients_label = defaultdict(list)
-        labels_from_db = self.adapter_client_labels_db.find({})
-        for client in labels_from_db:
-            client_id = client.get(CLIENT_ID)
-            conn_label = client.get(CONNECTION_LABEL)
-            plugin_unique_name = client.get(PLUGIN_UNIQUE_NAME)
-
-            if client_id and conn_label:
-                clients_label[conn_label].append((client_id, plugin_unique_name))
-        return clients_label
 
     def _vault_connection_factory(self) -> AbstractVaultConnection:
         """

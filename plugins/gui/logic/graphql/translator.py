@@ -5,6 +5,7 @@ from cachetools import LFUCache, cached
 
 import axonius.pql as _pql
 from axonius.entities import EntityType
+from axonius.modules.query.axonius_query import get_axonius_query_singleton
 from axonius.utils.axonius_query_language import process_filter
 from gui.logic.graphql.builder import GqlQuery
 
@@ -126,6 +127,7 @@ class Translator:
         self._entity_type = entity_type
         self._specific_data_converter = 'adapterDevices' if entity_type == EntityType.Devices else 'adapterUsers'
         self._bool_exp_type = 'device' if entity_type == EntityType.Devices else 'user'
+        self._axonius_query = get_axonius_query_singleton()
 
     @cached(cache=LFUCache(maxsize=64), key=lambda _, aql: hash(aql))
     def translate(self, aql):

@@ -16,11 +16,12 @@ from pymongo.collection import Collection
 from pymongo.errors import PyMongoError
 
 from axonius.consts.gui_consts import MAX_SORTED_FIELDS, MIN_SORTED_FIELDS
+from axonius.modules.data.axonius_data import get_axonius_data_singleton
+from axonius.modules.query.axonius_query import get_axonius_query_singleton
 from axonius.utils.get_plugin_base_instance import plugin_base_instance
 from axonius.utils.cache.entities_cache import entities_redis_cached
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH
-from axonius.utils.axonius_query_language import convert_db_entity_to_view_entity, parse_filter, \
-    convert_db_projection_to_view, replace_saved_queries_ids
+from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, convert_db_projection_to_view)
 from axonius.utils.gui_helpers import parse_entity_fields, get_historized_filter, \
     FIELDS_TO_PROJECT, FIELDS_TO_PROJECT_FOR_GUI, get_sort, nongui_beautify_db_entry, get_entities_count,\
     get_entities_count_cached
@@ -505,8 +506,9 @@ def perform_axonius_query(entity: EntityType,
     :param sort: additional parameter
     :return: an iterator for all the devices as they would been seen in the DB
     """
+    mongo_query = get_axonius_query_singleton().parse_aql_filter(query, entity_type=entity)
     entity_views_db, is_date_filter_required = plugin_base_instance().get_appropriate_view(None, entity)
-    return _get_entities_raw(entity_views_db, entity, parse_filter(query, entity=entity), is_date_filter_required,
+    return _get_entities_raw(entity_views_db, entity, mongo_query, is_date_filter_required,
                              db_projection=projection, limit=limit, skip=skip, sort=sort)
 
 
@@ -539,7 +541,8 @@ def perform_saved_view(entity: EntityType, saved_view: dict, **kwargs) -> Iterat
     :param use_cache use entities redis cache or not
     :return: an iterator for all the devices as they would been seen in the DB
     """
-    parsed_query_filter = replace_saved_queries_ids(saved_view['view']['query']['filter'], entity)
+    parsed_query_filter = get_axonius_query_singleton().aql_parser.parse_saved_queries_ids(
+        saved_view['view']['query']['filter'], entity)
     mongo_sort = get_sort(saved_view['view'])
 
     return perform_axonius_query(entity, parsed_query_filter, sort=mongo_sort, **kwargs)
@@ -587,7 +590,7 @@ def perform_saved_view_by_id(entity: EntityType,
     :raise ValueError: if the query doesn't exist
     :return: an iterator for all the devices as they would been seen in the DB
     """
-    saved_view = plugin_base_instance().gui_dbs.entity_query_views_db_map[entity].find_one({
+    saved_view = get_axonius_data_singleton().entity_views_collection[entity].find_one({
         '_id': ObjectId(saved_view_id)
     })
     if saved_view is None:

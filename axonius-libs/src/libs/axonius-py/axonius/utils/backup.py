@@ -14,6 +14,7 @@ from axonius.clients.aws.utils import upload_file_to_s3
 from axonius.clients.azure.utils import AzureBlobStorageClient, \
     CONTAINER_NAME_PATTERN, AzureBlob, AzureBlobContainer
 from axonius.entities import EntityType
+from axonius.modules.data.axonius_data import get_axonius_data_singleton
 from axonius.plugin_base import PluginBase
 from axonius.utils.host_utils import get_free_disk_space
 from axonius.utils.json import to_json
@@ -136,7 +137,7 @@ def create_tar_file():
                           cursor_obj=PluginBase.Instance._all_fields_db_map[EntityType.Users].find({}),
                           entity_name='fields_users')
         add_cursor_to_tar(tar_obj=tar,
-                          cursor_obj=PluginBase.Instance.adapter_client_labels_db.find({}),
+                          cursor_obj=get_axonius_data_singleton().connection_labels_collection.find({}),
                           entity_name='adapter_client_labels')
 
 
@@ -354,7 +355,7 @@ def backup_to_s3() -> int:
             add_cursor_to_tar(
                 tar, PluginBase.Instance._all_fields_db_map[EntityType.Users].find({}), 'fields_users')
             add_cursor_to_tar(
-                tar, PluginBase.Instance.adapter_client_labels_db.find({}), 'adapter_client_labels')
+                tar, get_axonius_data_singleton().connection_labels_collection.find({}), 'adapter_client_labels')
 
         # Encrypt
         subprocess.check_call([

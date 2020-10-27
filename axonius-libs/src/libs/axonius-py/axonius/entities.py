@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from axonius.consts.gui_consts import SPECIFIC_DATA
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from axonius.utils.axonius_query_language import parse_filter, convert_db_entity_to_view_entity
+from axonius.utils.axonius_query_language import convert_db_entity_to_view_entity
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -91,7 +91,8 @@ class EntitiesNamespace:
         if internal_axon_id is not None:
             final_mongo_filter = {'internal_axon_id': internal_axon_id}
         elif axonius_query_language is not None:
-            final_mongo_filter = parse_filter(axonius_query_language, entity=self.entity)
+            final_mongo_filter = self.plugin_base.common.query.parse_aql_filter(axonius_query_language,
+                                                                                entity_type=self.entity)
         else:
             raise ValueError('None of the query methods were provided, can\'t query {self.entity}')
 

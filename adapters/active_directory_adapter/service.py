@@ -13,7 +13,9 @@ from typing import List, Tuple, Dict, Optional, Iterator
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.triggers.interval import IntervalTrigger
 
-from active_directory_adapter.consts import LDAP_FIELD_TO_EXCLUDE_CONFIG
+from active_directory_adapter.consts import (LDAP_FIELD_TO_EXCLUDE_CONFIG,
+                                             DNS_RESOLVE_STATUS, IPS_FIELDNAME,
+                                             DEVICES_DATA)
 from active_directory_adapter.execution import ActiveDirectoryExecutionMixIn
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import (ClientConnectionException,
@@ -27,9 +29,6 @@ from axonius.clients.ldap.ldap_connection import (LDAP_ACCOUNTDISABLE, LDAP_ACCO
                                                   DEFAULT_LDAP_CONNECTION_TIMEOUT,
                                                   DEFAULT_LDAP_PAGE_SIZE, AD_GC_PORT_ENCRYPTED, AD_GC_PORT,
                                                   AD_LDAP_PORT, AD_LDAPS_PORT)
-from axonius.consts.adapter_consts import (DEVICES_DATA, DNS_RESOLVE_STATUS,
-                                           IPS_FIELDNAME,
-                                           NETWORK_INTERFACES_FIELDNAME)
 from axonius.devices import ad_entity
 from axonius.devices.ad_entity import ADEntity
 from axonius.devices.device_adapter import DeviceAdapter

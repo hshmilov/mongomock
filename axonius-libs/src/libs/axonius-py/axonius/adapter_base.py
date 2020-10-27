@@ -1199,7 +1199,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :param client_id: adapter client ID ( a.k.a client_used )
         :param client_config: the client connection data set , include connection label
         """
-        resp = self.adapter_client_labels_db.replace_one({
+        resp = self.common.data.connection_labels_collection.replace_one({
             CLIENT_ID: client_id,
             NODE_ID: self.node_id,
             PLUGIN_UNIQUE_NAME: self.plugin_unique_name
@@ -1223,7 +1223,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :param client_config: the client connection data set, include connection label
         '''
         if CLIENT_ID in client_config:
-            resp = self.adapter_client_labels_db.delete_one({
+            resp = self.common.data.connection_labels_collection.delete_one({
                 CLIENT_ID: client_config.get(CLIENT_ID),
                 PLUGIN_UNIQUE_NAME: self.plugin_unique_name,
                 NODE_ID: self.node_id

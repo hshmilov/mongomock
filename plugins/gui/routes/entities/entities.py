@@ -216,7 +216,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         Save or fetch views over the entities db
         :return:
         """
-        entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
+        entity_views_collection = self.common.data.entity_views_collection[entity_type]
         view_data = self.get_request_data_as_object()
         tags = view_data.get('tags', [])
 
@@ -256,7 +256,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         return str(update_result['_id'])
 
     def _delete_entity_views(self, entity_type: EntityType, mongo_filter) -> int:
-        entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
+        entity_views_collection = self.common.data.entity_views_collection[entity_type]
 
         selection = self.get_request_data_as_object()
         selection['ids'] = [ObjectId(i) for i in selection['ids']]
@@ -279,7 +279,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         :param entity_view_id:
         :return: None or the Object to be deleted
         """
-        entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
+        entity_views_collection = self.common.data.entity_views_collection[entity_type]
         update_result = entity_views_collection.find_one_and_update(
             {'_id': ObjectId(entity_view_id)},
             {'$set': {'archived': True}},
@@ -291,7 +291,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         if not view_data.get('name'):
             return return_error(f'Name is required in order to save a view', 400)
 
-        entity_views_collection = self.gui_dbs.entity_query_views_db_map[entity_type]
+        entity_views_collection = self.common.data.entity_views_collection[entity_type]
         _, new_saved_queries, removed_saved_queries = \
             self._get_saved_queries_references_diff(view_data, entity_views_collection)
         valid, error = validate_circular_dependency(entity_type, query_id, new_saved_queries)
@@ -325,7 +325,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         :param entity_type: users/devices
         :return: distinct list of tags
         """
-        return self.gui_dbs.entity_query_views_db_map[entity_type].distinct('tags')
+        return self.common.data.entity_views_collection[entity_type].distinct('tags')
 
     def _get_queries_names_by_entity(self, entity_type):
         """
@@ -334,7 +334,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         :return: list of saved-queries names
         """
         not_archived_saved_queries = filter_archived({'query_type': 'saved'})
-        return self.gui_dbs.entity_query_views_db_map[entity_type].find(
+        return self.common.data.entity_views_collection[entity_type].find(
             not_archived_saved_queries, {'name': 1, '_id': 0}
         )
 
@@ -435,7 +435,7 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
                 mongo_sort = {'desc': int(desc), 'field': field}
             req_expressions = request_data.get('expressions', '[]')
             expressions = json.loads(req_expressions) if isinstance(req_expressions, str) else req_expressions
-            self.gui_dbs.entity_query_views_db_map[entity_type].replace_one(
+            self.common.data.entity_views_collection[entity_type].replace_one(
                 {'name': {'$exists': False}, 'view.query.filter': view_filter},
                 {
                     'view': {

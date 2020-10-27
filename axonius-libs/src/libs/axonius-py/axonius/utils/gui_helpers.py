@@ -10,7 +10,7 @@ from collections import defaultdict
 from datetime import datetime
 from enum import Enum
 from threading import Lock
-from typing import NamedTuple, Iterable, List, Union, Dict, Optional
+from typing import NamedTuple, Iterable, List, Union
 
 import cachetools
 import dateutil
@@ -21,7 +21,7 @@ from pymongo.errors import ExecutionTimeout
 from bson import ObjectId
 from flask import request, session, g, Response
 
-from axonius.consts.adapter_consts import PREFERRED_FIELDS as PREFERRED_FIELDS_LABEL
+from axonius.consts.adapter_consts import PREFERRED_FIELDS_PREFIX
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFAULT_TIME_FORMAT, MAX_SORTED_FIELDS, \
     MIN_SORTED_FIELDS, ADAPTER_CONNECTIONS_FIELD, DISTINCT_ADAPTERS_COUNT_FIELD, CORRELATION_REASONS_FIELD, \
     CORRELATION_REASONS, HAS_NOTES, HAS_NOTES_TITLE, SortType, SortOrder, PREFERRED_FIELDS
@@ -30,9 +30,10 @@ from axonius.entities import EntitiesNamespace
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME, GUI_PLUGIN_NAME)
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.modules.query.axonius_query import get_axonius_query_singleton
 from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
-from axonius.utils.axonius_query_language import parse_filter, parse_filter_non_entities
+from axonius.utils.axonius_query_language import parse_filter_non_entities
 from axonius.utils.revving_cache import rev_cached_entity_type
 from axonius.utils.cache.entities_cache import entities_count_redis_cached
 from axonius.utils.threading import singlethreaded
@@ -54,7 +55,7 @@ PAGINATION_LIMIT_MAX = 2000
 FIELDS_TO_PROJECT = ['internal_axon_id', 'adapters.pending_delete', f'adapters.{PLUGIN_NAME}',
                      'tags.type', 'tags.name', f'tags.{PLUGIN_NAME}',
                      'accurate_for_datetime', ADAPTERS_LIST_LENGTH,
-                     'labels', 'adapters.client_used', PREFERRED_FIELDS_LABEL]
+                     'labels', 'adapters.client_used', PREFERRED_FIELDS_PREFIX]
 
 FIELDS_TO_PROJECT_FOR_GUI = ['internal_axon_id', 'adapters', 'unique_adapter_names', 'labels', ADAPTERS_LIST_LENGTH]
 
@@ -263,7 +264,7 @@ def filtered_entities():
                 elif 'users' in path_parts:
                     entity_type = EntityType.Users
 
-                filter_obj = parse_filter(filter_expr, history_date, entity_type)
+                filter_obj = get_axonius_query_singleton().parse_aql_filter(filter_expr, history_date, entity_type)
             except Exception as e:
                 logger.warning(f'Failed in mongo filter on {func} on \'{filter_expr}\'', exc_info=True)
                 return return_error(f'Could not create mongo filter. Details: {e}'
@@ -711,10 +712,6 @@ def get_historized_filter(entities_filter, history_date: datetime):
     return entities_filter
 
 
-def is_where_count_query(query):
-    return '\'$where\': ' in str(query)
-
-
 def get_entities_count(entities_filter,
                        entity_collection,
                        history_date: datetime = None,
@@ -728,7 +725,7 @@ def get_entities_count(entities_filter,
     processed_filter = entities_filter
     if is_date_filter_required:
         processed_filter = get_historized_filter(entities_filter, history_date)
-    is_adapter_where_query = is_where_count_query(processed_filter)
+    is_adapter_where_query = '\'$where\': ' in str(processed_filter)
     try:
         if quick and is_adapter_where_query:
             return entity_collection.count(processed_filter, limit=1000, maxTimeMS=1000)
@@ -828,8 +825,8 @@ def find_entity_field(entity_data, field_path, skip_unique=False, specific_adapt
         # Return no value for this path
         return None
 
-    if field_path in PREFERRED_FIELDS and entity_data.get(PREFERRED_FIELDS_LABEL):
-        field_value = entity_data.get(PREFERRED_FIELDS_LABEL, {})
+    if field_path in PREFERRED_FIELDS and entity_data.get(PREFERRED_FIELDS_PREFIX):
+        field_value = entity_data.get(PREFERRED_FIELDS_PREFIX, {})
         field_parts = field_path[len('specific_data.data.'):].split('.')
         for field_part in field_parts:
             field_value = field_value.get(field_part, {})
@@ -1688,68 +1685,6 @@ def nongui_beautify_db_entry(entry):
     tmp['uuid'] = str(entry['_id'])
     del tmp['_id']
     return tmp
-
-
-def find_filter_by_name(entity_type: EntityType, name) -> Optional[Dict[str, object]]:
-    """
-    From collection of views for given entity_type, fetch that with given name.
-    Return its filter, or None if no filter.
-    """
-    if not name:
-        return None
-    view_doc = PluginBase.Instance.gui_dbs.entity_query_views_db_map[entity_type].find_one({'name': name})
-    if not view_doc:
-        logger.info(f'No record found for view {name}')
-        return None
-    return view_doc['view']
-
-
-def find_view_by_id(entity_type: EntityType, view_id: str, projection: dict = None) -> Optional[Dict[str, object]]:
-    if not view_id:
-        return None
-    view_doc = PluginBase.Instance.gui_dbs.entity_query_views_db_map[entity_type].find_one({
-        '_id': ObjectId(view_id)
-    }, projection)
-    if not view_doc:
-        logger.info(f'No record found for view {view_id}')
-        return None
-    return view_doc
-
-
-def find_view_name_by_id(entity_type: EntityType, view_id: str) -> Optional[str]:
-    view_doc = find_view_by_id(entity_type, view_id, {
-        'name': 1, '_id': 0
-    })
-    return view_doc['name'] if view_doc else None
-
-
-def find_view_config_by_id(entity_type: EntityType, view_id: str) -> Optional[Dict[str, object]]:
-    if not view_id:
-        return None
-    view_doc = PluginBase.Instance.gui_dbs.entity_query_views_db_map[entity_type].find_one({
-        '_id': ObjectId(view_id)
-    }, {
-        'view': 1, '_id': 0
-    })
-    if not view_doc:
-        logger.info(f'No record found for view {view_id}')
-        return None
-    return view_doc['view']
-
-
-def find_views_by_name_match(name_match: str):
-    matching_views = []
-    for entity_type in EntityType:
-        for view in PluginBase.Instance.gui_dbs.entity_query_views_db_map[entity_type].find({
-                'name': {
-                    '$regex': name_match,
-                    '$options': 'i'
-                }
-        }, {
-            '_id': 1
-        }):
-            matching_views.append(str(view['_id']))
-    return matching_views
 
 
 def get_string_from_field_value(base_value):

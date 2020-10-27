@@ -5,8 +5,8 @@ from getpass import getpass
 import funcy
 
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME
-from axonius.utils.axonius_query_language import parse_filter
 from axonius.entities import EntityType
+from axonius.modules.query.axonius_query import get_axonius_query_singleton
 from testing.services.plugins.gui_service import GuiService
 
 ENTITIES_TO_UNLINK_CHUNKS = 15
@@ -42,7 +42,7 @@ def main():
     aql = input('Enter AQL:')
 
     try:
-        query = parse_filter(aql, entity=entity_type)
+        query = get_axonius_query_singleton().parse_aql_filter(aql, entity_type=entity_type)
     except Exception:
         print(f'Invalid query, please try again: {aql!r}')
         return -1

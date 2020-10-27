@@ -167,7 +167,6 @@ class Connections:
             self.request_remote_plugin('clients/' + connection_id, adapter_unique_name, method='delete')
             self._adapters.clean_cache()
             self._adapters_v2.clean_cache()
-            self.clients_labels.clean_cache()
             self._get_adapter_connections_data.clean_cache()
             self.log_activity_user_connection('delete', adapter_name, client_id, instance_name, is_instance_mode)
             try:
@@ -193,7 +192,7 @@ class Connections:
             return return_error('Changing connection details requires re-entering credentials', 400)
 
         # for audit must get before old connection delete.
-        client_label = self.adapter_client_labels_db.find_one({
+        client_label = self.common.data.connection_labels_collection.find_one({
             CLIENT_ID: client_id,
             PLUGIN_UNIQUE_NAME: adapter_unique_name,
             NODE_ID: prev_instance_id or instance_id
@@ -260,7 +259,6 @@ class Connections:
 
         self._adapters.clean_cache()
         self._adapters_v2.clean_cache()
-        self.clients_labels.clean_cache()
         self._get_adapter_connections_data.clean_cache()
         return self._query_connection_for_devices(adapter_unique_name, connection_data)
 
@@ -370,7 +368,6 @@ class Connections:
         self._adapters.clean_cache()
         self._adapters_v2.clean_cache()
         self._get_adapter_connections_data.clean_cache()
-        self.clients_labels.clean_cache()
 
         if save_and_fetch_connection:
             if response.status_code == 200:

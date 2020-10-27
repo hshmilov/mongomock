@@ -376,7 +376,7 @@ export default {
           spaceId: this.activeSpaceId,
           skip,
           limit: this.limit,
-          historical: this.chartFilters.history,
+          history: this.chartFilters.history,
           search: this.chartFilters.search,
           sortBy: type,
           sortOrder: order,

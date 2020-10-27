@@ -23,8 +23,6 @@ from axonius.consts.gui_consts import (CONFIG_CONFIG, ROLES_COLLECTION, USERS_CO
                                        EVALUATE_ROLE_ASSIGNMENT_ON, NEW_USERS_ONLY, ASSIGNMENT_RULE_ARRAY)
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           AXONIUS_SETTINGS_DIR_NAME,
-                                          DEVICE_VIEWS,
-                                          USER_VIEWS,
                                           GUI_PLUGIN_NAME,
                                           PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
@@ -694,10 +692,10 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         the pageSize attribute under the view
         """
         print('Upgrade to schema 21')
-        self.db.get_collection(GUI_PLUGIN_NAME, DEVICE_VIEWS).update_many({'view.pageSize': {'$exists': True}},
-                                                                          {'$unset': {'view.pageSize': 20}})
-        self.db.get_collection(GUI_PLUGIN_NAME, USER_VIEWS).update_many({'view.pageSize': {'$exists': True}},
-                                                                        {'$unset': {'view.pageSize': 20}})
+        self.db.data.entity_views_collection[EntityType.Devices].update_many({'view.pageSize': {'$exists': True}},
+                                                                             {'$unset': {'view.pageSize': 20}})
+        self.db.data.entity_views_collection[EntityType.Users].update_many({'view.pageSize': {'$exists': True}},
+                                                                           {'$unset': {'view.pageSize': 20}})
 
     @db_migration(raise_on_failure=False)
     def _update_schema_version_22(self):
@@ -1157,7 +1155,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
 
     def _update_enforcement_tasks_views(self, entity_to_views):
         trigger_path = 'result.metadata.trigger.view'
-        tasks_update = self.db.tasks_collection().find({
+        tasks_update = self.db.data.tasks_collection.find({
             'job_name': 'run',
             trigger_path: {
                 '$exists': True
@@ -1170,7 +1168,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             if not view.get('entity') or not view.get('name'):
                 continue
 
-            self.db.tasks_collection().update_one({
+            self.db.data.tasks_collection.update_one({
                 '_id': task['_id']
             }, {
                 '$set': {
@@ -1484,8 +1482,8 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
     def _update_schema_version_47(self):
         print('Upgrade to schema 47 - saved queries references')
 
-        user_view = self.db.get_collection('gui', USER_VIEWS)
-        device_view = self.db.get_collection('gui', DEVICE_VIEWS)
+        user_view = self.db.data.entity_views_collection[EntityType.Users]
+        device_view = self.db.data.entity_views_collection[EntityType.Devices]
 
         device_view_direct = self.db.get_collection('gui', DEVICE_VIEWS_DIRECT_REFERENCES)
         device_view_indirect = self.db.get_collection('gui', DEVICE_VIEWS_INDIRECT_REFERENCES)
@@ -1813,15 +1811,6 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
         return self.get(f'dashboard/charts/{chart_id}/csv', session=self._session, *vargs, **kwargs)
 
     def get_saved_views(self):
-
-        user_view = self.db.get_collection('gui', USER_VIEWS)
-        device_view = self.db.get_collection('gui', DEVICE_VIEWS)
-
-        entity_query_views_db_map = {
-            EntityType.Users: user_view,
-            EntityType.Devices: device_view,
-        }
-
         saved_views_filter = filter_archived({
             'query_type': 'saved',
             '$or': [
@@ -1837,7 +1826,7 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
         })
         views_data = []
         for entity in EntityType:
-            saved_views = entity_query_views_db_map[entity].find(saved_views_filter)
+            saved_views = self.db.data.entity_views_collection[entity].find(saved_views_filter)
             for view_doc in saved_views:
                 view = view_doc.get('view')
                 if view:

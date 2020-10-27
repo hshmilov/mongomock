@@ -6,8 +6,8 @@ from typing import List, Optional, Tuple, Dict
 import re
 from pymongo import MongoClient
 
-from axonius.consts.plugin_consts import CORE_UNIQUE_NAME, GUI_PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME, \
-    AGGREGATOR_PLUGIN_NAME
+from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME, GUI_PLUGIN_NAME, SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                          AGGREGATOR_PLUGIN_NAME, REPORTS_PLUGIN_NAME)
 from axonius.db.db_client import get_db_client
 from axonius.modules.plugin_settings import PluginSettings, ConfigurableConfigsGeneral
 
@@ -24,6 +24,7 @@ class AxoniusPlugins:
         self.aggregator = AxoniusPlugin(self.__db, AGGREGATOR_PLUGIN_NAME)
         self.gui = AxoniusPlugin(self.__db, GUI_PLUGIN_NAME)
         self.system_scheduler = AxoniusPlugin(self.__db, SYSTEM_SCHEDULER_PLUGIN_NAME)
+        self.enforcer = AxoniusPlugin(self.__db, REPORTS_PLUGIN_NAME)
 
     def get_plugin_names_with_config(self, config_name: str, config: dict) -> List[str]:
         """
@@ -62,9 +63,10 @@ class AxoniusPlugin:
         self.plugin_settings = PluginSettings(db, plugin_unique_name)
         self.configurable_configs = self.plugin_settings.configurable_configs
         self.config_schemas = self.plugin_settings.config_schemas
+        self.plugin_db = db[plugin_unique_name]
 
 
-def get_axonius_plugins_singleton(db: MongoClient) -> AxoniusPlugins:
+def get_axonius_plugins_singleton(db: Optional[MongoClient] = None) -> AxoniusPlugins:
     try:
         return get_axonius_plugins_singleton.instance
     except Exception:

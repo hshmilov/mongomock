@@ -78,7 +78,7 @@ class Dashboard(Charts, Notifications):
             return None
 
         if dashboard_data.get('entity'):
-            views_collection = self.gui_dbs.entity_query_views_db_map[EntityType(dashboard_data['entity'])]
+            views_collection = self.common.data.entity_views_collection[EntityType(dashboard_data['entity'])]
             if 'base' in dashboard_data:
                 dashboard_data['base'] = str(views_collection.find_one({
                     'name': dashboard_data['base']

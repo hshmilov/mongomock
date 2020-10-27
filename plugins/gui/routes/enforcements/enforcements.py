@@ -21,7 +21,7 @@ from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_FIELD,
 
 from axonius.plugin_base import EntityType, return_error
 from axonius.utils.gui_helpers import (get_connected_user_id, paginated,
-                                       filtered, sorted_endpoint, find_view_name_by_id, find_views_by_name_match,
+                                       filtered, sorted_endpoint,
                                        search_filter, metadata)
 from axonius.utils.mongo_retries import mongo_retry
 from axonius.utils.revving_cache import rev_cached
@@ -49,7 +49,8 @@ class Enforcements(Tasks):
             trigger_view_name = ''
             if trigger:
                 trigger_view = trigger['view']
-                trigger_view_name = find_view_name_by_id(EntityType(trigger_view['entity']), trigger_view['id'])
+                trigger_view_entity = EntityType(trigger_view['entity'])
+                trigger_view_name = self.common.data.find_view_name(trigger_view_entity, trigger_view['id'])
 
             main_action_type = self._get_action_type(actions[ACTIONS_MAIN_FIELD])
             return beautify_db_entry({
@@ -69,7 +70,7 @@ class Enforcements(Tasks):
                 '$or': [
                     mongo_filter, {
                         'triggers.view.id': {
-                            '$in': find_views_by_name_match(search)
+                            '$in': self.common.data.find_views_by_name_match(search)
                         }
                     }
                 ]

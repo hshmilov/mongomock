@@ -24,7 +24,7 @@ class TestEntitiesSavedQueriesReferences(TestBase):
             self.devices_page.execute_and_assert_query_reference(queries_tree[1], [queries_tree[2]])
 
             ids_map = {}
-            queries = axonius_system.entity_views[EntityType.Devices].find({
+            queries = axonius_system.db.data.entity_views_collection[EntityType.Devices].find({
                 'query_type': 'saved',
                 'name':  {
                     '$in': queries_tree
@@ -101,7 +101,7 @@ class TestEntitiesSavedQueriesReferences(TestBase):
             self.devices_page.close_dropdown()
 
             ids_map = {}
-            queries = axonius_system.entity_views[EntityType.Devices].find({
+            queries = axonius_system.db.data.entity_views_collection[EntityType.Devices].find({
                 'query_type': 'saved',
                 'name':  {
                     '$in': queries_tree
@@ -200,7 +200,7 @@ class TestEntitiesSavedQueriesReferences(TestBase):
             self.devices_queries_page.remove_single_saved_query_with_safeguard()
 
             ids_map = {}
-            queries = axonius_system.entity_views[EntityType.Devices].find({
+            queries = axonius_system.db.data.entity_views_collection[EntityType.Devices].find({
                 'query_type': 'saved',
                 'name':  {
                     '$in': queries_tree

@@ -3,8 +3,8 @@ import os
 import sys
 
 from axonius.consts.gui_consts import DASHBOARD_SPACES_COLLECTION, USERS_COLLECTION, DASHBOARD_COLLECTION
-from axonius.consts.plugin_consts import GUI_PLUGIN_NAME, DEVICE_VIEWS, USER_VIEWS, AXONIUS_USER_NAME, \
-    AXONIUS_RO_USER_NAME
+from axonius.consts.plugin_consts import GUI_PLUGIN_NAME, AXONIUS_USER_NAME, AXONIUS_RO_USER_NAME
+from axonius.entities import EntityType
 from axonius.utils.debug import redprint, greenprint
 from testing.services.plugins.mongo_service import MongoService
 
@@ -40,10 +40,12 @@ def main():
     try:
         ms = MongoService()
         gui_db = ms.client[GUI_PLUGIN_NAME]
+        views_map = ms.data.entity_views_collection
 
         all_users = {str(x['_id']): x for x in gui_db[USERS_COLLECTION].find({})}
         all_saved_queries = {
-            str(x['_id']): x for x in list(gui_db[DEVICE_VIEWS].find({})) + list(gui_db[USER_VIEWS].find({}))
+            str(x['_id']): x
+            for x in list(views_map[EntityType.Devices].find({})) + list(views_map[EntityType.Users].find({}))
         }
         all_dashboards = {
             str(x['_id']): x for x in list(gui_db[DASHBOARD_COLLECTION].find({}))

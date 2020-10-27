@@ -1,10 +1,10 @@
-from axonius.utils.axonius_query_language import parse_filter
+from axonius.modules.query.axonius_query import get_axonius_query_singleton
 
 
 # pylint: disable=C0330
 
 def assert_equal(axonius_query: str, mongo_dict: dict):
-    result = parse_filter(axonius_query)
+    result = get_axonius_query_singleton().parse_aql_filter(axonius_query)
     print(f'{axonius_query} -> {mongo_dict}, got {result}')
     assert result == mongo_dict
 

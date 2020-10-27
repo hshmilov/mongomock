@@ -9,16 +9,16 @@ import re
 from bson import ObjectId
 from dateutil.parser import parse as parse_date
 
-from axonius.consts.adapter_consts import PREFERRED_FIELDS
+from axonius.consts.adapter_consts import PREFERRED_FIELDS_PREFIX
 from axonius.consts.gui_consts import (ChartMetrics, ChartViews, ChartFuncs, ChartRangeTypes, ChartRangeUnits,
                                        ADAPTERS_DATA, SPECIFIC_DATA, RANGE_UNIT_DAYS,
                                        DASHBOARD_COLLECTION, SortType, SortOrder, LABELS_FIELD)
 from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.entities import EntityType
+from axonius.modules.query.axonius_query import get_axonius_query_singleton
 from axonius.plugin_base import PluginBase, return_error
-from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, parse_filter)
-from axonius.utils.gui_helpers import (find_view_config_by_id, find_entity_field, get_string_from_field_value,
-                                       is_where_count_query, find_view_by_id, get_adapters_metadata)
+from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity)
+from axonius.utils.gui_helpers import (find_entity_field, get_string_from_field_value, get_adapters_metadata)
 from axonius.utils.revving_cache import rev_cached, rev_cached_entity_type
 from axonius.utils.threading import GLOBAL_RUN_AND_FORGET
 from gui.logic.db_helpers import beautify_db_entry
@@ -62,7 +62,7 @@ def adapter_data(entity_type: EntityType):
 
 
 def fetch_chart_compare(chart_view: ChartViews, views: List, sort,
-                        selected_sort_by=None, selected_sort_order=None) -> List:
+                        selected_sort_by=None, selected_sort_order=None, for_date: str = None) -> List:
     """
     Iterate given views, fetch each one's filter from the appropriate query collection, according to its module,
     and execute the filter on the appropriate entity collection.
@@ -77,6 +77,7 @@ def fetch_chart_compare(chart_view: ChartViews, views: List, sort,
     if not views:
         raise Exception('No views for the chart')
 
+    axonius_query = get_axonius_query_singleton()
     data = []
     total = 0
     # for view in views:
@@ -85,7 +86,7 @@ def fetch_chart_compare(chart_view: ChartViews, views: List, sort,
         # But since list is very short the simpler and more readable implementation is fine
         entity_name = _.get('entity', EntityType.Devices.value)
         entity = EntityType(entity_name)
-        view_dict = find_view_by_id(entity, _['id'])
+        view_dict = axonius_query.data.find_view(entity, _['id'])
         if not view_dict:
             continue
 
@@ -100,20 +101,13 @@ def fetch_chart_compare(chart_view: ChartViews, views: List, sort,
             'chart_color': data_item_color,
             'index_in_config': i
         }
-        # extract data_collection, and build filter
-        for_date = _.get('for_date')
-        #  if we got a date we will add the accurate for datetime to the data_item result
-        if for_date:
-            data_item['accurate_for_datetime'] = for_date
-        entity_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
-        query_filter = [parse_filter(view_dict['view']['query']['filter'], for_date, entity)]
-        # if we have a date and we don't have an historical collection, count using filter on all historical_col
-        if for_date and is_date_filter_required:
-            query_filter.append({'accurate_for_datetime': for_date})
-        if is_where_count_query(query_filter):
-            data_item['value'] = entity_collection.count({'$and': query_filter})
-        else:
-            data_item['value'] = entity_collection.count_documents({'$and': query_filter})
+        entity_collection, date_query = axonius_query.data.entity_collection_query_for_date(entity, for_date)
+        query_filter = [date_query] if date_query else []
+        query_filter.append(axonius_query.parse_aql_filter_for_day(view_dict['view']['query']['filter'],
+                                                                   for_date, entity))
+        data_item['value'] = axonius_query.count_matches(entity_collection, {
+            '$and': query_filter
+        })
         data.append(data_item)
         total += data_item['value']
 
@@ -132,7 +126,7 @@ def fetch_chart_intersect(
         base, intersecting,
         base_color=None,
         intersecting_colors=None,
-        for_date=None) -> Optional[List]:
+        for_date: str = None) -> Optional[List]:
     """
     This chart shows intersection of 1 or 2 'Child' views with a 'Parent' (expected not to be a subset of them).
     Module to be queried is defined by the parent query.
@@ -143,7 +137,7 @@ def fetch_chart_intersect(
     :param intersecting: List of 1 or 2 views
     :param base_color: The base query color
     :param intersecting_colors: The intersecting queries colors
-    :param for_date: Data will be fetched and calculated according to what is stored on this date
+    :param for_date: Data will be fetched and calculated according to what is stored on this for_date
     :return: List of result portions for the query executions along with their names. First represents Parent query.
              If 1 child, second represents Child intersecting with Parent.
              If 2 children, intersection between all three is calculated, namely 'Intersection'.
@@ -152,29 +146,22 @@ def fetch_chart_intersect(
     """
     if not intersecting or len(intersecting) < 1:
         raise Exception('Pie chart requires at least one views')
-    # Query and data collections according to given parent's module
-    data_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
+    axonius_query = get_axonius_query_singleton()
+    data_collection, date_query = axonius_query.data.entity_collection_query_for_date(entity, for_date)
 
     base_view = {'query': {'filter': '', 'expressions': []}}
-    base_queries = []
+    base_queries = [date_query] if date_query else []
     base_name = 'ALL'
     if base:
-        base_from_db = find_view_by_id(entity, base)
+        base_from_db = axonius_query.data.find_view(entity, base)
         if not base_from_db or not base_from_db.get('view', {}).get('query'):
             return None
         base_view = base_from_db['view']
         base_name = base_from_db.get('name', '')
-        base_queries = [parse_filter(base_view['query']['filter'], for_date, entity)]
-
-    # If we have a date and this isn't an historical collection add a filter
-    if for_date and is_date_filter_required:
-        base_queries.append({'accurate_for_datetime': for_date})
+        base_queries.append(axonius_query.parse_aql_filter_for_day(base_view['query']['filter'], for_date, entity))
 
     data = []
-    if is_where_count_query(base_queries if base_queries else {}):
-        total = data_collection.count({'$and': base_queries})
-    else:
-        total = data_collection.count_documents({'$and': base_queries} if base_queries else {})
+    total = axonius_query.count_matches(data_collection, {'$and': base_queries} if base_queries else {})
     if not total:
         return [{
             'name': base_name,
@@ -186,26 +173,21 @@ def fetch_chart_intersect(
             'index_in_config': 0
         }]
 
-    child1_from_db = find_view_by_id(entity, intersecting[0])
+    child1_from_db = axonius_query.data.find_view(entity, intersecting[0])
     if not child1_from_db or not child1_from_db.get('view', {}).get('query'):
         return None
     child1_view = child1_from_db['view']
     child1_name = child1_from_db.get('name', '')
     child1_filter = child1_view['query']['filter']
-    child1_query = parse_filter(child1_filter, for_date, entity)
+    child1_query = axonius_query.parse_aql_filter_for_day(child1_filter, for_date, entity)
     base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
     child2_filter = ''
     if len(intersecting) == 1:
         # Fetch the only child, intersecting with parent
         child1_view['query']['filter'] = f'{base_filter}({child1_filter})'
-        if is_where_count_query(base_queries) or is_where_count_query(child1_query):
-            numeric_value = data_collection.count({
-                '$and': base_queries + [child1_query]
-            })
-        else:
-            numeric_value = data_collection.count_documents({
-                '$and': base_queries + [child1_query]
-            })
+        numeric_value = axonius_query.count_matches(data_collection, {
+            '$and': base_queries + [child1_query]
+        })
         data.append({
             'name': child1_name,
             'view': child1_view,
@@ -215,36 +197,24 @@ def fetch_chart_intersect(
             'index_in_config': 1
         })
     else:
-        child2_from_db = find_view_by_id(entity, intersecting[1])
+        child2_from_db = axonius_query.data.find_view(entity, intersecting[1])
         if not child2_from_db or not child2_from_db.get('view', {}).get('query'):
             return None
         child2_view = child2_from_db['view']
         child2_name = child2_from_db.get('name', '')
         child2_filter = child2_view['query']['filter']
-        child2_query = parse_filter(child2_filter, for_date, entity)
+        child2_query = axonius_query.parse_aql_filter_for_day(child2_filter, for_date, entity)
 
         # Child1 + Parent - Intersection
         child1_view['query']['filter'] = f'{base_filter}({child1_filter}) and not ({child2_filter})'
-        if is_where_count_query(base_queries) or \
-                is_where_count_query(child1_query) or \
-                is_where_count_query(child2_query):
-            numeric_value = data_collection.count({
-                '$and': base_queries + [
-                    child1_query,
-                    {
-                        '$nor': [child2_query]
-                    }
-                ]
-            })
-        else:
-            numeric_value = data_collection.count_documents({
-                '$and': base_queries + [
-                    child1_query,
-                    {
-                        '$nor': [child2_query]
-                    }
-                ]
-            })
+        numeric_value = axonius_query.count_matches(data_collection, {
+            '$and': base_queries + [
+                child1_query,
+                {
+                    '$nor': [child2_query]
+                }
+            ]
+        })
         data.append({
             'name': child1_name,
             'value': numeric_value,
@@ -255,18 +225,11 @@ def fetch_chart_intersect(
         })
 
         # Intersection
-        if is_where_count_query(base_filter) or \
-                is_where_count_query(child1_query) or \
-                is_where_count_query(child2_query):
-            numeric_value = data_collection.count({
-                '$and': base_queries + [
-                    child1_query, child2_query
-                ]})
-        else:
-            numeric_value = data_collection.count_documents({
-                '$and': base_queries + [
-                    child1_query, child2_query
-                ]})
+        numeric_value = axonius_query.count_matches(data_collection, {
+            '$and': base_queries + [
+                child1_query, child2_query
+            ]
+        })
         data.append({
             'name': f'{child1_name} + {child2_name}',
             'intersection': True,
@@ -278,26 +241,14 @@ def fetch_chart_intersect(
 
         # Child2 + Parent - Intersection
         child2_view['query']['filter'] = f'{base_filter}({child2_filter}) and not ({child1_filter})'
-        if is_where_count_query(base_queries) or \
-                is_where_count_query(child1_query) or \
-                is_where_count_query(child2_query):
-            numeric_value = data_collection.count({
-                '$and': base_queries + [
-                    child2_query,
-                    {
-                        '$nor': [child1_query]
-                    }
-                ]
-            })
-        else:
-            numeric_value = data_collection.count_documents({
-                '$and': base_queries + [
-                    child2_query,
-                    {
-                        '$nor': [child1_query]
-                    }
-                ]
-            })
+        numeric_value = axonius_query.count_matches(data_collection, {
+            '$and': base_queries + [
+                child2_query,
+                {
+                    '$nor': [child1_query]
+                }
+            ]
+        })
         data.append({
             'name': child2_name,
             'value': numeric_value,
@@ -324,7 +275,7 @@ def fetch_chart_intersect(
 
 
 # pylint: disable-msg=too-many-locals
-def _query_chart_segment_results(field_parent: str, view, entity: EntityType, for_date: datetime,
+def _query_chart_segment_results(field_parent: str, view, entity: EntityType, for_date: str,
                                  filters_keys: list):
     """
     create aggregation object and return his results
@@ -335,16 +286,15 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
     :param filters_keys: a list of all filter by keys ( field names to filter by )
     :return: aggregation results
     """
+    axonius_query = get_axonius_query_singleton()
     base_view = {'query': {'filter': '', 'expressions': []}}
-    base_queries = []
+    data_collection, date_query = axonius_query.data.entity_collection_query_for_date(entity, for_date)
+    base_queries = [date_query] if date_query else []
     if view:
-        base_view = find_view_config_by_id(entity, view)
-        if not base_view or not base_view.get('query'):
+        base_filter = axonius_query.data.find_view_filter(entity, view)
+        if not base_filter:
             return None, None
-        base_queries.append(parse_filter(base_view['query']['filter'], for_date, entity))
-    data_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
-    if for_date and is_date_filter_required:
-        base_queries.append({'accurate_for_datetime': for_date})
+        base_queries.append(axonius_query.parse_aql_filter_for_day(base_filter, for_date, entity))
 
     base_query = {'$and': base_queries} if base_queries else {}
     adapter_conditions = [
@@ -390,9 +340,7 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
     query = [
         # match base queries
         {
-            '$match': base_query if not is_where_count_query(base_query) else
-            # pylint: disable=C0330
-            {'_id': {'$in': [x['_id'] for x in data_collection.find(base_query, projection={'_id': True})]}}
+            '$match': axonius_query.convert_for_aggregation_matches(data_collection, base_query)
         },
         # filter old data from adapters
         {
@@ -421,7 +369,7 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
                         }
                     }
                 },
-                PREFERRED_FIELDS: 1
+                PREFERRED_FIELDS_PREFIX: 1
             }
         },
         # collect all data available by filters
@@ -512,7 +460,7 @@ def _query_chart_segment_results(field_parent: str, view, entity: EntityType, fo
 # pylint: disable-msg=too-many-branches
 # pylint: disable=too-many-arguments
 def fetch_chart_segment(chart_view: ChartViews, entity: EntityType, view, field, sort, value_filter: list = None,
-                        include_empty: bool = False, for_date=None,
+                        include_empty: bool = False, for_date: str = None,
                         selected_sort_by=None, selected_sort_order=None, timeframe=None, show_timeline=None,
                         chart_color=None) -> List:
     """
@@ -797,10 +745,11 @@ def _generate_aggregate_unique_values_reduce(key):
     }
 
 
-def _query_chart_abstract_results(field: dict, entity: EntityType, view_from_db, for_date: datetime):
+def _query_chart_abstract_results(field: dict, entity: EntityType, view_from_db, for_date: str):
     """
     Build the query and retrieve data for calculating the abstract chart for given field and view
     """
+    axonius_query = get_axonius_query_singleton()
     splitted = field['name'].split('.')
     additional_elemmatch_data = {}
 
@@ -843,13 +792,17 @@ def _query_chart_abstract_results(field: dict, entity: EntityType, view_from_db,
             }
         ]
     }
+    data_collection, date_query = axonius_query.data.entity_collection_query_for_date(entity, for_date)
+    if date_query:
+        base_query = {'$and': [base_query, date_query]}
+
     if view_from_db:
         base_view = view_from_db['view']
         if not base_view or not base_view.get('query'):
             return None, None
         base_query = {
             '$and': [
-                parse_filter(base_view['query']['filter'], for_date, entity),
+                axonius_query.parse_aql_filter_for_day(base_view['query']['filter'], for_date, entity),
                 base_query
             ]
         }
@@ -860,10 +813,6 @@ def _query_chart_abstract_results(field: dict, entity: EntityType, view_from_db,
         field_compare = f'{field_compare} and {field["name"]} > 0'
     base_view['query']['filter'] = f'{base_view["query"]["filter"]}{field["name"]} == {field_compare}'
 
-    # pylint: disable=protected-access
-    data_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
-    if for_date and is_date_filter_required:
-        base_query = {'$and': [base_query, {'accurate_for_datetime': for_date}]}
     # pylint: enable=protected-access
     return base_view, data_collection.find(base_query, projection={
         adapter_field_name: 1,
@@ -873,14 +822,14 @@ def _query_chart_abstract_results(field: dict, entity: EntityType, view_from_db,
     })
 
 
-def fetch_chart_abstract(_: ChartViews, entity: EntityType, view, field, func, for_date=None):
+def fetch_chart_abstract(_: ChartViews, entity: EntityType, view, field, func, for_date: str = None):
     """
     One piece of data summarizing the given field's values resulting from given view's query, according to given func
     """
     # Query and data collections according to given module
 
     field_name = field['name']
-    view_from_db = find_view_by_id(entity, view) if view else None
+    view_from_db = get_axonius_query_singleton().data.find_view(entity, view) if view else None
     base_view, results = _query_chart_abstract_results(field, entity, view_from_db, for_date)
     if not base_view or not results:
         return None
@@ -962,11 +911,12 @@ def _get_date_ranges(start: datetime, end: datetime) -> Iterable[Tuple[date, dat
 
 
 def _compare_timeline_lines(views, date_ranges):
+    axonius_query = get_axonius_query_singleton()
     for view in views:
         if not view.get('id'):
             continue
         entity = EntityType(view['entity'])
-        base_from_db = find_view_by_id(entity, view['id'])
+        base_from_db = axonius_query.data.find_view(entity, view['id'])
         base_view = base_from_db['view']
         if not base_view or not base_view.get('query'):
             return
@@ -977,6 +927,7 @@ def _compare_timeline_lines(views, date_ranges):
 
 
 def _intersect_timeline_lines(views, date_ranges):
+    axonius_query = get_axonius_query_singleton()
     if len(views) != 2 or not views[0].get('id'):
         logger.error(f'Unexpected number of views for performing intersection {len(views)}')
         return
@@ -986,7 +937,7 @@ def _intersect_timeline_lines(views, date_ranges):
     # first query handling
     base_filter = ''
     if views[0].get('id'):
-        base_from_db = find_view_by_id(first_entity_type, views[0]['id'])
+        base_from_db = axonius_query.data.find_view(first_entity_type, views[0]['id'])
         base_view = base_from_db['view']
         if not base_view or not base_view.get('query'):
             return
@@ -997,7 +948,7 @@ def _intersect_timeline_lines(views, date_ranges):
     }
 
     # second query handling
-    intersecting_from_db = find_view_by_id(second_entity_type, views[1]['id'])
+    intersecting_from_db = axonius_query.data.find_view(second_entity_type, views[1]['id'])
     if not intersecting_from_db or not intersecting_from_db.get('view', {}).get('query'):
         return
     intersecting_view = intersecting_from_db['view']
@@ -1011,10 +962,11 @@ def _intersect_timeline_lines(views, date_ranges):
 
 
 def fetch_timeline_points_for_segmentation(entity_type: EntityType, match_filter: str, date_ranges):
-    # pylint: disable=protected-access
+    axonius_query = get_axonius_query_singleton()
+
     def aggregate_for_date_range(args):
         range_from, range_to = args
-        historical_collection = PluginBase.Instance._historical_entity_views_db_map[entity_type]
+        historical_collection = axonius_query.data.entity_history_collection[entity_type]
         historical_in_range = historical_collection.aggregate([{
             '$project': {
                 'accurate_for_datetime': 1
@@ -1044,10 +996,11 @@ def fetch_timeline_points_for_segmentation(entity_type: EntityType, match_filter
 
 
 def _fetch_timeline_points(entity_type: EntityType, match_filter: str, date_ranges):
-    # pylint: disable=protected-access
+    axonius_query = get_axonius_query_singleton()
+
     def aggregate_for_date_range(args):
         range_from, range_to = args
-        historical_collection = PluginBase.Instance._historical_entity_views_db_map[entity_type]
+        historical_collection = axonius_query.data.entity_history_collection[entity_type]
         historical_in_range = historical_collection.aggregate([{
             '$project': {
                 'accurate_for_datetime': 1
@@ -1068,20 +1021,14 @@ def _fetch_timeline_points(entity_type: EntityType, match_filter: str, date_rang
         historical_counts = {}
         for historical_group in historical_in_range:
             group_date = historical_group['_id']
-            collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(group_date, entity_type)
-            base_filter = parse_filter(match_filter, group_date, entity_type)
-            if is_date_filter_required:
-                if is_where_count_query(base_filter) or is_where_count_query(group_date):
-                    historical_counts[group_date] = collection.count(
-                        {'$and': [base_filter, {'accurate_for_datetime': group_date}]})
-                else:
-                    historical_counts[group_date] = collection.count_documents(
-                        {'$and': [base_filter, {'accurate_for_datetime': group_date}]})
-            else:
-                if is_where_count_query(base_filter):
-                    historical_counts[group_date] = collection.count(base_filter)
-                else:
-                    historical_counts[group_date] = collection.count_documents(base_filter)
+            collection, date_query = axonius_query.data.entity_collection_query_for_date(
+                entity_type, group_date.strftime('%Y-%m-%d'))
+            base_filter = axonius_query.parse_aql_filter(match_filter, group_date, entity_type)
+            if date_query:
+                base_filter = {
+                    '$and': [base_filter, date_query]
+                }
+            historical_counts[group_date] = axonius_query.count_matches(collection, base_filter)
         return historical_counts
     # pylint: enable=protected-access
     points = {}
@@ -1183,10 +1130,10 @@ def fetch_chart_matrix(
         selected_sort_by=None,
         selected_sort_order=None,
         intersecting_colors=None,
-        for_date=None,) -> Optional[List]:
-
+        for_date: str = None) -> Optional[List]:
+    axonius_query = get_axonius_query_singleton()
     # Query and data collections according to given parent's module
-    data_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
+    data_collection, date_query = axonius_query.data.entity_collection_query_for_date(entity, for_date)
 
     # go over base queries
     data = []
@@ -1195,7 +1142,7 @@ def fetch_chart_matrix(
     for base_query_index, base_query_id in enumerate(base):
         base_view = {'query': {'filter': '', 'expressions': []}}
         if base_query_id:
-            base_from_db = find_view_by_id(entity, base_query_id)
+            base_from_db = axonius_query.data.find_view(entity, base_query_id)
             base_query_name = base_from_db['name']
             base_view = base_from_db['view']
             if not base_view.get('query'):
@@ -1203,21 +1150,20 @@ def fetch_chart_matrix(
         else:
             base_query_name = f'All {entity.value}'
 
-        base_queries = [parse_filter(base_view['query']['filter'], for_date, entity)]
-        if for_date and is_date_filter_required:
-            base_queries.append({'accurate_for_datetime': for_date})
+        base_queries = [date_query] if date_query else []
+        base_queries.append(axonius_query.parse_aql_filter_for_day(base_view['query']['filter'], for_date, entity))
         base_filter = f'({base_view["query"]["filter"]}) and ' if base_view['query']['filter'] else ''
 
         # intersection of base query with each data query
         for intersecting_query_index, intersecting_query_id in enumerate(intersecting):
-            child_from_db = find_view_by_id(entity, intersecting_query_id)
+            child_from_db = axonius_query.data.find_view(entity, intersecting_query_id)
             intersecting_query_name = child_from_db['name']
             child_view = child_from_db['view']
 
             if not child_view or not child_view.get('query'):
                 continue
             child_filter = child_view['query']['filter']
-            child_query = parse_filter(child_filter, for_date, entity)
+            child_query = axonius_query.parse_aql_filter_for_day(child_filter, for_date, entity)
             child_view['query']['filter'] = f'{base_filter}({child_filter})'
             child_view['query']['expressions'] = []
             numeric_value = data_collection.count_documents({
@@ -1272,24 +1218,21 @@ def fetch_chart_matrix(
 
 
 def fetch_chart_adapter_segment(chart_view: ChartViews, entity: EntityType, selected_view, sort,
-                                selected_sort_by=None, selected_sort_order=None, for_date=None,
+                                selected_sort_by=None, selected_sort_order=None, for_date: str = None,
                                 chart_colors=None):
-    # Query and data collections according to given parent's module
-    data_collection, is_date_filter_required = PluginBase.Instance.get_appropriate_view(for_date, entity)
+    axonius_query = get_axonius_query_singleton()
+    data_collection, date_query = axonius_query.data.entity_collection_query_for_date(entity, for_date)
     adapters_metadata = get_adapters_metadata()
 
     view_query_config = {'query': {'filter': '', 'expressions': []}}
-    base_queries = []
+    base_queries = [date_query] if date_query else []
     if selected_view:
-        view = find_view_by_id(entity, selected_view) or {}
+        view = axonius_query.data.find_view(entity, selected_view) or {}
         view_query_config = view.get('view')
         if not view_query_config or not view_query_config.get('query'):
             return None
-        base_queries = [parse_filter(view_query_config['query']['filter'], for_date, entity)]
-
-    # If we have a date and this isn't an historical collection add a filter
-    if for_date and is_date_filter_required:
-        base_queries.append({'accurate_for_datetime': for_date})
+        base_queries.append(axonius_query.parse_aql_filter_for_day(view_query_config['query']['filter'],
+                                                                   for_date, entity))
 
     condition = {'$and': base_queries} if base_queries else {}
     matching_devices = data_collection.find(condition, {'adapters.plugin_name': 1})
@@ -1383,111 +1326,7 @@ def generate_dashboard(dashboard_id: ObjectId, sort_by=None, sort_order=None):
     return generate_dashboard_uncached(dashboard_id, sort_by, sort_order)
 
 
-def fetch_latest_date(entity: EntityType, from_given_date: datetime, to_given_date: datetime):
-    """
-    For given entity and dates, check which is latest date with historical data, within the range
-    """
-    # pylint: disable=protected-access
-    historical = PluginBase.Instance._historical_entity_views_db_map[entity]
-    # pylint: enable=protected-access
-    latest_date = historical.find_one({
-        'accurate_for_datetime': {
-            '$lt': to_given_date,
-            '$gt': from_given_date,
-        }
-    }, sort=[('accurate_for_datetime', -1)], projection=['accurate_for_datetime'])
-    if not latest_date:
-        return None
-    return latest_date['accurate_for_datetime']
-
-
-def fetch_chart_intersect_historical(card, from_given_date, to_given_date):
-    if not card.get('config') or not card['config'].get('entity') or not card.get('view'):
-        return []
-    config = {**card['config'], 'entity': EntityType(card['config']['entity'])}
-    latest_date = fetch_latest_date(config['entity'], from_given_date, to_given_date)
-    if not latest_date:
-        return []
-    return fetch_chart_intersect(ChartViews[card['view']], **config, for_date=latest_date)
-
-
-def fetch_chart_compare_historical(card, from_given_date, to_given_date, selected_sort_by, selected_sort_order):
-    """
-    Finds the latest saved result from the given view list (from card) that are in the given date range
-    """
-    if not card.get('view') or not card.get('config') or not card['config'].get('views'):
-        return []
-    historical_views = []
-    default_sort = {**card['config']}.get('sort', None)
-    for view in card['config']['views']:
-        view_id = view.get('id')
-        if not view.get('entity') or not view_id:
-            continue
-        try:
-            latest_date = fetch_latest_date(EntityType(view['entity']), from_given_date, to_given_date)
-            if not latest_date:
-                continue
-            historical_views.append({'for_date': latest_date, **view})
-
-        except Exception:
-            logger.exception(f'When dealing with {view_id} and {view["entity"]}')
-            continue
-    if not historical_views:
-        return []
-    return fetch_chart_compare(ChartViews[card['view']], historical_views, sort=default_sort,
-                               selected_sort_by=selected_sort_by, selected_sort_order=selected_sort_order)
-
-
-def fetch_chart_segment_historical(card, from_given_date, to_given_date, selected_sort_by=None,
-                                   selected_sort_order=None):
-    """
-    Get historical data for card of metric 'segment'
-    """
-    if not card.get('view') or not card.get('config') or not card['config'].get('entity'):
-        return []
-    config = {**card['config'], 'entity': EntityType(card['config']['entity'])}
-    latest_date = fetch_latest_date(config['entity'], from_given_date, to_given_date)
-    if not latest_date:
-        return []
-    return fetch_chart_segment(ChartViews[card['view']], **config, for_date=latest_date,
-                               selected_sort_by=selected_sort_by, selected_sort_order=selected_sort_order)
-
-
-def fetch_chart_adapter_segment_historical(card, from_given_date, to_given_date):
-    if not card.get('config') or not card['config'].get('entity') or not card.get('view'):
-        return []
-    config = {**card['config'], 'entity': EntityType(card['config']['entity'])}
-    latest_date = fetch_latest_date(config['entity'], from_given_date, to_given_date)
-    if not latest_date:
-        return []
-    return fetch_chart_adapter_segment(ChartViews[card['view']], **config, for_date=latest_date)
-
-
-def fetch_chart_abstract_historical(card, from_given_date, to_given_date):
-    """
-    Get historical data for card of metric 'abstract'
-    """
-    config = {**card['config'], 'entity': EntityType(card['config']['entity'])}
-    latest_date = fetch_latest_date(config['entity'], from_given_date, to_given_date)
-    if not latest_date:
-        return []
-    return fetch_chart_abstract(ChartViews[card['view']], **config, for_date=latest_date)
-
-
-def fetch_chart_matrix_historical(card, from_given_date, to_given_date):
-    if not card.get('view') \
-            or not card.get('config') \
-            or not card['config'].get('entity'):
-        return []
-    config = {**card['config'], 'entity': EntityType(card['config']['entity'])}
-    latest_date = fetch_latest_date(config['entity'], from_given_date, to_given_date)
-    if not latest_date:
-        return []
-    return fetch_chart_matrix(ChartViews[card['view']], **config, for_date=latest_date)
-
-
-def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, to_date: datetime,
-                                  sort_by=None, sort_order=None):
+def dashboard_historical_uncached(dashboard_id: ObjectId, for_date: str, sort_by=None, sort_order=None):
     # pylint: disable=protected-access
     dashboard = PluginBase.Instance._get_collection(DASHBOARD_COLLECTION).find_one({
         '_id': dashboard_id
@@ -1504,21 +1343,28 @@ def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, t
             return beautify_db_entry(dashboard)
 
         handler_by_metric = {
-            ChartMetrics.compare: fetch_chart_compare_historical,
-            ChartMetrics.intersect: fetch_chart_intersect_historical,
-            ChartMetrics.segment: fetch_chart_segment_historical,
-            ChartMetrics.adapter_segment: fetch_chart_adapter_segment_historical,
-            ChartMetrics.abstract: fetch_chart_abstract_historical,
-            ChartMetrics.matrix: fetch_chart_matrix_historical
+            ChartMetrics.compare: fetch_chart_compare,
+            ChartMetrics.intersect: fetch_chart_intersect,
+            ChartMetrics.segment: fetch_chart_segment,
+            ChartMetrics.adapter_segment: fetch_chart_adapter_segment,
+            ChartMetrics.abstract: fetch_chart_abstract,
+            ChartMetrics.matrix: fetch_chart_matrix
         }
+        config = {**dashboard['config']}
 
         def call_dashboard_handler(metric):
             if metric in [ChartMetrics.segment, ChartMetrics.compare]:
-                return handler_by_metric[dashboard_metric](dashboard, from_date, to_date,
+                return handler_by_metric[dashboard_metric](dashboard,
                                                            selected_sort_by=sort_by,
-                                                           selected_sort_order=sort_order)
-            return handler_by_metric[dashboard_metric](dashboard, from_date, to_date)
+                                                           selected_sort_order=sort_order,
+                                                           **config,
+                                                           for_date=for_date)
+            return handler_by_metric[dashboard_metric](dashboard, **config, for_date=for_date)
 
+        if config.get('entity') and ChartMetrics.compare != dashboard_metric:
+            # _fetch_chart_compare crashed in the wild because it got entity as a param.
+            # We don't understand how such a dashboard chart was created. But at least we won't crash now
+            config['entity'] = EntityType(dashboard['config']['entity'])
         dashboard['data'] = call_dashboard_handler(dashboard_metric)
         if dashboard['data'] is None:
             dashboard['data'] = []
@@ -1531,9 +1377,8 @@ def dashboard_historical_uncached(dashboard_id: ObjectId, from_date: datetime, t
 
 
 @rev_cached(ttl=3600 * 24 * 365)
-def generate_dashboard_historical(dashboard_id: ObjectId, from_date: datetime, to_date: datetime,
-                                  sort_by=None, sort_order=None):
-    return dashboard_historical_uncached(dashboard_id, from_date, to_date, sort_by, sort_order)
+def generate_dashboard_historical(dashboard_id: ObjectId, for_date: str, sort_by=None, sort_order=None):
+    return dashboard_historical_uncached(dashboard_id, for_date, sort_by, sort_order)
 
 
 def _sort_dashboard_data(data, selected_sort_by, selected_sort_order, default_chart_sort,

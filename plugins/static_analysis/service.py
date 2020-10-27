@@ -20,7 +20,7 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase
 from axonius.users.user_adapter import UserAdapter, ASSOCIATED_FIELD
-from axonius.utils.axonius_query_language import parse_filter, convert_db_entity_to_view_entity
+from axonius.utils.axonius_query_language import convert_db_entity_to_view_entity
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import is_valid_user
 
@@ -127,7 +127,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
         :return: True if virtual host and False if not
         """
         devices_from_containers_adapter = list(self.devices_db.find(
-            parse_filter(
+            self.common.query.parse_aql_filter(
                 '((adapters_data.esx_adapter.id == ({"$exists":true,"$ne":""}))) or'
                 '((adapters_data.hyper_v_adapter.id == ({"$exists":true,"$ne":""}))) or'
                 '((adapters_data.proxmox_adapter.id == ({"$exists":true,"$ne":""}))) or'
@@ -138,7 +138,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
             return True
 
         devices_with_vmware_manuf = self.devices_db.find(
-            parse_filter(
+            self.common.query.parse_aql_filter(
                 '(specific_data.data.network_interfaces.mac == regex("^00:15:5D")) or '
                 '(specific_data.data.network_interfaces.manufacturer == regex("^Nutanix")) or '
                 '(specific_data.data.network_interfaces.manufacturer == regex("^VMware"))'),
@@ -183,7 +183,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
         https://portal.nutanix.com/#page/kbs/details?targetId=kA03200000099jkCAA
         """
         devices_from_containers_adapter = self.devices_db.find(
-            parse_filter(
+            self.common.query.parse_aql_filter(
                 '((adapters_data.esx_adapter.id == ({"$exists":true,"$ne":""}))) or'
                 '((adapters_data.hyper_v_adapter.id == ({"$exists":true,"$ne":""}))) or'
                 '((adapters_data.proxmox_adapter.id == ({"$exists":true,"$ne":""}))) or'
@@ -197,7 +197,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
             self._update_virtual_host_to_device(device, True)
 
         devices_with_vmware_manuf = self.devices_db.find(
-            parse_filter(
+            self.common.query.parse_aql_filter(
                 '(specific_data.data.network_interfaces.mac == regex("^00:15:5D")) or '
                 '(specific_data.data.network_interfaces.manufacturer == regex("^Nutanix")) or '
                 '(specific_data.data.network_interfaces.manufacturer == regex("^VMware"))'),
@@ -388,7 +388,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
         # a) The device's adapter reports CVEs (i.e. Shodan, Tenable SC) alone
         # b) The device has installed software and we can search for CVEs associated with it
         devices_with_cve_or_softwares = list(self.devices_db.find(
-            parse_filter(
+            self.common.query.parse_aql_filter(
                 '(specific_data.data.software_cves.cve_id == ({"$exists":true,"$ne": ""})) '
                 'or (specific_data.data.installed_software.name == ({"$exists":true,"$ne": ""}))'),
             projection={
@@ -415,7 +415,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
         :return:
         """
         devices_with_virtual_host_positive = list(self.devices_db.find(
-            parse_filter(
+            self.common.query.parse_aql_filter(
                 '(specific_data.data.virtual_host == true)'),
             projection={
                 '_id': False,
@@ -641,7 +641,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
         # 1. Get all devices which have users associations, and map all these devices to one global users object.
         # Notice that we select by filter. we do this to include users that came both from adapters and plugins.
         devices_with_users_association = self.devices_db.find(
-            parse_filter(
+            self.common.query.parse_aql_filter(
                 'specific_data.data.users == exists(true) or specific_data.data.last_used_users == exists(true) or '
                 'specific_data.data.assigned_to == exists(true) or '
                 'specific_data.data.top_user == exists(true) or '
@@ -879,7 +879,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
         # if the default is saved, then every batch will be fetched in more than every 10 minutes. But the default
         # of mongo is to lose a cursor that hasn't been fetched in 10 minutes, so this will cause a 'cursor not found'.
         devices_with_last_used_users = self.devices_db.find(
-            parse_filter(
+            self.common.query.parse_aql_filter(
                 '((adapters_data.azure_ad_adapter.user_principal_name == ({"$exists":true,"$ne":""}))) '
                 'or ((specific_data.data.last_used_users == ({"$exists":true,"$ne":""}))) '
                 'or (specific_data.data.email == ({"$exists":true,"$ne":""}))'

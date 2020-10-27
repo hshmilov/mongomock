@@ -4,7 +4,7 @@ from datetime import datetime
 import random
 import pymongo
 
-from axonius.utils.axonius_query_language import parse_filter
+from axonius.modules.query.axonius_query import get_axonius_query_singleton
 
 from pymongo import MongoClient
 
@@ -39,7 +39,7 @@ def fix_for_materialized(f):
 
 
 def perform(q: str, c=col, materialize: bool=True, natural_hint=False) -> Tuple[int, int]:
-    f = parse_filter(q)
+    f = get_axonius_query_singleton().parse_aql_filter(q)
     if materialize:
         f = fix_for_materialized(f)
 

@@ -3,12 +3,11 @@ import traceback
 from abc import ABC, abstractmethod
 from typing import Set, List
 import urllib.parse
-from bson import ObjectId
 
 from axonius.entities import EntityType
+from axonius.modules.query.axonius_query import get_axonius_query_singleton
 from axonius.types.enforcement_classes import (Trigger, TriggeredReason,
                                                AlertActionResult, ActionRunResults, EntityResult)
-from axonius.utils.axonius_query_language import parse_filter
 from axonius.consts.plugin_consts import GUI_SYSTEM_CONFIG_COLLECTION, GUI_PLUGIN_NAME
 from axonius.utils.mongo_escaping import unescape_dict
 from reports.action_types.action_type_base import ActionTypeBase
@@ -89,11 +88,8 @@ class ActionTypeAlert(ActionTypeBase, ABC):
         Fetch the view defining the action's trigger, from db according to its EntityType
         :return: Found document or empty dict if none exists
         """
-        if not self._run_configuration.view.id:
-            return {}
-        return self._plugin_base.gui_dbs.entity_query_views_db_map[self._entity_type].find_one({
-            '_id': ObjectId(self._run_configuration.view.id)
-        })
+        return self._plugin_base.common.data.find_view(self._run_configuration.view.entity,
+                                                       self._run_configuration.view.id) or {}
 
     @property
     def trigger_view_name(self) -> str:
@@ -118,7 +114,8 @@ class ActionTypeAlert(ActionTypeBase, ABC):
         :return: A mongo query object valid for the entities collection
         """
         if self.trigger_view_config.get('query'):
-            return parse_filter(self.trigger_view_config['query']['filter'], entity=self._entity_type)
+            return get_axonius_query_singleton().parse_aql_filter(self.trigger_view_config['query']['filter'],
+                                                                  entity_type=self._entity_type)
         return self._create_query(self._internal_axon_ids)
 
     def _generate_query_link(self):

@@ -80,3 +80,10 @@ ACTION_TYPE_DB_FIELD = f'{ACTION_FIELD}.{ACTION_NAME_FIELD}'
 STARTED_AT_FIELD = 'started_at'
 
 NOT_RAN_STATE = 'Not ran'
+
+
+###############
+# COLLECTIONS #
+###############
+TASKS_COLLECTION = 'triggerable_history'
+TASKS_RESULTS_COLLECTION = 'action_results'

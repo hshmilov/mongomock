@@ -26,12 +26,10 @@ from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_MAIN_FI
                                           ACTIONS_POST_FIELD,
                                           ACTIONS_SUCCESS_FIELD)
 from axonius.logging.audit_helper import AuditCategory, AuditAction
-from axonius.plugin_base import EntityType, return_error
-from axonius.utils.axonius_query_language import parse_filter
+from axonius.plugin_base import return_error
 from axonius.utils.datetime import next_weekday
 from axonius.utils.gui_helpers import (get_connected_user_id,
-                                       find_filter_by_name, paginated,
-                                       filtered, sorted_endpoint)
+                                       paginated, filtered, sorted_endpoint)
 from axonius.utils.permissions_helper import PermissionValue, PermissionAction, PermissionCategory
 from axonius.utils.threading import run_and_forget
 from gui.logic.db_helpers import beautify_db_entry
@@ -382,8 +380,6 @@ class Reports:
             generator_params = {}
             space_ids = report.get('spaces') or []
             generator_params['dashboard'] = self._get_dashboard(space_ids=space_ids, exclude_personal=True)
-            generator_params['adapters'] = self._get_adapter_data(report['adapters']) if report.get('adapters') \
-                else None
             generator_params['default_sort'] = self._system_settings['defaultSort']
             generator_params['saved_view_count_func'] = self._get_entity_count
             generator_params['spaces'] = self._dashboard_spaces_collection.find(filter_archived(
@@ -402,47 +398,6 @@ class Reports:
         except Exception:
             logger.exception(f'Failed to generate report {report.get("name", "")}')
             return None, None
-
-    def _get_adapter_data(self, adapters):
-        """
-        Get the definition of the adapters to include in the report. For each adapter, get the views defined for it
-        and execute each one, according to its entity, to get the amount of results for it.
-
-        :return:
-        """
-
-        def get_adapters_data():
-            for adapter in adapters:
-                if not adapter.get('name'):
-                    continue
-
-                views = []
-                for query in adapter.get('views', []):
-                    if not query.get('name') or not query.get('entity'):
-                        continue
-                    entity = EntityType(query['entity'])
-                    view_filter = find_filter_by_name(entity, query['name'])
-                    if view_filter:
-                        query_filter = view_filter['query']['filter']
-                        view_parsed = parse_filter(query_filter, entity=entity)
-                        views.append({
-                            **query,
-                            'count': self._entity_db_map[entity].count_documents(view_parsed)
-                        })
-                adapter_clients_report = {}
-                adapter_unique_name = ''
-                try:
-                    # Exception thrown if adapter is down or report missing, and section will appear with views only
-                    adapter_unique_name = self.get_plugin_unique_name(adapter['name'])
-                    adapter_reports_db = self._get_db_connection()[adapter_unique_name]
-                    found_report = adapter_reports_db['report'].find_one({'name': 'report'}) or {}
-                    adapter_clients_report = found_report.get('data', {})
-                except Exception:
-                    logger.exception(f'Error contacting the report db for adapter {adapter_unique_name} {adapter}')
-
-                yield {'name': adapter['title'], 'queries': views, 'views': adapter_clients_report}
-
-        return list(get_adapters_data())
 
     @gui_route_logged_in('send_email', methods=['POST'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Reports))

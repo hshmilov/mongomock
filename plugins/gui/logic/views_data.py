@@ -5,7 +5,7 @@ from typing import Iterable
 
 import pymongo
 
-from axonius.plugin_base import PluginBase
+from axonius.modules.data.axonius_data import get_axonius_data_singleton
 from axonius.entities import EntityType
 from axonius.consts.gui_consts import (LAST_UPDATED_FIELD, PREDEFINED_FIELD)
 from gui.logic.fielded_plugins import get_fielded_plugins
@@ -62,7 +62,7 @@ def _process_filter_views(entity_type: EntityType, mongo_filter):
 
 
 def get_views(entity_type: EntityType, limit, skip, mongo_filter, mongo_sort) -> Iterable[dict]:
-    entity_views_collection = PluginBase.Instance.gui_dbs.entity_query_views_db_map[entity_type]
+    entity_views_collection = get_axonius_data_singleton().entity_views_collection[entity_type]
 
     if mongo_sort:
         sort = list(mongo_sort.items())
@@ -76,7 +76,7 @@ def get_views(entity_type: EntityType, limit, skip, mongo_filter, mongo_sort) ->
 
 
 def get_views_count(entity_type: EntityType, mongo_filter, quick: bool = False):
-    entity_views_collection = PluginBase.Instance.gui_dbs.entity_query_views_db_map[entity_type]
+    entity_views_collection = get_axonius_data_singleton().entity_views_collection[entity_type]
     processed_filter = _process_filter_views(entity_type, mongo_filter)
     if quick:
         return entity_views_collection.count_documents(processed_filter, limit=1000)

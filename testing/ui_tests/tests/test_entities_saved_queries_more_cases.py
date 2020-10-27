@@ -43,7 +43,7 @@ class TestEntitiesSavedQueriesMoreCases(TestBase):
             self.devices_page.close_dropdown()
 
             ids_map = {}
-            queries = axonius_system.entity_views[EntityType.Devices].find({
+            queries = axonius_system.db.data.entity_views_collection[EntityType.Devices].find({
                 'query_type': 'saved',
                 'name':  {
                     '$in': queries_tree

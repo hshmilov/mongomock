@@ -356,7 +356,7 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
 
     @db_migration(raise_on_failure=False)
     def _update_schema_version_8(self):
-        enforcement_tasks_collection = self.db.client[REPORTS_PLUGIN_NAME]['triggerable_history']
+        enforcement_tasks_collection = self.db.data.tasks_collection
         for result_type in ['main', 'failure', 'success', 'post']:
             enforcement_tasks_collection.update_many(
                 filter={

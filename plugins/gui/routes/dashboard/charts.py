@@ -15,16 +15,13 @@ from axonius.consts.gui_consts import (FILE_NAME_TIMESTAMP_FORMAT,
 from axonius.entities import EntityType
 from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.plugin_base import return_error
-from axonius.utils.gui_helpers import (get_connected_user_id, historical_range,
-                                       paginated, search_filter, sorted_by_method_endpoint)
+from axonius.utils.gui_helpers import (get_connected_user_id, paginated, search_filter,
+                                       sorted_by_method_endpoint)
 from axonius.utils.permissions_helper import (PermissionAction,
                                               PermissionCategory,
                                               PermissionValue)
 from axonius.utils.revving_cache import WILDCARD_ARG, NoCacheException
-from gui.logic.dashboard_data import (fetch_chart_segment,
-                                      fetch_chart_segment_historical,
-                                      fetch_chart_adapter_segment,
-                                      fetch_chart_adapter_segment_historical,
+from gui.logic.dashboard_data import (fetch_chart_segment, fetch_chart_adapter_segment,
                                       generate_dashboard_historical, is_dashboard_paginated)
 from gui.logic.routing_helper import gui_route_logged_in, gui_section_add_rules
 from gui.routes.dashboard.dashboard import generate_dashboard
@@ -254,14 +251,12 @@ class Charts:
         return None
 
     @paginated()
-    @historical_range()
     @search_filter()
     @gui_route_logged_in('<panel_id>', methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Dashboard), enforce_trial=False)
     @sorted_by_method_endpoint()
     # pylint: disable=too-many-branches, unexpected-keyword-arg
-    def get_dashboard_panel(self, panel_id, skip, limit, from_date: datetime, to_date: datetime,
-                            search: str, sort_by=None, sort_order=None):
+    def get_dashboard_panel(self, panel_id, skip, limit, search: str, sort_by=None, sort_order=None):
         """
         GET partial data of the Dashboard Panel
 
@@ -284,8 +279,9 @@ class Charts:
             generate_dashboard.clean_cache([panel_id, sort_by, sort_order])
             generate_dashboard_historical.clean_cache([panel_id, sort_by, sort_order, WILDCARD_ARG, WILDCARD_ARG])
 
-        if from_date and to_date:
-            generated_dashboard = generate_dashboard_historical(panel_id, from_date, to_date,
+        history = request.args.get('history')
+        if history:
+            generated_dashboard = generate_dashboard_historical(panel_id, history,
                                                                 sort_by=sort_by, sort_order=sort_order,
                                                                 use_semaphore=True)
         else:
@@ -534,14 +530,12 @@ class Charts:
     #           EXPORT
     ################################################
 
-    @historical_range()
     @gui_route_logged_in('<panel_id>/csv', methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Dashboard))
-    def generate_chart_csv(self, panel_id, from_date: datetime, to_date: datetime):
+    def generate_chart_csv(self, panel_id):
         card = self._dashboard_collection.find_one({
             '_id': ObjectId(panel_id)
         })
-
         handler_by_metric = {
             'segment': {
                 'handler': self.generate_segment_csv,
@@ -572,10 +566,11 @@ class Charts:
             card['config']['entity'] = EntityType(card['config']['entity'])
 
         metric = card['metric']
+        history = request.args.get('history')
         if metric in ('timeline', 'segment_timeline'):
-            column_headers, rows = handler_by_metric[card['metric']]['handler'](card)
+            column_headers, rows = handler_by_metric[metric]['handler'](card)
         else:
-            column_headers, rows = handler_by_metric[metric]['handler'](card, from_date, to_date)
+            column_headers, rows = handler_by_metric[metric]['handler'](card, history)
 
         string_output = io.StringIO()
         dw = csv.DictWriter(string_output, column_headers)
@@ -593,14 +588,11 @@ class Charts:
         return output_file
 
     @staticmethod
-    def generate_segment_csv(card, from_date, to_date):
+    def generate_segment_csv(card, date: str = None):
         if not card['config'].get('field'):
             return return_error('Error: no such data available ', 400)
 
-        if from_date and to_date:
-            data = fetch_chart_segment_historical(card, from_date, to_date)
-        else:
-            data = fetch_chart_segment(ChartViews[card['view']], **card['config'])
+        data = fetch_chart_segment(ChartViews[card['view']], **card['config'], for_date=date)
         name = card['config']['field']['title']
         return [name, 'count'], [{name: x['name'], 'count': x['value']} for x in data]
 
@@ -650,11 +642,8 @@ class Charts:
         return headers, sorted_data
 
     @staticmethod
-    def generate_adapter_segment_csv(card, from_date, to_date):
-        if from_date and to_date:
-            data = fetch_chart_adapter_segment_historical(card, from_date, to_date)
-        else:
-            data = fetch_chart_adapter_segment(ChartViews[card['view']], **card['config'])
+    def generate_adapter_segment_csv(card, date: str = None):
+        data = fetch_chart_adapter_segment(ChartViews[card['view']], **card['config'], for_date=date)
         return ['Adapter Name', 'count'], [{'Adapter Name': x['fullName'], 'count': x['value']} for x in data]
 
     @staticmethod

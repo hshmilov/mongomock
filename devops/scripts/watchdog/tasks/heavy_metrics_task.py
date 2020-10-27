@@ -9,9 +9,9 @@ import json
 
 from axonius.consts.metric_consts import HeavySystemMetric
 from axonius.entities import EntityType
+from axonius.modules.query.axonius_query import get_axonius_query_singleton
 from scripts.watchdog.watchdog_task import WatchdogTask
 from services.axonius_service import AxoniusService
-from axonius.utils.axonius_query_language import parse_filter
 
 SLEEP_SECONDS = 60 * 60 * 12  # 12 hours
 QUERIES_FILE = Path('/etc/axonius/count_queries')
@@ -136,7 +136,7 @@ class HeavySystemMetricsTask(WatchdogTask):
                     entity_type = EntityType(entry['entity_type'])
                     query = entry['query']
                     name = entry['name']
-                    query_as_mongo = parse_filter(query)
+                    query_as_mongo = get_axonius_query_singleton().parse_aql_filter(query)
                     collection = ax.db.get_entity_db(entity_type)
                     count = collection.count_documents(query_as_mongo)
                     self.report_metric(metric_name=HeavySystemMetric.COUNT_QUERIES,

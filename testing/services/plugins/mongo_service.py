@@ -8,6 +8,7 @@ from retrying import retry
 
 from axonius.db.files import DBFileHelper
 from axonius.modules.axonius_plugins import AxoniusPlugins
+from axonius.modules.data.axonius_data import AxoniusData
 from axonius.plugin_base import EntityType
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, AGGREGATOR_PLUGIN_NAME, GUI_PLUGIN_NAME,
@@ -47,6 +48,7 @@ class MongoService(SystemService, WeaveService):
         super().__init__('mongo', '../infrastructures/database')
         self.plugins = AxoniusPlugins(self.client)
         self.db_files = DBFileHelper(self.client)
+        self.data = AxoniusData(self.client)
 
     @property
     def default_max_allowed_memory(self):
@@ -342,6 +344,3 @@ class MongoService(SystemService, WeaveService):
 
     def enforcements_collection(self):
         return self.client[REPORTS_PLUGIN_NAME][REPORTS_PLUGIN_NAME]
-
-    def tasks_collection(self):
-        return self.client[REPORTS_PLUGIN_NAME]['triggerable_history']

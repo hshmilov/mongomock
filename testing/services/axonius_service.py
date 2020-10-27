@@ -23,8 +23,7 @@ from scripts.instances.instances_modes import get_instance_mode, InstancesModes
 from scripts.instances.network_utils import (get_encryption_key,
                                              restore_master_connection,
                                              get_docker_subnet_ip_range, DOCKER_BRIDGE_INTERFACE_NAME)
-from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, GUI_SYSTEM_CONFIG_COLLECTION,
-                                          USER_VIEWS, DEVICE_VIEWS)
+from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME, SYSTEM_SETTINGS, GUI_SYSTEM_CONFIG_COLLECTION)
 from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           NODE_MARKER_PATH,
@@ -108,11 +107,6 @@ class AxoniusService:
         if 'linux' in sys.platform.lower() and docker.from_env().info()['OperatingSystem'] != 'Docker Desktop':
             self.axonius_services.append(self.instance_control)
             self.axonius_services.append(self.openvpn)
-
-        self.entity_views = {
-            EntityType.Devices: self.db.get_collection(self.gui.plugin_name, DEVICE_VIEWS),
-            EntityType.Users: self.db.get_collection(self.gui.plugin_name, USER_VIEWS)
-        }
 
         self.entity_views_direct_references = {
             EntityType.Devices: self.db.get_collection(self.gui.plugin_name, DEVICES_DIRECT_REFERENCES_COLLECTION),

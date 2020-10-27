@@ -14,12 +14,12 @@ from pymongo.errors import CollectionInvalid, BulkWriteError
 from aggregator.exceptions import AdapterOffline, ClientsUnavailable
 from aggregator.historical import create_retrospective_historic_collections, MIN_DISK_SIZE
 from axonius.db_migrations import db_migration
-from axonius.utils.axonius_query_language import PREFERRED_SUFFIX
+from axonius.modules.query.consts import PREFERRED_SUFFIX
 from axonius.utils.datetime import parse_date
 from axonius.utils.mongo_indices import common_db_indexes, non_historic_indexes
 from axonius.adapter_base import is_plugin_adapter
 from axonius.consts.adapter_consts import NON_THREAD_SAFE_CLEAN_DB_ADAPTERS, AXONIUS_INTERNAL_ID
-from axonius.consts.adapter_consts import PREFERRED_FIELDS as PREFERRED_FIELDS_LABEL
+from axonius.consts.adapter_consts import PREFERRED_FIELDS_PREFIX
 from axonius.consts.gui_consts import ParallelSearch, PREFERRED_FIELDS, SPECIFIC_DATA_PREFIX_LENGTH, \
     MAX_DAYS_SINCE_LAST_SEEN
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
@@ -613,7 +613,7 @@ class AggregatorService(Triggerable, PluginBase):
                 },
                 {
                     '$set': {
-                        preferred_field.replace('specific_data.data', PREFERRED_FIELDS_LABEL): val
+                        preferred_field.replace('specific_data.data', PREFERRED_FIELDS_PREFIX): val
                     }
                 }
             )

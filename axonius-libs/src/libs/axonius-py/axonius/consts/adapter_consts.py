@@ -1,15 +1,8 @@
-from axonius.devices.dns_resolvable import DNSResolvableDevice
 
 ADAPTER_PLUGIN_TYPE = 'Adapter'
 IGNORE_DEVICE = 'IgnoreDevice'
 AXONIUS_INTERNAL_ID = 'internal_axon_id'
-PREFERRED_FIELDS = 'preferred_fields'
-
-# Active directory adapter
-DNS_RESOLVE_STATUS = DNSResolvableDevice.dns_resolve_status.name
-IPS_FIELDNAME = 'ips'
-NETWORK_INTERFACES_FIELDNAME = 'network_interfaces'
-DEVICES_DATA = 'devices_data'
+PREFERRED_FIELDS_PREFIX = 'preferred_fields'
 
 # Adapter Settings
 SHOULD_NOT_REFRESH_CLIENTS = 'should_not_refresh_clients'

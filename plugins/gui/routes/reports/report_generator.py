@@ -12,10 +12,9 @@ from weasyprint.fonts import FontConfiguration
 from axonius.consts.gui_consts import (ChartViews, PREDEFINED_FIELD,
                                        FILE_NAME_TIMESTAMP_FORMAT)
 from axonius.entities import EntityType
-from axonius.plugin_base import PluginBase
+from axonius.modules.common import AxoniusCommon
 from axonius.utils.gui_helpers import get_sort, entity_fields
 from axonius.utils.db_querying_helper import get_entities
-from axonius.utils.axonius_query_language import parse_filter
 from gui.logic.filter_utils import filter_archived, filter_by_ids
 from gui.logic.dashboard_data import adapter_data
 from gui.logic.generate_csv import get_csv_file_from_heavy_lifting_plugin
@@ -665,6 +664,7 @@ class ReportGenerator:
         :return: Lists of the view names along with the list of results and list of field headers, with pretty names.
         """
         logger.info('Getting views data')
+        axonius_common = AxoniusCommon()
         views_data = {}
         if not saved_queries:
             return views_data
@@ -698,7 +698,7 @@ class ReportGenerator:
             if not saved_views_filter:
                 continue
 
-            saved_views = PluginBase.Instance.gui_dbs.entity_query_views_db_map[entity].find(saved_views_filter)
+            saved_views = axonius_common.data.find_views(entity, saved_views_filter)
             for view_doc in saved_views:
                 if not views_data.get(entity.name):
                     views_data[entity.name] = []
@@ -706,20 +706,19 @@ class ReportGenerator:
                     view = view_doc.get('view')
                     if view:
                         filter_query = view.get('query', {}).get('filter', '')
+                        mongo_query = axonius_common.query.parse_aql_filter(filter_query, entity_type=entity)
                         field_filters = view.get('colFilters', {})
                         excluded_adapters = view.get('colExcludedAdapters', {})
-                        count = self.report_params['saved_view_count_func'](
-                            entity, parse_filter(filter_query, entity=entity), None, False)
+                        count = self.report_params['saved_view_count_func'](entity, mongo_query, None, False)
                         projection = {field: 1 for field in view.get('fields', []) if field_to_title.get(field)
                                       and field != 'specific_data.data.image'}
                         views_data[entity.name].append({
                             'name': view_doc.get('name'), 'entity': entity.value,
                             'fields': [{field_to_title.get(field, field): field} for field in
                                        view.get('fields', []) if field_to_title.get(field)],
-                            'data': list(get_entities(limit=view.get('pageSize',
-                                                                     20 if not attach_views_csvs else 5),
+                            'data': list(get_entities(limit=view.get('pageSize', 20 if not attach_views_csvs else 5),
                                                       skip=0,
-                                                      view_filter=parse_filter(filter_query, entity=entity),
+                                                      view_filter=mongo_query,
                                                       sort=get_sort(view),
                                                       run_over_projection=False,
                                                       projection=projection,
@@ -730,7 +729,7 @@ class ReportGenerator:
                             'count': count,
                             'csv':
                                 get_csv_file_from_heavy_lifting_plugin(view_doc.get('name'),
-                                                                       parse_filter(filter_query, entity=entity),
+                                                                       mongo_query,
                                                                        get_sort(view),
                                                                        projection,
                                                                        None,

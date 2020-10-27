@@ -14,7 +14,6 @@ from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase
 from axonius.utils.files import get_local_config_file
-from axonius.utils.axonius_query_language import parse_filter
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -95,13 +94,14 @@ class ReimageTagsAnalysisService(Triggerable, PluginBase):
         :return:
         """
         return self.devices_db.find(
-            parse_filter('(specific_data.data.network_interfaces.manufacturer == ({"$exists":true,"$ne":""}))'
-                         ' and '  # mac manufacturer exists
-                         '(specific_data.data.hostname == ({"$exists":true,"$ne":""}))'
-                         ' and '  # hostname exists
-                         '(specific_data.data.last_seen == ({"$exists":true,"$ne":null}))'
-                         ' and '  # last_seen exists
-                         f'specific_data.data.adapter_properties == "{AdapterProperty.Agent.name}"'),  # Agent
+            self.common.query.parse_aql_filter(
+                '(specific_data.data.network_interfaces.manufacturer == ({"$exists":true,"$ne":""}))'
+                ' and '  # mac manufacturer exists
+                '(specific_data.data.hostname == ({"$exists":true,"$ne":""}))'
+                ' and '  # hostname exists
+                '(specific_data.data.last_seen == ({"$exists":true,"$ne":null}))'
+                ' and '  # last_seen exists
+                f'specific_data.data.adapter_properties == "{AdapterProperty.Agent.name}"'),  # Agent
             projection={
                 '_id': False,
                 'adapters.data.network_interfaces.mac': True,

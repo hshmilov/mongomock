@@ -1526,7 +1526,7 @@ class APIMixin:
         for adapter_name in adapters.keys():
             for adapter in adapters[adapter_name]:
                 for client in adapter['clients']:
-                    client_label = self.adapter_client_labels_db.find_one({
+                    client_label = self.common.data.connection_labels_collection.find_one({
                         'client_id': client['client_id'],
                         PLUGIN_NAME: adapter_name,
                         NODE_ID: adapter[NODE_ID]

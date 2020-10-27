@@ -57,7 +57,7 @@ class Adapters(Connections):
             for adapter_name in adapters.keys():
                 for adapter in adapters[adapter_name]:
                     for client in adapter['clients']:
-                        client_label = self.adapter_client_labels_db.find_one({
+                        client_label = self.common.data.connection_labels_collection.find_one({
                             'client_id': client['client_id'],
                             PLUGIN_NAME: adapter_name,
                             NODE_ID: adapter[NODE_ID]
@@ -511,7 +511,7 @@ class Adapters(Connections):
         :return: list of connection label mapping -> [{client_id,connection_label,plugin_uniq_name,node_id}} ]  instance
         """
         clients_label = []
-        labels_from_db = self.adapter_client_labels_db.find({})
+        labels_from_db = self.common.data.connection_labels_collection.find({})
         for client in labels_from_db:
             client_id = client.get(CLIENT_ID)
             connection_label = client.get(CONNECTION_LABEL)

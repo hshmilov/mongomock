@@ -12,8 +12,7 @@ from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_POST_FI
 from axonius.plugin_base import EntityType
 from axonius.consts.report_consts import (ACTIONS_MAIN_FIELD)
 from axonius.utils.gui_helpers import (paginated, filtered,
-                                       sorted_endpoint,
-                                       find_view_name_by_id, find_views_by_name_match, search_filter)
+                                       sorted_endpoint, search_filter)
 from axonius.mixins.triggerable import (StoredJobStateCompletion)
 from axonius.utils.mongo_chunked import get_chunks_length
 from gui.logic.db_helpers import beautify_db_entry
@@ -29,8 +28,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 @gui_section_add_rules('tasks')
 class Tasks:
 
-    @staticmethod
-    def _tasks_query(mongo_filter, enforcement_name=None, search_value=None):
+    def _tasks_query(self, mongo_filter, enforcement_name=None, search_value=None):
         """
         General query for all Complete / In progress task that also answer given mongo_filter
         """
@@ -39,7 +37,7 @@ class Tasks:
                 '$or': [
                     mongo_filter, {
                         'result.metadata.trigger.view.id': {
-                            '$in': find_views_by_name_match(search_value)
+                            '$in': self.common.data.find_views_by_name_match(search_value)
                         }
                     }
                 ]
@@ -147,7 +145,8 @@ class Tasks:
             trigger_view_name = ''
             trigger_view = trigger.get('view')
             if trigger_view:
-                trigger_view_name = find_view_name_by_id(EntityType(trigger_view['entity']), trigger_view['id'])
+                trigger_view_name = self.common.data.find_view_name(
+                    EntityType(trigger_view['entity']), trigger_view['id'])
             return beautify_db_entry({
                 '_id': task['_id'],
                 'enforcement': task['post_json']['report_name'],
@@ -191,7 +190,8 @@ class Tasks:
             trigger = task_metadata.get('trigger', {})
             if trigger:
                 trigger_view = trigger['view']
-                trigger_view_name = find_view_name_by_id(EntityType(trigger_view['entity']), trigger_view['id'])
+                trigger_view_entity = EntityType(trigger_view['entity'])
+                trigger_view_name = self.common.data.find_view_name(trigger_view_entity, trigger_view['id'])
 
             main_action = result.get(ACTIONS_MAIN_FIELD, {})
             main_action_type = main_action.get(ACTION_FIELD, {}).get(ACTION_NAME_FIELD)
