@@ -1526,6 +1526,11 @@
     "link": "",
     "description": "Stresstest can be configured with any amount of devices and it creates that number of random devices."
   },
+  "hpe_oneview_adapter": {
+    "title": "HPE OneView",
+    "link": "https://docs.axonius.com/docs/hpe-oneview",
+    "description": "HPE OneView is an integrated IT management solution that transforms compute, storage, and networking into software-defined infrastructure to automate tasks."
+  },
   "sal_adapter": {
     "title": "Sal",
     "link": "https://docs.axonius.com/docs/sal",

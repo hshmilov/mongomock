@@ -128,7 +128,6 @@ class HpeImcAdapter(AdapterBase):
 
     @staticmethod
     def _fill_hpe_imc_device_fields(device_raw: dict, device: MyDeviceAdapter):
-        # AUTOADAPTER
         try:
             device.label = device_raw.get('label')
             status_raw = parse_int(device_raw.get('status'))

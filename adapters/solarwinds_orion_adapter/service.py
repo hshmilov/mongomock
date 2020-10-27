@@ -288,7 +288,12 @@ class SolarwindsOrionAdapter(AdapterBase, Configurable):
                             logger.exception(f'Problem with {property_name}')
             except Exception:
                 logger.exception(f'Problem getting custom data')
-            device.hostname = raw_device_data.get('NodeName')
+            hostname = raw_device_data.get('NodeName')
+            if isinstance(hostname, str) and hostname and ' (' in hostname:
+                device.name = hostname
+                device.hostname = hostname.split(' (')[0]
+            else:
+                device.hostname = hostname
             device.description = raw_device_data.get('Description')
             available_memory_gb = None
             used_memory_gb = None

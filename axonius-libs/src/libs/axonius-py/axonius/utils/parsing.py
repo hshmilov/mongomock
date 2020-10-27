@@ -48,6 +48,7 @@ MAC_NAMES = ['os x', 'osx', 'macos', 'mac os', 'macbook']
 # and in some cases indexsing is performance critical
 NORMALIZED_HOSTNAME_STRING = 'normalized_hostname_string'
 NET_BIOS_MAX_LENGTH = 15
+MB_TO_GB_CONVERT = 1024.0
 DEFAULT_DOMAIN_EXTENSIONS = ['.LOCAL', '.WORKGROUP', '.LOCALHOST']
 # In MacOs hostname of the same computer can return in different shapes,
 # that's why we would like to compare them without these strings
@@ -73,7 +74,7 @@ DEFAULT_VERSION_EXTENSION = '00000000'
 DEFAULT_LINUX_VERSION_EPOCH = '0'
 DUPLICATES_NAMES = ['SYSOPS-MACBOOK-PRO.LOCAL']
 BAD_SERIALS = ['INVALID', 'NON-UNIQUES/N', '0', '1', 'SYSTEMSERIALNUMBER', 'TOBEFILLEDBYO.E.M.', 'VIRTUAL', 'DELETE',
-               'DELETED', 'NO INFORMATION',
+               'DELETED', 'NO INFORMATION', '00001',
                'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN', '-', '0123456789', 'NA-VIRTUAL', 'TBD', 'X',
                '0123456789ABCDEF', 'NONE', 'VMWARE', '(VM)', 'SUN', 'NO INFORMATION', 'VIRTUAL SERVER']
 
@@ -925,9 +926,13 @@ def is_aqua_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'aqua_adapter'
 
 
+def is_netbrain_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'netbrain_adapter'
+
+
 def is_dangerous_asset_names_adapter(adapter_device):
     return is_snow_adapter(adapter_device) or is_lansweerp_dapter(adapter_device) \
-        or is_alertlogic_adapter(adapter_device) \
+        or is_alertlogic_adapter(adapter_device) or is_netbrain_adapter(adapter_device) \
         or is_bluecat_adapter(adapter_device) or is_qualys_adapter(adapter_device) \
         or is_counter_act_adapter(adapter_device) or is_sql_adapter(adapter_device) or is_aqua_adapter(adapter_device)
 
@@ -937,6 +942,8 @@ def hostname_not_problematic(adapter_device):
             ('localhost' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'iphone' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'ipad' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'ec2amaz' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'general-cloud' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'blank' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'ios' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'loaner' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
