@@ -1,4 +1,4 @@
-import axiosClient from '@api/axios.js';
+import axiosClient from '@api/axios';
 import Promise from 'promise';
 
 import _get from 'lodash/get';
@@ -28,7 +28,7 @@ import {
   UPDATE_QUERY_INVALID_REFERENCES,
   UPDATE_QUERY_ERROR,
 } from './mutations';
-
+import { parseDateFromAllowedDates } from './pure_utils';
 
 /*
     A generic wrapper for requests to server.
@@ -113,13 +113,15 @@ export const getModule = (state, payload) => {
 };
 
 export const FETCH_DATA_COUNT = 'FETCH_DATA_COUNT';
-export const fetchDataCount = async ({ state, dispatch }, payload) => {
+export const fetchDataCount = async ({ state, dispatch, getters }, payload) => {
   const path = payload.endpoint || payload.module;
   const module = getModule(state, payload);
   if (!module) return;
   const { view } = module;
 
   module.count.data = undefined;
+  const historicalDate = parseDateFromAllowedDates(view.historical,
+    getters.getAllowedDates(payload.module));
 
   let useCacheEntry = true;
   if (payload.useCacheEntry !== undefined) {
@@ -143,7 +145,7 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
       method: 'POST',
       data: {
         filter: view.query.filter,
-        history: view.historical,
+        history: historicalDate,
         use_cache_entry: useCacheEntry,
       },
       payload,
@@ -155,7 +157,7 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
         method: 'POST',
         data: {
           filter: view.query.filter,
-          history: view.historical,
+          history: historicalDate,
           quick: true,
           use_cache_entry: useCacheEntry,
         },
@@ -179,7 +181,7 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
     }
 
     if (view.historical) {
-      params.push(`history=${encodeURIComponent(view.historical)}`);
+      params.push(`history=${encodeURIComponent(historicalDate)}`);
     }
     if (view.queryStrings) {
       Object.keys(view.queryStrings)
@@ -208,7 +210,7 @@ export const fetchDataCount = async ({ state, dispatch }, payload) => {
   }
 };
 
-const createPostContentRequest = (state, payload) => {
+const createPostContentRequest = (state, payload, allowedDates) => {
   const module = getModule(state, payload);
   if (!module) return '';
   const { view } = module;
@@ -245,7 +247,7 @@ const createPostContentRequest = (state, payload) => {
 
   if (view) {
     if (view.historical) {
-      params.history = view.historical;
+      params.history = parseDateFromAllowedDates(view.historical, allowedDates);
     }
     if (view.colFilters) {
       params.field_filters = view.colFilters;
@@ -304,15 +306,15 @@ const createPostContentRequest = (state, payload) => {
   return params;
 };
 
-const createContentRequest = (state, payload) => {
-  const params = createPostContentRequest(state, payload);
+const createContentRequest = (state, payload, allowedDates) => {
+  const params = createPostContentRequest(state, payload, allowedDates);
   return Object.keys(params)
     .filter((key) => ['string', 'number', 'boolean'].includes(typeof params[key]))
     .map((key) => `${key}=${encodeURIComponent(params[key])}`).join('&');
 };
 
 export const FETCH_DATA_CONTENT = 'FETCH_DATA_CONTENT';
-export const fetchDataContent = async ({ state, dispatch }, payload) => {
+export const fetchDataContent = async ({ state, dispatch, getters }, payload) => {
   const module = getModule(state, payload);
   const path = payload.endpoint || payload.module;
   if (!module) return Promise.reject(new Error('module is required'));
@@ -336,10 +338,10 @@ export const fetchDataContent = async ({ state, dispatch }, payload) => {
       payload,
     });
   }
-
+  const allowedDates = getters.getAllowedDates(payload.module);
   if (!view) {
     return await dispatch(REQUEST_API, {
-      rule: `${path}?${createContentRequest(state, payload)}`,
+      rule: `${path}?${createContentRequest(state, payload, allowedDates)}`,
       type: UPDATE_DATA_CONTENT,
       payload,
     });
@@ -349,13 +351,13 @@ export const fetchDataContent = async ({ state, dispatch }, payload) => {
     return await dispatch(REQUEST_API, {
       rule: path,
       method: 'POST',
-      data: createPostContentRequest(state, payload),
+      data: createPostContentRequest(state, payload, allowedDates),
       type: UPDATE_DATA_CONTENT,
       payload,
     });
   }
   return await dispatch(REQUEST_API, {
-    rule: `${path}?${createContentRequest(state, payload)}`,
+    rule: `${path}?${createContentRequest(state, payload, allowedDates)}`,
     type: UPDATE_DATA_CONTENT,
     payload,
   });

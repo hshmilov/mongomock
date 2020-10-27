@@ -59,4 +59,7 @@ export const constants = {
       });
     },
   },
+  getters: {
+    getAllowedDates: (state) => (moduleName) => state.allowedDates[moduleName] || {},
+  },
 };

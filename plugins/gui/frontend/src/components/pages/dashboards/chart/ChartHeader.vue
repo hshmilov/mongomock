@@ -8,7 +8,7 @@
         {{ title }}
       </h3>
       <span v-if="filters.history">
-        {{ filters.history }}
+        {{ historicalDate }}
       </span>
     </div>
     <ATooltip
@@ -38,6 +38,9 @@
 
 <script>
 import { Tooltip as ATooltip } from 'ant-design-vue';
+import dayjs from 'dayjs';
+import { mapGetters } from 'vuex';
+import { DATE_FORMAT } from '@store/getters';
 
 export default {
   name: 'XChartHeader',
@@ -61,8 +64,14 @@ export default {
     },
   },
   computed: {
+    ...mapGetters({
+      dateFormat: DATE_FORMAT,
+    }),
     filterActive() {
       return Boolean(this.filters.search || this.filters.history);
+    },
+    historicalDate() {
+      return dayjs(this.filters.history).format(this.dateFormat);
     },
   },
 };

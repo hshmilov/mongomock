@@ -82,10 +82,17 @@ import {
 } from 'vuex';
 import { getUserTableColumnGroups } from '@api/user-preferences';
 import _isEmpty from 'lodash/isEmpty';
-import { defaultFields, getEntityPermissionCategory } from '@constants/entities';
+import { getEntityPermissionCategory } from '@constants/entities';
 import { DEFAULT_DATE_SCHEMA } from '@store/modules/constants';
 import _get from 'lodash/get';
 
+import { parseDateFromAllowedDates } from '@store/pure_utils';
+import { LAZY_FETCH_ADAPTERS_CLIENT_LABELS } from '@store/modules/adapters';
+import {
+  FETCH_DATA_FIELDS, FETCH_DATA_CURRENT, FETCH_DATA_HYPERLINKS,
+} from '@store/actions';
+import { UPDATE_DATA_VIEW } from '@store/mutations';
+import { GET_DATA_SCHEMA_BY_NAME, GET_SYSTEM_COLUMNS } from '@store/getters';
 import XQuery from './query/Query.vue';
 import XTable from '../../neurons/data/Table.vue';
 import XTableData from './TableData.vue';
@@ -93,13 +100,6 @@ import XEntitiesActionMenu from './ActionMenu.vue';
 import XTableOptionMenu from './TableOptionMenu.vue';
 import { Divider as ADivider, Icon as AIcon } from 'ant-design-vue';
 import XStringView from '@neurons/schema/types/string/StringView.vue';
-
-import { GET_DATA_SCHEMA_BY_NAME, GET_SYSTEM_COLUMNS } from '../../../store/getters';
-import { UPDATE_DATA_VIEW } from '../../../store/mutations';
-import {
-  FETCH_DATA_FIELDS, FETCH_DATA_CURRENT, FETCH_DATA_HYPERLINKS,
-} from '../../../store/actions';
-import { LAZY_FETCH_ADAPTERS_CLIENT_LABELS } from '../../../store/modules/adapters';
 
 export default {
   name: 'XEntityTable',
@@ -131,6 +131,9 @@ export default {
     ...mapState({
       historicalState(state) {
         return state[this.module].view.historical;
+      },
+      allowedDates(state) {
+        return state.constants.allowedDates[this.module];
       },
       currentSelectionLabels(state) {
         if (!this.selection.include) return {};
@@ -225,14 +228,16 @@ export default {
       this.$emit('row-clicked');
 
       let path = `/${this.module}/${entityId}`;
+      let historicalDate;
       if (this.historicalState) {
-        path += `?history=${encodeURIComponent(this.historicalState)}`;
+        historicalDate = parseDateFromAllowedDates(this.historicalState, this.allowedDates);
+        path += `?history=${encodeURIComponent(historicalDate)}`;
       }
       this.$router.push({ path });
       this.fetchDataCurrent({
         module: this.module,
         id: entityId,
-        history: this.historicalState,
+        history: historicalDate,
       });
     },
     updateEntities(reset = true, selectIds = []) {

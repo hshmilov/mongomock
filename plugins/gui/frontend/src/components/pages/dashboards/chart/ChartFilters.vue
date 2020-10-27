@@ -19,6 +19,7 @@
       placeholder="Select historical date"
       :allow-clear="false"
       :disabled-date="isDateDisabled"
+      :format="dateFormat"
       @change="onDateSelected"
     />
     <div
@@ -42,10 +43,11 @@
 
 <script>
 import { Input, DatePicker } from 'ant-design-vue';
-import { mapState } from 'vuex';
+import { mapGetters, mapState } from 'vuex';
 import dayjs from 'dayjs';
 import _get from 'lodash/get';
 import _isNil from 'lodash/isNil';
+import { DATE_FORMAT } from '@store/getters';
 
 export default {
   name: 'XChartFilters',
@@ -77,6 +79,9 @@ export default {
     };
   },
   computed: {
+    ...mapGetters({
+      dateFormat: DATE_FORMAT,
+    }),
     ...mapState({
       allowedDates(state) {
         const usersDiscoveryDatesObject = _get(state, 'constants.allowedDates.users', []);
