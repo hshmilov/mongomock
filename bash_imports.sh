@@ -56,6 +56,13 @@ function run_in_axonius_manager {
     python3 -u axonius_system.py "$@"
 }
 
+function run_in_axonius_manager_se {
+    python3 ./devops/create_pth.py >/dev/null
+    cd "$(dirname "$0")"
+    cd devops/SE
+    python3 se.py "$@"
+}
+
 function unset_docker_if_needed {
   if [[ $(uname -s) =~ MINGW.* || "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
     unset -f docker
