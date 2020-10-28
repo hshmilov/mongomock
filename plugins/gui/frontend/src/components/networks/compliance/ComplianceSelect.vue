@@ -83,7 +83,7 @@ export default {
             white-space: nowrap;
             text-overflow: ellipsis;
             overflow: hidden;
-            max-width: 380px;
+            max-width: 420px;
         }
     }
 </style>
