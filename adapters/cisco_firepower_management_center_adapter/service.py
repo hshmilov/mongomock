@@ -178,6 +178,7 @@ class CiscoFirepowerManagementCenterAdapter(AdapterBase):
             try:
                 ipaddress.ip_address(hostname)
                 device.add_nic(ips=[hostname])
+                device.hostname = device.name
             except Exception:
                 pass
             device.description = device_raw.get('description')

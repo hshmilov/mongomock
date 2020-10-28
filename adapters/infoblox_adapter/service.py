@@ -35,6 +35,7 @@ class InfobloxAdapter(AdapterBase, Configurable):
         end_time = Field(datetime.datetime, 'End Time')
         fingerprint = Field(str, 'Fingerprint')
         discoverer = Field(str, 'Discoverer')
+        fqdn = Field(str, 'Secondary Hostname')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -154,6 +155,8 @@ class InfobloxAdapter(AdapterBase, Configurable):
                     (len(hostnames) > 0)):
                 # I did not change hostname to not change ID in many already deployed customers
                 hostname_strip = hostnames[0].strip('"')
+                if len(hostnames) > 1:
+                    device.fqdn = hostnames[1]
             mac_address = device_raw.get('mac_address')
 
             if not hostname_strip and not mac_address:

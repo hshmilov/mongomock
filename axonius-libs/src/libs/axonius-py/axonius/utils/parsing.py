@@ -1333,7 +1333,7 @@ def is_start_with_valid_ip(value):
     return is_valid_ip(value)
 
 
-BAD_ASSETS = ['dev', 'localhost', 'delete', 'deleted', 'na', 'macbook-air',
+BAD_ASSETS = ['dev', 'localhost', 'delete', 'deleted', 'na', 'macbook-air', 'macbook-pro',
               'unknown', 'test1', 'stage', 'ipad', 'iphone']
 
 

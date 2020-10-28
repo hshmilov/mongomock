@@ -107,6 +107,7 @@ def is_only_host_adapter(adapter_device):
                                               'bigid_adapter',
                                               'json_adapter',
                                               'epo_adapter',
+                                              'observeit_adapter',
                                               'crowd_strike_adapter',
                                               'amd_db_adapter',
                                               'hp_nnmi_adapter',
@@ -158,7 +159,7 @@ def is_only_host_adapter_not_localhost(adapter_device):
 
 def get_fqdn(adapter_device):
     # For now we support only Chef to avoid confusion of future adapters writers
-    if not is_chef_adapter(adapter_device):
+    if adapter_device.get('plugin_name') not in ['chef_adapter', 'infoblox_adapter']:
         return None
     return adapter_device['data'].get('fqdn')
 
@@ -585,7 +586,7 @@ def is_a_record_device(adapter_device):
 
 def is_full_hostname_adapter(adapter_device):
     return adapter_device.get('plugin_name') in ['active_directory_adapter', 'panorays_adapter', 'tanium_adapter',
-                                                 'sccm_adapter'] \
+                                                 'sccm_adapter', 'cisco_firepower_management_center_adapter'] \
         or is_a_record_device(adapter_device)
 
 
