@@ -167,6 +167,7 @@ export default {
       complianceOptions: [
         { name: 'aws', title: 'CIS Amazon Web Services Foundations Benchmark V1.2' },
         { name: 'azure', title: 'CIS Microsoft Azure Foundations Benchmark V1.1' },
+        { name: 'oracle_cloud', title: 'CIS Oracle Cloud Infrastructure Foundations Benchmark V1.0 - BETA' },
       ],
       score: 0,
       activeRules: [],

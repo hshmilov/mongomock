@@ -10,13 +10,10 @@ from typing import List
 from flask import request
 from pymongo import UpdateOne
 
-from axonius.compliance.aws_cis_default_rules import \
-    get_default_cis_aws_compliance_report
-from axonius.compliance.azure_cis_default_rules import \
-    get_default_cis_azure_compliance_report
+from axonius.compliance.all_default_rules import ALL_DEFAULT_CIS_REPORTS
 from axonius.consts import adapter_consts
-from axonius.consts.compliance_consts import (COMPLIANCE_AWS_RULES_COLLECTION,
-                                              COMPLIANCE_AZURE_RULES_COLLECTION)
+from axonius.consts.compliance_consts import COMPLIANCE_RULES_COLLECTIONS, COMPLIANCE_MODULES, \
+    COMPLIANCE_REPORTS_COLLECTIONS
 from axonius.consts.plugin_consts import COMPLIANCE_PLUGIN_NAME
 from axonius.plugin_base import PluginBase
 
@@ -24,20 +21,20 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 def _get_compliance_reports_collection(compliance_name):
-    reports_collection_name = 'reports' if compliance_name == 'aws' else f'{compliance_name}_reports'
+    reports_collection_name = COMPLIANCE_REPORTS_COLLECTIONS[compliance_name]
     return PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME][reports_collection_name]
 
 
 def get_compliance_rules_collection(compliance_name):
-    collection_name = COMPLIANCE_AWS_RULES_COLLECTION if compliance_name == 'aws' else COMPLIANCE_AZURE_RULES_COLLECTION
+    collection_name = COMPLIANCE_RULES_COLLECTIONS[compliance_name]
     return PluginBase.Instance._get_db_connection()[COMPLIANCE_PLUGIN_NAME][collection_name]
 
 
 def get_compliance_default_rules(compliance_name):
-    if compliance_name == 'aws':
-        return get_default_cis_aws_compliance_report()
-    if compliance_name == 'azure':
-        return get_default_cis_azure_compliance_report()
+    get_report_func = ALL_DEFAULT_CIS_REPORTS.get(compliance_name)
+    if get_report_func and callable(get_report_func):
+        return get_report_func()
+    logger.warning(f'Unknown compliance name for default rules: {compliance_name}')
     return {}
 
 
@@ -69,7 +66,7 @@ def get_compliance_accounts(compliance_name):
 def get_compliance_rules_info(compliance_name: str):
     """
     Get all existing rules info.
-    :param compliance_name:  aws or azure.
+    :param compliance_name:  Name of the compliance module (example: 'aws'). One of `COMPLIANCE_MODULES`
     :return: list of rules objects.
     """
     report_rules_db = get_compliance_rules_collection(compliance_name)
@@ -109,7 +106,7 @@ def get_compliance_rules_info(compliance_name: str):
 def get_compliance_filters(compliance_name: str):
     """
     Get table filters and rules info.
-    :param compliance_name: aws or azure.
+    :param compliance_name: Name of the compliance module (example: 'aws'). One of `COMPLIANCE_MODULES`
     """
     accounts = get_compliance_accounts(compliance_name)
     rules = get_compliance_rules_info(compliance_name)
@@ -122,7 +119,7 @@ def get_compliance_filters(compliance_name: str):
 def update_rules_score_flag(compliance_name: str, rules_map: dict):
     """
     Update the include_in_score flag in db for every rule.
-    :param compliance_name: aws or azure
+    :param compliance_name: Name of the compliance module (example: 'aws'). One of `COMPLIANCE_MODULES`
     :param rules_map: dict<rule, boolean>
     :return: None
     """
@@ -148,7 +145,7 @@ def get_compliance(compliance_name: str, method: str, accounts: list, rules: lis
                    aggregated: bool):
     """
     Get compliance report info.
-    :param compliance_name: aws or azure
+    :param compliance_name: Name of the compliance module (example: 'aws'). One of `COMPLIANCE_MODULES`
     :param method: report
     :param accounts: accounts to filter
     :param rules: rules to filter
@@ -157,7 +154,7 @@ def get_compliance(compliance_name: str, method: str, accounts: list, rules: lis
     :param aggregated: show aggregated data for accounts or not.
     :return: report info - array of rules.
     """
-    if compliance_name in ['aws', 'azure']:
+    if compliance_name in COMPLIANCE_MODULES:
         if method == 'report':
             cis_rules, score = get_compliance_rules(compliance_name, accounts, rules, categories, failed_only,
                                                     aggregated)
@@ -166,9 +163,10 @@ def get_compliance(compliance_name: str, method: str, accounts: list, rules: lis
                 'score': score,
             }
         if method == 'report_no_data':
+            pretty_name = ' '.join([x.capitalize() for x in compliance_name.replace('_', ' ').split()])
             return {
                 'status': 'no_data',
-                'error': 'Please connect the AWS/Azure Adapter',
+                'error': f'Please connect {pretty_name} adapter',
                 'rules': [],
             }
 
@@ -189,21 +187,18 @@ def get_active_adapters():
 def get_initial_cis_selection():
     """
     return the initial cis selection.
-    :return: aws or azure
+    :return: The first module name that has a matching adapter configured,
+        or 'aws' if no match found.
+    :rtype: str
     """
     active_adapters = get_active_adapters()
-    aws_adapter_found = False
-    azure_adapter_found = False
 
     for adapter in active_adapters:
         adapter_name = adapter.get('plugin_name', '')
-        if 'aws' in adapter_name:
-            aws_adapter_found = True
-        elif 'azure' in adapter_name:
-            azure_adapter_found = True
-    if aws_adapter_found or not azure_adapter_found:
-        return 'aws'
-    return 'azure'
+        for module_name in COMPLIANCE_MODULES:
+            if module_name in adapter_name:
+                return module_name
+    return 'aws'
 
 
 def get_compliance_initial_cis():
@@ -215,7 +210,7 @@ def get_compliance_initial_cis():
 def get_rules_map(compliance_name: str):
     """
     return map of <rule_name, <include_in_score, comments>>
-    :param compliance_name: aws or azure
+    :param compliance_name: Name of the compliance module (example: 'aws'). One of `COMPLIANCE_MODULES`
     """
     rules_collection = get_compliance_rules_collection(compliance_name)
 
@@ -285,7 +280,7 @@ def _replace_entities_results_query(aggregated_rules, accounts_ids, compliance_n
     This function aggregates the affected assets query for each rule in ``compliance_name``.
     :param aggregated_rules: [{rule1}, {rule2} ... ]
     :param accounts_ids: {accounts_id1, account_id2 ...} This is a set of unique ids.
-    :param compliance_name: Name of the cis compliance module (currently aws or azure)
+    :param compliance_name: Name of the compliance module (example: 'aws'). One of `COMPLIANCE_MODULES`
     :return:
     """
     account_id_field = f'data.{compliance_name}_account_id'

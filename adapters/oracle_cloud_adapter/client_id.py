@@ -1,4 +1,4 @@
-from oracle_cloud_adapter import consts
+from axonius.clients.oracle_cloud import consts
 
 
 def get_client_id(client_config):

@@ -3,6 +3,7 @@ from enum import Enum
 
 from typing import Tuple, Optional
 
+from axonius.consts.compliance_consts import COMPLIANCE_MODULES
 from axonius.plugin_base import PluginBase
 from axonius.compliance.compliance import get_compliance_rules_collection
 
@@ -22,11 +23,14 @@ class AccountReport:
         self.sections_added = []
         self.plugin_base: PluginBase = PluginBase.Instance
 
-        aws_rules_collection = get_compliance_rules_collection('aws')
-        azure_rules_collection = get_compliance_rules_collection('azure')
-
-        self.aws_rules_by_section = self._prepare_rules(aws_rules_collection.find({}))
-        self.azure_rules_by_section = self._prepare_rules(azure_rules_collection.find({}))
+        self.rules_by_section = {
+            module: self._prepare_rules(get_compliance_rules_collection(module).find({}))
+            for module in COMPLIANCE_MODULES
+        }
+        self.default_rules_by_section = None
+        for rule_by_section in self.rules_by_section.values():
+            self.default_rules_by_section = rule_by_section
+            break
 
     @staticmethod
     def _prepare_rules(rules):
@@ -51,7 +55,7 @@ class AccountReport:
             cis_json_dict: Optional[dict] = None    # has to be last
     ):
         if cis_json_dict is None:
-            cis_json_dict = self.aws_rules_by_section
+            cis_json_dict = self.default_rules_by_section
         if section in self.sections_added:
             logger.critical(f'section {section} has already been added, not continuing')
             return
@@ -83,7 +87,7 @@ class AccountReport:
             cis_json_dict: Optional[dict] = None    # has to be last
     ):
         if cis_json_dict is None:
-            cis_json_dict = self.aws_rules_by_section
+            cis_json_dict = self.default_rules_by_section
 
         if section in self.sections_added:
             logger.critical(f'section {section} has already been added, not continuing')

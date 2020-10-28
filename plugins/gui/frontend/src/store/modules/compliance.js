@@ -33,6 +33,9 @@ export const compliance = {
       azure: {
         report: getComplianceReportState(),
       },
+      oracle_cloud: {
+        report: getComplianceReportState(),
+      },
     },
     view: {
       page: 0,

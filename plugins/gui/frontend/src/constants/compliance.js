@@ -78,6 +78,42 @@ export const emailFormFields = {
       required: false,
     },
   ],
+  oracle_cloud: [
+    {
+      name: 'mailSubject',
+      title: 'Email Subject',
+      type: 'string',
+      required: true,
+    },
+    {
+      name: 'mailMessage',
+      title: 'Custom message (up to 500 characters)',
+      type: 'string',
+      format: 'text',
+      limit: 500,
+      required: false,
+    },
+    {
+      name: 'emailList',
+      title: 'Recipients',
+      type: 'array',
+      items: {
+        type: 'string',
+        format: 'email',
+      },
+      required: false,
+    },
+    {
+      name: 'emailListCC',
+      title: 'Recipients CC',
+      type: 'array',
+      items: {
+        type: 'string',
+        format: 'email',
+      },
+      required: false,
+    },
+  ],
 };
 
 export const jiraFormFields = {

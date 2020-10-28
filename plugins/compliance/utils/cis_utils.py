@@ -143,6 +143,30 @@ def get_count_incompliant_azure_cis_rule(entity: EntityType,
     ).count()
 
 
+def get_count_incompliant_generic_cis_rule(entity: EntityType,
+                                           rule_section: str,
+                                           account_id: str,
+                                           adapter_prefix: str):
+    # pylint: disable=protected-access
+    return PluginBase.Instance._entity_db_map[entity].find(
+        {
+            'adapters':
+                {
+                    '$elemMatch': {
+                        '$and': [
+                            {
+                                f'data.{adapter_prefix}_account_id': account_id
+                            },
+                            {
+                                f'data.{adapter_prefix}_cis_incompliant.rule_section': rule_section
+                            }
+                        ]
+                    }
+                }
+        }
+    ).count()
+
+
 def build_entities_query(entity_type: str,
                          rule_section: str,
                          account_id: Optional[str] = None,

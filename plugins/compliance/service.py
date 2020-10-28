@@ -7,8 +7,15 @@ from axonius.plugin_base import PluginBase
 from axonius.utils.files import get_local_config_file
 from compliance.aws_cis.aws_cis import AWSCISGenerator
 from compliance.azure_cis.azure_cis import AzureCISGenerator
+from compliance.oracle_cloud_cis.oracle_cloud_cis import OracleCloudCISGenerator
 
 logger = logging.getLogger(f'axonius.{__name__}')
+
+GENERATORS = {
+    'aws': AWSCISGenerator,
+    'azure': AzureCISGenerator,
+    'oracle_cloud': OracleCloudCISGenerator
+}
 
 
 class ComplianceService(Triggerable, PluginBase):
@@ -34,20 +41,17 @@ class ComplianceService(Triggerable, PluginBase):
     @staticmethod
     def run_compliance_report(post_json: dict):
         report_type = post_json.get('report') if post_json else None
-
-        if not report_type or report_type == 'aws':
-            try:
-                aws_cis_generator = AWSCISGenerator()
-                aws_cis_generator.generate()
-            except Exception:
-                logger.exception(f'Could not generate AWS CIS Report')
-
-        if not report_type or report_type == 'azure':
-            try:
-                azure_cis_generator = AzureCISGenerator()
-                azure_cis_generator.generate()
-            except Exception:
-                logger.exception(f'Could not generate Azure CIS Report')
+        try:
+            generator_cls = GENERATORS.get(report_type)
+            if generator_cls:
+                generator_cls().generate()
+            else:
+                logger.debug(f'Report type {report_type} not found in {list(GENERATORS.keys())}')
+                # Fallback to default report type
+                logger.info(f'Generating AWS CIS report by default')
+                AWSCISGenerator().generate()
+        except Exception:
+            logger.exception(f'Could not generate CIS report for {report_type or "aws"}')
 
     @property
     def plugin_subtype(self) -> PluginSubtype:

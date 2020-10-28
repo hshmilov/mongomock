@@ -80,7 +80,7 @@ def usage():
     {name} root_master_s3_restore - Trigger 'Root Master mode' s3 restore
     {name} root_master_smb_restore - Trigger 'Root Master mode' SMB restore
     {name} root_master_azure_restore - Trigger 'Root Master mode' Azure restore
-    {name} compliance run (aws/azure) - Run Compliance Report
+    {name} compliance run (aws/azure/oracle_cloud) - Run Compliance Report
     {name} tag remove [device/user] [query] [startswith=abcd / eq=abcd] - deletes a tag (gui label)
     {name} trigger [service_name] (execute) - Trigger a job (by default execute) on the service name, on this node.
     {name} ru [container-name] - Recover uwsgi
