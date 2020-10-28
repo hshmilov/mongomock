@@ -267,14 +267,20 @@ export default {
       if (!this.chartFilters.history) {
         return '';
       }
+
+      const trendTimeframe = _get(this.chart, 'config.timeframe.count', 0);
+
+      return this.isBeforeTrendFirstDay
+        ? `Timeline is limited to the last ${trendTimeframe} days`
+        : '';
+    },
+    isBeforeTrendFirstDay() {
       const historical = dayjs(this.chartFilters.history);
       const trendTimeframe = _get(this.chart, 'config.timeframe.count', 0);
 
       const firstDayOfTrend = dayjs().subtract(trendTimeframe, 'days');
 
-      return historical.isBefore(firstDayOfTrend)
-        ? `Timeline is limited to the last ${trendTimeframe} days`
-        : '';
+      return historical.isBefore(firstDayOfTrend);
     },
     isPersonalSpace() {
       const activeSpace = this.getSpaceById(this.activeSpaceId);
@@ -326,6 +332,7 @@ export default {
       this.chartFilters = filters;
       this.filtersLayerVisible = false;
       this.currentPage = 1;
+      if (this.isBeforeTrendFirstDay) this.expanded = false;
       this.fetchData();
     },
     // update chart data
@@ -399,7 +406,13 @@ export default {
         }
         let chartData = {};
         if (this.pagination) {
-          chartData = this.getPaginatedDataObject(head, tail, count, this.currentPage, this.chartData.content);
+          chartData = this.getPaginatedDataObject(
+            head,
+            tail,
+            count,
+            this.currentPage,
+            this.chartData.content,
+          );
         } else {
           chartData = {
             content: [...head, ...tail],

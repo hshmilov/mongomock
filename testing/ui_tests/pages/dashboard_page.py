@@ -137,6 +137,7 @@ class DashboardPage(BasePage):
     CHART_PANEL_SORT_ACTION_ID = 'sort_chart'
     CHART_PANEL_SORT_BY_ID = 'chart_sort_by_{sort_by}'
     CHART_PANEL_SORT_ORDER_ID = 'chart_sort_order_{sort_by}_{sort_order}'
+    CHART_TREND_BUTTON_CSS = '.x-chart .trend.x-button'
 
     TOGGLE_LEGEND_CSS = '.footer__bottom__actions .x-button.legend'
     CLOSE_CHART_DRAWER = '.footer__bottom__actions .x-button.close-drawer'
@@ -428,8 +429,14 @@ class DashboardPage(BasePage):
     def find_chart_segment_include_empty(self):
         return self.find_checkbox_with_label_by_label('Include entities with no value')
 
+    def find_chart_segment_include_timeline(self):
+        return self.find_checkbox_with_label_by_label('Include timeline')
+
     def check_chart_segment_include_empty(self):
         self.find_chart_segment_include_empty().click()
+
+    def check_chart_segment_include_timeline(self):
+        self.find_chart_segment_include_timeline().click()
 
     def is_chart_segment_include_empty_enabled(self):
         checkbox = self.find_checkbox_with_label_by_label('Include entities with no value')
@@ -590,6 +597,29 @@ class DashboardPage(BasePage):
 
     def is_card_save_button_disabled(self):
         return self.is_save_button_disabled()
+
+    def add_basic_segmentation_card(self, module, field, title, chart_type='histogram', include_timeline: bool = False):
+        try:
+            self.open_new_card_wizard()
+            self.select_chart_metric('Field Segmentation')
+            self.driver.find_element_by_css_selector(f'#{chart_type}').click()
+            self.select_chart_wizard_module(module)
+            self.select_chart_wizard_field(field)
+            self.check_chart_segment_include_empty()
+            self.fill_text_field_by_element_id(self.CHART_TITLE_ID, title)
+
+            if include_timeline:
+                self.check_chart_segment_include_timeline()
+
+            self.click_card_save()
+            self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS, interval=1)
+            self.wait_for_card_spinner_to_end()
+        except NoSuchElementException:
+            self.close_dropdown()
+            self.click_button('Cancel')
+            self.wait_for_element_absent_by_css(self.MODAL_OVERLAY_CSS)
+            return False
+        return True
 
     def add_segmentation_card(self, module, field, title, chart_type='histogram', view_name='', partial_text=True,
                               include_empty: bool = True, value_filter: str = '', sort_config=None):
@@ -1384,6 +1414,15 @@ class DashboardPage(BasePage):
         # wait till animation over
         time.sleep(0.1)
 
+    def fill_card_search_date(self, card, date_to_fill):
+        self.toggle_card_filters(card)
+        self.wait_for_element_present_by_css(self.FILTERS_CONTAINER_CSS, element=card)
+        self.fill_datepicker_date(date_to_fill, card)
+        self.click_button(self.CARD_FILTERS_APPLY_TEXT, scroll_into_view_container='.x-spaces__content')
+        self.wait_for_element_absent_by_css(self.FILTERS_CONTAINER_CSS, element=card)
+        # wait till animation over
+        time.sleep(1)
+
     def clear_card_search(self, card):
         self.toggle_card_filters(card)
         self.wait_for_element_present_by_css(self.FILTERS_CONTAINER_CSS, element=card)
@@ -1509,6 +1548,9 @@ class DashboardPage(BasePage):
 
     def assert_is_add_new_chart_card(self, card):
         assert card.find_element_by_css_selector(self.ADD_NEW_CARD_BUTTON_CSS)
+
+    def check_segmentation_card_timeline_disabled(self, card):
+        return self.is_element_disabled(card.find_element_by_css_selector(self.CHART_TREND_BUTTON_CSS))
 
     def get_histogram_chart_values(self, chart_name):
         histogram_card = self.get_card(chart_name)

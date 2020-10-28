@@ -1,11 +1,16 @@
+from datetime import datetime, timedelta
+from axonius.entities import EntityType
+from services.adapters import stresstest_service
 from ui_tests.tests.test_dashboard_chart_base import TestDashboardChartBase
-from ui_tests.tests.ui_consts import (OS_TYPE_OPTION_NAME, TAGS_FIELD_NAME, DEVICES_MODULE)
+from ui_tests.tests.ui_consts import (OS_TYPE_OPTION_NAME, STRESSTEST_ADAPTER_NAME, TAGS_FIELD_NAME, DEVICES_MODULE,
+                                      ASSET_NAME_FIELD_NAME)
 
 
 class TestDashboardSegmentationChart(TestDashboardChartBase):
-    TEST_SEGMENTATION_TITLE = 'test segmentation'
-    TEST_TAGS_SEGMENTATION_TITLE = 'Test tags segmentation'
 
+    TEST_SEGMENTATION_TITLE = 'test segmentation'
+    SEGMENTATION_WITH_TIMELINE_CARD_TITLE = 'Segmentation & Timeline'
+    TEST_TAGS_SEGMENTATION_TITLE = 'Test tags segmentation'
     TEST_TAG_WINDOWS = 'test_win_tag'
     TEST_TAG_GCP = 'test_gcp_tag'
 
@@ -95,3 +100,23 @@ class TestDashboardSegmentationChart(TestDashboardChartBase):
 
         for tag_name in expected_vals:
             assert int(data_dict[tag_name]) == expected_vals[tag_name]
+
+    def test_timeline_button_disabled_when_date_exceed(self):
+        with stresstest_service.StresstestService().contextmanager(take_ownership=True):
+            self.adapters_page.switch_to_page()
+            self.adapters_page.wait_for_adapter(STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.add_server({'device_count': 600, 'name': 'testonius'}, STRESSTEST_ADAPTER_NAME)
+            self.adapters_page.wait_for_server_green()
+            self.base_page.run_discovery()
+            self.dashboard_page.switch_to_page()
+            assert self.dashboard_page.add_basic_segmentation_card(module=DEVICES_MODULE,
+                                                                   field=ASSET_NAME_FIELD_NAME,
+                                                                   title=self.SEGMENTATION_WITH_TIMELINE_CARD_TITLE,
+                                                                   include_timeline=True)
+            self.dashboard_page.wait_for_spinner_to_end()
+            self._create_history(EntityType.Devices)
+            self.dashboard_page.refresh()
+            self.dashboard_page.switch_to_page()
+            card = self.dashboard_page.find_dashboard_card(self.SEGMENTATION_WITH_TIMELINE_CARD_TITLE)
+            self.dashboard_page.fill_card_search_date(card, (datetime.now() - timedelta(days=30)))
+            assert self.dashboard_page.check_segmentation_card_timeline_disabled(card)
