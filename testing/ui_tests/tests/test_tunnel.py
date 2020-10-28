@@ -166,3 +166,4 @@ class TestTunnel(TestBase):
         time.sleep(15)
         wait_until(lambda: self._verify_tunnel_status('Connected', True), check_return_value=False,
                    tolerated_exceptions_list=[TimeoutException], total_timeout=240, interval=0)
+        time.sleep(15)

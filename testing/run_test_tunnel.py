@@ -274,18 +274,18 @@ def main(ami_id=None):
                                                        timeout=15 * 60)
 
         TC.print('Waiting for the tests to finish')
-        tries = 0
         time.sleep(20 * 60)
         axonius_instance.wait_for_ssh()
-        for i in range(5):
+        for i in range(10):
             try:
-                result = instance_manager._InstanceManager__ssh_execute(axonius_instance, 'Check tests status',
-                                                                        'ls -la /home/ubuntu/cortex/logs/TC_logs/artifacts.xml',
-                                                                        append_ts=False,
-                                                                        timeout=60)
+                instance_manager._InstanceManager__ssh_execute(axonius_instance, 'Check tests status',
+                                                               'ls -la /home/ubuntu/cortex/logs/TC_logs/artifacts.xml',
+                                                               append_ts=False,
+                                                               timeout=60)
                 break
             except Exception:
                 time.sleep(60)
+                axonius_instance.wait_for_ssh()
 
         TC.print('Lower permissions of artifacts')
         instance_manager._InstanceManager__ssh_execute(axonius_instance, 'Lower permissions of artifacts',
