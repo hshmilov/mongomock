@@ -997,6 +997,11 @@
     "link": "https://docs.axonius.com/docs/divvycloud",
     "description": "DivvyCloud offers security, compliance, and governance guardrails for public and private cloud infrastructures."
   },
+  "aruba_central_adapter": {
+    "title": "Aruba Central",
+    "link": "https://docs.axonius.com/docs/aruba-central",
+    "description": "Aruba Central is a unified cloud-based network operations, assurance and security platform that simplifies the deployment, management, and optimization of wireless, wired and WAN environments."
+  },
   "zabbix_adapter": {
     "title": "Zabbix",
     "link": "https://docs.axonius.com/docs/zabbix",
