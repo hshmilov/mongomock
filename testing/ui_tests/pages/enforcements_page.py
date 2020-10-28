@@ -81,14 +81,15 @@ class EnforcementsPage(EntitiesPage):
     EDIT_ENFORCEMENT_XPATH = '//div[text()=\'{enforcement_name}\']'
     SEND_AN_EMAIL = 'Send an Email'
     DISABLED_ACTION_XPATH = (
-        '//div[contains(@class, \'md-list-item-content\')]//div[@class=\'x-title disabled\' '
+        '//div[contains(@class, \'ant-collapse-header\')]//div[@class=\'x-title disabled\' '
         'and .//text()=\'{action_name}\']'
     )
     CATEGORY_ACTIONS_XPATH = (
-        '//div[contains(@class, \'md-list-item-container\') and child::div['
-        './/text()=\'{category}\']]//div[@class=\'md-list-expand\']//div[@class=\'action-name\']'
+        '//div[contains(@class, \'ant-collapse-item\') and child::div['
+        './/text()=\'{category}\']]//div[@class=\'action-name\']'
     )
-    CATEGORY_LIST_CSS = '.x-action-library > .md-list > .md-list-item > .md-list-item-container > .md-list-item-content'
+    CATEGORY_LIST_CSS = \
+        '.x-action-library > .actions-container > .ant-collapse > .ant-collapse-item > .ant-collapse-header'
     TASK_RESULT_CSS = '.x-action-result .x-summary div:nth-child({child_count})'
     TASK_RESULT_SUCCESS_CSS = TASK_RESULT_CSS.format(child_count=1)
     TASK_RESULT_FAILURE_CSS = TASK_RESULT_CSS.format(child_count=3)
