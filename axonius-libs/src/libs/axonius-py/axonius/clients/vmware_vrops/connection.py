@@ -7,7 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.clients.vmware_vrops.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES, TOKEN_URL, RESOURCES_URL, \
     DEFAULT_TIMEOUT_HOURS, ALERTS_URL, VIRTUAL_MACHINE_PROPERTIES_URL, PROPERTIES_URL, PROPERTIES_BLACK_LIST, \
-    HOST_SYSTEM_PROPERTIES_URL
+    HOST_SYSTEM_PROPERTIES_URL, SECOND_PROPERTIES_URL
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import int_or_none
 
@@ -140,18 +140,54 @@ class VmwareVropsConnection(RESTConnection):
                 logger.error(f'Response not in correct format {response}')
                 return properties_by_resource_id
 
+            second_properties = self._get_second_properties(resource_ids)
+
             for resource_property in response.get('values'):
                 if not (isinstance(resource_property, dict) and
                         isinstance(resource_property.get('property-contents'), dict) and
                         resource_property.get('resourceId')):
                     logger.warning(f'Resource property not in correct format {resource_property}')
                     continue
-                properties_by_resource_id[resource_property.get('resourceId')] = self._get_properties_as_dict(
+
+                resource_properties = self._get_properties_as_dict(
                     resource_property.get('property-contents').get('property-content'))
+
+                resource_properties.update(second_properties.get(resource_property.get('resourceId')))
+                properties_by_resource_id[resource_property.get('resourceId')] = resource_properties
         except Exception as e:
             logger.exception(
                 f'Invalid request made while getting properties, resource ids: {resource_ids},'
                 f' property keys: {properties}')
+        return properties_by_resource_id
+
+    @staticmethod
+    def _get_second_properties_as_a_dict(properties):
+        return {resource_property.get('name'): resource_property.get('value') for resource_property in properties if
+                resource_property.get('name') is not None}
+
+    def _get_second_properties(self, resource_ids):
+        properties_by_resource_id = {}
+        try:
+            url_params = {'resourceId': resource_ids}
+            response = self._get(SECOND_PROPERTIES_URL, url_params=url_params)
+            if not (isinstance(response, dict) and
+                    isinstance(response.get('resourcePropertiesList'), list)):
+                logger.error(f'Response not in correct format {response}')
+                return properties_by_resource_id
+
+            for resource_property in response.get('resourcePropertiesList'):
+                if not (isinstance(resource_property, dict) and
+                        isinstance(resource_property.get('property'), list) and
+                        resource_property.get('resourceId')):
+                    continue
+
+                resource_id = resource_property.get('resourceId')
+                properties_by_resource_id[resource_id] = self._get_second_properties_as_a_dict(
+                    resource_property.get('property'))
+
+        except Exception as e:
+            logger.exception(
+                f'Invalid request made while getting properties, resource ids: {resource_ids}')
         return properties_by_resource_id
 
     @staticmethod

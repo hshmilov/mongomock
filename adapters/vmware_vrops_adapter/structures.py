@@ -80,3 +80,4 @@ class VmwareVropsDeviceInstance(DeviceAdapter):
     monitoring_interval = Field(int, 'Monitoring Interval')
     badges = ListField(Badge, 'Badges')
     alerts = ListField(Alert, 'Alerts')
+    product_name = Field(str, 'Product Name')

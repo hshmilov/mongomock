@@ -236,6 +236,14 @@ class VmwareVropsAdapter(AdapterBase):
                     alert.alert_impact = alert_raw.get('alertImpact')
 
                     device.alerts.append(alert)
+
+            properties_raw = device_raw.get('extra_properties')
+            if isinstance(properties_raw, dict):
+                if isinstance(properties_raw.get('summary|config|productName'), list):
+                    device.product_name = properties_raw.get('summary|config|productName')[0]
+                else:
+                    device.product_name = properties_raw.get('summary|config|productName')
+
         except Exception:
             logger.exception(f'Failed creating instance for device {device_raw}')
 
@@ -263,11 +271,19 @@ class VmwareVropsAdapter(AdapterBase):
 
             if isinstance(properties_raw, dict):
                 if isinstance(properties_raw.get('config|hardware|memoryKB'), list):
-                    device.total_physical_memory = int_or_none(
-                        properties_raw.get('config|hardware|memoryKB')[0]) / (1024 ** 3)  # From KB to GB
-                elif properties_raw.get('config|hardware|memoryKB') is not None:
-                    device.total_physical_memory = int_or_none(
-                        properties_raw.get('config|hardware|memoryKB')) / (1024 ** 3)  # From KB to GB
+                    if isinstance(properties_raw.get('config|hardware|memoryKB')[0], int):
+                        device.total_physical_memory = (float_or_none(
+                            properties_raw.get('config|hardware|memoryKB')[0]) or 0) / (1024 ** 3)  # From KB to GB
+                    else:
+                        device.total_physical_memory = (float_or_none(
+                            properties_raw.get('config|hardware|memoryKB')[0]) or 0) / (1024 ** 3)  # From KB to GB
+                elif isinstance(properties_raw.get('config|hardware|memoryKB'), int):
+                    device.total_physical_memory = (float_or_none(
+                        properties_raw.get('config|hardware|memoryKB')) or 0) / (1024 ** 3)  # From KB to GB
+                else:
+                    device.total_physical_memory = (float_or_none(
+                        properties_raw.get('config|hardware|memoryKB')) or 0) / (1024 ** 3)  # From KB to GB
+
                 if isinstance(properties_raw.get('summary|guest|hostName'), list):
                     device.hostname = properties_raw.get('summary|guest|hostName')[0]
                 else:
@@ -394,6 +410,28 @@ class VmwareVropsAdapter(AdapterBase):
                     device.cloud_id = properties_raw.get('summary|hostuuid')[0]
                 else:
                     device.cloud_id = properties_raw.get('summary|hostuuid')
+
+                for i in range(1000):  # Support only 1000 ips and mac to parse.
+                    if isinstance(properties_raw.get(f'net:{4000 + i}|ip_address'), list):
+                        ip_address = properties_raw.get(f'net:{4000 + i}|ip_address')[0]
+                    else:
+                        ip_address = properties_raw.get(f'net:{4000 + i}|ip_address')
+
+                    if isinstance(properties_raw.get(f'net:{4000 + i}|mac_address'), list):
+                        mac_address = properties_raw.get(f'net:{4000 + i}|mac_address')[0]
+                    else:
+                        mac_address = properties_raw.get(f'net:{4000 + i}|mac_address')
+
+                    if not (ip_address or mac_address):
+                        continue
+                    device.add_nic(mac=mac_address, ips=[ip_address])
+
+                if isinstance(properties_raw.get('config|hardware|diskSpace'), list):
+                    device.add_hd(total_size=float_or_none(
+                        properties_raw.get('config|hardware|diskSpace')[0]))
+                else:
+                    device.add_hd(total_size=float_or_none(
+                        properties_raw.get('config|hardware|diskSpace')))
 
             self._fill_vmware_vrops_device_fields(device_raw, device)
             device.cloud_provider = 'VMWare'
