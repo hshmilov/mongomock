@@ -1541,6 +1541,11 @@
     "link": "https://docs.axonius.com/docs/sal",
     "description": "Sal is an open-source reporting solution for managed endpoints."
   },
+    "flexnet_adapter": {
+    "title": "FlexNet Manager Suite Cloud - BETA",
+    "link": "https://docs.axonius.com/docs/flexnet-manager-suite-cloud",
+    "description": "FlexNet Manager Suite Cloud from Flexera is a SaaS offering for software license compliance and license optimization."
+  },
   "stresstest_adapter": {
     "title": "Test adapters",
     "link": "",
