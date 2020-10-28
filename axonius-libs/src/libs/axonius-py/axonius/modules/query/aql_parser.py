@@ -29,10 +29,20 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class AQLParser:
-    def __init__(self, db: MongoClient):
+    def __init__(self, db: Optional[MongoClient]):
         self.data = get_axonius_data_singleton(db)
 
-    def parse(self, aql_filter: str, for_date: datetime = None, entity_type: EntityType = None) -> dict:
+    def parse(self, aql_filter: str, for_date: datetime = None) -> dict:
+        if aql_filter is None:
+            return {}
+
+        aql_filter = self.parse_aql_magics(aql_filter.strip(), for_date)
+        return self.convert_query_not(get_mongo_query(aql_filter)) if aql_filter else {}
+
+    def parse_aql_magics(self, aql_filter: str, for_date: datetime = None):
+        return self.parse_date(self.parse_not(self.parse_now(aql_filter, for_date)))
+
+    def parse_for_entity(self, aql_filter: str, for_date: datetime = None, entity_type: EntityType = None) -> dict:
         if not aql_filter:
             return {}
         aql_filter = self.parse_saved_queries_ids(aql_filter, entity_type)
@@ -301,8 +311,7 @@ class AQLParser:
 
         aql_filter = aql_filter.strip()
         aql_filter, enforcement_task_result_ids = self.parse_enforcement_task_results(aql_filter)
-        aql_filter = self.parse_not(aql_filter)
-        aql_filter = self.parse_date(aql_filter)
+        aql_filter = self.parse_date(self.parse_not(aql_filter))
         mongo_query = self.convert_query_not(get_mongo_query(aql_filter)) if aql_filter else {}
         self.convert_query_list_fields(mongo_query, include_outdated)
         self.convert_query_field_paths(mongo_query)
@@ -895,11 +904,11 @@ class AQLParser:
         }
 
 
-def get_aql_parser_singleton(db: MongoClient) -> AQLParser:
+def get_aql_parser_singleton(db: Optional[MongoClient] = None) -> AQLParser:
     try:
         return get_aql_parser_singleton.instance
     except Exception:
-        logger.info(f'Initiating AxoniusPlugins singleton')
+        logger.info(f'Initiating AQLParser singleton')
         get_aql_parser_singleton.instance = AQLParser(db)
 
     return get_aql_parser_singleton.instance

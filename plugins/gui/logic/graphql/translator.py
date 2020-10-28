@@ -5,8 +5,7 @@ from cachetools import LFUCache, cached
 
 import axonius.pql as _pql
 from axonius.entities import EntityType
-from axonius.modules.query.axonius_query import get_axonius_query_singleton
-from axonius.utils.axonius_query_language import process_filter
+from axonius.modules.query.aql_parser import get_aql_parser_singleton
 from gui.logic.graphql.builder import GqlQuery
 
 AQL_LOGICAL_AND = '$and'
@@ -127,14 +126,13 @@ class Translator:
         self._entity_type = entity_type
         self._specific_data_converter = 'adapterDevices' if entity_type == EntityType.Devices else 'adapterUsers'
         self._bool_exp_type = 'device' if entity_type == EntityType.Devices else 'user'
-        self._axonius_query = get_axonius_query_singleton()
 
     @cached(cache=LFUCache(maxsize=64), key=lambda _, aql: hash(aql))
     def translate(self, aql):
         """
         Translate AQL to SqlGen filter, use cached to hash already translated AQLs
         """
-        processed_aql = process_filter(aql, None)
+        processed_aql = get_aql_parser_singleton().parse_aql_magics(aql)
         tokenized_aql = _pql.find(processed_aql)
         return self._translate_aql(tokenized_aql)
 

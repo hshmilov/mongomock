@@ -13,8 +13,8 @@ from flask import request, session, jsonify
 from axonius.consts.gui_consts import CORRELATION_REASONS, HAS_NOTES, HAS_NOTES_TITLE
 from axonius.consts.plugin_consts import NOTES_DATA_TAG, PLUGIN_UNIQUE_NAME
 from axonius.entities import AXONIUS_ENTITY_BY_CLASS, AxoniusEntity
+from axonius.modules.query.axonius_query import get_axonius_query_singleton
 from axonius.plugin_base import EntityType, return_error, PluginBase
-from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, convert_db_projection_to_view)
 from axonius.utils.gui_helpers import (get_historized_filter, parse_entity_fields,
                                        flatten_fields, get_generic_fields, get_csv_canonized_value)
 from axonius.utils.merge_data import merge_entities_fields
@@ -37,14 +37,15 @@ def _fetch_historical_entity(entity_type: EntityType, entity_id, projection=None
     query_filter = None
     entity = None
     try:
+        axonius_query = get_axonius_query_singleton()
         query_filter = {'internal_axon_id': entity_id}
 
         entity_col, is_date_filter_required = PluginBase.Instance.get_appropriate_view(history_date, entity_type)
         if is_date_filter_required:
             query_filter = get_historized_filter(query_filter, history_date)
-        entity = entity_col.find_one(query_filter, projection=convert_db_projection_to_view(projection))
+        entity = entity_col.find_one(query_filter, axonius_query.convert_entity_projection_structure(projection))
 
-        return convert_db_entity_to_view_entity(entity, ignore_errors=True)
+        return axonius_query.convert_entity_data_structure(entity, ignore_errors=True)
     except Exception:
         logger.exception(f'Error on {entity_type} on {entity_id}, projection {projection}, history '
                          f'{history_date}, with filter {query_filter} and entity {entity}')

@@ -20,7 +20,6 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.mixins.triggerable import Triggerable, RunIdentifier
 from axonius.plugin_base import PluginBase
 from axonius.users.user_adapter import UserAdapter, ASSOCIATED_FIELD
-from axonius.utils.axonius_query_language import convert_db_entity_to_view_entity
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import is_valid_user
 
@@ -406,7 +405,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
             if not device:
                 logger.debug(f'internal_axon_id {axon_id["internal_axon_id"]} not found')
                 continue
-            yield convert_db_entity_to_view_entity(device, ignore_errors=True)
+            yield self.common.query.convert_entity_data_structure(device, ignore_errors=True)
             devices_seen.add(axon_id.get('internal_axon_id'))
 
     def _get_devices_with_virtual_host_positive(self):
@@ -429,7 +428,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
             if not device:
                 logger.debug(f'internal_axon_id {axon_id["internal_axon_id"]} not found')
                 continue
-            yield convert_db_entity_to_view_entity(device, ignore_errors=True)
+            yield self.common.query.convert_entity_data_structure(device, ignore_errors=True)
 
     def __get_cve_data_from_installed_software(self, adapter_specific_data):
         """
@@ -658,7 +657,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
             if device_i % 10000 == 0:
                 logger.info(f'Users Devices association - Step 1 - pulled {device_i}')
             # Get a list of all users associated for this device.
-            device = convert_db_entity_to_view_entity(device_raw, ignore_errors=True)
+            device = self.common.query.convert_entity_data_structure(device_raw, ignore_errors=True)
             all_device_data = device.get('specific_data', [])
             for sd_users in [d['data']['users'] for d in all_device_data
                              if isinstance(d['data'], dict) and d['data'].get('users') is not None]:
@@ -892,7 +891,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
             if device_i and device_i % 1000 == 0:
                 logger.info(f'Parsed {device_i} users in last_used_users_departments')
             # Get a list of all users associated for this device.
-            device_raw = convert_db_entity_to_view_entity(device_view, ignore_errors=True)
+            device_raw = self.common.query.convert_entity_data_structure(device_view, ignore_errors=True)
             device_specific_data = device_raw.get('specific_data', [])
             device_last_used_users_set = set()
 

@@ -8,6 +8,7 @@ from pymongo.collection import Collection
 from axonius.entities import EntityType
 from axonius.modules.data.axonius_data import get_axonius_data_singleton
 from axonius.modules.query.aql_parser import get_aql_parser_singleton
+from axonius.modules.query.field_parser import get_field_parser_singleton
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -16,9 +17,13 @@ class AxoniusQuery:
     def __init__(self, db: Optional[MongoClient] = None):
         self.data = get_axonius_data_singleton(db)
         self.aql_parser = get_aql_parser_singleton(db)
+        self.field_parser = get_field_parser_singleton(db)
+
+    def parse_aql_filter_basic(self, aql_filter: str, for_date: datetime = None):
+        return self.aql_parser.parse(aql_filter, for_date)
 
     def parse_aql_filter(self, aql_filter: str, for_date: datetime = None, entity_type: EntityType = None):
-        return self.aql_parser.parse(aql_filter, for_date, entity_type)
+        return self.aql_parser.parse_for_entity(aql_filter, for_date, entity_type)
 
     def parse_aql_filter_for_day(self, aql_filter: str, date: str = None, entity_type: EntityType = None):
         if date:
@@ -46,6 +51,12 @@ class AxoniusQuery:
                 ]
             }
         }
+
+    def convert_entity_data_structure(self, entity: dict, ignore_errors: bool = False):
+        return self.field_parser.convert_entity_data_structure(entity, ignore_errors)
+
+    def convert_entity_projection_structure(self, projection: dict) -> Optional[dict]:
+        return self.field_parser.convert_entity_projection_structure(projection)
 
 
 def get_axonius_query_singleton(db: Optional[MongoClient] = None):

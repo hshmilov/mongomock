@@ -10,7 +10,6 @@ from dataclasses import dataclass
 
 from axonius.consts.gui_consts import SPECIFIC_DATA
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME
-from axonius.utils.axonius_query_language import convert_db_entity_to_view_entity
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -69,6 +68,7 @@ class EntitiesNamespace:
 
     def __init__(self, plugin_base, entity: EntityType):
         self.plugin_base = plugin_base
+        self.axonius_query = plugin_base.common.query
         self.entity = entity
 
         self.add_label = functools.partial(plugin_base.add_label_to_entity, entity)
@@ -91,8 +91,8 @@ class EntitiesNamespace:
         if internal_axon_id is not None:
             final_mongo_filter = {'internal_axon_id': internal_axon_id}
         elif axonius_query_language is not None:
-            final_mongo_filter = self.plugin_base.common.query.parse_aql_filter(axonius_query_language,
-                                                                                entity_type=self.entity)
+            final_mongo_filter = self.axonius_query.parse_aql_filter(axonius_query_language,
+                                                                     entity_type=self.entity)
         else:
             raise ValueError('None of the query methods were provided, can\'t query {self.entity}')
 
@@ -102,7 +102,7 @@ class EntitiesNamespace:
                 yield entity_object(self.plugin_base, entity_in_db, lazy=True)
         else:
             for entity_in_db in db.find(final_mongo_filter):
-                yield entity_object(self.plugin_base, convert_db_entity_to_view_entity(entity_in_db))
+                yield entity_object(self.plugin_base, self.axonius_query.convert_entity_data_structure(entity_in_db))
 
 
 class DevicesNamespace(EntitiesNamespace):
@@ -132,6 +132,7 @@ class AxoniusEntity:
         :param dict entity_in_db: a dict representing the entity in the db.
         """
         self.plugin_base = plugin_base
+        self.axonius_query = plugin_base.common.query
         self.entity = entity
         self.data = entity_in_db
         self.lazy = lazy
@@ -173,7 +174,7 @@ class AxoniusEntity:
             raise ValueError('Couldn\'t flush from db, internalaxonid wasn\'t found. This might happen if the document'
                              'was deleted because of a link or unlink')
 
-        self.data = convert_db_entity_to_view_entity(data)
+        self.data = self.axonius_query.convert_entity_data_structure(data)
 
     def add_label(self, label, is_enabled=True, identity_by_adapter=None):
         """

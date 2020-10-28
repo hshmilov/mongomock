@@ -21,7 +21,6 @@ from axonius.modules.query.axonius_query import get_axonius_query_singleton
 from axonius.utils.get_plugin_base_instance import plugin_base_instance
 from axonius.utils.cache.entities_cache import entities_redis_cached
 from axonius.consts.plugin_consts import ADAPTERS_LIST_LENGTH
-from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity, convert_db_projection_to_view)
 from axonius.utils.gui_helpers import parse_entity_fields, get_historized_filter, \
     FIELDS_TO_PROJECT, FIELDS_TO_PROJECT_FOR_GUI, get_sort, nongui_beautify_db_entry, get_entities_count,\
     get_entities_count_cached
@@ -321,7 +320,7 @@ def convert_entities_to_frontend_entities(data_list: Iterable[dict],
     See get_entities for parameters
     """
     for entity in data_list:
-        entity = convert_db_entity_to_view_entity(entity, ignore_errors=ignore_errors)
+        entity = get_axonius_query_singleton().convert_entity_data_structure(entity, ignore_errors=ignore_errors)
         if not projection:
             yield nongui_beautify_db_entry(entity)
         else:
@@ -381,7 +380,7 @@ def get_entities(limit: int,
             if projection:
                 projection[field] = 1
 
-    db_projection = convert_db_projection_to_view(projection) or {}
+    db_projection = get_axonius_query_singleton().convert_entity_projection_structure(projection) or {}
     if run_over_projection or projection:
         for field in FIELDS_TO_PROJECT:
             db_projection[field] = 1

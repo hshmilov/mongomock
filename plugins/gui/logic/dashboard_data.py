@@ -17,7 +17,6 @@ from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.entities import EntityType
 from axonius.modules.query.axonius_query import get_axonius_query_singleton
 from axonius.plugin_base import PluginBase, return_error
-from axonius.utils.axonius_query_language import (convert_db_entity_to_view_entity)
 from axonius.utils.gui_helpers import (find_entity_field, get_string_from_field_value, get_adapters_metadata)
 from axonius.utils.revving_cache import rev_cached, rev_cached_entity_type
 from axonius.utils.threading import GLOBAL_RUN_AND_FORGET
@@ -829,14 +828,16 @@ def fetch_chart_abstract(_: ChartViews, entity: EntityType, view, field, func, f
     # Query and data collections according to given module
 
     field_name = field['name']
-    view_from_db = get_axonius_query_singleton().data.find_view(entity, view) if view else None
+    axonius_query = get_axonius_query_singleton()
+    view_from_db = axonius_query.data.find_view(entity, view) if view else None
     base_view, results = _query_chart_abstract_results(field, entity, view_from_db, for_date)
     if not base_view or not results:
         return None
     count = 0
     sigma = 0
     for item in results:
-        field_values = find_entity_field(convert_db_entity_to_view_entity(item, ignore_errors=True), field_name)
+        field_values = find_entity_field(
+            axonius_query.convert_entity_data_structure(item, ignore_errors=True), field_name)
         if not field_values or (isinstance(field_values, list) and all(not val for val in field_values)):
             continue
         if ChartFuncs[func] == ChartFuncs.count:

@@ -33,7 +33,6 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.modules.query.axonius_query import get_axonius_query_singleton
 from axonius.plugin_base import EntityType, add_rule, return_error, PluginBase
 from axonius.users.user_adapter import UserAdapter
-from axonius.utils.axonius_query_language import parse_filter_non_entities
 from axonius.utils.revving_cache import rev_cached_entity_type
 from axonius.utils.cache.entities_cache import entities_count_redis_cached
 from axonius.utils.threading import singlethreaded
@@ -232,7 +231,7 @@ def filtered():
             try:
                 filter_expr = request.args.get('filter', '')
                 history_date = request.args.get('history')
-                filter_obj = parse_filter_non_entities(filter_expr, history_date)
+                filter_obj = get_axonius_query_singleton().parse_aql_filter_basic(filter_expr, history_date)
             except Exception as e:
                 logger.warning(f'Failed in mongo filter {func} with \'{filter_expr}\'', exc_info=True)
                 return return_error(f'Could not create mongo filter. Details: {e}'
