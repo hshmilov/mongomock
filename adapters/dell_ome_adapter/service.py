@@ -559,7 +559,7 @@ class DellOmeAdapter(AdapterBase, Configurable):
             'required': [
                 'async_chunks'
             ],
-            'pretty_name': 'Slack Configuration',
+            'pretty_name': 'Dell OpenManage Enterprise Configuration',
             'type': 'array'
         }
 
