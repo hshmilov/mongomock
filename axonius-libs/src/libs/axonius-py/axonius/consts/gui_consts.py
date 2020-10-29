@@ -261,6 +261,10 @@ class FeatureFlagsNames:
     PopulateMajorMinorVersionFields = 'populate_major_minor_version_fields'
     QueryTimelineRange = 'query_timeline_range'
     EnforcementCenter = 'enforcement_center'
+    EnablePBKDF2FedOnly = 'enable_pbkdf2_for_local_users_password'
+
+
+ENABLE_PBKDF2_FED_BUILD_ONLY_ERROR = 'Enable PBKDF2 for local user password is only available for Federal build'
 
 
 class CloudComplianceNames:

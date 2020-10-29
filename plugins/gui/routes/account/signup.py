@@ -2,12 +2,12 @@ from datetime import datetime, timedelta
 
 from flask import (jsonify,
                    request)
-from passlib.hash import bcrypt
 
 from axonius.consts import gui_consts
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.plugin_consts import GUI_PLUGIN_NAME
 from axonius.plugin_base import return_error
+from axonius.utils.hash import user_password_handler
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.feature_flags import FeatureFlags
 from gui.logic.login_helper import has_customer_login_happened
@@ -48,8 +48,9 @@ class Signup:
         if not new_password:
             return return_error('Passwords do not match', 400)
 
+        password, salt = user_password_handler(new_password)
         self._users_collection.update_one({'user_name': 'admin'},
-                                          {'$set': {'password': bcrypt.hash(new_password),
+                                          {'$set': {'password': password, 'salt': salt,
                                                     'email': signup_data.get(gui_consts.Signup.ContactEmailField)}})
 
         # we don't want to store creds openly

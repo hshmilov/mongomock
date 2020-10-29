@@ -9,7 +9,6 @@ import tempfile
 from datetime import datetime, timedelta
 
 import pytest
-from passlib.hash import bcrypt
 from retrying import retry
 from selenium import webdriver
 import selenium.common.exceptions
@@ -28,6 +27,7 @@ from axonius.consts.plugin_consts import (AXONIUS_USERS_LIST, CORE_UNIQUE_NAME,
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX, LOGS_PATH_HOST
 from axonius.plugin_base import EntityType
 from axonius.utils.mongo_administration import truncate_capped_collection
+from axonius.utils.hash import user_password_handler
 from services.axonius_service import get_service
 from test_credentials.test_gui_credentials import DEFAULT_USER, AXONIUS_AWS_TESTS_USER
 from ui_tests.pages.account_page import AccountPage
@@ -328,9 +328,10 @@ class TestBase:
         self.axonius_system.get_system_users_db().delete_many(
             {'user_name': {'$nin': AXONIUS_USERS_LIST + [DEFAULT_USER['user_name']]}})
         self.axonius_system.get_users_preferences_db().delete_many({})
+        password, salt = user_password_handler(DEFAULT_USER['password'])
         self.axonius_system.get_system_users_db().update_one(
-            {'user_name': DEFAULT_USER['user_name']}, {'$set': {'password': bcrypt.hash(DEFAULT_USER['password'])}})
-
+            {'user_name': DEFAULT_USER['user_name']},
+            {'$set': {'password': password, 'salt': salt}})
         self.axonius_system.db.remove_gui_dynamic_fields(EntityType.Users)
         self.axonius_system.db.remove_gui_dynamic_fields(EntityType.Devices)
 

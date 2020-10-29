@@ -9,7 +9,6 @@ from flask import (jsonify,
                    make_response, redirect, request, session)
 from werkzeug.wrappers import Response
 from urllib3.util.url import parse_url
-from passlib.hash import bcrypt
 from flask_limiter.util import get_remote_address
 # pylint: disable=import-error,no-name-in-module
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
@@ -33,6 +32,7 @@ from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error, random_string, LIMITER_SCOPE
 from axonius.types.ssl_state import (SSLState)
 from axonius.utils.datetime import parse_date
+from axonius.utils.hash import verify_user_password
 from axonius.utils.parsing import bytes_image_to_base64
 from axonius.utils.permissions_helper import is_axonius_role
 from gui.logic.filter_utils import filter_archived
@@ -112,7 +112,7 @@ class Login:
             logger.info(f'Unknown user {user_name} tried logging in')
             self._log_activity_login_failure(user_name)
             return return_error('Wrong user name or password', 401)
-        if not bcrypt.verify(password, user_from_db['password']):
+        if not verify_user_password(password, user_from_db.get('password'),  user_from_db.get('salt')):
             logger.info(f'User {user_name} tried logging in with wrong password')
             self._log_activity_login_failure(user_name)
             return return_error('Wrong user name or password', 401)

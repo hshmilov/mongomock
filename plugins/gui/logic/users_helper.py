@@ -33,5 +33,7 @@ def beautify_user_entry(user):
     user['role_id'] = str(user.get('role_id'))
     if user.get('permissions'):
         user['permissions'] = serialize_db_permissions(user.get('permissions'))
+    if user.get('salt'):
+        user.pop('salt')
     user['password'] = UNCHANGED_MAGIC_FOR_GUI
     return user

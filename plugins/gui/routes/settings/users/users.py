@@ -6,7 +6,6 @@ from datetime import datetime
 import pymongo
 from bson import ObjectId
 from flask import jsonify
-from passlib.hash import bcrypt
 
 from axonius.consts.gui_consts import (IS_AXONIUS_ROLE,
                                        PREDEFINED_ROLE_RESTRICTED,
@@ -22,6 +21,7 @@ from axonius.consts.plugin_consts import (ADMIN_USER_NAME,
 from axonius.logging.audit_helper import AuditAction, AuditType, AuditCategory
 from axonius.plugin_base import return_error
 from axonius.utils.gui_helpers import paginated, sorted_endpoint
+from axonius.utils.hash import user_password_handler
 from axonius.utils.permissions_helper import (PermissionAction,
                                               PermissionCategory,
                                               PermissionValue, get_restricted_permissions)
@@ -120,7 +120,7 @@ class Users:
         if self._users_collection.find_one(user_filter):
             return return_error('User already exists', 400)
 
-        password = bcrypt.hash(password)
+        password, salt = user_password_handler(password)
 
         user = self._create_user_if_doesnt_exist(
             username=user_name,
@@ -130,6 +130,7 @@ class Users:
             picname=None,
             source='internal',
             password=password,
+            salt=salt,
             role_id=ObjectId(role_id)
         )
         return jsonify(beautify_user_entry(user))
@@ -142,7 +143,7 @@ class Users:
         return insert_result.inserted_id
 
     def _create_user_if_doesnt_exist(self, username, first_name, last_name, email, picname=None, source='internal',
-                                     password=None, role_id=None, assignment_rule_match_found=False,
+                                     password=None, salt=None, role_id=None, assignment_rule_match_found=False,
                                      change_role_on_every_login=False):
         """
          Create a new user in the system if it does not exist already
@@ -163,7 +164,7 @@ class Users:
         :return: Created user/ Or the existing one
         """
         if source != 'internal' and password:
-            password = bcrypt.hash(password)
+            password, salt = user_password_handler(password)
 
         match_user = {
             USER_NAME: username,
@@ -178,6 +179,7 @@ class Users:
                 'pic_name': picname or self.DEFAULT_AVATAR_PIC,
                 'source': source,
                 'password': password,
+                'salt': salt,
                 'api_key': secrets.token_urlsafe(),
                 'api_secret': secrets.token_urlsafe(),
                 'email': email,
@@ -306,13 +308,19 @@ class Users:
 
             password = post_data.get('password')
             if password != UNCHANGED_MAGIC_FOR_GUI and self._check_password_validity(password):
-                new_user_info['password'] = bcrypt.hash(password)
+                password, salt = user_password_handler(password)
+                new_user_info['salt'] = salt
+                new_user_info['password'] = password
                 new_user_info['password_last_updated'] = datetime.utcnow()
             elif password != UNCHANGED_MAGIC_FOR_GUI:
                 return return_error(PASSWORD_NO_MEET_REQUIREMENTS_MSG, 403)
         else:
             new_user_info['ignore_role_assignment_rules'] = post_data.get('ignore_role_assignment_rules')
-        logger.info(f'_update_user -> user_info {new_user_info}')
+        # never print password to logs
+        log_new_user_info = new_user_info.copy()
+        log_new_user_info.pop('password', None)
+        log_new_user_info.pop('salt', None)
+        logger.info(f'_update_user -> user_info {log_new_user_info}')
         updated_user = self._users_collection.find_one_and_update({
             '_id': ObjectId(user_id)
         }, {

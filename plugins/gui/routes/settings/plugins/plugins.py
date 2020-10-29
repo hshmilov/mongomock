@@ -21,7 +21,8 @@ from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (PROXY_ERROR_MESSAGE,
                                        GETTING_STARTED_CHECKLIST_SETTING,
                                        RootMasterNames, DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES,
-                                       IDENTITY_PROVIDERS_CONFIG, GUI_CONFIG_NAME)
+                                       IDENTITY_PROVIDERS_CONFIG, GUI_CONFIG_NAME, FeatureFlagsNames,
+                                       ENABLE_PBKDF2_FED_BUILD_ONLY_ERROR)
 from axonius.consts.metric_consts import GettingStartedMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           GUI_PLUGIN_NAME,
@@ -38,6 +39,7 @@ from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error
 from axonius.types.ssl_state import (SSLState)
 from axonius.utils.backup import verify_preshared_key, get_filename_from_format
+from axonius.utils.build_modes import is_fed_build_mode
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.smb import SMBClient
@@ -459,6 +461,10 @@ class Plugins:
         config_to_set = request.get_json(silent=True)
         if config_to_set is None:
             return return_error('Invalid config', 400)
+
+        # respond error if PBKDF2 HMAC enable on regular build
+        if config_to_set.get(FeatureFlagsNames.EnablePBKDF2FedOnly, False) and not is_fed_build_mode():
+            return return_error(ENABLE_PBKDF2_FED_BUILD_ONLY_ERROR, 400)
 
         self._update_plugin_config(plugin_name, config_name, config_to_set)
         self._invalidate_sessions()

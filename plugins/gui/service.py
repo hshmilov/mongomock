@@ -32,6 +32,7 @@ from axonius.consts.system_consts import AXONIUS_SAAS_VAR_NAME
 from axonius.logging.audit_helper import AuditCategory, AuditAction, AuditType
 from axonius.saas.input_params import read_saas_input_params
 from axonius.saas.saas_secrets_manager import SaasSecretsManager
+from axonius.utils.hash import user_password_to_pbkdf2_hmac, is_pbkdf2_enable_for_user_account
 from axonius.utils.revving_cache import rev_cached
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
@@ -86,6 +87,7 @@ from axonius.utils.permissions_helper import (get_admin_permissions, get_viewer_
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.ssl import MUTUAL_TLS_CA_PATH, \
     MUTUAL_TLS_CONFIG_FILE
+from axonius.utils.build_modes import is_fed_build_mode
 from gui.api import APIMixin
 from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
@@ -105,9 +107,12 @@ DEFAULT_AWS_TEST_PASSWORD = '$2b$12$GE1DJiMkTLh.5VW6iICUr.oR5yVIXgA5vFK1FF2dkHzo
 SUPPORTED_API_VERSIONS = ['4.0']
 
 
-def _generate_password(length=32):
-    password = secrets.token_hex(nbytes=length).encode()
-    return bcrypt.hashpw(password, bcrypt.gensalt())
+def _generate_password(length=32) -> tuple:
+    password = secrets.token_hex(nbytes=length)
+    if is_fed_build_mode() and is_pbkdf2_enable_for_user_account():
+        salt = secrets.token_hex(16)
+        return user_password_to_pbkdf2_hmac(password, salt), salt
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()), None
 
 
 class GuiService(Triggerable,
@@ -125,33 +130,20 @@ class GuiService(Triggerable,
 
     DEFAULT_AVATAR_PIC = '/src/assets/images/users/avatar.png'
     ALT_AVATAR_PIC = '/src/assets/images/users/alt_avatar.png'
-    DEFAULT_USER = {'user_name': ADMIN_USER_NAME,
-                    'password': _generate_password(),
-                    'first_name': 'administrator', 'last_name': '',
-                    'pic_name': DEFAULT_AVATAR_PIC,
-                    'source': 'internal',
-                    'api_key': secrets.token_urlsafe(),
-                    'api_secret': secrets.token_urlsafe(),
-                    'password_last_updated': datetime.utcnow()
-                    }
 
-    ALTERNATIVE_USER = {'user_name': AXONIUS_USER_NAME,
-                        'password': _generate_password(),
-                        'first_name': 'axonius', 'last_name': '',
-                        'pic_name': ALT_AVATAR_PIC,
-                        'source': 'internal',
-                        'api_key': secrets.token_urlsafe(),
-                        'api_secret': secrets.token_urlsafe()
-                        }
-
-    ALTERNATIVE_RO_USER = {'user_name': AXONIUS_RO_USER_NAME,
-                           'password': _generate_password(),
-                           'first_name': 'axonius_ro', 'last_name': '',
-                           'pic_name': ALT_AVATAR_PIC,
-                           'source': 'internal',
-                           'api_key': secrets.token_urlsafe(),
-                           'api_secret': secrets.token_urlsafe()
-                           }
+    @staticmethod
+    def _get_default_user(user_name, pic_name):
+        password, salt = _generate_password()
+        return {'user_name': user_name,
+                'password': password,
+                'salt': salt,
+                'first_name': 'administrator',
+                'last_name': '',
+                'pic_name': pic_name,
+                'source': 'internal',
+                'api_key': secrets.token_urlsafe(),
+                'api_secret': secrets.token_urlsafe(),
+                'password_last_updated': datetime.utcnow()}
 
     def __create_user_tokens_index(self):
         # add ttl index to user tokens collection if not exist, prior to our logic the ttl value
@@ -197,7 +189,7 @@ class GuiService(Triggerable,
                 'name': PREDEFINED_ROLE_ADMIN
             })
             # User doesn't exist, this must be the installation process
-            default_user = self.DEFAULT_USER
+            default_user = self._get_default_user(ADMIN_USER_NAME, self.DEFAULT_AVATAR_PIC)
             default_user['role_id'] = owner_role.get('_id')
             admin_result = self._users_collection.insert_one(default_user)
             self._add_personal_space(admin_result.inserted_id)
@@ -206,7 +198,7 @@ class GuiService(Triggerable,
             owner_role = self._roles_collection.find_one({
                 'name': PREDEFINED_ROLE_OWNER
             })
-            alternatice_user = self.ALTERNATIVE_USER
+            alternatice_user = self._get_default_user(AXONIUS_USER_NAME, self.ALT_AVATAR_PIC)
             alternatice_user['role_id'] = owner_role.get('_id')
             axonius_user_result = self._users_collection.insert_one(alternatice_user)
             self._add_personal_space(axonius_user_result.inserted_id)
@@ -216,7 +208,7 @@ class GuiService(Triggerable,
             owner_ro_role = self._roles_collection.find_one({
                 'name': PREDEFINED_ROLE_OWNER_RO
             })
-            alternative_user_ro = self.ALTERNATIVE_RO_USER
+            alternative_user_ro = self._get_default_user(AXONIUS_RO_USER_NAME, self.ALT_AVATAR_PIC)
             alternative_user_ro['role_id'] = owner_ro_role.get('_id')
             axonius_ro_user_result = self._users_collection.insert_one(alternative_user_ro)
             self._add_personal_space(axonius_ro_user_result.inserted_id)

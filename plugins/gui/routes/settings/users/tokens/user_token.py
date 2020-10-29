@@ -4,7 +4,6 @@ from datetime import datetime
 
 from bson import ObjectId
 from flask import jsonify
-from passlib.hash import bcrypt
 
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (USERS_TOKENS_EMAIL_INVITE_SUBJECT,
@@ -18,6 +17,7 @@ from axonius.consts.plugin_consts import (ADMIN_USER_NAME,
                                           RESET_PASSWORD_SETTINGS)
 from axonius.logging.audit_helper import AuditAction, AuditCategory, AuditType
 from axonius.plugin_base import return_error
+from axonius.utils.hash import verify_user_password, user_password_handler
 from axonius.utils.permissions_helper import PermissionCategory
 from gui.logic.routing_helper import gui_route_logged_in, gui_section_add_rules
 
@@ -116,16 +116,17 @@ class UserToken:
 
         user = self._users_collection.find_one({
             '_id': ObjectId(user_id)
-        }, projection={'password': 1})
+        }, projection={'password': 1, 'salt': 1})
 
-        if bcrypt.verify(post_data['password'], user['password']):
+        if verify_user_password(post_data['password'], user['password'], user.get('salt')):
             return return_error('Your new password must be different from your previous password.', 400)
 
+        password, salt = user_password_handler(post_data['password'])
         user = self._users_collection.find_one_and_update({
             '_id': ObjectId(user_id)
         }, {
             '$set': {
-                'password': bcrypt.hash(post_data['password']),
+                'password': password, 'salt': salt,
                 'password_last_updated': datetime.utcnow()
             }
         }, {USER_NAME: 1, 'password': 1})

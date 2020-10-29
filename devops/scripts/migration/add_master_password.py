@@ -2,6 +2,7 @@ import argparse
 from passlib.hash import bcrypt
 
 from axonius.consts.plugin_consts import AXONIUS_USER_NAME
+from axonius.utils.hash import user_password_handler
 from services.axonius_service import AxoniusService
 
 
@@ -10,13 +11,15 @@ def main(args):
     username = args.username
     ax = AxoniusService()
     users_collection = ax.db.gui_users_collection()
+    password, salt = user_password_handler(new_password)
     users_collection.update_one(
         {
             'user_name': username
         },
         {
             '$set': {
-                'password': bcrypt.hash(new_password)
+                'password': password,
+                'salt': salt
             }
         }
     )

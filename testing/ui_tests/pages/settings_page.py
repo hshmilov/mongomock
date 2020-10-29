@@ -13,9 +13,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from axonius.adapter_base import WEEKDAYS
-from axonius.consts.gui_consts import PROXY_ERROR_MESSAGE
+from axonius.consts.gui_consts import PROXY_ERROR_MESSAGE, ENABLE_PBKDF2_FED_BUILD_ONLY_ERROR
 from axonius.consts.plugin_consts import CORRELATION_SCHEDULE_HOURS_INTERVAL, AWS_SM_ACCESS_KEY_ID, \
     AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION, GUI_PLUGIN_NAME, AXONIUS_DNS_SUFFIX
+from axonius.consts.gui_consts import FeatureFlagsNames
 from services.axon_service import TimeoutException
 from test_helpers.utils import get_datetime_format_by_gui_date
 from ui_tests.pages.page import PAGE_BODY, TAB_BODY, Page
@@ -304,6 +305,8 @@ class SettingsPage(Page):
     ABOUT_PAGE_DATE_KEYS = [ABOUT_PAGE_BUILD_DATE_LABEL, ABOUT_PAGE_CONTRACT_EXPIRY_DATE_LABEL]
     NEXT_DAYS_COUNT = 30
 
+    FEATURE_FLAG_BCRYPT_TO_PBKDF2_LABEL = ('Change local user password storage scheme from bcrypt to pbkdf2'
+                                           ' ( federal mode only )')
     QUERIES_CACHE_TTL_CSS = '#ttl'
 
     @property
@@ -1844,6 +1847,24 @@ class SettingsPage(Page):
                         get_datetime_format_by_gui_date(date_format)) == self.about_page_get_label_value_by_key(key)
                 else:
                     assert value == self.about_page_get_label_value_by_key(key)
+
+    def find_bcrypt_to_pbkdf2_checkbox(self):
+        return self.find_checkbox_by_label(self.FEATURE_FLAG_BCRYPT_TO_PBKDF2_LABEL)
+
+    def toggle_bcrypt_to_pbkdf2_feature_flag(self, make_yes=True):
+        self.click_toggle_button(self.find_bcrypt_to_pbkdf2_checkbox(), make_yes=make_yes)
+
+    def verify_bcrypt_to_pbkdf2_forbidden_on_regular_build(self):
+        self.switch_to_page()
+        self.click_feature_flags()
+        self.toggle_bcrypt_to_pbkdf2_feature_flag()
+        # wait for failure toaster
+        self.save_and_wait_for_toaster(toaster_message=ENABLE_PBKDF2_FED_BUILD_ONLY_ERROR)
+
+    def verify_bcrypt_to_pbkdf2_status(self, status):
+        self.switch_to_page()
+        self.click_feature_flags()
+        assert self.is_toggle_selected(self.driver.find_element_by_id(FeatureFlagsNames.EnablePBKDF2FedOnly)) == status
 
     def approve_queries_cache_safeguard(self):
         safeguard_modal = self.driver.find_element_by_css_selector(self.DIALOG_OVERLAY_ACTIVE_CSS)

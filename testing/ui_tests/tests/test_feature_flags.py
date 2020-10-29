@@ -1,15 +1,17 @@
 import time
 
 import pytest
-from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException
-from services.adapters.cybereason_service import CybereasonService
+from selenium.common.exceptions import (ElementNotInteractableException,
+                                        NoSuchElementException)
 
+from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG
+from axonius.utils.build_modes import is_fed_build_mode
+from axonius.utils.wait import wait_until
+from services.adapters.cybereason_service import CybereasonService
 from test_credentials.test_gui_credentials import AXONIUS_USER
 from test_helpers.utils import get_server_date
-from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.pages.enforcements_page import Action, ActionCategory
-from axonius.utils.wait import wait_until
-from axonius.consts.gui_consts import FEATURE_FLAGS_CONFIG
+from ui_tests.tests.ui_test_base import TestBase
 
 
 class TestFeatureFlags(TestBase):
@@ -169,3 +171,25 @@ class TestFeatureFlags(TestBase):
         self.restart_browser()
         self.dashboard_page.find_banner_no_contract()
         self._change_expiration_date(3, contract=True, server_time=server_date)
+
+    @pytest.mark.skipif(is_fed_build_mode(), reason='Can run only on regular image')
+    def test_bcrypt_to_pbkdf2_disable_on_regular_build(self):
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+        # login as _axonius
+        self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
+        self.settings_page.switch_to_page()
+        self.settings_page.click_feature_flags()
+        self._save_screenshot('feature_flag_status')
+        self.settings_page.verify_bcrypt_to_pbkdf2_forbidden_on_regular_build()
+        self.settings_page.refresh()
+        self.settings_page.verify_bcrypt_to_pbkdf2_status(status=False)
+
+    @pytest.mark.skipif(not is_fed_build_mode(), reason='Can run only on fed imag')
+    def test_bcrypt_to_pbkdf2_enable_on_fed_build(self):
+        self.login_page.logout()
+        self.login_page.wait_for_login_page_to_load()
+        # login as _axonius
+        self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
+        self.settings_page.verify_bcrypt_to_pbkdf2_status(status=True)
+        TestBase.save_backup('test_bcrypt_to_pbkdf2_enable_on_fed_build3', 'pbkdf')

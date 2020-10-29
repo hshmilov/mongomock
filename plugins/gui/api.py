@@ -6,7 +6,6 @@ from itertools import islice
 from typing import List
 
 from flask import g, has_request_context, jsonify, request
-from passlib.hash import bcrypt
 
 from axonius.adapter_base import AdapterBase
 from axonius.consts.adapter_consts import CONNECTION_LABEL
@@ -26,6 +25,7 @@ from axonius.utils.gui_helpers import (add_rule_custom_authentication,
                                        log_activity_rule, paginated, projected)
 from axonius.utils.gui_helpers import schema_fields as schema
 from axonius.utils.gui_helpers import sorted_endpoint
+from axonius.utils.hash import verify_user_password
 from axonius.utils.metric import remove_ids
 from axonius.utils.permissions_helper import (PermissionAction,
                                               PermissionCategory,
@@ -76,7 +76,7 @@ def basic_authentication(func, required_permission: PermissionValue, enforce_per
 
             role = roles_collection.find_one({'_id': user_from_db.get('role_id')})
 
-            if not bcrypt.verify(password, user_from_db['password']):
+            if not verify_user_password(password, user_from_db['password'], user_from_db.get('salt')):
                 return None, None
 
             is_expired = (PluginBase.Instance.trial_expired() or PluginBase.Instance.contract_expired())

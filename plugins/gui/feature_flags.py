@@ -2,10 +2,12 @@ import logging
 from datetime import datetime, timedelta
 
 from axonius.consts.gui_consts import (FeatureFlagsNames, RootMasterNames, CloudComplianceNames, ParallelSearch,
-                                       DashboardControlNames)
-from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME
+                                       DashboardControlNames, LOGGED_IN_MARKER_PATH, USERS_COLLECTION)
+from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME, AXONIUS_USER_NAME
 from axonius.mixins.configurable import Configurable
-from axonius.utils.build_modes import get_build_mode, BuildModes
+from axonius.modules.common import AxoniusCommon
+from axonius.utils.build_modes import get_build_mode, BuildModes, is_fed_build_mode
+from axonius.utils.hash import is_pbkdf2_enable_for_user_account
 from gui.logic.dashboard_data import (generate_dashboard, generate_dashboard_historical)
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -121,6 +123,13 @@ class FeatureFlags(Configurable):
                     'description': 'Only TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 and '
                                    'TLS_DHE_RSA_WITH_AES_256_GCM_SHA384 are supported',
                     'type': 'bool'
+                },
+                {
+                    'name': FeatureFlagsNames.EnablePBKDF2FedOnly,
+                    'title': 'Change local user password storage scheme from bcrypt to pbkdf2 ( federal mode only )',
+                    'description': 'Only for FEDERAL build mode regular build '
+                                   'will be force back to bcrypt if PBKDF2F enabled',
+                    'type': 'bool',
                 },
                 {
                     'name': FeatureFlagsNames.EnableSaaS,
@@ -301,6 +310,7 @@ class FeatureFlags(Configurable):
             FeatureFlagsNames.RefetchAssetEntityAction: False,
             FeatureFlagsNames.EnableFIPS: get_build_mode() == BuildModes.fed.value,
             FeatureFlagsNames.DisableRSA: get_build_mode() == BuildModes.fed.value,
+            FeatureFlagsNames.EnablePBKDF2FedOnly: cls._is_fresh_fed_build_install() or cls._is_pbkfd2_previously_set(),
             FeatureFlagsNames.HigherCiphers: False,
             FeatureFlagsNames.EnableSaaS: False,
             FeatureFlagsNames.QueryTimelineRange: False,
@@ -313,3 +323,40 @@ class FeatureFlags(Configurable):
                 DashboardControlNames.historical_call_limit: 5
             }
         }
+
+    @classmethod
+    def _is_fresh_fed_build_install(cls) -> bool:
+        """
+            check if FED build mode and
+            no login maker exist and
+            double check we dont have any existing admin user ( make it is a fresh build )
+            then return true to enable pbkdf2 HMAC for local user password.
+        :return:
+        """
+        try:
+            return (
+                is_fed_build_mode() and not LOGGED_IN_MARKER_PATH.exists() and
+                not AxoniusCommon().db.gui.get_collection(USERS_COLLECTION).find_one({'user_name': 'admin'})
+            )
+        except Exception:
+            logger.error('failure to figure out if system is a new federal installation ')
+        return False
+
+    @classmethod
+    def _is_pbkfd2_previously_set(cls) -> bool:
+        """
+           in case renew config will be issued ( "Configs are corrupted ->  Inserting default )
+           lets figure out if PDBKS previously set by looking on axonius internal user salt property )
+        """
+        try:
+            return is_fed_build_mode() and (bool(AxoniusCommon().db.gui.get_collection(USERS_COLLECTION).find_one(
+                {
+                    'user_name': AXONIUS_USER_NAME,
+                    'salt': {'$ne': None}
+                },
+                {'salt': 1, '_id': 0}
+            )) or is_pbkdf2_enable_for_user_account())
+
+        except Exception:
+            logger.error('failure to figure out if internal user have salt value ')
+        return False

@@ -4,6 +4,8 @@ export CORTEX_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $CORTEX_ROOT/prepare_python_env.sh
 source $CORTEX_ROOT/bash_imports.sh
 
+LOGIN_MARKER="$CORTEX_ROOT/.axonius_settings/.logged_in"
+
 echo "Killing dockers"
 RUNNING_DOCKERS=$( docker ps -q )
 if [ -f /.dockerenv ];then
@@ -57,4 +59,10 @@ if [[ $1 == "images" ]]; then
             # exit 1
         fi
     fi
+fi
+
+# delete .axonius_settings/.logged_in marker because we removed mongo volume so signup information is removed
+if [[ -f $LOGIN_MARKER ]]; then
+   echo "deleting $LOGIN_MARKER"
+   set -e; sudo rm  $LOGIN_MARKER; set +x
 fi

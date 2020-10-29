@@ -3,13 +3,13 @@
 import logging
 from datetime import datetime
 
-from passlib.hash import bcrypt
 from flask import jsonify, session
 
 from axonius.consts.gui_consts import USERS_PREFERENCES_COLUMNS_FIELD
 from axonius.consts.plugin_consts import PASSWORD_NO_MEET_REQUIREMENTS_MSG
 from axonius.plugin_base import (EntityType, LIMITER_SCOPE, route_limiter_key_func, return_error)
 from axonius.utils.gui_helpers import get_connected_user_id
+from axonius.utils.hash import verify_user_password, user_password_handler
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -32,17 +32,19 @@ class Account:
         user = session.get('user')
         if not user or not user.get('password'):
             return return_error('Not logged in', 401)
-        if not bcrypt.verify(post_data.get('old', ''), user['password']):
+        if not verify_user_password(post_data.get('old', ''), user['password'], user.get('salt')):
             return return_error('Given password is wrong', 400)
 
         if not self._check_password_validity(post_data['new']):
             return return_error(PASSWORD_NO_MEET_REQUIREMENTS_MSG, 403)
 
+        password, salt = user_password_handler(post_data['new'])
         self._users_collection.update_one(
             {'_id': user['_id']},
             {
                 '$set': {
-                    'password': bcrypt.hash(post_data['new']),
+                    'password': password,
+                    'salt': salt,
                     'password_last_updated': datetime.utcnow()
                 }
             })

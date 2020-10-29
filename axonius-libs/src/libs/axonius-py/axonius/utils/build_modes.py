@@ -22,3 +22,7 @@ def get_build_mode():
     if mode and BuildModes.has_value(mode):
         return mode
     return None
+
+
+def is_fed_build_mode() -> bool:
+    return get_build_mode() == BuildModes.fed.value

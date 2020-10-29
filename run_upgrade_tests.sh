@@ -147,7 +147,7 @@ docker exec axonius-manager /bin/sh ./testing/test_credentials/docker_login.sh
 docker pull nexus.pub.axonius.com/elgalu/selenium:3.141.59-p32
 docker exec -d axonius-manager python3 ./devops/create_pth.py
 sleep 5
-set +e; timeout 3600 docker exec -w /home/ubuntu/cortex/testing axonius-manager python3 run_upgrade_tests.py --teardown-keep-db upgrade/after_upgrade -p no:testing/tests/conftest.py; set -e;
+timeout 7200 docker exec -w /home/ubuntu/cortex/testing axonius-manager python3 run_upgrade_tests.py --teardown-keep-db upgrade/after_upgrade -p no:testing/tests/conftest.py
 
 echo "#### After upgrade tests done"
 
