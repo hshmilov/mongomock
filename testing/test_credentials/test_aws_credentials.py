@@ -31,12 +31,12 @@ client_details = [
         "region_name": "us-east-2",
         'get_all_regions': False
     }, [US_EAST_2_EC2_BUILDS_MACHINE_ID]),
-    ({
-        "aws_access_key_id": EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
-        "aws_secret_access_key": EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY,
-        "region_name": "us-east-1",
-        'get_all_regions': False
-    }, [US_EAST_1_ECS_FARGATE_CONTAINER_ID]),
+    # ({
+    #     "aws_access_key_id": EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
+    #     "aws_secret_access_key": EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY,
+    #     "region_name": "us-east-1",
+    #     'get_all_regions': False
+    # }, [US_EAST_1_ECS_FARGATE_CONTAINER_ID]),
     ({
         "aws_access_key_id": EC2_ECS_EKS_READONLY_ACCESS_KEY_ID,
         "aws_secret_access_key": EC2_ECS_EKS_READONLY_SECRET_ACCESS_KEY,
