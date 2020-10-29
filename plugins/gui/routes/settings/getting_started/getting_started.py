@@ -22,6 +22,8 @@ class GettingStarted:
     def get_getting_started_data(self):
         """
         Fetch the Getting Started checklist state from db
+
+        path: /api/settings/getting_started
         """
         data = self._get_collection('getting_started').find_one({})
         return jsonify(data)
@@ -30,6 +32,8 @@ class GettingStarted:
     def getting_started_set_milestone_completion(self):
         """
         Check an item in the Getting Started checklist as done.
+
+        path: /api/settings/getting_started/completion
         """
         milestone_name = self.get_request_data_as_object().get('milestoneName', '')
 
@@ -67,6 +71,8 @@ class GettingStarted:
     def getting_started_update_settings(self):
         """
         Update the value of the checklist autoOpen setting.
+
+        path: /api/settings/getting_started
         """
         settings = self.get_request_data_as_object().get('settings', {})
         auto_open = settings.get('autoOpen', False)

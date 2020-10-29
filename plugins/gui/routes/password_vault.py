@@ -23,6 +23,9 @@ class PasswordVault:
         """
         Checks if the query successfully fetches data from requested vault
         (for use before saving the client credentials).
+
+        path: /api/password_vault
+
         :return: True if successfully retrieves data from requested vault.
         """
         vault_fetch_data = self.get_request_data_as_object()

@@ -38,6 +38,9 @@ class Certificate:
     ##################
     @gui_route_logged_in('details', methods=['GET'], enforce_trial=True)
     def check_certificate_details(self):
+        """
+        path: /api/certificate/details
+        """
         config_cert = self._grab_file_contents(self._global_ssl.get('cert_file', None), stored_locally=False)
         if not config_cert or not self._global_ssl.get('enabled', False):
             config_cert = Path(SSL_CERT_PATH).read_text()
@@ -53,6 +56,9 @@ class Certificate:
 
     @gui_route_logged_in('reset_to_defaults', methods=['POST'], enforce_trial=True)
     def reset_to_defaults(self):
+        """
+        path: /api/certificate/reset_to_defaults
+        """
         try:
             self.plugins.core.configurable_configs.update_config(
                 CORE_CONFIG_NAME,
@@ -72,6 +78,9 @@ class Certificate:
 
     @gui_route_logged_in('import_cert', methods=['POST'], enforce_trial=True)
     def import_cert(self):
+        """
+        path: /api/certificate/import_cert
+        """
         cert_file = request.get_json()
         if cert_file:
             try:
@@ -111,6 +120,9 @@ class Certificate:
     @gui_route_logged_in('cancel_csr', methods=['POST'], enforce_trial=True)
     # pylint: disable=lost-exception
     def cancel_csr(self):
+        """
+        path: /api/certificate/cancel_csr
+        """
         try:
             csr_req = self.plugins.get_plugin_settings(CORE_UNIQUE_NAME).configurable_configs[CORE_CONFIG_NAME][CSR_KEY]
             self.db_files.delete_file(ObjectId(csr_req.get('csr_file', {}).get('uuid', None)))
@@ -123,6 +135,9 @@ class Certificate:
     @gui_route_logged_in('csr', methods=['GET', 'POST'], enforce_trial=True)
     # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements
     def csr(self):
+        """
+        path: /api/certificate/csr
+        """
         csr_req = self.plugins.get_plugin_settings(CORE_UNIQUE_NAME).configurable_configs[CORE_CONFIG_NAME][CSR_KEY]
         # Returns the CSR file stored in db and return to the user to download
         if request.method == 'GET':
@@ -253,6 +268,9 @@ class Certificate:
     @gui_route_logged_in('certificate_settings', methods=['GET', 'POST'], enforce_trial=True)
     # pylint: disable=too-many-return-statements,too-many-branches
     def check_settings(self):
+        """
+        path: /api/certificate/certificate_settings
+        """
         if request.method == 'GET':
             return jsonify({
                 'ssl_trust': self._ssl_trust_settings,
@@ -340,6 +358,9 @@ class Certificate:
     @gui_route_logged_in('global_ssl', methods=['GET', 'POST'], enforce_trial=True)
     # pylint: disable=too-many-return-statements
     def global_ssl(self):
+        """
+        path: /api/certificate/global_ssl
+        """
         if request.method == 'GET':
             return jsonify(self._global_ssl)
         try:

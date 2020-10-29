@@ -62,6 +62,10 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                 get_metadata: bool = True,
                 include_details: bool = False,
                 use_cache_entry: bool = True):
+            """
+            path: /api/devices
+            path: /api/users
+            """
             is_cache_enabled = self._system_settings.get(GuiCache.root_key, {}).get(GuiCache.enabled, False)
             ttl = self._system_settings.get(GuiCache.root_key, {}).get(GuiCache.ttl, 60) * 60
             iterable, cursor_obj, cache_last_updated = self._get_entities(excluded_adapters, field_filters, history,
@@ -103,6 +107,10 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                        excluded_adapters,
                        get_metadata: bool = True,
                        include_details: bool = False):
+            """
+            path: /api/devices
+            path: /api/users
+            """
             iterable, cursor_obj, _ = self._get_entities(excluded_adapters, field_filters, history,
                                                          include_details, limit, mongo_filter,
                                                          mongo_projection, mongo_sort, skip, use_cursor=True,
@@ -160,7 +168,12 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
 
         @gui_route_logged_in('history_dates')
         def entities_history_dates(self):
-            """Get all of the history dates that are valid for entities."""
+            """
+            Get all of the history dates that are valid for entities.
+
+            path: /api/devices/history_dates
+            path: /api/users/history_dates
+            """
             return jsonify(all_historical_dates()[self.entity_type.value])
 
         @filtered_entities()
@@ -168,6 +181,10 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                                                                                          permission_category),
                              activity_params=[ACTIVITY_PARAMS_COUNT])
         def delete_entities(self, mongo_filter):
+            """
+            path: /api/devices
+            path: /api/users
+            """
             return self._delete_entities_by_internal_axon_id(
                 self.entity_type, self.get_request_data_as_object(), mongo_filter)
 
@@ -180,7 +197,10 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
             PermissionAction.View, permission_category))
         def get_csv(self, mongo_filter, mongo_sort,
                     mongo_projection, history: datetime, field_filters, excluded_adapters):
-
+            """
+            path: /api/devices/csv
+            path: /api/users/csv
+            """
             if 'specific_data.data.image' in mongo_projection:
                 del mongo_projection['specific_data.data.image']
 
@@ -208,6 +228,10 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @gui_route_logged_in('count', methods=['GET', 'POST'], required_permission=PermissionValue.get(
             PermissionAction.View, permission_category), skip_activity=True)
         def get_count(self, mongo_filter, history: datetime, use_cache_entry: bool = True):
+            """
+            path: /api/devices/count
+            path: /api/users/count
+            """
             content = self.get_request_data_as_object()
             quick = content.get('quick') or request.args.get('quick')
             quick = quick == 'True'
@@ -231,11 +255,19 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
 
         @gui_route_logged_in('fields')
         def fields(self):
+            """
+            path: /api/devices/fields
+            path: /api/users/fields
+            """
             return jsonify(entity_fields(self.entity_type))
 
         @filtered_entities()
         @gui_route_logged_in('labels', methods=['GET'])
         def get_entity_labels(self, mongo_filter):
+            """
+            path: /api/devices/labels
+            path: /api/users/labels
+            """
             db, namespace = (self.devices_db, self.devices) if self.entity_type == EntityType.Devices else \
                 (self.users_db, self.users)
             return self._entity_labels(
@@ -245,6 +277,10 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @gui_route_logged_in('labels', methods=['POST', 'DELETE'], required_permission=PermissionValue.get(
             PermissionAction.Update, permission_category))
         def update_entity_labels(self, mongo_filter):
+            """
+            path: /api/devices/labels
+            path: /api/users/labels
+            """
             db, namespace = (self.devices_db, self.devices) if self.entity_type == EntityType.Devices else \
                 (self.users_db, self.users)
             return self._entity_labels(
@@ -253,17 +289,29 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @filtered_entities()
         @gui_route_logged_in('disable', methods=['POST'])
         def disable_entity(self, mongo_filter):
+            """
+            path: /api/devices/disable
+            path: /api/users/disable
+            """
             return self._disable_entity(self.entity_type, mongo_filter)
 
         @filtered_entities()
         @gui_route_logged_in('enforce', methods=['POST'])
         def enforce_entity(self, mongo_filter):
+            """
+            path: /api/devices/enforce
+            path: /api/users/enforce
+            """
             return self._enforce_entity(self.entity_type, mongo_filter)
 
         @historical()
         @return_api_format()
         @gui_route_logged_in('<entity_id>', methods=['GET'])
         def entity_generic(self, entity_id, history: datetime, api_format: bool = True):
+            """
+            path: /api/devices/<entity_id>
+            path: /api/users/<entity_id>
+            """
             res = get_entity_data(self.entity_type, entity_id, history)
             if isinstance(res, dict):
                 if api_format:
@@ -280,6 +328,9 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
                 self, entity_id, field_name, mongo_sort, history: datetime, search: str):
             """
             Create a csv file for a specific field of a specific entity
+
+            path: /api/devices/<entity_id>/<field_name>/csv
+            path: /api/users/<entity_id>/<field_name>/csv
 
             :param entity_id:   internal_axon_id of the entity to create csv for
             :param field_name:  Field of the entity, containing table data
@@ -305,11 +356,19 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
 
         @gui_route_logged_in('<entity_id>/tasks', methods=['GET'])
         def entity_tasks(self, entity_id):
+            """
+            path: /api/devices/<entity_id>/tasks
+            path: /api/users/<entity_id>/tasks
+            """
             return jsonify(entity_tasks_actions(entity_id))
 
         @gui_route_logged_in('<entity_id>/notes', methods=['PUT', 'DELETE'], required_permission=PermissionValue.get(
             PermissionAction.Update, permission_category))
         def entity_notes(self, entity_id):
+            """
+            path: /api/devices/<entity_id>/notes
+            path: /api/users/<entity_id>/notes
+            """
             return entity_notes(self.entity_type, entity_id,
                                 self.get_request_data_as_object())
 
@@ -320,6 +379,9 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         def entity_tasks_csv(self, entity_id, mongo_sort, schema_fields):
             """
             Create a csv file for a enforcement tasks of a specific entity
+
+            path: /api/devices/<entity_id>/tasks/csv
+            path: /api/users/<entity_id>/tasks/csv
 
             :param entity_id:   internal_axon_id of the entity tasks to create csv for
             :param mongo_sort:  the sort of the csv
@@ -338,6 +400,10 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @gui_route_logged_in('<entity_id>/notes/<note_id>', methods=['POST'], required_permission=PermissionValue.get(
             PermissionAction.Update, permission_category))
         def entity_notes_update(self, entity_id, note_id):
+            """
+            path: /api/devices/<entity_id>/notes/<note_id>
+            path: /api/users/<entity_id>/notes/<note_id>
+            """
             return entity_notes_update(self.entity_type, entity_id, note_id,
                                        self.get_request_data_as_object()['note'])
 
@@ -347,16 +413,27 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         def entities_custom_data(self, mongo_filter):
             """
             See self._entity_custom_data
+
+            path: /api/devices/custom
+            path: /api/users/custom
             """
             return self._entity_custom_data(self.entity_type, mongo_filter)
 
         @gui_route_logged_in('hyperlinks')
         def entity_hyperlinks(self):
+            """
+            path: /api/devices/hyperlinks
+            path: /api/users/hyperlinks
+            """
             return jsonify(self._get_entity_hyperlinks(self.entity_type))
 
         @filtered_entities()
         @gui_route_logged_in('manual_link', methods=['POST'])
         def entities_link(self, mongo_filter):
+            """
+            path: /api/devices/manual_link
+            path: /api/users/manual_link
+            """
             device_id = self._link_many_entities(self.entity_type, mongo_filter)
             self._trigger_remote_plugin(AGGREGATOR_PLUGIN_NAME, 'calculate_preferred_fields',
                                         blocking=True,
@@ -366,13 +443,22 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @filtered_entities()
         @gui_route_logged_in('manual_unlink', methods=['POST'])
         def entities_unlink(self, mongo_filter):
+            """
+            path: /api/devices/manual_unlink
+            path: /api/users/manual_unlink
+            """
             ret_data = self._unlink_axonius_entities(self.entity_type, mongo_filter)
             self._trigger_remote_plugin_no_blocking(AGGREGATOR_PLUGIN_NAME, 'calculate_preferred_fields')
             return ret_data
 
         @gui_route_logged_in(rule='destroy', methods=['POST'])
         def api_users_destroy(self):
-            """Delete all assets and optionally all historical assets."""
+            """
+            Delete all assets and optionally all historical assets.
+
+            path: /api/devices
+            path: /api/users
+            """
             return self._destroy_assets(entity_type=self.entity_type, historical_prefix='historical_users_')
 
         @property
@@ -386,6 +472,10 @@ def entity_generator(rule: str, permission_category: PermissionCategory):
         @gui_route_logged_in(rule='reset_cache', methods=['POST'], required_permission=PermissionValue.get(
             PermissionAction.View, permission_category), skip_activity=True)
         def reset_query_cache(self, mongo_filter):
+            """
+            path: /api/devices
+            path: /api/users
+            """
             clear_entities_query_cache(mongo_filter, self.entity_type)
             return ''
 

@@ -105,6 +105,8 @@ class Dashboard(Charts, Notifications):
         __is_first_time_use maintains whether any adapter was connected with a client.
         Otherwise, user should be offered to take a walkthrough of the system.
 
+        path: /api/dashboard/first_use
+
         :return: Whether this is the first use of the system
         """
         return jsonify(self._is_system_first_use)
@@ -112,6 +114,8 @@ class Dashboard(Charts, Notifications):
     @gui_route_logged_in('is_system_empty', methods=['GET'], enforce_trial=False)
     def dashboard_is_empty(self):
         """
+        path: /api/dashboard/is_system_empty
+
         :return: Whether this is the first use of the system
         """
 
@@ -127,16 +131,24 @@ class Dashboard(Charts, Notifications):
 
     @gui_route_logged_in('first_historical_date', methods=['GET'], enforce_permissions=False)
     def get_first_historical_date(self):
+        """
+        path: /api/dashboard/first_historical_date
+        """
         return jsonify(first_historical_date())
 
     @gui_route_logged_in('get_allowed_dates', enforce_permissions=False)
     def all_historical_dates(self):
+        """
+        path: /api/dashboard/get_allowed_dates
+        """
         return jsonify(all_historical_dates())
 
     @gui_route_logged_in(methods=['GET'], enforce_trial=False)
     def get_dashboards(self):
         """
         GET all the saved spaces.
+
+        path: /api/dashboard
 
         :return:
         """
@@ -163,7 +175,9 @@ class Dashboard(Charts, Notifications):
 
     @gui_route_logged_in('<space_id>', methods=['GET'], enforce_trial=False, activity_params=[SPACE_NAME])
     def get_space_by_id(self, space_id):
-
+        """
+        path: /api/dashboard/<space_id>
+        """
         if not space_id:
             return_error('space id is required', 400)
 
@@ -234,6 +248,8 @@ class Dashboard(Charts, Notifications):
         """
         PUT an updated name for an existing Dashboard Space
 
+        path: /api/dashboard/<space_id>
+
         :param space_id: The ObjectId of the existing space
         :return:         An error with 400 status code if failed, or empty response with 200 status code, otherwise
         """
@@ -284,6 +300,8 @@ class Dashboard(Charts, Notifications):
         """
         DELETE an existing Dashboard Space
 
+        path: /api/dashboard/<space_id>
+
         :param space_id: The ObjectId of the existing space
         :return:         An error with 400 status code if failed, or empty response with 200 status code, otherwise
         """
@@ -304,6 +322,8 @@ class Dashboard(Charts, Notifications):
     def update_dashboards(self):
         """
         POST a new space that will have the type 'custom'
+
+        path: /api/dashboard
 
         :return:
         """
@@ -475,6 +495,9 @@ class Dashboard(Charts, Notifications):
 
     @gui_route_logged_in('adapter_data/<entity_name>', methods=['GET'], enforce_trial=False)
     def get_adapter_data(self, entity_name):
+        """
+        path: /api/dashboard/adapter_data/<entity_name>
+        """
         try:
             return jsonify(adapter_data(EntityType(entity_name)))
         except KeyError:
@@ -615,7 +638,9 @@ class Dashboard(Charts, Notifications):
                                                                  PermissionCategory.Charts),
                          activity_params=[SPACE_NAME], proceed_and_set_access=True)
     def reorder_dashboard_space_panels(self, space_id, no_access):
-
+        """
+        path: /api/dashboard/reorder/<space_id>
+        """
         if no_access and not self._is_personal_space(ObjectId(space_id)):
             return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 

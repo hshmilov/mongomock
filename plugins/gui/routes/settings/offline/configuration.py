@@ -17,6 +17,9 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class Configuration:
     @gui_route_logged_in('upload_file', methods=['POST'], enforce_trial=False)
     def create_file_upload(self):
+        """
+        path: /api/settings/configuration
+        """
         total, used, free = shutil.disk_usage(self.upload_files_dir)
         # make sure system will have at least 200M disk space
         margin = 200000000

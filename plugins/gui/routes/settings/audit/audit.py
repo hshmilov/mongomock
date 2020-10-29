@@ -28,6 +28,9 @@ class Audit:
     @historical_range()
     @gui_route_logged_in()
     def get_audit(self, limit: int, skip: int, search: str, from_date: datetime, to_date: datetime):
+        """
+        path: /api/settings/audit
+        """
         if not search:
             limited_activity_logs = self._fetch_audit(from_date, to_date).skip(skip).limit(limit)
             return jsonify([self._format_activity(activity) for activity in limited_activity_logs])
@@ -133,6 +136,8 @@ class Audit:
     @gui_route_logged_in('count')
     def get_audit_count(self, search, from_date: datetime, to_date: datetime):
         """
+        path: /api/settings/audit/count
+
         :return: filtered users collection size (without axonius users)
         """
         if not search:
@@ -144,6 +149,9 @@ class Audit:
     @historical_range()
     @gui_route_logged_in('csv')
     def get_audit_csv(self, search, from_date: datetime, to_date: datetime):
+        """
+        path: /api/settings/audit/csv
+        """
         csv_audit_data = self._get_activities_formatted_filtered(search, from_date, to_date, format_date=True)
         csv_string = io.StringIO()
         dw = csv.DictWriter(csv_string, ['type', 'date', 'user', 'action', 'category', 'message'])

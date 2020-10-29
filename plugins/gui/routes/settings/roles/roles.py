@@ -21,6 +21,9 @@ class Roles:
     @gui_route_logged_in(methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.GetUsersAndRoles, PermissionCategory.Settings))
     def get_roles(self):
+        """"
+        path: /api/settings/roles
+        """
         roles = [beautify_db_entry(entry) for entry in self._roles_collection.find(
             filter_archived({
                 IS_AXONIUS_ROLE: {'$ne': True}
@@ -37,6 +40,9 @@ class Roles:
     def get_assignable_roles(self):
         """
         Designated endpoint for getting only assignable roles list
+
+        path: /api/settings/roles/assignable_roles
+
         :return: set of roles (id and name only)
         """
         return jsonify(
@@ -50,6 +56,9 @@ class Roles:
     @gui_route_logged_in('<role_id>/assignees', methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.Update, PermissionCategory.Settings, PermissionCategory.Roles))
     def get_role_assignees(self, role_id):
+        """
+        path: /api/settings/roles/<role_id>/assignees
+        """
         match_users = {
             ROLE_ID: ObjectId(role_id)
         }
@@ -60,6 +69,8 @@ class Roles:
     def add_role(self):
         """
         Service for creating new roles.
+
+        path: /api/settings/roles
 
         :return:
         """
@@ -101,6 +112,9 @@ class Roles:
 
     @gui_route_logged_in('<role_id>', methods=['POST'])
     def update_role(self, role_id):
+        """
+        path: /api/settings/roles/<role_id>
+        """
         role_data = self.get_request_data_as_object()
         if 'name' not in role_data:
             logger.error('Name is required for saving a role')
@@ -139,6 +153,9 @@ class Roles:
 
     @gui_route_logged_in('<role_id>', methods=['DELETE'])
     def delete_roles(self, role_id):
+        """
+        path: /api/settings/roles/<role_id>
+        """
         match_role = {
             '_id': ObjectId(role_id)
         }

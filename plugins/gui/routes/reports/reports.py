@@ -86,6 +86,8 @@ class Reports:
         """
         GET results in list of all currently configured enforcements, with their query id they were created with
 
+        path: /api/reports
+
         :return:
         """
         return jsonify(self._get_reports(limit, mongo_filter, mongo_sort, skip))
@@ -94,6 +96,8 @@ class Reports:
     def add_reports(self):
         """
         PUT Send report_service a new enforcement to be configured
+
+        path: /api/reports
 
         :return:
         """
@@ -125,11 +129,17 @@ class Reports:
 
     @gui_route_logged_in(methods=['DELETE'], activity_params=['count'])
     def delete_reports(self):
+        """
+        path: /api/reports
+        """
         return self._delete_report_configs(self.get_request_data_as_object()), 200
 
     @filtered()
     @gui_route_logged_in('count')
     def reports_count(self, mongo_filter):
+        """
+        path: /api/reports/count
+        """
         reports_collection = self.reports_config_collection
         return jsonify(reports_collection.count_documents(mongo_filter))
 
@@ -157,6 +167,9 @@ class Reports:
     def get_report_by_id(self, report_id):
         """
         :param report_id:
+
+        path: /api/reports/<report_id>
+
         :return:
         """
         reports_collection = self.reports_config_collection
@@ -177,7 +190,9 @@ class Reports:
 
     @gui_route_logged_in('<report_id>', methods=['POST'])
     def update_report_by_id(self, report_id):
-
+        """
+        path: /api/reports/<report_id>
+        """
         report_to_update = request.get_json(silent=True)
         if not self.is_axonius_user():
             report_to_update[LAST_UPDATED_FIELD] = datetime.now()
@@ -325,6 +340,9 @@ class Reports:
         If background report generation setting is turned off, the report will be generated here, as well.
 
         TBD Should receive ID of the report to export (once there will be an option to save many report definitions)
+
+        path: /api/reports/<report_id>/pdf
+
         :return:
         """
         report_name, report_data, attachments_data = self._get_executive_report_and_attachments(report_id)
@@ -402,6 +420,9 @@ class Reports:
     @gui_route_logged_in('send_email', methods=['POST'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Reports))
     def test_exec_report(self):
+        """
+        path: /api/reports/send_email
+        """
         try:
             report = self.get_request_data_as_object()
             self._send_report_thread(report=report)

@@ -50,6 +50,10 @@ class Login:
 
     @gui_route_logged_in('get_login_options', enforce_session=False)
     def get_login_options(self):
+        """
+        path: /api/get_login_options
+        """
+
         return jsonify({
             'ldap': {
                 'enabled': self._ldap_login['enabled'],
@@ -68,6 +72,9 @@ class Login:
     def get_current_user(self):
         """
         Get current user or login
+
+        path: /api/login
+
         :return:
         """
         user = session.get('user')
@@ -90,6 +97,9 @@ class Login:
     def login(self):
         """
         do login
+
+        path: /api/login
+
         :return:
         """
         log_in_data = self.get_request_data_as_object()
@@ -312,6 +322,9 @@ class Login:
 
     @gui_route_logged_in('okta-redirect', enforce_session=False)
     def okta_redirect(self):
+        """
+        path: /api/okta-redirect
+        """
         okta_settings = self._okta
         if not okta_settings['enabled']:
             return return_error('Okta login is disabled', 400)
@@ -365,6 +378,9 @@ class Login:
 
     @gui_route_logged_in('login/ldap', methods=['POST'], enforce_session=False)
     def ldap_login(self):
+        """
+        path: /api/login/ldap
+        """
         try:
             log_in_data = self.get_request_data_as_object()
             if log_in_data is None:
@@ -533,6 +549,9 @@ class Login:
 
     @gui_route_logged_in('login/saml/metadata/', methods=['GET', 'POST'], enforce_session=False)
     def saml_login_metadata(self):
+        """
+        path: /api/login/saml/metadata
+        """
         saml_settings = self._saml_login
         # Metadata can always exist, no need to check if SAML has been activated.
 
@@ -551,6 +570,9 @@ class Login:
 
     @gui_route_logged_in('login/saml/', methods=['GET', 'POST'], enforce_session=False)
     def saml_login(self):
+        """
+        path: /api/login/saml
+        """
         self_url, req = self.__get_flask_request_for_saml(request)
         saml_settings = self._saml_login
 
@@ -626,6 +648,9 @@ class Login:
     def logout(self):
         """
         Clears session, logs out
+
+        path: /api/logout
+
         :return:
         """
         user = session.get('user')

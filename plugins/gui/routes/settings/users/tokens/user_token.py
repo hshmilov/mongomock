@@ -34,6 +34,9 @@ class UserToken:
         """
         Gets user ID and generate reset password token
         user id expected to be plain text, not ObjectId
+
+        path: /api/settings/users/tokens/generate
+
         :return: link to current machine reset password page, with the token as url param
         """
         if not manual_user_id:
@@ -78,6 +81,9 @@ class UserToken:
         Search for current user's reset password token
         if no token exist, its count as expired
         :param: token: a valid token for user reset password
+
+        path: /api/settings/users/tokens/validate/<token>
+
         :return: boolean representation of token status, valid or expired in any other case
         """
         user_token = self._users_tokens_collection.find_one({
@@ -94,6 +100,9 @@ class UserToken:
         """
         Change user password verified by the reset password token, new password expected to be in post_data
         :param token: a valid token for user reset password
+
+        path: /api/settings/users/tokens/reset
+
         :return:
         """
         post_data = self.get_request_data_as_object()
@@ -147,6 +156,9 @@ class UserToken:
 
     @gui_route_logged_in('notify', methods=['PUT', 'POST'], activity_params=[USER_NAME])
     def send_reset_password(self):
+        """
+        path: /api/settings/users/tokens/notify
+        """
         post_data = self.get_request_data_as_object()
         if not post_data.get('user_id'):
             return return_error('please provide valid user id', 400)

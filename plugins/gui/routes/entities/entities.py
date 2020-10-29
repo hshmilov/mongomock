@@ -637,6 +637,9 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
     @gui_route_logged_in('actions/<action_type>', methods=['POST'], required_permission=PermissionValue.get(
         PermissionAction.Update, PermissionCategory.DevicesAssets))
     def actions_run(self, action_type, mongo_filter):
+        """
+        path: /api/enforcements/actions/<action_type>
+        """
         action_data = self.get_request_data_as_object()
         action_data['action_type'] = action_type
         if action_data.get('internal_axon_ids') and not action_data.get('entities'):
@@ -652,6 +655,9 @@ class Entities(entity_generator('devices', PermissionCategory.DevicesAssets),
         """
         Executes a run shell command on devices.
         Expected values: a list of internal axon ids, the action name, and the action command.
+
+        path: /api/enforcements/actions
+
         :return:
         """
         return jsonify(self._get_actions())

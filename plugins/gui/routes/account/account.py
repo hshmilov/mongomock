@@ -25,6 +25,8 @@ class Account:
         Change a password for a specific user. It must be the same user as currently logged in to the system.
         Post data is expected to have the old password, matching the one in the DB
 
+        path: /api/self/password
+
         :param user_id:
         :return:
         """
@@ -55,6 +57,8 @@ class Account:
     def get_system_users_preferences(self):
         """
         Fetch the default view of devices table, for current user
+
+        path: /api/self/preferences
         """
         return self._system_users_preferences_get()
 
@@ -62,6 +66,8 @@ class Account:
     def update_system_users_preferences(self):
         """
         Save the default view of devices table, for current user
+
+        path: /api/self/preferences
         """
         post_data = self.get_request_data_as_object()
         self._users_preferences_collection.update_one({

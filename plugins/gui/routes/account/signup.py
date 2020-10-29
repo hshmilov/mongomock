@@ -18,7 +18,11 @@ from gui.logic.login_helper import has_customer_login_happened
 class Signup:
     @gui_route_logged_in(methods=['POST', 'GET'], enforce_session=False)
     def process_signup(self):
-        """Process initial signup."""
+        """
+        Process initial signup.
+
+        path: /api/signup
+        """
         return self._process_signup()
 
     # pylint: disable=dangerous-default-value

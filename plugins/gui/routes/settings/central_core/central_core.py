@@ -16,6 +16,8 @@ class CentralCore:
 
         jim: 3.3: added for esentire/cimpress automation
 
+        path: /api/settings/central_core
+
         :return: dict
         """
         return self._get_central_core_settings()
@@ -25,6 +27,8 @@ class CentralCore:
         """Update the current central core (root master) settings from feature flags.
 
         jim: 3.3: added for esentire/cimpress automation
+
+        path: /api/settings/central_core
 
         :return: dict
         """
@@ -41,6 +45,8 @@ class CentralCore:
 
         restore_type: str, required
             type of restore to perform
+
+        path: /api/settings/central_core
 
         :return: dict
         """

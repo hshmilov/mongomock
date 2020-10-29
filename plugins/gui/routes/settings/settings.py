@@ -42,6 +42,8 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
         This is needed for the case that user is restricted from the settings but can view pages that use them.
         The pages should render the same, so these settings must be permitted to read anyway.
 
+        path: /api/settings
+
         :return: Settings for the system and Global settings, indicating if Mail and Syslog are enabled
         """
         history_setting = self.plugins.system_scheduler.configurable_configs[SCHEDULER_CONFIG_NAME]
@@ -92,6 +94,7 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
         Manage the maintenance features which can be customly set by user or switched all on for a limited time.
         GET returns current config for the features
 
+        path: /api/settings/maintenance
         """
         match_maintenance = {
             'type': 'maintenance'
@@ -108,6 +111,7 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
         PUT start all features for given duration of time
         DELETE stop all features (should be available only if they are temporarily on)
 
+        path: /api/settings/maintenance
         """
         match_maintenance = {
             'type': 'maintenance'
@@ -158,6 +162,9 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
         """
         Get or set config by name
         :param config_name: Config to fetch
+
+        path: /api/settings/<config_name>
+
         :return:
         """
         configs_collection = self._get_collection('config')
@@ -176,6 +183,9 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
 
     @gui_route_logged_in('historical_sizes', methods=['GET'])
     def get_historical_size_stats(self):
+        """
+        path: /api/settings/historical_sizes
+        """
         return self._get_historical_size_stats()
 
     def _get_historical_size_stats(self):
@@ -215,6 +225,9 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
     def get_metadata(self):
         """
         Gets the system metadata.
+
+        path: /api/settings/metadata
+
         :return:
         """
         return jsonify(self.metadata)
@@ -223,6 +236,8 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
     def schedule_research_phase(self):
         """
         Schedules or initiates research phase.
+
+        path: /api/settings/run_manual_discovery
 
         :return: Map between each adapter and the number of devices it has, unless no devices
         """
@@ -241,6 +256,8 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
     def stop_research_phase(self):
         """
         Stops currently running research phase.
+
+        path: /api/settings/stop_research_phase
         """
         return self._stop_research_phase()
 
@@ -269,6 +286,9 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
 
     @gui_route_logged_in('api_key', methods=['GET'], enforce_permissions=False)
     def get_api_key(self):
+        """
+        path: /api/settings/api_key
+        """
         api_data = self._users_collection.find_one({
             '_id': get_connected_user_id()
         })
@@ -278,6 +298,8 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
     def update_api_key(self):
         """
         Get or change the API key
+
+        path: /api/settings/reset_api_key
         """
         new_token = secrets.token_urlsafe()
         new_api_key = secrets.token_urlsafe()
@@ -299,6 +321,8 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
     def set_system_default_columns(self):
         """
         Save the system default columns of entities table
+
+        path: /api/settings/system_default_columns
         """
         post_data = self.get_request_data_as_object()
         self.system_collection.update_one(
@@ -315,6 +339,9 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
     def get_password_policy_requirements(self):
         """
         Get the current complexity specifications for enforcing the Password Policy
+
+        path: /api/settings/password_policy
+
         :return:
         """
         if not self._password_policy_settings or not self._password_policy_settings['enabled']:

@@ -8,6 +8,9 @@ from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 class Labels:
     @gui_route_logged_in(enforce_permissions=False)
     def get_labels(self):
+        """
+        path: /api/labels
+        """
         return jsonify(self._get_labels())
 
     @staticmethod

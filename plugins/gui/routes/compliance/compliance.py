@@ -37,7 +37,9 @@ class Compliance:
 
     @gui_route_logged_in('initial_cis', methods=['GET'])
     def get_compliance_info(self):
-
+        """
+        path: /api/compliance/initial_cis
+        """
         try:
             return jsonify(get_compliance_initial_cis())
         except Exception as e:
@@ -46,6 +48,9 @@ class Compliance:
 
     @gui_route_logged_in('<name>/filters', methods=['GET'])
     def get_compliance_filters(self, name):
+        """
+        path: /api/compliance/<name>/filters
+        """
         try:
             return jsonify(get_compliance_filters(name))
         except Exception as e:
@@ -55,6 +60,9 @@ class Compliance:
     @include_rules_in_score()
     @gui_route_logged_in('<name>/rules', methods=['POST'], activity_params=['cis_title'])
     def update_compliance_rules(self, name, rules):
+        """
+        path: /api/compliance/<name>/rules
+        """
         try:
             return jsonify(update_rules_score_flag(name, rules))
         except Exception as e:
@@ -70,6 +78,9 @@ class Compliance:
     @gui_route_logged_in('<name>/<method>', methods=['GET', 'POST'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Compliance), skip_activity=True)
     def compliance(self, name, method, accounts, rules, categories, failed_only, aggregated, api_format: bool = True):
+        """
+        path: /api/compliance/<name>/<method>
+        """
         response = self._get_compliance(name, method, accounts, rules, categories, failed_only, aggregated)
         if api_format:
             response_dict = json.loads(response.data)
@@ -95,6 +106,9 @@ class Compliance:
     @gui_route_logged_in('<name>/csv', methods=['POST'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Compliance))
     def compliance_csv(self, name, schema_fields, accounts, rules, categories, failed_only, aggregated):
+        """
+        path: /api/compliance/<name>/csv
+        """
         return self._post_compliance_csv(name, schema_fields, accounts, rules, categories, failed_only, aggregated)
 
     @staticmethod
@@ -159,6 +173,9 @@ class Compliance:
         PermissionAction.Add, PermissionCategory.Enforcements), activity_params=['cis_title'])
     def send_compliance_email(self, name, schema_fields, accounts, email_props, rules, categories, failed_only,
                               aggregated):
+        """
+        path: /api/compliance/<name>/send_email
+        """
         try:
             if not self._is_compliance_visible():
                 return return_error('Cloud asset compliance is not visible', http_status=400)
@@ -257,6 +274,9 @@ class Compliance:
     @gui_route_logged_in('<name>/create_jira', methods=['POST'], required_permission=PermissionValue.get(
         PermissionAction.Add, PermissionCategory.Enforcements), activity_params=['cis_title'])
     def create_jira_issue(self, name, schema_fields, accounts, jira_props, rules, categories, failed_only, aggregated):
+        """
+        path: /api/compliance/<name>/create_jira
+        """
         try:
             if not self._is_compliance_visible():
                 return return_error('Cloud asset compliance is not visible', http_status=400)
@@ -291,6 +311,9 @@ class Compliance:
                              PermissionAction.Update, PermissionCategory.Compliance, PermissionCategory.Comments),
                          skip_activity=True)
     def api_update_compliance_comments(self, name):
+        """
+        path: /api/compliance/<name>/comments
+        """
         content = self.get_request_data_as_object()
         comment = content.get('comment', {})
 

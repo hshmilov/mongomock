@@ -15,6 +15,9 @@ class GraphQLAPI:
     @gui_route_logged_in('search/devices', methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.DevicesAssets))
     def search_devices(self, limit, skip):
+        """
+        path: /api/graphql/search/devices
+        """
         response = graphql.search_devices(request.args.get('term'), limit, skip, request.args.get('count', False))
         if not response:
             return None
@@ -26,6 +29,9 @@ class GraphQLAPI:
     @gui_route_logged_in('search/users', methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.UsersAssets))
     def search_users(self, limit, skip):
+        """
+        path: /api/graphql/search/users
+        """
         response = graphql.search_users(request.args.get('term'), limit, skip, request.args.get('count', False))
         if not response:
             return None

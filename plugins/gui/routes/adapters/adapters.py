@@ -52,6 +52,9 @@ class Adapters(Connections):
     @return_api_format()
     @gui_route_logged_in(enforce_trial=False)
     def adapters(self, api_format=True):
+        """
+        path: /api/adapters
+        """
         if api_format:
             adapters = self._adapters()
             for adapter_name in adapters.keys():
@@ -71,6 +74,9 @@ class Adapters(Connections):
 
     @gui_route_logged_in('list', enforce_permissions=False)
     def adapters_list(self):
+        """
+        path: /api/adapters/list
+        """
         adapters = self._adapters_v2()
         adapters_meta = get_adapters_metadata()
         configured_adapters = []
@@ -87,6 +93,8 @@ class Adapters(Connections):
     def hint_raise_adapter(self, plugin_name: str):
         """
         Raises all instances of the given plugin name
+
+        path: /api/adapters/hint_raise/<plugin_name>
         """
         plugins_to_raise = self.core_configs_collection.find({
             PLUGIN_NAME: plugin_name,
@@ -118,6 +126,9 @@ class Adapters(Connections):
     @gui_route_logged_in('<plugin_name>/advanced_settings', methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Adapters))
     def get_adapter_advanced_settings_schema(self, plugin_name):
+        """
+        path: /api/adapters/<plugin_name>/advanced_settings
+        """
         return jsonify(self._adapter_advanced_config_schema(plugin_name))
 
     @rev_cached(ttl=10, remove_from_cache_ttl=60)
@@ -364,6 +375,8 @@ class Adapters(Connections):
         This is needed for the case that user has permissions to disable entities but is restricted from adapters.
         The user would need to know which entities can be disabled, according to the features of their adapters.
 
+        path: /api/adapters/adapter_features
+
         :return: Dict between unique plugin name of the adapter and their list of features
         """
         plugins_available = self.get_available_plugins_from_core()
@@ -418,6 +431,9 @@ class Adapters(Connections):
                          required_permission=PermissionValue.get(PermissionAction.View, PermissionCategory.Adapters),
                          skip_activity=True)
     def adapter_upload_file(self, adapter_name, node_id):
+        """
+        path: /api/adapters/<adapter_name>/<node_id>/upload_file
+        """
         adapter_unique_name = self.request_remote_plugin(
             f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}').json().get('plugin_unique_name')
 
@@ -468,7 +484,9 @@ class Adapters(Connections):
 
     @gui_route_logged_in('<adapter_name>/<config_name>', methods=['POST'], enforce_trial=False, skip_activity=True)
     def update_adapter(self, adapter_name, config_name):
-
+        """
+        path: /api/adapters/<adapter_name>/<config_name>
+        """
         config_from_db = self.plugins.get_plugin_settings(adapter_name).configurable_configs[config_name]
         config_to_set = request.get_json(silent=True)
 
@@ -496,6 +514,8 @@ class Adapters(Connections):
     def get_plugin_configs(self, plugin_name, config_name):
         """
         Get a specific config on a specific plugin
+
+        path: /api/adapters/<plugin_name>/<config_name>
         """
         plugin_name = self._get_plugin_name(plugin_name)
         config, schema = self._get_adapter_configs(config_name, plugin_name)
@@ -508,6 +528,8 @@ class Adapters(Connections):
     @gui_route_logged_in('labels', methods=['GET'], enforce_permissions=False)
     def adapters_client_labels(self) -> list:
         """
+        path: /api/adapters/labels
+
         :return: list of connection label mapping -> [{client_id,connection_label,plugin_uniq_name,node_id}} ]  instance
         """
         clients_label = []

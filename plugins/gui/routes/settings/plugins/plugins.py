@@ -61,6 +61,8 @@ class Plugins:
         Status will be "error" if the plugin is not registered.
         Otherwise it will be "success", if currently running or "warning", if  stopped.
 
+        path: /api/settings/plugins
+
         :mongo_filter
         :return: List of plugins with
         """
@@ -104,6 +106,8 @@ class Plugins:
     def get_default_plugin_configs(self, plugin_name):
         """
         Get the default config of a specific plugin
+
+        path: /api/settings/plugins/<plugin_name>
         """
         config_name = None
         if plugin_name == GUI_PLUGIN_NAME:
@@ -118,6 +122,8 @@ class Plugins:
     def update_default_plugin_configs(self, plugin_name):
         """
         Get the default config of a specific plugin
+
+        path: /api/settings/plugins/<plugin_name>
         """
         config_name = None
         if plugin_name == GUI_PLUGIN_NAME:
@@ -132,6 +138,8 @@ class Plugins:
     def get_plugin_configs(self, plugin_name, config_name):
         """
         Get a specific config on a specific plugin
+
+        path: /api/settings/plugins/<plugin_name>/<config_name>
         """
         config, schema = self._get_plugin_configs(config_name, plugin_name)
 
@@ -158,6 +166,9 @@ class Plugins:
     @gui_route_logged_in('<plugin_name>/<config_name>', methods=['POST'], enforce_trial=False,
                          activity_params=['config_name'])
     def update_plugin_configs(self, plugin_name, config_name):
+        """
+        path: /api/settings/plugins/<plugin_name>/<config_name>
+        """
         response = self._save_plugin_config(plugin_name, config_name)
         if response:
             return response
@@ -605,6 +616,8 @@ class Plugins:
         Calls endpoint of given plugin_unique_name, according to given command
         The command should comply with the /supported_features of the plugin
 
+        path: /api/settings/plugins/<plugin_unique_name>/<command>
+
         :param plugin_unique_name:
         :return:
         """
@@ -616,6 +629,9 @@ class Plugins:
 
     @gui_route_logged_in('<plugin_name>/upload_file', methods=['POST'], skip_activity=True)
     def plugins_upload_file(self, plugin_name):
+        """
+        path: /api/settings/plugins/<plugin_name>/upload_file
+        """
         return self._upload_file(plugin_name)
 
     def _clean_connection_discovery_from_adapter_clients(self, adapter_unique_name: str):

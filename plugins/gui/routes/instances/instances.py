@@ -25,6 +25,9 @@ class Instances:
 
     @gui_route_logged_in(methods=['GET'])
     def get_instances(self):
+        """
+        path: /api/instances
+        """
         db_connection = self._get_db_connection()
         nodes = self._filter_nodes_retention_data(self._get_nodes_table())
         system_config = db_connection['gui']['system_collection'].find_one({'type': 'server'}) or {}
@@ -42,6 +45,9 @@ class Instances:
 
     @gui_route_logged_in('selectable_instances', methods=['GET'], enforce_permissions=False)
     def get_instances_list(self):
+        """
+        path: /api/instances/selectable_instances
+        """
         return jsonify([{NODE_ID: node[NODE_ID], NODE_NAME: node[NODE_NAME]} for node in self._get_nodes_table()])
 
     def update_instance(self, instance_data, attributes):
@@ -56,6 +62,9 @@ class Instances:
 
     @gui_route_logged_in(methods=['POST'], skip_activity=True)
     def update_instances(self):
+        """
+        path: /api/instances
+        """
         data = self.get_request_data_as_object()
 
         # REACTIVATE NODE
@@ -78,6 +87,9 @@ class Instances:
                          required_permission=PermissionValue.get(PermissionAction.Update, PermissionCategory.Instances),
                          skip_activity=True)
     def delete_instances(self):
+        """
+        path: /api/instances
+        """
         data = self.get_request_data_as_object()
         node_ids = data[NODE_DATA_INSTANCE_ID]
         if self.node_id in node_ids:
@@ -158,6 +170,9 @@ class Instances:
 
     @gui_route_logged_in('tags', methods=['POST'])
     def update_instances_tags(self):
+        """
+        path: /api/instances/tags
+        """
         data = self.get_request_data_as_object()
         self.request_remote_plugin(f'nodes/tags/{data["node_id"]}', method='POST', json={'tags': data['tags']})
         return ''
@@ -165,6 +180,9 @@ class Instances:
     @gui_route_logged_in('tags', methods=['DELETE'], required_permission=PermissionValue.get(
         PermissionAction.Update, PermissionCategory.Instances))
     def delete_instances_tags(self):
+        """
+        path: /api/instances/tags
+        """
         data = self.get_request_data_as_object()
         self.request_remote_plugin(f'nodes/tags/{data["node_id"]}', method='DELETE', json={'tags': data['tags']})
         return ''

@@ -71,7 +71,9 @@ class Tasks:
     @search_filter()
     @gui_route_logged_in()
     def enforcement_tasks(self, limit, skip, mongo_filter, mongo_sort, search):
-
+        """
+        path: /api/enforcements/tasks
+        """
         if mongo_sort.get('status'):
             mongo_sort['job_completed_state'] = -1 * mongo_sort['status']
             del mongo_sort['status']
@@ -90,6 +92,8 @@ class Tasks:
     def enforcement_tasks_count(self, mongo_filter):
         """
         Counts how many 'run' tasks are documented in the trigger history of reports plugin
+
+        path: /api/enforcements/tasks/count
         """
         return jsonify(self.enforcement_tasks_runs_collection.count_documents(self._tasks_query(mongo_filter)))
 
@@ -97,6 +101,8 @@ class Tasks:
     def enforcement_task_by_id(self, task_id):
         """
         Fetch an entire 'run' record with all its results, according to given task_id
+
+        path: /api/enforcements/tasks/<task_id>
         """
 
         def beautify_task(task):

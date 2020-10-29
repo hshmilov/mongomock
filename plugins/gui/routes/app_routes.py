@@ -57,6 +57,8 @@ class AppRoutes(Signup,
         """
         Returns a dictionary between all string names and string values in the system.
         This is used to print "nice" spacted strings to the user while not using them as variable names
+
+        path: /api/get_constants
         """
 
         def dictify_enum(e):
@@ -73,6 +75,8 @@ class AppRoutes(Signup,
         """
         Whether system has currently expired it's trial or contract.
         If no trial or contract expiration date, answer will be false.
+
+        path: /api/system/expired
         """
         feature_flags_config = self.feature_flags_config()
         if feature_flags_config.get(FeatureFlagsNames.TrialEnd):
@@ -83,11 +87,17 @@ class AppRoutes(Signup,
 
     @gui_route_logged_in('google_analytics/collect', methods=['GET', 'POST'], enforce_permissions=False)
     def google_analytics_proxy(self):
+        """
+        path: /api/google_analytics/collect
+        """
         self.handle_ga_request('https://www.google-analytics.com/collect')
         return ''
 
     @gui_route_logged_in('google_analytics/r/collect', methods=['GET', 'POST'], enforce_permissions=False)
     def google_analytics_r_proxy(self):
+        """
+        path: /api/google_analytics/r/collect
+        """
         self.handle_ga_request('https://www.google-analytics.com/r/collect')
         return ''
 
@@ -125,22 +135,34 @@ class AppRoutes(Signup,
 
     @add_rule_unauth('provision')
     def get_provision(self):
+        """
+        path: /api/provision
+        """
         return jsonify(self._maintenance_config.get('provision', True) or
                        self._maintenance_config.get('timeout') is not None)
 
     @add_rule_unauth('analytics')
     def get_analytics(self):
+        """
+        path: /api/analytics
+        """
         return jsonify(self._maintenance_config.get('analytics', True) or
                        self._maintenance_config.get('timeout') is not None)
 
     @add_rule_unauth('troubleshooting')
     def get_troubleshooting(self):
+        """
+        path: /api/troubleshooting
+        """
         return jsonify(self._maintenance_config.get('troubleshooting', True) or
                        self._maintenance_config.get('timeout') is not None)
 
     @gui_route_logged_in('csrf', methods=['GET'], enforce_permissions=False)
     # pylint: disable=no-self-use
     def csrf(self):
+        """
+        path: /api/csrf
+        """
         if session and 'csrf-token' in session:
             session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
             resp = Response(session['csrf-token'])
@@ -150,4 +172,7 @@ class AppRoutes(Signup,
 
     @add_rule_unauth('get_environment_name')
     def get_environment_name(self):
+        """
+        path: /api/get_environment_name
+        """
         return jsonify({'environment_name': self._get_environment_name()})

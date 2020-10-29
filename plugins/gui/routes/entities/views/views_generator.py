@@ -28,6 +28,10 @@ def views_generator(base_permission_category: PermissionCategory):
                       include_details: bool = False):
             """
             Get saved view for the entity
+
+            path: /api/devices/views/<query_type>
+            path: /api/users/views/<query_type>
+
             :return:
             """
             views = self._get_entity_views(self.entity_type, limit, skip, mongo_filter, mongo_sort, query_type)
@@ -56,6 +60,10 @@ def views_generator(base_permission_category: PermissionCategory):
         def add_entity_views(self, no_access):
             """
             Add views over the devices db
+
+            path: /api/devices/views
+            path: /api/devices/views
+
             :return:
             """
             # If there are no permissions, also check that the request doesn't relate to the private query
@@ -71,6 +79,9 @@ def views_generator(base_permission_category: PermissionCategory):
         def delete_views(self, query_type, mongo_filter, no_access):
             """
             Delete views over the devices db
+
+            path: /api/devices/views/<query_type>
+            path: /api/devices/views/<query_type>
             """
             # If there are no permissions, also check that the request doesn't relate to the private query
             # Only then we report error and exit
@@ -84,6 +95,9 @@ def views_generator(base_permission_category: PermissionCategory):
         def delete_sq_from_panel(self, view_id, no_access):
             """
             Delete Entity View by ID
+
+            path: /api/devices/views/view/<view_id>
+            path: /api/users/views/view/<view_id>
             """
             if no_access and not request.get_json().get('private'):
                 return return_error('You are lacking some permissions for this request', 401)
@@ -99,6 +113,10 @@ def views_generator(base_permission_category: PermissionCategory):
         def views_update(self, query_id, no_access):
             """
             Update name of an existing view
+
+            path: /api/devices/views/<query_id>
+            path: /api/users/views/<query_id>
+
             :return:
             """
             # If there are no permissions, also check that the request doesn't relate to the private query
@@ -114,6 +132,10 @@ def views_generator(base_permission_category: PermissionCategory):
         def views_publish(self, query_id):
             """
             Sets private view to public
+
+            path: /api/devices/views/<query_id>/publish
+            path: /api/users/views/<query_id>/publish
+
             :return:
             """
             error = self._update_entity_views(self.entity_type, query_id)
@@ -122,17 +144,29 @@ def views_generator(base_permission_category: PermissionCategory):
         @gui_route_logged_in('tags', methods=['GET'], required_permission=PermissionValue.get(
             PermissionAction.View, base_permission_category))
         def get_entity_saved_queries_tags(self):
+            """"
+            path: /api/devices/views/tags
+            path: /api/users/views/tags
+            """
             return jsonify(self._get_queries_tags_by_entity(self.entity_type))
 
         @gui_route_logged_in('names_list', methods=['GET'], required_permission=PermissionValue.get(
             PermissionAction.View, base_permission_category))
         def get_entity_saved_queries_names_list(self):
+            """"
+            path: /api/devices/views/names_list
+            path: /api/users/views/names_list
+            """
             return jsonify(self._get_queries_names_by_entity(self.entity_type))
 
         @filtered()
         @gui_route_logged_in('<query_type>/count', methods=['GET'], required_permission=PermissionValue.get(
             PermissionAction.View, base_permission_category))
         def get_entities_views_count(self, mongo_filter, query_type):
+            """"
+            path: /api/devices/views/<query_type>/count
+            path: /api/users/views/<query_type>/count
+            """
             content = self.get_request_data_as_object()
             quick = content.get('quick') or request.args.get('quick')
             quick = quick == 'True'
@@ -155,6 +189,10 @@ def views_generator(base_permission_category: PermissionCategory):
             """
             return the invalid references that the <query_id> cannot reference (use as a saved_query in the wizard)
             due to circular dependency.
+
+            path: /api/devices/views/references/<query_id>
+            path: /api/users/views/references/<query_id>
+
             :return:
             """
             return jsonify(self._get_saved_query_invalid_references(self.entity_type, query_id))

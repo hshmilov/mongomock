@@ -22,6 +22,9 @@ class UserBulk:
     def delete_users_bulk(self):
         """
         archive all users or all users with id found in a given set.
+
+        path: /api/settings/users/bulk
+
         :return:
         status code 200 - archived all requested users and invalidate their session
         status code 202 - the request partially succeed. Not akk users archived
@@ -98,6 +101,9 @@ class UserBulk:
     def users_assign_role_bulk(self):
         """
         set new role_id to all users or all users with id found in a given set.
+
+        path: /api/settings/users/bulk/assign_role
+
         :return:
         status code 200 - updated all requested users
         status code 202 - the request partially succeed. Not akk users archived

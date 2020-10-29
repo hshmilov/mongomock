@@ -76,6 +76,7 @@ class Charts:
         Return charts data for the requested page.
         Charts attached to the Personal dashboard and a different user the connected one, are excluded
 
+        path: /api/dashboard/charts
         """
         return jsonify(self._get_dashboard(skip, limit))
 
@@ -100,6 +101,8 @@ class Charts:
     def add_dashboard_space_panel(self, space_id, no_access):
         """
         POST a new Dashboard chart configuration, attached to requested space
+
+        path: /api/dashboard/charts/<space_id>
 
         :param space_id: The ObjectId of the space for adding the panel to
         :param no_access: this endpoint called by user with no permissions if true
@@ -260,6 +263,8 @@ class Charts:
         """
         GET partial data of the Dashboard Panel
 
+        path: /api/dashboard/charts/<panel_id>
+
         :param panel_id: The mongo id of the panel to handle
         :param skip: For GET, requested offset of panel's data
         :param limit: For GET, requested limit of panel's data
@@ -348,6 +353,9 @@ class Charts:
     def update_dashboard_panel(self, panel_id, no_access):
         """
         POST an update of the configuration for an existing Dashboard Panel
+
+        path: /api/dashboard/charts/<panel_id>
+
         :param panel_id: The mongo id of the panel to handle
         :param no_access: this endpoint called by user with no permissions if true
         :return: chart name / dashboard name
@@ -410,6 +418,8 @@ class Charts:
         """
         DELETE an existing Dashboard Panel and DELETE its panelId from the
         "panels_order" in the "dashboard_space" collection
+
+        path: /api/dashboard/charts/<panel_id>
 
         :param panel_id: The mongo id of the panel to handle
         :param no_access: this endpoint called by user with no permissions if true
@@ -476,6 +486,8 @@ class Charts:
                          activity_params=[SOURCE_SPACE_NAME, TARGET_SPACE_NAME, CHART_NAME])
     def move_dashboard_panel(self, panel_id):
         """
+        path: /api/dashboard/charts/move/<panel_id>
+
         :param panel_id: The mongo id of the panel to handle
         """
         destination_space_id = self.get_request_data_as_object().get('destinationSpace')
@@ -522,6 +534,9 @@ class Charts:
     @gui_route_logged_in('reorder/<space_id>', methods=['GET'], enforce_trial=False,
                          required_permission=PermissionValue.get(PermissionAction.View, PermissionCategory.Dashboard))
     def get_dashboard_order_space_panels(self, space_id):
+        """
+        path: /api/dashboard/charts/reorder/<space_id>
+        """
         return jsonify(self._dashboard_spaces_collection.find_one({
             '_id': ObjectId(space_id)
         }))
@@ -533,6 +548,9 @@ class Charts:
     @gui_route_logged_in('<panel_id>/csv', methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Dashboard))
     def generate_chart_csv(self, panel_id):
+        """
+        path: /api/dashboard/charts/<panel_id>/csv
+        """
         card = self._dashboard_collection.find_one({
             '_id': ObjectId(panel_id)
         })

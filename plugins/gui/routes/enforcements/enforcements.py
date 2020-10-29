@@ -156,6 +156,8 @@ class Enforcements(Tasks):
         """
         GET results in list of all currently configured enforcements, with their query id they were created with
 
+        path: /api/enforcements
+
         :return:
         """
         enforcements = self._get_enforcements(limit, mongo_filter, mongo_sort, skip, search=search)
@@ -172,6 +174,8 @@ class Enforcements(Tasks):
         """
         PUT Send report_service a new enforcement to be configured
 
+        path: /api/enforcements
+
         :return:
         """
         enforcement_to_add = request.get_json(silent=True)
@@ -186,6 +190,8 @@ class Enforcements(Tasks):
         """
         DELETE delete an enforcement
 
+        path: /api/enforcements
+
         :return:
         """
         enforcement_selection = self.get_request_data_as_object()
@@ -199,12 +205,17 @@ class Enforcements(Tasks):
     @filtered()
     @gui_route_logged_in('count')
     def enforcements_count(self, mongo_filter):
+        """
+        path: /api/enforcements/count
+        """
         return jsonify(self.enforcements_collection.count_documents(mongo_filter))
 
     @gui_route_logged_in('saved')
     def saved_enforcements(self):
         """
         Returns a list of all existing Saved Enforcement names, in order to check duplicates
+
+        path: /api/enforcements/saved
         """
         return jsonify([x['name'] for x in self.enforcements_collection.find({}, {
             'name': 1
@@ -212,6 +223,9 @@ class Enforcements(Tasks):
 
     @gui_route_logged_in('<enforcement_id>', methods=['GET'])
     def get_enforcement_by_id(self, enforcement_id):
+        """
+        path: /api/enforcements/<enforcement_id>
+        """
         def get_saved_action(name):
             if not name:
                 return {}
@@ -249,6 +263,9 @@ class Enforcements(Tasks):
 
     @gui_route_logged_in('<enforcement_id>', methods=['POST'])
     def update_enforcement_by_id(self, enforcement_id):
+        """
+        path: /api/enforcements/<enforcement_id>
+        """
         enforcement_data = request.get_json(silent=True)
         enforcement_to_update = {
             'name': enforcement_data['name'],
@@ -314,6 +331,8 @@ class Enforcements(Tasks):
     def trigger_enforcement_by_id(self, enforcement_id, no_access):
         """
         Triggers a job for the requested enforcement with its first trigger
+
+        path: /api/enforcements/<enforcement_id>/trigger
         """
 
         # If there are no permissions, also check that the request doesn't relate to the enforcement page run
@@ -341,6 +360,8 @@ class Enforcements(Tasks):
     def enforce_entity_custom_data(self, entity_type):
         """
         See self._entity_custom_data
+
+        path: /api/enforcements/<enforcement_id>/custom
         """
         logger.info('Adding Custom Data by Triggered Enforcement')
         return self._entity_custom_data(EntityType(entity_type))
@@ -354,6 +375,9 @@ class Enforcements(Tasks):
 
     @gui_route_logged_in('cache/<cache_name>/delete')
     def _clean_cache(self, cache_name):
+        """"
+        path: /api/enforcements/cache/<cache_name>/delete
+        """
         if cache_name == 'reports_actions':
             logger.info('Cleaning _get_actions_from_reports_plugin cache async...')
             try:
@@ -369,6 +393,8 @@ class Enforcements(Tasks):
     def actions(self):
         """
         Returns all action names and their schema, as defined by the author of the class
+
+        path: /api/enforcements/actions
         """
         response = self._get_actions_from_reports_plugin()
 
@@ -378,6 +404,8 @@ class Enforcements(Tasks):
     def saved_actions(self):
         """
         Returns a list of all existing Saved Action names, in order to check duplicates
+
+        path: /api/enforcements/actions/saved
         """
         return jsonify([x['name'] for x in self.enforcements_saved_actions_collection.find({}, {
             'name': 1
@@ -389,6 +417,9 @@ class Enforcements(Tasks):
     @search_filter()
     @gui_route_logged_in('<enforcement_id>/tasks', methods=['GET'])
     def tasks_by_enforcement_id(self, enforcement_id, limit, skip, mongo_filter, mongo_sort, search):
+        """
+        path: /api/enforcements/<enforcement_id>/tasks
+        """
         enforcement = self.enforcements_collection.find_one({
             '_id': ObjectId(enforcement_id)
         })
@@ -411,6 +442,9 @@ class Enforcements(Tasks):
     @filtered()
     @gui_route_logged_in('<enforcement_id>/tasks/count', methods=['GET'])
     def tasks_by_enforcement_id_count(self, enforcement_id, mongo_filter):
+        """
+        path: /api/enforcements/<enforcement_id>/tasks/count
+        """
         enforcement = self.enforcements_collection.find_one({
             '_id': ObjectId(enforcement_id)
         })
@@ -423,6 +457,9 @@ class Enforcements(Tasks):
 
     @gui_route_logged_in('actions/upload_file', methods=['POST'], skip_activity=True)
     def actions_upload_file(self):
+        """
+        path: /api/enforcements/actions/upload_file
+        """
         return self._upload_file(DEVICE_CONTROL_PLUGIN_NAME)
 
     def _get_action_type(self, action_name):

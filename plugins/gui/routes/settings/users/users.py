@@ -50,6 +50,9 @@ class Users:
         :param limit: limit for pagination
         :param skip: start index for pagination
         :param mongo_sort: sort the users by a field and a sort order
+
+        path: /api/settings/users
+
         :return:
         """
         return self._get_user_pages(limit=limit, skip=skip, sort=mongo_sort)
@@ -58,6 +61,8 @@ class Users:
         PermissionAction.GetUsersAndRoles, PermissionCategory.Settings))
     def system_users_count(self):
         """
+        path: /api/settings/users
+
         :return: filtered users collection size (without axonius users)
         """
         role_ids_to_display = self._get_system_users_role_ids()
@@ -73,6 +78,9 @@ class Users:
     def get_username_list(self):
         """
         Designated endpoint for getting all used user names
+
+        path: /api/settings/users/username_list
+
         :return: set of user names
         """
         users = self._users_collection.find(
@@ -85,6 +93,8 @@ class Users:
     def add_users(self):
         """
         PUT Create a new user
+
+        path: /api/settings/users
 
         :return:
         """
@@ -275,6 +285,8 @@ class Users:
     def update_user(self, user_id):
         """
             Updates user info
+
+            path: /api/settings/users/<user_id>
         """
         return self._update_user(user_id)
 
@@ -341,6 +353,8 @@ class Users:
     def delete_user(self, user_id):
         """
             Deleting a user
+
+            path: /api/settings/users/<user_id>
         """
         user = self._users_collection.find_one_and_update({'_id': ObjectId(user_id)},
                                                           {'$set': {'archived': True}},

@@ -30,6 +30,9 @@ class Connections:
     @gui_route_logged_in(methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Adapters))
     def get_adapter_connections_data(self, adapter_name):
+        """
+        path: /api/adapters/<adapter_name>/connections
+        """
         return jsonify(self._get_adapter_connections_data(adapter_name))
 
     @gui_route_logged_in(methods=['PUT'], activity_params=['adapter_name', 'client_id'], skip_activity=True)
@@ -38,6 +41,8 @@ class Connections:
         Save and query assets for given connection data
         Request data is expected to contain the adapter name, instance id and connection parameters
         It may contain a label to name the connection
+
+        path: /api/adapters/<adapter_name>/connections
 
         :return: {
             id: <ObjectId of inserted document>
@@ -80,6 +85,9 @@ class Connections:
 
     @gui_route_logged_in('test', methods=['POST'], skip_activity=True)
     def test_connection(self, adapter_name):
+        """
+        path: /api/adapters/<adapter_name>/connections/test
+        """
         request_data = self.get_request_data_as_object()
         if not request_data:
             return return_error('Adapter name and connection data are required', 400)
@@ -93,6 +101,9 @@ class Connections:
     @gui_route_logged_in('<connection_id>', methods=['POST', 'DELETE'], activity_params=['adapter_name', 'client_id'],
                          skip_activity=True)
     def update_connection(self, adapter_name, connection_id):
+        """
+        path: /api/adapters/<adapter_name>/connections/<connection_id>
+        """
         request_data = self.get_request_data_as_object()
         if not request_data:
             return return_error('Adapter name and connection data are required', 400)

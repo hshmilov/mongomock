@@ -42,6 +42,9 @@ class Tunnel:
         """
         Check the tunnel status by pinging the tunnel server and making sure it response
         If the status has changed since last time (taken first time when gui container is up) it updates accordingly.
+
+        path: /api/tunnel/get_status
+
         :param internal_use: For internal use only (logging, sending emails, internal calls not related to user)
         :return: Response object with the text 'True' or 'False' that corresponds the tunnel status.
         """
@@ -96,6 +99,9 @@ class Tunnel:
     def generate_dockerfile_for_agent(self):
         """
         Generate a unique installer to the customer
+
+        path: /api/tunnel/download_agent
+
         :return: A sh file (bash script) for installing the tunnel.
         """
         headers = {
@@ -121,6 +127,9 @@ class Tunnel:
 
     @gui_route_logged_in('emails_list', methods=['GET', 'POST'], enforce_trial=True)
     def emails_list(self):
+        """
+        path: /api/tunnel/emails_list
+        """
         if request.method == 'GET':
             return Response(json.dumps(self._get_tunnel_email_recipients()))
         new_emails = request.get_json()
@@ -136,6 +145,9 @@ class Tunnel:
 
     @gui_route_logged_in('proxy_settings', methods=['GET', 'POST'], enforce_trial=True)
     def proxy_settings(self):
+        """
+        path: /api/tunnel/proxy_settings
+        """
         if request.method == 'GET':
             return Response(json.dumps(self._get_tunnel_proxy_settings()))
 
