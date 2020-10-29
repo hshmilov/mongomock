@@ -7,7 +7,7 @@ export default function CheckVersion() {
   let newHash = '';
 
   const hasHashChanged = () => {
-    if (!currentHash || currentHash === '{{POST_BUILD_ENTERS_HASH_HERE}}') {
+    if (!currentHash || currentHash !== '{{POST_BUILD_ENTERS_HASH_HERE}}') {
       return true;
     }
 
