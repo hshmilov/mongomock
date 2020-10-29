@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-exit 0
+
 cd "$(dirname "$0")"
 
 echo "Creating venv"
