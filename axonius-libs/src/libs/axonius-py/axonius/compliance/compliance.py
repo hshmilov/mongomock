@@ -184,6 +184,13 @@ def get_active_adapters():
     }, projection={'plugin_name': 1})
 
 
+def is_module_active(active_adapters, module_name):
+    for adapter_name in active_adapters:
+        if module_name in adapter_name:
+            return True
+    return False
+
+
 def get_initial_cis_selection():
     """
     return the initial cis selection.
@@ -191,13 +198,10 @@ def get_initial_cis_selection():
         or 'aws' if no match found.
     :rtype: str
     """
-    active_adapters = get_active_adapters()
-
-    for adapter in active_adapters:
-        adapter_name = adapter.get('plugin_name', '')
-        for module_name in COMPLIANCE_MODULES:
-            if module_name in adapter_name:
-                return module_name
+    active_adapters = [adapter.get('plugin_name', '') for adapter in get_active_adapters()]
+    for module_name in COMPLIANCE_MODULES:
+        if is_module_active(active_adapters, module_name):
+            return module_name
     return 'aws'
 
 
