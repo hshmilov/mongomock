@@ -74,6 +74,10 @@ class TestCustomDiscoverySchedule(TestBase):
             client_fetch_time = self._get_client_last_fetch_time(JSON_CLIENT_NAME)
             client_relative_fetch_time = datetime.utcnow()
             wait_until(
+                lambda: axonius_system.scheduler.log_tester.is_str_in_log(
+                    'Finished Custom Discovery Connection trigger', 10),
+                total_timeout=MAX_WAIT_TIME_FOR_CUSTOM_DISCOVERY)
+            wait_until(
                 lambda: self._get_client_last_fetch_time(JSON_CLIENT_NAME, client_fetch_time),
                 total_timeout=MAX_WAIT_TIME_FOR_CUSTOM_DISCOVERY,
                 interval=30)
