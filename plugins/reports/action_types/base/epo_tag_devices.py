@@ -67,6 +67,7 @@ class EpoTagAction(ActionTypeBase):
         current_result = self._get_entities_from_view({
             'adapters.data.name': 1,
             'internal_axon_id': 1,
+            'adapters.client_used': 1,
             'adapters.plugin_name': 1,
         })
         results = []

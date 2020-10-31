@@ -129,7 +129,7 @@ class DuoAdapter(AdapterBase):
         user.last_name = raw_user_data.get('lastname')
         user_status = raw_user_data.get('status')
         user.user_status = user_status
-        if user_status == 'disabled':
+        if user_status in ['disabled', 'pending deletion']:
             user.account_disabled = True
         else:
             user.account_disabled = False

@@ -78,7 +78,7 @@ class InfobloxConnection(RESTConnection):
         try:
             for network_raw in self.__get_items_from_url(
                     'network',
-                    url_params={'_return_fields': 'network,extattrs'}
+                    url_params={'_return_fields': 'network,extattrs,comment'}
             ):
                 if not network_raw.get('network'):
                     continue

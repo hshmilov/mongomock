@@ -250,6 +250,7 @@ class CiscoPrimeAdapter(AdapterBase):
                 device.ap_ip_address = ap_ip_address.get('address')
             device.ap_mac_address = raw_device.get('apMacAddress')
             device.ap_name = raw_device.get('apName')
+            device.device_name = raw_device.get('deviceName')
             device.auth_algo = raw_device.get('authenticationAlgorithm')
         except Exception:
             logger.exception(f'Problem getting AP info for {raw_device}')

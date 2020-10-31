@@ -155,7 +155,7 @@ class LogicmonitorAdapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with id {device_id} has no ID: {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('displayName') or '')
+            device.id = str(device_id) + '_' + (device_raw.get('displayName') or '')
             device.set_raw(device_raw)
 
             device.hostname = device_raw.get('name')

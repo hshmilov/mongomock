@@ -1,3 +1,4 @@
+import ipaddress
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -141,6 +142,7 @@ class AwakeAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Failed creating instance for device {device_raw}')
 
+    # pylint: disable=too-many-locals, too-many-nested-blocks, too-many-branches, too-many-statements
     def _create_device(self, device_raw: dict, device: MyDeviceAdapter):
         try:
             device_id = device_raw.get('deviceId')
@@ -158,6 +160,16 @@ class AwakeAdapter(AdapterBase):
             device.last_seen = parse_date(device_raw.get('lastSeen'))
             device.figure_os(device_raw.get('os'))
             if isinstance(device_raw.get('ips'), list):
+                ips = device_raw.get('ips')
+                try:
+                    if self.__cidr_blacklist_networks:
+                        for ip in ips:
+                            ip = ipaddress.IPv4Address(ip)
+                            if any(ip in bnc for bnc in self.__cidr_blacklist_networks):
+                                # this address is in the cidr blacklist
+                                return None
+                except Exception:
+                    logger.exception(f'Problem with ip black list')
                 device.add_nic(ips=device_raw.get('ips'))
             self._fill_awake_device_fields(device_raw, device)
 
@@ -187,3 +199,35 @@ class AwakeAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Agent]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'cidr_blacklist',
+                    'title': 'CIDR Blacklist',
+                    'type': 'string'
+                }
+            ],
+            'required': [
+            ],
+            'pretty_name': 'Awake Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'cidr_blacklist': None
+        }
+
+    def _on_config_update(self, config):
+        cidr_blacklist = config.get('cidr_blacklist')
+        self.__cidr_blacklist_networks = []
+        if cidr_blacklist and isinstance(cidr_blacklist, str):
+            for cidr_blacklist_network in cidr_blacklist.split(','):
+                try:
+                    self.__cidr_blacklist_networks.append(ipaddress.IPv4Network(cidr_blacklist_network.strip()))
+                except Exception:
+                    logger.exception(f'Could not add cidr {cidr_blacklist_network} to blacklist')

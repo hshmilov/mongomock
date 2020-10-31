@@ -295,7 +295,7 @@ class FeatureFlags(Configurable):
             FeatureFlagsNames.BandicootCompare: False,
             FeatureFlagsNames.ExperimentalAPI: False,
             FeatureFlagsNames.CloudCompliance: {
-                CloudComplianceNames.Visible: False,
+                CloudComplianceNames.Visible: True,
                 CloudComplianceNames.Enabled: False,
                 CloudComplianceNames.ExpiryDate: '',
             },

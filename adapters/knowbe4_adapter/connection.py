@@ -69,7 +69,7 @@ class Knowbe4Connection(RESTConnection):
             pst_count += 1
             pst_id = sec_test_raw.get('pst_id')
             try:
-                pst_id_data = self._get(f'phishing/security_tests/{pst_id}/recipients')
+                pst_id_data = self._get_paginated(f'phishing/security_tests/{pst_id}/recipients')
                 for pst_user in pst_id_data:
                     if not pst_user.get('user') or not pst_user['user'].get('id'):
                         continue

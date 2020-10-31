@@ -425,6 +425,11 @@
     "link": "https://docs.axonius.com/docs/cisco-unified-communications-manager-ucm",
     "description": "Cisco Unified Communications Manager provides secure and manageable call control and session management."
   },
+  "traps_adapter": {
+    "title": "Traps Endpoint Security Manager",
+    "link": "https://docs.axonius.com/docs/traps",
+    "description": "Traps Endpoint Security Manager (ESM) prevents advanced persistent threats (APTs) and zero-day attacks. Traps also provides protection for endpoints by blocking attack vectors before any malware is initiated or software vulnerabilities or bugs are exploited."
+  },
   "randori_adapter": {
     "title": "Randori",
     "link": "https://docs.axonius.com/docs/randori",
@@ -1541,7 +1546,7 @@
     "link": "https://docs.axonius.com/docs/sal",
     "description": "Sal is an open-source reporting solution for managed endpoints."
   },
-    "flexnet_adapter": {
+  "flexnet_adapter": {
     "title": "FlexNet Manager Suite Cloud - BETA",
     "link": "https://docs.axonius.com/docs/flexnet-manager-suite-cloud",
     "description": "FlexNet Manager Suite Cloud from Flexera is a SaaS offering for software license compliance and license optimization."

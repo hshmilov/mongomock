@@ -199,6 +199,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             retry_sleep_time=self.__retry_sleep_time,
             devices_per_page=self.__devices_per_page,
             https_proxy=client_config.get('https_proxy'),
+            proxy_username=client_config.get('proxy_username'),
+            proxy_password=client_config.get('proxy_password'),
             fetch_from_inventory=self.__fetch_from_inventory,
             fetch_report=self.__fetch_report,
             fetch_tickets=self.__fetch_tickets,
@@ -246,7 +248,18 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 {'name': consts.PASSWORD, 'title': 'Password', 'type': 'string', 'format': 'password'},
                 {'name': consts.QUALYS_TAGS_WHITELIST, 'title': 'Qualys Tags Whitelist', 'type': 'string'},
                 {'name': consts.VERIFY_SSL, 'title': 'Verify SSL', 'type': 'bool'},
-                {'name': 'https_proxy', 'title': 'HTTPS Proxy', 'type': 'string'}
+                {'name': 'https_proxy', 'title': 'HTTPS Proxy', 'type': 'string'},
+                {
+                    'name': 'proxy_username',
+                    'title': 'HTTPS Proxy User Name',
+                    'type': 'string'
+                },
+                {
+                    'name': 'proxy_password',
+                    'title': 'HTTPS Proxy Password',
+                    'type': 'string',
+                    'format': 'password'
+                }
             ],
             'required': [consts.QUALYS_SCANS_DOMAIN, consts.USERNAME, consts.PASSWORD, consts.VERIFY_SSL],
             'type': 'array',

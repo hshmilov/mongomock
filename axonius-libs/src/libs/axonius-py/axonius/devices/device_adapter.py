@@ -185,7 +185,7 @@ class DeviceAdapterOS(SmartJsonClass):
         str, 'Type', enum=['Windows', 'Linux', 'OS X', 'iOS', 'AirOS',
                            'Android', 'FreeBSD', 'VMWare', 'Cisco', 'Mikrotik', 'VxWorks', 'PanOS',
                            'F5 Networks Big-IP', 'Solaris', 'AIX', 'Printer', 'PlayStation', 'Check Point', "Arista",
-                           'Netscaler', 'Chrome OS']
+                           'Netscaler', 'Chrome OS', 'FortiOs']
     )
     distribution = Field(str, 'Distribution', enum=ENUM_WINDOWS_VERSIONS, skip_enum_check=True,
                          json_format=JsonStringFormat.os_distribution)
@@ -627,6 +627,7 @@ class TenableVulnerability(SmartJsonClass):
     has_been_mitigated = Field(bool, 'Mitigated')
     xref = ListField(str, 'Cross References')
     port = Field(int, 'Port')
+    vpr_score = Field(str, 'VPR Score')
     protocol = Field(str, 'Protocol')
 
 

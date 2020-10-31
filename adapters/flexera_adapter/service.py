@@ -469,6 +469,7 @@ class FlexeraAdapter(AdapterBase, Configurable):
 
             device.assigned_username = device_raw.get('AssignedUserUserName')
             device.assigned_user_email = device_raw.get('AssignedUserEmail')
+            device.email = device_raw.get('AssignedUserEmail')
             device.business_unit = device_raw.get('BusinessUnit')
             device.fnmp_location = device_raw.get('LocationName')
             device.cost_center = device_raw.get('CostCenter')

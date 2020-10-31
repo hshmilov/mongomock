@@ -147,7 +147,7 @@ class OpenstackAdapter(AdapterBase):
                 device.image_name = image.get('name')
                 device.image_create_time = parse_date(image.get('created_at'))
                 device.image_update_time = parse_date(image.get('updated_at'))
-                device.image_uai = image.get('uai')
+                device.image_uai = (image.get('metadata') or {}).get('uai')
             except Exception:
                 logger.exception(f'Problem with image')
 

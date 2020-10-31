@@ -115,6 +115,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         ad_dc_source = Field(str, 'AD DC Source')
         ms_mcs_adm_pwd = Field(str, 'Mc Mcs Admin Pwd')
         ms_mcs_adm_pwd_expiration_time = Field(datetime, 'Mc Mcs Admin Pwd Expiration Time')
+        proxy_addresses = ListField(str, 'Proxy Addresses')
         is_laps_installed = Field(bool, 'Is LAPS Installed')
         resolvable_hostname = ListField(str, 'Resolvable Hostnames')
 
@@ -146,6 +147,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         building = Field(str, 'Building')
         floor = Field(str, 'Floor')
         room = Field(str, 'Room')
+        department_id = Field(str, 'Department ID')
+        department_code = Field(str, 'Department Code')
+        see_also = ListField(str, 'See Also')
 
     def __init__(self):
 
@@ -879,6 +883,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 user.employee_id = user_raw.get('employeeID') or user_raw.get('umwEmployeeID')
                 user.building = user_raw.get('umwBuilding')
                 user.floor = user_raw.get('umwFloor')
+                user.department_id = user_raw.get('umwDepartmentId')
+                user.department_code = user_raw.get('umwDepartmentCode')
+                user.see_also = user_raw.get('seeAlso') if isinstance(user_raw.get('seeAlso'), list) else None
                 user.room = user_raw.get('umwRoom')
                 user.employee_number = user_raw.get('employeeNumber')
                 user.employee_type = user_raw.get('employeeType') or user_raw.get('amdocs-employee-type-code')
@@ -1316,8 +1323,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                     device.device_disabled = bool(user_account_control & LDAP_ACCOUNTDISABLE)
 
                     # Is this a Domain Controller? If so, parse some more things
-                    if user_account_control == (ad_entity.TRUSTED_FOR_DELEGATION | ad_entity.SERVER_TRUST_ACCOUNT) \
-                            or "OU=Domain Controllers" in device_raw['distinguishedName']:
+                    if user_account_control == (ad_entity.TRUSTED_FOR_DELEGATION | ad_entity.SERVER_TRUST_ACCOUNT):
                         device.ad_is_dc = True
 
                         hostname_lower = device_raw.get('dNSHostName', '').lower()
@@ -1455,7 +1461,8 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 # make the subnets list unique
                 subnets_list = list(set(subnets_list))
                 device.add_nic(ips=ips_list, subnets=subnets_list)
-
+                device.proxy_addresses = device_raw.get('proxyAddresses') \
+                    if isinstance(device_raw.get('proxyAddresses'), list) else None
                 device.adapter_properties = [AdapterProperty.Assets.name, AdapterProperty.Manager.name]
                 device.set_raw(device_raw)
 

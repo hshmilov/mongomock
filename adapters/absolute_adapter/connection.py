@@ -20,8 +20,8 @@ class AbsoluteConnection(RESTConnection):
         self._client_secret = client_secret
         self._data_center = data_center.lower()
 
-    def _create_authorization_header_for_get_devices(self, skip):
-        self._create_authorization_header(url='/v2/reporting/devices',
+    def _create_authorization_header_for_url(self, url, skip):
+        self._create_authorization_header(url=url,
                                           url_params=f'%24skip={skip}&%24top={DEVICE_PER_PAGE}')
 
     # pylint: disable=R0914
@@ -69,30 +69,18 @@ class AbsoluteConnection(RESTConnection):
             f'x-abs-date, Signature={signature}'
 
     def _connect(self):
-        self._create_authorization_header_for_get_devices(0)
+        self._create_authorization_header_for_url('/v2/reporting/devices', 0)
         self._get('v2/reporting/devices', url_params={'$skip': 0, '$top': DEVICE_PER_PAGE})
 
-    # pylint: disable=too-many-locals, too-many-nested-blocks, too-many-branches, arguments-differ
-    def get_device_list(self, fetch_cdf=False):
+    def _get_endpoint(self, url):
         skip = 0
         while skip < MAX_NUMBER_OF_DEVICES:
             try:
-                self._create_authorization_header_for_get_devices(skip)
-                devices = self._get('v2/reporting/devices', url_params={'$skip': skip, '$top': DEVICE_PER_PAGE})
+                self._create_authorization_header_for_url(f'/{url}', skip)
+                devices = self._get(url, url_params={'$skip': skip, '$top': DEVICE_PER_PAGE})
                 if devices:
                     for i, device_raw in enumerate(devices):
-                        try:
-                            logger.debug(f'Got to index {i}')
-                            device_id = device_raw.get('id')
-                            if not device_id:
-                                logger.warning(f'Bad device with no ID {device_raw}')
-                                continue
-                            if fetch_cdf:
-                                self._create_authorization_header(url=f'/v2/reporting/devices/{device_id}/cfd',
-                                                                  url_params='')
-                                device_raw['cfd_fields'] = self._get(f'v2/reporting/devices/{device_id}/cfd')
-                        except Exception:
-                            logger.debug(f'Problem getting fields', exc_info=True)
+                        logger.debug(f'Got to index {i}')
                         yield device_raw
                 else:
                     break
@@ -100,3 +88,33 @@ class AbsoluteConnection(RESTConnection):
             except Exception:
                 logger.exception(f'Problem at skip {skip}')
                 break
+
+    # pylint: disable=too-many-locals, too-many-nested-blocks, too-many-branches, arguments-differ
+    def get_device_list(self, fetch_cdf=False, fetch_apps=False):
+        apps_to_device_dict = dict()
+        if fetch_apps:
+            for app_raw in self._get_endpoint('v2/sw/deviceapplications'):
+                try:
+                    device_id = app_raw.get('deviceUid')
+                    if not device_id:
+                        continue
+                    if device_id not in apps_to_device_dict:
+                        apps_to_device_dict[device_id] = []
+                    apps_to_device_dict[device_id].append(app_raw)
+                except Exception:
+                    logger.exception(f'Problem with app {app_raw}')
+
+        for device_raw in self._get_endpoint('v2/reporting/devices'):
+            try:
+                device_id = device_raw.get('id')
+                if not device_id:
+                    logger.warning(f'Bad device with no ID {device_raw}')
+                    continue
+                device_raw['apps_raw'] = apps_to_device_dict.get(device_id)
+                if fetch_cdf:
+                    self._create_authorization_header(url=f'/v2/reporting/devices/{device_id}/cfd',
+                                                      url_params='')
+                    device_raw['cfd_fields'] = self._get(f'v2/reporting/devices/{device_id}/cfd')
+            except Exception:
+                logger.debug(f'Problem getting fields', exc_info=True)
+            yield device_raw

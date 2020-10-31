@@ -69,6 +69,8 @@ class HpeOneviewConnection(RESTConnection):
                         logger.info(f'Done Device pagination, got {len(response.get("members"))} / {DEVICE_PER_PAGE}')
                         break
                     url_params['start'] += len(response.get('members'))
+                    if url_params['start'] >= response.get('total'):
+                        break
                 except Exception:
                     logger.exception(f'Problem at offset: {url_params["start"]}')
 

@@ -50,17 +50,22 @@ class OrcaConnection(RESTConnection):
             yield device_raw, devices_alerts_dict, device_inventory_dict, devices_logs_dict, devices_compliance_dict
 
     def _get_api_endpoint(self, endpoint, url_params=None):
+        logger.info(f'Starting to fetch {endpoint}')
         response = self._get(endpoint, url_params=url_params)
         yield from response['data']
         if not url_params:
             url_params = {}
+        i = 1
         while response.get('next_page_token'):
             try:
+                if i % 10 == 0:
+                    logger.info(f'Got to index {i}')
                 url_params.update({'next_page_token': response.get('next_page_token')})
                 response = self._get(endpoint, url_params=url_params)
                 yield from response['data']
                 if not response['data']:
                     break
+                i += 1
             except Exception:
                 logger.exception(f'Exception in orca fetch')
                 break

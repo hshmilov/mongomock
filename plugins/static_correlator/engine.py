@@ -58,6 +58,7 @@ ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_a
                       'counter_act_adapter', 'tanium_discover_adapter', 'infoblox_adapter', 'aws_adapter',
                       'airwatch_adapter', 'iboss_cloud_adapter']
 DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'counter_act_adapter',
+                      'iboss_cloud_adapter'
                       'infoblox_adapter', 'azure_ad_adapter', 'tanium_discover_adapter',
                       'solarwinds_orion_adapter', 'mssql_adapter']
 SEMI_DANGEROUS_ADAPTERS = ['symantec_adapter', 'tanium_asset_adapter']
@@ -103,7 +104,6 @@ def is_only_host_adapter(adapter_device):
                                               'symantec_dlp_adapter',
                                               'netskope_adapter',
                                               'sumo_logic_adapter',
-                                              'flexera_adapter',
                                               'bigid_adapter',
                                               'json_adapter',
                                               'epo_adapter',
@@ -130,6 +130,8 @@ def is_only_host_adapter(adapter_device):
     if (adapter_device.get('plugin_name').lower() == 'cisco_prime_adapter' and
             adapter_device['data'].get('fetch_proto') == 'CDP'):
         return True
+    if adapter_device.get('plugin_name') in ['flexera_adapter'] and not get_domain_for_correlation(adapter_device):
+        return True
     return False
 
 
@@ -145,10 +147,15 @@ def is_deep_security_device(adapter_device):
     return adapter_device.get('plugin_name') == 'deep_security_adapter'
 
 
+def is_bomgar_adapter(adapter_device):
+    return adapter_device.get('plugin_name') == 'bomgar_adapter'
+
+
 def is_only_host_adapter_or_host_only_force(adapter_device):
     return (is_only_host_adapter(adapter_device) and
             (not adapter_device.get(NORMALIZED_MACS) and not get_normalized_ip(adapter_device))) \
-        or is_palolato_vpn(adapter_device) or is_cherwell_adapter(adapter_device) or is_zscaler_adapter(adapter_device)\
+        or is_palolato_vpn(adapter_device) or is_cherwell_adapter(adapter_device) \
+        or is_zscaler_adapter(adapter_device) or is_bomgar_adapter(adapter_device)\
         or is_service_now_and_no_other(adapter_device) or is_deep_security_device(adapter_device) \
         or is_force_hostname_when_no_mac_device(adapter_device)
 

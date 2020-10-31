@@ -331,7 +331,10 @@ class AzureAdAdapter(AdapterBase, Configurable):
                 device.last_seen = parse_date(device_raw.get('lastSyncDateTime'))
             except Exception:
                 logger.exception(f'Prbolem getting last seen for {device_raw}')
-            device_serial = device_raw.get('serialNumber')
+            hardware_information = device_raw.get('hardwareInformation')
+            if not isinstance(hardware_information, dict):
+                hardware_information = {}
+            device_serial = device_raw.get('serialNumber') or hardware_information.get('serialNumber')
             if device_serial and device_serial not in ['SystemSerialNumber', 'System Serial Number', 'Default string']:
                 device.device_serial = device_serial
             device.phone_number = device_raw.get('phoneNumber')

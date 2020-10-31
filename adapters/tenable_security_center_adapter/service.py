@@ -355,6 +355,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                 cpe = vulnerability.get('cpe') or None
                 cve = vulnerability.get('cve') or None
                 cvss_base_score = vulnerability.get('baseScore') or None
+                vpr_score = vulnerability.get('vprScore')
                 exploit_value = (vulnerability.get('exploitAvailable') or '').lower()
                 exploit_available = None
                 if exploit_value:
@@ -364,7 +365,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                 severity = (vulnerability.get('severity') or {}).get('name') or None
                 plugin_text = vulnerability.get('pluginText') or None
                 first_seen = parse_date(vulnerability.get('firstSeen'))
-                last_seen = parse_date(vulnerability.get('lastSeen'))
+                vuln_last_seen = parse_date(vulnerability.get('lastSeen'))
                 last_mitigated = parse_date(vulnerability.get('lastMitigated'))
                 has_been_mitigated = parse_bool_from_raw(vulnerability.get('hasBeenMitigated'))
 
@@ -399,6 +400,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                                         cpe=cpe,
                                         cve=cve,
                                         cvss_base_score=cvss_base_score,
+                                        vpr_score=vpr_score,
                                         exploit_available=exploit_available,
                                         synopsis=synopsis,
                                         see_also=see_also,
@@ -406,7 +408,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                                         plugin_text=plugin_text,
                                         plugin_id=plugin_id,
                                         first_seen=first_seen,
-                                        last_seen=last_seen,
+                                        last_seen=vuln_last_seen,
                                         last_mitigated=last_mitigated,
                                         has_been_mitigated=has_been_mitigated,
                                         xref=xref,

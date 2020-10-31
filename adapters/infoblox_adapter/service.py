@@ -36,6 +36,7 @@ class InfobloxAdapter(AdapterBase, Configurable):
         fingerprint = Field(str, 'Fingerprint')
         discoverer = Field(str, 'Discoverer')
         fqdn = Field(str, 'Secondary Hostname')
+        network_comment = Field(str, 'Network Comment')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -226,6 +227,7 @@ class InfobloxAdapter(AdapterBase, Configurable):
                             device[f'{normalized_column_name}_str'] = attr_value
                     except Exception:
                         pass
+                device.network_comment = network_data.get('comment')
             except Exception:
                 logger.exception(f'Problem setting external attributes')
             try:
@@ -347,6 +349,7 @@ class InfobloxAdapter(AdapterBase, Configurable):
                             device[f'{normalized_column_name}_str'] = attr_value
                     except Exception:
                         pass
+                device.network_comment = network_data.get('comment')
             except Exception:
                 logger.exception(f'Problem setting external attributes')
             try:

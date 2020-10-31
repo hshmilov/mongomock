@@ -318,6 +318,8 @@ def figure_out_os(s):
     if 'cisco' in s or ('IOS' in orig_s and not any(x in s for x in ios_devices)):
         # If it has 'cisco', or it has 'IOS' (upper letters) and it doesn't have 'iphone', 'ipad', etc.
         os_type = 'Cisco'
+    elif 'fortios' in s:
+        os_type = 'FortiOs'
     elif 'vxworks' in s:
         os_type = 'VxWorks'
     elif 'windows' in s or ('win' in s and 'darwin' not in s and 'aix' not in s and 'sidewin' not in s):
@@ -946,6 +948,7 @@ def hostname_not_problematic(adapter_device):
              and 'general-cloud' not in get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'blank' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'ios' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'ge' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'loaner' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'macbook-air' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'mac-mini' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
@@ -1291,11 +1294,16 @@ def is_epo_adapter(adapter_device):
     return adapter_device.get('plugin_name') == 'epo_adapter'
 
 
+def is_infoblox_netmri_adapter(adapter_deivce):
+    return adapter_deivce.get('plugin_name') == 'infoblox_netmri_adapter'
+
+
 def get_asset_name(adapter_device):
     if adapter_device['data'].get('name') and not is_qualys_adapter(adapter_device) \
             and (not is_bluecat_adapter(adapter_device) or not adapter_device.get(NORMALIZED_MACS)) \
             and not is_tenable_io_adapter(adapter_device) \
             and not is_epo_adapter(adapter_device) \
+            and not is_infoblox_netmri_adapter(adapter_device) \
             and not is_g_naapi_adapter(adapter_device):
         asset = adapter_device['data'].get('name').upper().strip()
         if asset not in ['UNKNOWN']:
@@ -1333,8 +1341,8 @@ def is_start_with_valid_ip(value):
     return is_valid_ip(value)
 
 
-BAD_ASSETS = ['dev', 'localhost', 'delete', 'deleted', 'na', 'macbook-air', 'macbook-pro',
-              'unknown', 'test1', 'stage', 'ipad', 'iphone']
+BAD_ASSETS = ['dev', 'localhost', 'delete', 'deleted', 'na', 'macbook-air', 'macbook-pro', 'ge', '10', '3', 'n/a',
+              'unknown', 'test1', 'test2', 'stage', 'ipad', 'iphone', 'qa']
 
 
 def is_asset_before_host_device(adapter_device):

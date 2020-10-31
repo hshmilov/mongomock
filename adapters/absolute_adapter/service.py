@@ -71,7 +71,8 @@ class AbsoluteAdapter(AdapterBase, Configurable):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list(fetch_cdf=self.__fetch_cdf)
+            yield from client_data.get_device_list(fetch_cdf=self.__fetch_cdf,
+                                                   fetch_apps=self.__fetch_apps)
 
     @staticmethod
     def _clients_schema():
@@ -130,6 +131,18 @@ class AbsoluteAdapter(AdapterBase, Configurable):
                     continue
                 device.id = device_id + '_' + (device_raw.get('fullSystemName') or '') + '_' + \
                     (device_raw.get('systemName') or '')
+                apps_raw = device_raw.get('apps_raw')
+                if not isinstance(apps_raw, list):
+                    apps_raw = []
+                for app_raw in apps_raw:
+                    try:
+                        if not app_raw.get('appName'):
+                            continue
+                        device.add_installed_software(name=app_raw.get('appName'),
+                                                      version=app_raw.get('appVersion'),
+                                                      publisher=app_raw.get('appPublisher'))
+                    except Exception:
+                        logger.exception(f'Problem with app raw')
                 hostname = device_raw.get('systemName')
                 cfd_fields = device_raw.get('cfd_fields')
                 if not isinstance(cfd_fields, dict):
@@ -287,10 +300,16 @@ class AbsoluteAdapter(AdapterBase, Configurable):
                     'name': 'fetch_cdf',
                     'title': 'Fetch custom device fields data',
                     'type': 'bool'
+                },
+                {
+                    'name': 'fetch_apps',
+                    'type': 'bool',
+                    'title': 'Fetch application'
                 }
             ],
             'required': [
                 'fetch_cdf',
+                'fetch_apps'
             ],
             'pretty_name': 'Absolute Configuration',
             'type': 'array'
@@ -299,8 +318,10 @@ class AbsoluteAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'fetch_cdf': False
+            'fetch_cdf': False,
+            'fetch_apps': False
         }
 
     def _on_config_update(self, config):
+        self.__fetch_apps = config['fetch_apps']
         self.__fetch_cdf = config['fetch_cdf']

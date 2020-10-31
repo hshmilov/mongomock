@@ -17,6 +17,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class CloudflareAdapter(AdapterBase):
+    # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         cnames = ListField(str, 'CNames')
         zone_name = Field(str, 'Zone Name')
@@ -26,6 +27,7 @@ class CloudflareAdapter(AdapterBase):
         proxiable = Field(bool, 'Proxiable')
         account_id = Field(str, 'Account ID')
         account_name = Field(str, 'Account Name')
+        proxied = Field(bool, 'Proxied')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -128,6 +130,8 @@ class CloudflareAdapter(AdapterBase):
                 return None
             device.id = str(device_id) + '_' + (device_raw.get('name') or '')
             device.hostname = device_raw.get('name')
+            if isinstance(device_raw.get('proxied'), bool):
+                device.proxied = device_raw.get('proxied')
             if cnamas_dict.get(device_raw.get('name')):
                 device.cnames = cnamas_dict.get(device_raw.get('name'))
             if device_raw.get('content'):

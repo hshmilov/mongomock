@@ -14,15 +14,15 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class LogicmonitorConnection(RESTConnection):
     """ rest client for LogicMonitor adapter """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, access_id, access_key, **kwargs):
         super().__init__(*args,
                          url_base_prefix='',
                          headers={'Content-Type': 'application/json',
                                   'Accept': 'application/json'},
                          **kwargs)
 
-        self._access_id = kwargs.get('access_id')
-        self._access_key = kwargs.get('access_key')
+        self._access_id = access_id
+        self._access_key = access_key
 
         if kwargs.get('params'):
             self._url_base_prefix = f'{consts.ENDPOINT}{kwargs.get("params")}'
@@ -47,7 +47,7 @@ class LogicmonitorConnection(RESTConnection):
         request_variables = (f'GET'
                              f'{epoch_time}'
                              f'{data}'
-                             f'{consts.ENDPOINT}')
+                             f'{consts.ENDPOINT_SUFFIX}')
 
         # build the hmac from this data mashup
         request_hmac = hmac.new(access_key.encode(),
@@ -73,11 +73,15 @@ class LogicmonitorConnection(RESTConnection):
         except Exception as e:
             logger.exception(f'Generation of the API key failed: {e}')
 
-        endpoint = f'{consts.ENDPOINT}/1/properties'
         try:
-            self._get(endpoint, url_params='{"size": consts.DEVICE_PER_PAGE, "offset": 0}')
+            response = self._get(consts.ENDPOINT, url_params={'size': consts.DEVICE_PER_PAGE, 'offset': 0})
+            if not isinstance(response, dict):
+                raise RESTException(f'Bad server data')
+            if not response.get('data'):
+                err = response.get('errmsg')
+                raise RESTException(f'Could not get data: {err}')
         except Exception:
-            logger.exception('Device pull from the {endpoint} endpoint failed')
+            logger.exception(f'Device pull from the {consts.ENDPOINT} endpoint failed')
             raise
 
     def get_device_list(self):

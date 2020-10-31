@@ -40,6 +40,7 @@ class CiscoDevice(DeviceAdapter):
     ap_ip_address = Field(str, 'AP IP Address')
     ap_mac_address = Field(str, 'AP MAC Address')
     ap_name = Field(str, 'AP Name')
+    device_name = Field(str, 'Device Name')
     auth_algo = Field(str, 'Authentication Algorithm')
     nac_state = Field(str, 'NAC State')
     wireless_vlan = Field(str, 'Wireless Vlan')

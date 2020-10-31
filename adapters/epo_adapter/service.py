@@ -1,3 +1,4 @@
+import time
 import ipaddress
 import json
 import logging
@@ -94,6 +95,7 @@ class EpoAdapter(AdapterBase, Configurable):
         epo_host = Field(str, 'EPO Host')
         node_text_path = Field(str, 'Node Text Path')
         epo_id = Field(str, 'EPO ID')
+        is_portable = Field(bool, 'Is Portable')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -242,6 +244,8 @@ class EpoAdapter(AdapterBase, Configurable):
                     device.epo_tags = [epo_tag.strip() for epo_tag in (
                         device_raw.get('EPOLeafNode.Tags') or '').split(',') if epo_tag.strip()]
                 device.node_text_path = device_raw.get('EPOBranchNode.NodeTextPath')
+                if isinstance(device_raw.get('EPOComputerProperties.IsPortable'), int):
+                    device.is_portable = device_raw.get('EPOComputerProperties.IsPortable') == 1
             except Exception:
                 logger.exception("Couldn't set some epo info")
             if len(str(device_raw)) < 1000000:
@@ -292,6 +296,10 @@ class EpoAdapter(AdapterBase, Configurable):
                     client_data[USER], client_data[PASS])
         action = 'system.applyTag' if apply else 'system.clearTag'
         mc.run(action, names=','.join(machine_names), tagName=tag_name)
+        try:
+            time.sleep(60)
+        except Exception:
+            pass
         for device_id in machine_names:
             self._refetch_device(client_id, client_data, device_id)
         return True

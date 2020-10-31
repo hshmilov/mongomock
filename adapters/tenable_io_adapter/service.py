@@ -317,6 +317,8 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         fqdns = device_raw.get('fqdns', [])
         hostnames = device_raw.get('hostnames', [])
         netbios = device_raw.get('netbios_names', [])
+        if not mac_addresses_raw and not fqdns and not hostnames and not netbios and self.__drop_only_ip_devices:
+            return None
         hostname = None
         if len(netbios) > 0 and netbios[0] != '':
             hostname = netbios[0]
@@ -327,6 +329,12 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         if len(fqdns) > 0 and fqdns[0] != '':
             if hostname:
                 device.name = fqdns[0]
+                try:
+                    if device.name.split('.')[0].lower() == device.hostname.split('.')[0].lower() \
+                            and '.' in device.name:
+                        device.hostname = device.name
+                except Exception:
+                    pass
             else:
                 device.hostname = fqdns[0]
         try:
@@ -540,11 +548,17 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     'name': 'cancel_old_export_jobs',
                     'title': 'Cancel old export jobs',
                     'type': 'bool'
-                }
+                },
+                {
+                    'name': 'drop_only_ip_devices',
+                    'title': 'Do not fetch devices with no MAC address and no hostname',
+                    'type': 'bool'
+                },
             ],
             'required': [
                 'exclude_no_last_scan',
                 'fetch_agent_data',
+                'drop_only_ip_devices',
                 'cancel_old_export_jobs'
             ],
             'pretty_name': 'Tenable.io Configuration',
@@ -555,6 +569,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'exclude_no_last_scan': False,
+            'drop_only_ip_devices': False,
             'scan_id_white_list': None,
             'adapter_key_white_list': None,
             'fetch_agent_data': True,
@@ -562,6 +577,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         }
 
     def _on_config_update(self, config):
+        self.__drop_only_ip_devices = config.get('drop_only_ip_devices') or False
         self.__exclude_no_last_scan = config.get('exclude_no_last_scan')
         self.__scan_id_white_list = config['scan_id_white_list'].split(',') \
             if config.get('scan_id_white_list') else None
