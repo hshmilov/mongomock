@@ -24,11 +24,12 @@ from axonius.consts.plugin_consts import CONFIGURABLE_CONFIGS_LEGACY_COLLECTION,
     THYCOTIC_SS_PORT, THYCOTIC_SS_USERNAME, THYCOTIC_SS_PASSWORD, THYCOTIC_SS_VERIFY_SSL, CYBERARK_APP_ID, \
     CYBERARK_PORT, VAULT_SETTINGS, PASSWORD_MANGER_ENABLED, CONFIG_SCHEMAS_LEGACY_COLLECTION, \
     ADAPTER_SCHEMA_LEGACY_COLLECTION, ADAPTER_SETTINGS_LEGACY_COLLECTION, DISCOVERY_REPEAT_ON, DISCOVERY_CONFIG_NAME, \
-    HISTORY_REPEAT_EVERY, HISTORY_REPEAT_RECURRENCE, HISTORY_REPEAT_WEEKDAYS, HISTORY_REPEAT_ON, HISTORY_REPEAT_TYPE, \
-    HISTORY_REPEAT_EVERY_LIFECYCLE, WEEKDAYS, ENABLE_CUSTOM_DISCOVERY, CONNECTION_DISCOVERY, ADAPTER_DISCOVERY, \
-    DISCOVERY_REPEAT_TYPE, DISCOVERY_REPEAT_EVERY, DISCOVERY_REPEAT_RATE, DISCOVERY_RESEARCH_DATE_TIME, \
-    DISCOVERY_REPEAT_EVERY_DAY, DISCOVERY_REPEAT_ON_WEEKDAYS, PASSWORD_MANGER_AWS_SM_VAULT, AWS_SM_SECRET_ACCESS_KEY, \
-    AWS_SM_ACCESS_KEY_ID, AWS_SM_REGION
+    HISTORY_REPEAT_EVERY_DAY, HISTORY_REPEAT_RECURRENCE, HISTORY_REPEAT_WEEKDAYS, HISTORY_REPEAT_ON,\
+    HISTORY_REPEAT_TYPE, HISTORY_REPEAT_EVERY_LIFECYCLE, WEEKDAYS, ENABLE_CUSTOM_DISCOVERY, CONNECTION_DISCOVERY,\
+    ADAPTER_DISCOVERY, DISCOVERY_REPEAT_TYPE, DISCOVERY_REPEAT_EVERY, DISCOVERY_REPEAT_RATE,\
+    DISCOVERY_RESEARCH_DATE_TIME, DISCOVERY_REPEAT_EVERY_DAY, DISCOVERY_REPEAT_ON_WEEKDAYS,\
+    PASSWORD_MANGER_AWS_SM_VAULT, AWS_SM_SECRET_ACCESS_KEY, AWS_SM_ACCESS_KEY_ID, AWS_SM_REGION,\
+    SYSTEM_SCHEDULER_PLUGIN_NAME, HISTORY_REPEAT_TIME, HISTORY_CONFIG_NAME
 
 from axonius.consts.adapter_consts import ADAPTER_PLUGIN_TYPE, LAST_FETCH_TIME, VAULT_PROVIDER, CLIENT_CONFIG, \
     CLIENT_ID, LEGACY_VAULT_PROVIDER
@@ -1057,7 +1058,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
         history_retention_settings = discovery_settings.pop('history_settings', {})
         history_settings = {
             'enabled': history_enabled,
-            HISTORY_REPEAT_EVERY: {
+            HISTORY_REPEAT_EVERY_DAY: {
                 HISTORY_REPEAT_RECURRENCE: 1
             },
             HISTORY_REPEAT_WEEKDAYS: {
@@ -1202,6 +1203,30 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
         password = self.create_redis_password()
         self.create_redis_conf_file(password)
         self.create_redis_certs()
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_33(self):
+        print('Upgrade to schema 33')
+
+        config = self.db.plugins.system_scheduler.configurable_configs[SCHEDULER_CONFIG_NAME]
+        if not config:
+            # no scheduler config yet, first run
+            return
+
+        history_config = config.get(HISTORY_CONFIG_NAME, {})
+        repeat_type = history_config.get(HISTORY_REPEAT_TYPE)
+
+        if repeat_type in [HISTORY_REPEAT_EVERY_DAY, HISTORY_REPEAT_WEEKDAYS]:
+            local_machine_midnight = datetime.datetime.combine(datetime.datetime.now(), datetime.datetime.min.time())
+            utc_midnight = local_machine_midnight.replace(tzinfo=None).astimezone(tz=datetime.timezone.utc)
+            history_config[repeat_type][HISTORY_REPEAT_TIME] = utc_midnight.strftime('%H:%M')
+
+            self.db.plugins.get_plugin_settings(SYSTEM_SCHEDULER_PLUGIN_NAME).configurable_configs.update_config(
+                SCHEDULER_CONFIG_NAME,
+                {
+                    HISTORY_CONFIG_NAME: history_config
+                }
+            )
 
     def migrate_adapter_advanced_settings_to_connection(
             self,

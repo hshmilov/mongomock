@@ -19,7 +19,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 MINUTES_IN_HOUR = 60
 
 
-class DiscoveryCustomScheduler:
+class CustomScheduler:
     MAX_WORKERS = 5
 
     def __init__(self, db=None):
@@ -66,25 +66,18 @@ class DiscoveryCustomScheduler:
         repeat_type = config.get(DISCOVERY_REPEAT_TYPE)
         if repeat_type == DISCOVERY_REPEAT_RATE:
             rate_in_hours = config.get(DISCOVERY_REPEAT_RATE)
-            return DiscoveryCustomScheduler.get_cron_by_rate(rate_in_hours)
+            return CustomScheduler.get_cron_by_rate(rate_in_hours)
 
         hour, minute = config.get(repeat_type, {}). \
             get(DISCOVERY_RESEARCH_DATE_TIME).split(':')
+
         if repeat_type == DISCOVERY_REPEAT_ON_WEEKDAYS:
-            # transform weekday names to cron names: [Sunday,monday] -> sun,mon
             repeat_days = config.get(DISCOVERY_REPEAT_ON_WEEKDAYS, {}).get(DISCOVERY_REPEAT_ON, [])
-            weekdays_for_cron = ','.join([day[:3].lower() for day in
-                                          repeat_days])
-            return CronTrigger(hour=hour,
-                               minute=minute,
-                               second='0',
-                               day_of_week=weekdays_for_cron)
+            return CustomScheduler.get_weekdays_cron_trigger(repeat_days, hour, minute)
+
         if repeat_type == DISCOVERY_REPEAT_EVERY_DAY:
             recurrence = config.get(DISCOVERY_REPEAT_EVERY_DAY, {}).get(DISCOVERY_REPEAT_EVERY, 1)
-            return CronTrigger(hour=hour,
-                               minute=minute,
-                               second='0',
-                               day=f'*/{recurrence}')
+            return CustomScheduler.get_repeat_every_x_days_cron_trigger(recurrence, hour, minute)
         return None
 
     @staticmethod
@@ -172,3 +165,20 @@ class DiscoveryCustomScheduler:
     def remove_all_jobs(self):
         logger.info(f'Remove all jobs for {self.__class__.__name__}')
         self.scheduler.remove_all_jobs()
+
+    @staticmethod
+    def get_weekdays_cron_trigger(repeat_days, hour, minute):
+        # transform weekday names to cron names: [Sunday,monday] -> sun,mon
+        weekdays_for_cron = ','.join([day[:3].lower() for day in
+                                      repeat_days])
+        return CronTrigger(hour=hour,
+                           minute=minute,
+                           second='0',
+                           day_of_week=weekdays_for_cron)
+
+    @staticmethod
+    def get_repeat_every_x_days_cron_trigger(recurrence, hour, minute):
+        return CronTrigger(hour=hour,
+                           minute=minute,
+                           second='0',
+                           day=f'*/{recurrence}')

@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 import urllib.parse
 from tempfile import NamedTemporaryFile
@@ -239,9 +239,10 @@ class Page:
 
     # Discovery
     DISCOVERY_SCHEDULE_MODE_DDL = '.x-select .x-select-trigger'
-    DISCOVERY_SCHEDULE_INTERVAL_TEXT = ScheduleTriggers.every_x_hours
-    DISCOVERY_SCHEDULE_SCHEDULED_TEXT = ScheduleTriggers.every_x_days
-    DISCOVERY_SCHEDULE_WEEKDAYS_TEXT = ScheduleTriggers.every_week_days
+    SCHEDULE_INTERVAL_TEXT = ScheduleTriggers.every_x_hours
+    SCHEDULE_SCHEDULED_TEXT = ScheduleTriggers.every_x_days
+    SCHEDULE_WEEKDAYS_TEXT = ScheduleTriggers.every_week_days
+    SCHEDULE_EVERY_CYCLE = ScheduleTriggers.every_discovery_cycle
     DISCOVERY_SCHEDULE_MODE_OPTIONS = '.x-dropdown > .content .x-select-content > .x-select-options > *'
     LIFECYCLE_WEEKDAYS_SELECT_ID = '#repeat_on_select'
     DATA_COLLECTION_TOASTER = 'Connection established. Data collection initiated...'
@@ -1440,17 +1441,19 @@ class Page:
                                         scheduling_wrapping_class='', scheduling_repeat_selector=''):
         mode_dropdown_selector = f'{scheduling_wrapping_class} {self.DISCOVERY_SCHEDULE_MODE_DDL}' \
             if scheduling_wrapping_class else self.DISCOVERY_SCHEDULE_MODE_DDL
-        if mode == self.DISCOVERY_SCHEDULE_INTERVAL_TEXT:
-            self._set_discovery_mode_dropdown_to_interval(mode_dropdown_selector)
+        if mode == self.SCHEDULE_INTERVAL_TEXT:
+            self._set_scheduling_mode_dropdown_to_interval(mode_dropdown_selector)
             self._set_discovery_mode_to_rate_value(time_value)
 
-        elif mode == self.DISCOVERY_SCHEDULE_SCHEDULED_TEXT:
-            self._set_discovery_mode_dropdown_to_date(mode_dropdown_selector)
-            self._set_discovery_mode_to_date_value(time_value, scheduling_repeat_selector, True)
+        elif mode == self.SCHEDULE_SCHEDULED_TEXT:
+            self._set_scheduling_mode_dropdown_to_date(mode_dropdown_selector)
+            self._set_discovery_mode_to_date_value(time_value, scheduling_repeat_selector,
+                                                   scheduling_wrapping_class, True)
 
-        elif mode == self.DISCOVERY_SCHEDULE_WEEKDAYS_TEXT and weekdays:
-            self._set_discovery_mode_dropdown_to_weekdays(mode_dropdown_selector)
-            self._set_discovery_mode_to_date_value(time_value, scheduling_repeat_selector, False)
+        elif mode == self.SCHEDULE_WEEKDAYS_TEXT and weekdays:
+            self._set_scheduling_mode_dropdown_to_weekdays(mode_dropdown_selector)
+            self._set_discovery_mode_to_date_value(time_value, scheduling_repeat_selector,
+                                                   scheduling_wrapping_class, False)
             self._clear_lifecycle_weekdays()
             try:
                 self.assert_select_option_is_empty(dropdown_css_selector=self.LIFECYCLE_WEEKDAYS_SELECT_ID,
@@ -1464,6 +1467,9 @@ class Page:
             self.select_multiple_option_without_search(self.LIFECYCLE_WEEKDAYS_SELECT_ID,
                                                        self.ANT_SELECT_MENU_ITEM_CSS,
                                                        values=weekdays)
+        elif mode == self.SCHEDULE_EVERY_CYCLE:
+            self._set_scheduling_mode_dropdown_to_every_cycle(mode_dropdown_selector)
+
         else:
             raise RuntimeError('Invalid discovery schedule mode ')
 
@@ -1475,29 +1481,37 @@ class Page:
         self.wait_for_element_present_by_css(discovery_mode_class)
         return self.driver.find_element_by_css_selector(discovery_mode_class)
 
-    def _get_discovery_mode_selected_item(self, discovery_mode_class):
+    def _get_scheduling_mode_selected_item(self, discovery_mode_class):
         return self._find_discovery_mode_dropdown(discovery_mode_class).text
 
-    def _set_discovery_mode_dropdown_to_interval(self, discovery_mode_class):
-        if self._get_discovery_mode_selected_item(discovery_mode_class) != self.DISCOVERY_SCHEDULE_INTERVAL_TEXT:
+    def _set_scheduling_mode_dropdown_to_interval(self, discovery_mode_class):
+        if self._get_scheduling_mode_selected_item(discovery_mode_class) != self.SCHEDULE_INTERVAL_TEXT:
             self.select_option_without_search(discovery_mode_class,
                                               self.DROPDOWN_SELECTED_OPTION_CSS,
-                                              self.DISCOVERY_SCHEDULE_INTERVAL_TEXT)
+                                              self.SCHEDULE_INTERVAL_TEXT)
 
-    def _set_discovery_mode_dropdown_to_weekdays(self, discovery_mode_class):
-        if self._get_discovery_mode_selected_item(discovery_mode_class) != self.DISCOVERY_SCHEDULE_WEEKDAYS_TEXT:
+    def _set_scheduling_mode_dropdown_to_weekdays(self, discovery_mode_class):
+        if self._get_scheduling_mode_selected_item(discovery_mode_class) != self.SCHEDULE_WEEKDAYS_TEXT:
             self.select_option_without_search(discovery_mode_class,
                                               self.DROPDOWN_SELECTED_OPTION_CSS,
-                                              self.DISCOVERY_SCHEDULE_WEEKDAYS_TEXT)
+                                              self.SCHEDULE_WEEKDAYS_TEXT)
 
-    def _set_discovery_mode_dropdown_to_date(self, discovery_mode_class):
-        if self._get_discovery_mode_selected_item(discovery_mode_class) != self.DISCOVERY_SCHEDULE_SCHEDULED_TEXT:
+    def _set_scheduling_mode_dropdown_to_date(self, discovery_mode_class):
+        if self._get_scheduling_mode_selected_item(discovery_mode_class) != self.SCHEDULE_SCHEDULED_TEXT:
             self.select_option_without_search(discovery_mode_class,
                                               self.DROPDOWN_SELECTED_OPTION_CSS,
-                                              self.DISCOVERY_SCHEDULE_SCHEDULED_TEXT)
+                                              self.SCHEDULE_SCHEDULED_TEXT)
 
-    def _set_discovery_mode_to_date_value(self, time_of_day_value, scheduling_repeat_selector, repeat):
-        self._fill_schedule_date(time_of_day_value, scheduling_repeat_selector, repeat=repeat)
+    def _set_scheduling_mode_dropdown_to_every_cycle(self, discovery_mode_class):
+        if self._get_scheduling_mode_selected_item(discovery_mode_class) != self.SCHEDULE_EVERY_CYCLE:
+            self.select_option_without_search(discovery_mode_class,
+                                              self.DROPDOWN_SELECTED_OPTION_CSS,
+                                              self.SCHEDULE_EVERY_CYCLE)
+
+    def _set_discovery_mode_to_date_value(self, time_of_day_value, scheduling_repeat_selector,
+                                          scheduling_wrapping_class, repeat):
+        self._fill_schedule_date(time_of_day_value, scheduling_repeat_selector,
+                                 scheduling_wrapping_class, repeat=repeat)
 
     def _clear_lifecycle_weekdays(self):
         self.unselect_multiple_option_without_search(self.LIFECYCLE_WEEKDAYS_SELECT_ID, values=list(WEEKDAYS))
@@ -1512,7 +1526,15 @@ class Page:
     def _wait_for_data_collection_toaster_start(self, retries=1200):
         self.wait_for_toaster(self.DATA_COLLECTION_TOASTER, retries)
 
-    def _fill_schedule_date(self, text, scheduling_repeat_selector, repeat=True):
-        self.fill_text_field_by_css_selector(self.DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS, text)
+    def _fill_schedule_date(self, text, scheduling_repeat_selector, scheduling_wrapping_class=None, repeat=True):
+        selector = f'{scheduling_wrapping_class} {self.DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS}'\
+            if scheduling_wrapping_class else self.DISCOVERY_SCHEDULE_TIME_PICKER_INPUT_CSS
+        self.fill_text_field_by_css_selector(selector, text)
         if repeat:
             self.fill_text_field_by_element_id(scheduling_repeat_selector, 1)
+
+    @staticmethod
+    def set_discovery_time(minutes):
+        current_utc = datetime.utcnow()
+        timepicker_input = current_utc + timedelta(minutes=minutes)
+        return timepicker_input.time().strftime('%I:%M%p').lower()

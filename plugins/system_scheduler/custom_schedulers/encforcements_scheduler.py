@@ -7,14 +7,14 @@ from apscheduler.triggers.cron import CronTrigger
 from axonius.consts.plugin_consts import REPORTS_PLUGIN_NAME
 from axonius.consts.report_consts import TRIGGERS_FIELD
 from axonius.types.enforcement_classes import Trigger, TriggerPeriod
-from system_scheduler.custom_schedulers.discovery_scheduler import DiscoveryCustomScheduler
+from system_scheduler.custom_schedulers.discovery_scheduler import CustomScheduler
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 MINUTES_IN_HOUR = 60
 
 
-class EnforcementsCustomScheduler(DiscoveryCustomScheduler):
+class EnforcementsCustomScheduler(CustomScheduler):
 
     @staticmethod
     def get_cron_trigger_from_config(config: dict) -> CronTrigger:

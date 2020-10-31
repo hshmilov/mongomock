@@ -45,7 +45,7 @@ class TestCustomDiscoverySchedule(TestBase):
             self._prepare_clients()
             self.adapters_page.toggle_adapters_discovery_configurations(
                 adapter_name=JSON_ADAPTER_NAME,
-                mode=self.adapters_page.DISCOVERY_SCHEDULE_SCHEDULED_TEXT,
+                mode=self.adapters_page.SCHEDULE_SCHEDULED_TEXT,
                 value=self.adapters_page.set_discovery_time(2))
             adapter_relative_fetch_time = datetime.utcnow()
             axonius_system = get_service()
@@ -67,7 +67,7 @@ class TestCustomDiscoverySchedule(TestBase):
             self.adapters_page.toggle_adapter_client_connection_discovery(
                 adapter_name=JSON_ADAPTER_NAME,
                 client_position=0,
-                mode=self.adapters_page.DISCOVERY_SCHEDULE_SCHEDULED_TEXT,
+                mode=self.adapters_page.SCHEDULE_SCHEDULED_TEXT,
                 value=self.adapters_page.set_discovery_time(2),
                 do_fetch=False)
 
@@ -98,7 +98,7 @@ class TestCustomDiscoverySchedule(TestBase):
             self.adapters_page.toggle_adapter_client_connection_discovery(
                 adapter_name=JSON_ADAPTER_NAME,
                 client_position=0,
-                mode=self.adapters_page.DISCOVERY_SCHEDULE_INTERVAL_TEXT,
+                mode=self.adapters_page.SCHEDULE_INTERVAL_TEXT,
                 value=0.05)  # 0.05 hours is 3 minutes.
 
             # Client should be triggered twice - upon save, and after X hours passed.
@@ -133,7 +133,7 @@ class TestCustomDiscoverySchedule(TestBase):
             self.adapters_page.toggle_adapter_client_connection_discovery(
                 adapter_name=JSON_ADAPTER_NAME,
                 client_position=0,
-                mode=self.adapters_page.DISCOVERY_SCHEDULE_WEEKDAYS_TEXT,
+                mode=self.adapters_page.SCHEDULE_WEEKDAYS_TEXT,
                 value=self.adapters_page.set_discovery_time(2),
                 weekdays=[datetime.now().strftime('%A')])
             client_relative_fetch_time = datetime.utcnow()
@@ -167,7 +167,7 @@ class TestCustomDiscoverySchedule(TestBase):
             start_time = datetime.utcnow()
             self.adapters_page.toggle_adapters_discovery_configurations(
                 adapter_name=JSON_ADAPTER_NAME,
-                mode=self.adapters_page.DISCOVERY_SCHEDULE_SCHEDULED_TEXT,
+                mode=self.adapters_page.SCHEDULE_SCHEDULED_TEXT,
                 value=self.adapters_page.set_discovery_time(2),
                 toggle_connection=True)
 
@@ -176,7 +176,7 @@ class TestCustomDiscoverySchedule(TestBase):
             self.adapters_page.toggle_adapter_client_connection_discovery(
                 adapter_name=JSON_ADAPTER_NAME,
                 client_position=0,
-                mode=self.adapters_page.DISCOVERY_SCHEDULE_SCHEDULED_TEXT,
+                mode=self.adapters_page.SCHEDULE_SCHEDULED_TEXT,
                 do_fetch=False,
                 value=custom_connection_time)
 

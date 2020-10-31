@@ -9,6 +9,7 @@ class AuditCategory(Enum):
     CustomDiscovery = 'custom_discovery'
     Correlation = 'correlation'
     ConnectionCustomDiscovery = 'connection_custom_discovery'
+    CustomHistory = 'custom_history'
     GettingStarted = 'getting_started'
     Adapters = 'adapters'
     AdaptersConnections = 'adapters.<adapter_name>.connections'

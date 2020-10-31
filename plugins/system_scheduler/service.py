@@ -39,8 +39,9 @@ from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           SYSTEM_SCHEDULER_PLUGIN_NAME,
                                           AGGREGATOR_PLUGIN_NAME, CONNECTION_DISCOVERY,
                                           HISTORY_REPEAT_ON, HISTORY_REPEAT_TYPE,
-                                          HISTORY_REPEAT_EVERY, HISTORY_REPEAT_WEEKDAYS, HISTORY_REPEAT_RECURRENCE,
-                                          HISTORY_REPEAT_EVERY_LIFECYCLE, WEEKDAYS, CLIENT_ACTIVE)
+                                          HISTORY_REPEAT_EVERY_DAY, HISTORY_REPEAT_WEEKDAYS, HISTORY_REPEAT_RECURRENCE,
+                                          HISTORY_REPEAT_EVERY_LIFECYCLE, WEEKDAYS, CLIENT_ACTIVE, HISTORY_REPEAT_TIME,
+                                          ENABLE_CUSTOM_HISTORY)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import (SchedulerState, Phases, ResearchPhases,
                                              CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL, TUNNEL_STATUS_CHECK_INTERVAL,
@@ -63,8 +64,9 @@ from axonius.utils.root_master.root_master import root_master_restore_from_s3, \
 from axonius.utils.host_utils import get_free_disk_space, check_installer_locks
 from system_scheduler.custom_schedulers.adapter_connections_scheduler import CustomConnectionsScheduler
 from system_scheduler.custom_schedulers.adapter_scheduler import CustomAdapterScheduler
-from system_scheduler.custom_schedulers.discovery_scheduler import DiscoveryCustomScheduler
+from system_scheduler.custom_schedulers.discovery_scheduler import CustomScheduler
 from system_scheduler.custom_schedulers.encforcements_scheduler import EnforcementsCustomScheduler
+from system_scheduler.custom_schedulers.history_scheduler import HistoryScheduler
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -154,6 +156,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         self.custom_adapter_scheduler = None
         self.custom_connection_scheduler = None
         self.custom_enforcements_scheduler = None
+        self.custom_history_scheduler = None
         self.init_custom_schedulers()
 
     def init_custom_schedulers(self):
@@ -175,6 +178,13 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             self.custom_enforcements_scheduler = EnforcementsCustomScheduler(db=self.mongo_client)
             self.custom_enforcements_scheduler.init_enforcements_custom_discovery_scheduling(
                 self.trigger_custom_enforcement
+            )
+        except Exception:
+            logger.critical('Error while configuring custom enforcements schedulers', exc_info=True)
+        try:
+            self.custom_history_scheduler = HistoryScheduler(db=self.mongo_client)
+            self.custom_history_scheduler.init_history_custom_scheduling(
+                self.trigger_custom_history
             )
         except Exception:
             logger.critical('Error while configuring custom enforcements schedulers', exc_info=True)
@@ -466,7 +476,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 {
                     'items': [
                         {
-                            'name': 'enabled',
+                            'name': ENABLE_CUSTOM_HISTORY,
                             'title': 'Enable scheduled historical snapshot',
                             'type': 'bool',
                             'required': True
@@ -481,7 +491,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                     'title': 'Every discovery cycle'
                                 },
                                 {
-                                    'name': HISTORY_REPEAT_EVERY,
+                                    'name': HISTORY_REPEAT_EVERY_DAY,
                                     'title': 'Every x days'
                                 },
                                 {
@@ -492,7 +502,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                             'type': 'string'
                         },
                         {
-                            'name': HISTORY_REPEAT_EVERY,
+                            'name': HISTORY_REPEAT_EVERY_DAY,
                             'type': 'array',
                             'items': [
                                 {
@@ -500,14 +510,20 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                     'title': 'Repeat scheduled historical snapshot every (days)',
                                     'type': 'integer',
                                     'min': 1
+                                },
+                                {
+                                    'name': HISTORY_REPEAT_TIME,
+                                    'title': 'Scheduled historical snapshot time',
+                                    'type': 'string',
+                                    'format': 'time'
                                 }
                             ],
-                            'required': ['historical_schedule_recurrence']
+                            'required': [HISTORY_REPEAT_RECURRENCE, HISTORY_REPEAT_TIME]
                         },
                         {
                             'name': HISTORY_REPEAT_WEEKDAYS,
                             'type': 'array',
-                            'required': [HISTORY_REPEAT_ON],
+                            'required': [HISTORY_REPEAT_ON, HISTORY_REPEAT_TIME],
                             'items': [
                                 {
                                     'name': HISTORY_REPEAT_ON,
@@ -517,6 +533,12 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                                         'enum': [{'name': day.lower(), 'title': day} for day in WEEKDAYS],
                                         'type': 'string'
                                     }
+                                },
+                                {
+                                    'name': HISTORY_REPEAT_TIME,
+                                    'title': 'Scheduled historical snapshot time',
+                                    'type': 'string',
+                                    'format': 'time'
                                 }
                             ]
                         },
@@ -581,11 +603,13 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             },
             'history_settings': {
                 'enabled': True,
-                HISTORY_REPEAT_EVERY: {
-                    HISTORY_REPEAT_RECURRENCE: 1
+                HISTORY_REPEAT_EVERY_DAY: {
+                    HISTORY_REPEAT_RECURRENCE: 1,
+                    HISTORY_REPEAT_TIME: '00:00'
                 },
                 HISTORY_REPEAT_WEEKDAYS: {
-                    HISTORY_REPEAT_ON: [day.lower() for day in WEEKDAYS]
+                    HISTORY_REPEAT_ON: [day.lower() for day in WEEKDAYS],
+                    HISTORY_REPEAT_TIME: '00:00'
                 },
                 HISTORY_REPEAT_TYPE: HISTORY_REPEAT_EVERY_LIFECYCLE,
             },
@@ -772,8 +796,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
                     # 2. Run historical phase
                     try:
-                        history_config, last_history_date = self.get_history_config()
-                        if self.__save_history and self.should_save_history(history_config, last_history_date):
+                        history_config = self.get_history_config()
+                        if self.__save_history and self.should_save_history(history_config):
                             # Save history.
                             _change_subphase(ResearchPhases.Save_Historical)
                             free_disk_space_in_gb = get_free_disk_space() / (1024 ** 3)
@@ -887,8 +911,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 logger.error(f'Failed running post-correlation phase', exc_info=True)
 
             try:
-                history_config, last_history_date = self.get_history_config()
-                if self.__save_history and self.should_save_history(history_config, last_history_date):
+                history_config = self.get_history_config()
+                if self.__save_history and self.should_save_history(history_config):
                     # Save history.
                     _change_subphase(ResearchPhases.Save_Historical)
                     free_disk_space_in_gb = get_free_disk_space() / (1024 ** 3)
@@ -946,11 +970,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                 yield adapter
 
     @staticmethod
-    def should_save_history(history_saving_config: dict, last_history: datetime) -> bool:
+    def should_save_history(history_saving_config: dict) -> bool:
         """
         Check if we should save historical devices data
         :param history_saving_config: history saving config
-        :param last_history: last history date
         :return: True if we should save history data
         """
         if not history_saving_config:
@@ -959,17 +982,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         if history_saving_config.get(HISTORY_REPEAT_TYPE) == HISTORY_REPEAT_EVERY_LIFECYCLE:
             return True
 
-        if history_saving_config.get(HISTORY_REPEAT_TYPE) == HISTORY_REPEAT_WEEKDAYS:
-            today = datetime.today().strftime('%A').lower()
-            saved_weekdays = (history_saving_config.get(HISTORY_REPEAT_WEEKDAYS) or {}).get(HISTORY_REPEAT_ON) or []
-            if today in saved_weekdays:
-                return True
-        elif history_saving_config.get(HISTORY_REPEAT_TYPE) == HISTORY_REPEAT_EVERY:
-            if not last_history:
-                return True
-            saved_recurrence = (history_saving_config.get(HISTORY_REPEAT_EVERY) or {}).get(HISTORY_REPEAT_RECURRENCE, 1)
-            if (datetime.now() - last_history).days >= saved_recurrence:
-                return True
         return False
 
     def __get_all_adapters(self):
@@ -1110,8 +1122,8 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             clients_to_trigger = {}
             # get adapter connections without enabled custom connection discovery
             for adapter_unique_name in \
-                    DiscoveryCustomScheduler.get_plugin_unique_names(self.mongo_client, adapter_name):
-                adapter_clients = DiscoveryCustomScheduler.get_adapter_clients(self.mongo_client, adapter_unique_name)
+                    CustomScheduler.get_plugin_unique_names(self.mongo_client, adapter_name):
+                adapter_clients = CustomScheduler.get_adapter_clients(self.mongo_client, adapter_unique_name)
                 for client in adapter_clients:
                     connection_discovery = client.get(CONNECTION_DISCOVERY, {})
                     if not connection_discovery.get(ENABLE_CUSTOM_DISCOVERY):
@@ -1167,7 +1179,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                             f'not triggering custom discovery connection for {adapter_name}:{client_id}')
                 return
             for adapter_unique_name in \
-                    DiscoveryCustomScheduler.get_plugin_unique_names(self.mongo_client, adapter_name):
+                    CustomScheduler.get_plugin_unique_names(self.mongo_client, adapter_name):
                 try:
                     # we are triggering the adapter with this unique job name
                     # because we dont want triggerable to think these jobs are duplicates
@@ -1297,12 +1309,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             plugin_settings = self.plugins.get_plugin_settings(self.plugin_name)
             history_config = (plugin_settings.configurable_configs[SCHEDULER_CONFIG_NAME] or {}) \
                 .get('history_settings') if plugin_settings else {}
-
-            last_history = self.historical_devices_db_view.find_one(filter={},
-                                                                    sort=[('accurate_for_datetime', -1)],
-                                                                    projection={'accurate_for_datetime': 1})
-            last_history_date = last_history.get('accurate_for_datetime') if last_history else None
-            return history_config, last_history_date
+            return history_config
         except Exception as e:
             logger.exception(f'Error while checking for historical data: {e}')
         return {}, None
@@ -1542,3 +1549,17 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             logger.exception(f'Error while updating {enforcement_name} enforcement scheduler {e}')
             return return_error(str(e), non_prod_error=True, http_status=500)
         return 'OK', 200
+
+    @add_rule('update_custom_scheduler_history_job', methods=['POST'])
+    def update_custom_scheduler_history(self):
+        try:
+            self.custom_history_scheduler.update_job(create=True, callback=self.trigger_custom_history)
+        except Exception as e:
+            logger.exception(f'Error while updating history scheduler {e}')
+            return return_error(str(e), non_prod_error=True, http_status=500)
+        return 'OK', 200
+
+    def trigger_custom_history(self):
+        self.log_activity(AuditCategory.CustomHistory, AuditAction.Start)
+        self._run_historical_phase()
+        self.log_activity(AuditCategory.CustomHistory, AuditAction.End)

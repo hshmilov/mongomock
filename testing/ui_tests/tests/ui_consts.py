@@ -213,3 +213,4 @@ class ScheduleTriggers:
     every_x_days = 'Every x days'
     every_x_hours = 'Every x hours'
     every_week_days = 'Days of week'
+    every_discovery_cycle = 'Every discovery cycle'

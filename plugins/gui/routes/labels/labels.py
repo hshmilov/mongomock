@@ -186,6 +186,12 @@ class Labels:
             'audit.connection_custom_discovery.clean': 'Custom Discovery Clean',
             'audit.connection_custom_discovery.clean.template': 'Custom Discovery clean for \'{adapter}\'',
 
+            'audit.custom_history': 'Historical Snapshot',
+            'audit.custom_history.start': 'Save History Started',
+            'audit.custom_history.start.template': 'Saving historical snapshot started',
+            'audit.custom_history.end': 'Save History Ended',
+            'audit.custom_history.end.template': 'Saving historical snapshot ended',
+
             'audit.getting_started': 'Getting Started',
             'audit.getting_started.complete_phase': 'Getting Started Phase Completed',
             'audit.getting_started.complete_phase.template': 'Getting Started phase \'{phase}\' completed',

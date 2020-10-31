@@ -22,7 +22,6 @@ from test_helpers.utils import get_datetime_format_by_gui_date
 from ui_tests.pages.page import PAGE_BODY, TAB_BODY, Page
 
 # pylint: disable=too-many-lines,no-member
-from ui_tests.tests.ui_consts import ScheduleTriggers
 
 
 class SettingsPage(Page):
@@ -159,12 +158,12 @@ class SettingsPage(Page):
 
     DISCOVERY_SCHEDULE_MODE_DDL_CSS = '.x-settings .x-select .x-select-trigger'
     DISCOVERY_SCHEDULE_REPEAT_INPUT_ID = 'system_research_date_recurrence'
+    HISTORY_SCHEDULE_REPEAT_INPUT_ID = 'historical_schedule_recurrence'
     DISCOVERY_SCHEDULE_INTERVAL_INPUT_CSS = '#system_research_rate'
-    DISCOVERY_SCHEDULE_INTERVAL_TEXT = ScheduleTriggers.every_x_hours
-    DISCOVERY_SCHEDULE_SCHEDULED_TEXT = ScheduleTriggers.every_x_days
-    DISCOVERY_SCHEDULE_WEEKDAYS_TEXT = ScheduleTriggers.every_week_days
     DISCOVERY_SCHEDULE_MODE_OPTIONS = '.x-dropdown > .content .x-select-content > .x-select-options > *'
     HISTORY_ENABLED_CHECKBOX = '//*[contains(text(),\'Enable scheduled historical snapshot\')]'
+    DISCOVERY_SCHEDULING_WRAPPING_CLASS = '.x-settings .item_discovery_settings'
+    HISTORY_SCHEDULING_WRAPPING_CLASS = '.x-settings .item_history_settings'
 
     MIN_PASSWORD_LENGTH_ID = 'password_length'
     MIN_UPPERCASE_CHARS_ID = 'password_min_uppercase'
@@ -1440,26 +1439,39 @@ class SettingsPage(Page):
         return self._find_discovery_mode_dropdown(self.DISCOVERY_SCHEDULE_MODE_DDL_CSS).text
 
     def set_discovery_mode_dropdown_to_interval(self):
-        if self.get_discovery_mode_selected_item() != self.DISCOVERY_SCHEDULE_INTERVAL_TEXT:
+        if self.get_discovery_mode_selected_item() != self.SCHEDULE_INTERVAL_TEXT:
             self.select_option_without_search(self.DISCOVERY_SCHEDULE_MODE_DDL_CSS,
                                               self.SELECT_OPTION_CSS,
-                                              self.DISCOVERY_SCHEDULE_INTERVAL_TEXT)
+                                              self.SCHEDULE_INTERVAL_TEXT)
 
     def set_discovery__to_interval_value(self, interval=0, negative_flow=False):
-        self._set_discovery_schedule_settings(mode=self.DISCOVERY_SCHEDULE_INTERVAL_TEXT,
+        self._set_discovery_schedule_settings(mode=self.SCHEDULE_INTERVAL_TEXT,
                                               time_value=interval,
                                               negative_flow=negative_flow)
 
     def set_discovery__to_time_of_day(self, time_of_day=0, negative_flow=False):
-        self._set_discovery_schedule_settings(mode=self.DISCOVERY_SCHEDULE_SCHEDULED_TEXT,
+        self._set_discovery_schedule_settings(mode=self.SCHEDULE_SCHEDULED_TEXT,
                                               time_value=time_of_day,
                                               negative_flow=negative_flow)
 
     # pylint: disable=dangerous-default-value
     def set_discovery__to_weekdays(self, time_of_day=0, weekdays: list = []):
-        self._set_discovery_schedule_settings(mode=self.DISCOVERY_SCHEDULE_WEEKDAYS_TEXT,
+        self._set_discovery_schedule_settings(mode=self.SCHEDULE_WEEKDAYS_TEXT,
                                               time_value=time_of_day,
                                               weekdays=weekdays)
+
+    def set_history__to_every_cycle(self):
+        self._set_history_schedule_settings(mode=self.SCHEDULE_EVERY_CYCLE)
+
+    def set_history__to_time_of_day(self, time_of_day=0, negative_flow=False):
+        self._set_history_schedule_settings(mode=self.SCHEDULE_SCHEDULED_TEXT,
+                                            time_value=time_of_day,
+                                            negative_flow=negative_flow)
+
+    def set_history__to_weekdays(self, time_of_day=0, weekdays: list = []):
+        self._set_history_schedule_settings(mode=self.SCHEDULE_WEEKDAYS_TEXT,
+                                            time_value=time_of_day,
+                                            weekdays=weekdays)
 
     def get_date_format(self):
         return self.find_elements_by_css(self.DATE_FORMAT_CSS)[0].text
@@ -1491,9 +1503,22 @@ class SettingsPage(Page):
     # pylint: disable=dangerous-default-value
     def _set_discovery_schedule_settings(self, mode='', time_value=0, negative_flow=False, weekdays: list = []):
         self.switch_to_page()
+        self._set_schedule_settings(mode=mode, time_value=time_value, weekdays=weekdays, negative_flow=negative_flow,
+                                    scheduling_wrapping_class=self.DISCOVERY_SCHEDULING_WRAPPING_CLASS,
+                                    scheduling_repeat_selector=self.DISCOVERY_SCHEDULE_REPEAT_INPUT_ID)
+
+    def _set_history_schedule_settings(self, mode='', time_value=0, negative_flow=False, weekdays: list = []):
+        self.switch_to_page()
+        self._set_schedule_settings(mode=mode, time_value=time_value, weekdays=weekdays, negative_flow=negative_flow,
+                                    scheduling_wrapping_class=self.HISTORY_SCHEDULING_WRAPPING_CLASS,
+                                    scheduling_repeat_selector=self.HISTORY_SCHEDULE_REPEAT_INPUT_ID)
+
+    def _set_schedule_settings(self, mode='', time_value=0, negative_flow=False, weekdays: list = [],
+                               scheduling_wrapping_class=None, scheduling_repeat_selector=None):
+        self.switch_to_page()
         self.set_discovery_schedule_settings(mode=mode, time_value=time_value, weekdays=weekdays,
-                                             scheduling_wrapping_class='.x-settings',
-                                             scheduling_repeat_selector=self.DISCOVERY_SCHEDULE_REPEAT_INPUT_ID)
+                                             scheduling_wrapping_class=scheduling_wrapping_class,
+                                             scheduling_repeat_selector=scheduling_repeat_selector)
         if negative_flow:
             # click to get error message display
             self.click_save_button()

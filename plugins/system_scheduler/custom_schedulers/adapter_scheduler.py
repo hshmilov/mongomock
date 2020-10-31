@@ -5,12 +5,12 @@ from apscheduler.triggers.cron import CronTrigger
 
 from axonius.consts.plugin_consts import ADAPTER_DISCOVERY, DISCOVERY_CONFIG_NAME, ENABLE_CUSTOM_DISCOVERY
 from axonius.modules.axonius_plugins import AxoniusPlugins
-from system_scheduler.custom_schedulers.discovery_scheduler import DiscoveryCustomScheduler
+from system_scheduler.custom_schedulers.discovery_scheduler import CustomScheduler
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class CustomAdapterScheduler(DiscoveryCustomScheduler):
+class CustomAdapterScheduler(CustomScheduler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.plugins = AxoniusPlugins(self.db)

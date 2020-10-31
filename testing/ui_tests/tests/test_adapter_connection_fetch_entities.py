@@ -17,7 +17,7 @@ class TestAdapterConnectionFetchEntities(TestBase):
         self.adapters_page.toggle_adapter_client_connection_discovery(
             adapter_name=AD_ADAPTER_NAME,
             client_position=0,
-            mode=self.adapters_page.DISCOVERY_SCHEDULE_INTERVAL_TEXT,
+            mode=self.adapters_page.SCHEDULE_INTERVAL_TEXT,
             value=1)
 
         self.devices_page.switch_to_page()

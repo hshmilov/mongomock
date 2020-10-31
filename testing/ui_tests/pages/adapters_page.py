@@ -2,7 +2,6 @@ import re
 import time
 from collections import namedtuple
 from copy import copy
-from datetime import datetime, timedelta
 import pytest
 
 from selenium.common.exceptions import NoSuchElementException
@@ -633,12 +632,6 @@ class AdaptersPage(EntitiesPage):
 
     def update_csv_connection_label(self, file_name, update_label):
         self.update_server_connection_label(CSV_NAME, 'File name', file_name, update_label)
-
-    @staticmethod
-    def set_discovery_time(minutes):
-        current_utc = datetime.utcnow()
-        timepicker_input = current_utc + timedelta(minutes=minutes)
-        return timepicker_input.time().strftime('%I:%M%p').lower()
 
     # pylint: disable=dangerous-default-value
     def _set_discovery_schedule_settings(self, mode=None, value=None, weekdays=[], scheduling_wrapping_class=''):

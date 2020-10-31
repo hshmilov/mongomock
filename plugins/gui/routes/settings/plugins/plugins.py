@@ -170,6 +170,16 @@ class Plugins:
         path: /api/settings/plugins/<plugin_name>/<config_name>
         """
         response = self._save_plugin_config(plugin_name, config_name)
+
+        if plugin_name == SYSTEM_SCHEDULER_PLUGIN_NAME and config_name == SCHEDULER_CONFIG_NAME:
+            try:
+                self.request_remote_plugin('update_custom_scheduler_history_job',
+                                           plugin_unique_name=SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                           method='POST',
+                                           timeout=10)
+            except Exception:
+                logger.exception('Error while triggering update_custom_scheduler_history_job')
+
         if response:
             return response
 

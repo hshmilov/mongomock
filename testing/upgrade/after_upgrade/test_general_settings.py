@@ -43,7 +43,7 @@ class TestGeneralSettings(UpgradeTestBase):
             self.settings_page.find_should_history_be_gathered_toggle()) is False
 
         # verify mode set to interval and value been migrated
-        assert self.settings_page.get_selected_discovery_mode() == self.settings_page.DISCOVERY_SCHEDULE_INTERVAL_TEXT
+        assert self.settings_page.get_selected_discovery_mode() == self.settings_page.SCHEDULE_INTERVAL_TEXT
         assert self.settings_page.get_schedule_rate_value() == DISCOVERY_UPDATED_VALUE
 
     def test_gui_settings(self):

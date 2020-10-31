@@ -30,7 +30,7 @@ class TestAdapterInactiveConnections(TestBase):
             self._init_csv_clients()
             self.adapters_page.toggle_adapters_discovery_configurations(
                 CSV_NAME,
-                mode=self.adapters_page.DISCOVERY_SCHEDULE_WEEKDAYS_TEXT,
+                mode=self.adapters_page.SCHEDULE_WEEKDAYS_TEXT,
                 value=self.adapters_page.set_discovery_time(2),
                 weekdays=WEEKDAYS)
             # wait for the schedule to begin 2 minutes + 1 minutes for the system scheduler to pick the job
@@ -47,7 +47,7 @@ class TestAdapterInactiveConnections(TestBase):
             self.adapters_page.toggle_adapter_client_connection_discovery(
                 adapter_name=CSV_NAME,
                 client_position=0,
-                mode=self.adapters_page.DISCOVERY_SCHEDULE_WEEKDAYS_TEXT,
+                mode=self.adapters_page.SCHEDULE_WEEKDAYS_TEXT,
                 value=self.adapters_page.set_discovery_time(2),
                 weekdays=WEEKDAYS)
             # wait for the schedule to begin 2 minutes + 1 minutes for the system scheduler to pick the job
