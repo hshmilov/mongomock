@@ -69,6 +69,7 @@ class DevicesPage(EntitiesPage):
     FIELD_INSTALLED_SOFTWARE_VERSION = 'Version'
     FIELD_FIREWALL_RULES_FROM_PORT = 'Firewall Rules: From port'
     FIELD_ADAPTER_CONNECTION_LABEL = 'Adapter Connection Label'
+    FIELD_VULNERABLE_SOFTWARE = 'Vulnerable Software'
     PREFERRED_HOSTNAME_FIELD = 'Preferred Host Name'
     AGENT_VERSIONS_FIELD = 'Agent Versions'
     AGENT_VERSIONS_NAME_FIELD = 'Agent Versions: Name'

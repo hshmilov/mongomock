@@ -154,6 +154,7 @@ class EntitiesPage(Page):
     ADAPTERS_DATA_TAB_CSS = '.x-entity-adapters'
     ENFORCEMENT_DATA_TAB_TITLE = 'Enforcement Tasks'
     EXTENDED_DATA_TAB_TITLE = 'Extended Data'
+    VULNERABLE_SOFTWARE_TAB_ID = 'software_cves'
 
     NOTES_CREATED_TOASTER = 'New note was created'
     NOTES_EDITED_TOASTER = 'Existing note was edited'
@@ -1259,6 +1260,9 @@ class EntitiesPage(Page):
 
     def click_general_tab(self):
         self.click_tab(self.GENERAL_DATA_TAB_TITLE)
+
+    def click_vulnerable_software_tab(self):
+        self.driver.find_element_by_id(self.VULNERABLE_SOFTWARE_TAB_ID).click()
 
     def click_adapters_tab(self):
         self.click_tab(self.ADAPTERS_DATA_TAB_TITLE)
