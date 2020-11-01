@@ -113,7 +113,13 @@ class FiremonAdapter(AdapterBase, Configurable):
     @staticmethod
     def _fill_firemon_device_fields(device_raw: dict, device: MyDeviceAdapter):
         try:
-            device.management_ip = device_raw.get('managementIp')
+            try:
+                ip = device_raw.get('managementIp')
+                device.management_ip = ip
+                if ip is not None and isinstance(ip, str):
+                    device.management_ip_raw = [ip]
+            except Exception:
+                pass
             device_pack = device_raw.get('devicePack')
             if not isinstance(device_pack, dict):
                 device_pack = {}

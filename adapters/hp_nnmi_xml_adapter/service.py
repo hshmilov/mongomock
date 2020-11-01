@@ -35,7 +35,7 @@ class HpNnmiXmlAdapter(AdapterBase):
         location = Field(str, 'Location')
         snmp_name = Field(str, 'Node SNMP Name')
         snmp_addr = Field(str, 'SNMP Address', converter=format_ip, json_format=JsonStringFormat.ip)
-        snmp_addr_raw = Field(str, converter=format_ip_raw, hidden=True)
+        snmp_addr_raw = ListField(str, converter=format_ip_raw, hidden=True)
         system_object_id = Field(str, 'System Object ID')
         notes = Field(str, 'Notes')
         created = Field(datetime.datetime, 'Creation time')
@@ -151,10 +151,13 @@ class HpNnmiXmlAdapter(AdapterBase):
             device.location = device_raw.get('location')
             device.snmp_name = device_raw.get('nodesnmpsysname')
             try:
-                device.snmp_addr = device_raw.get('nodesnmpaddress')
-                device.snmp_addr_raw = device_raw.get('nodesnmpaddress')
-            except Exception:
-                logger.warning(f'Got {str(e)} trying to parse snmp address for {device_raw}')
+                snmp_addr = device_raw.get('nodesnmpaddress')
+                device.snmp_addr = snmp_addr
+                if isinstance(snmp_addr, str):
+                    snmp_addr = [snmp_addr]
+                device.snmp_addr_raw = snmp_addr
+            except Exception as e:
+                logger.warning(f'Got error: {str(e)} while trying to parse snmp address for {device_raw}')
             device.system_object_id = device_raw.get('systemObjectId')
             device.notes = device_raw.get('notes')
 

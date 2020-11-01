@@ -1,6 +1,6 @@
 import datetime
 
-from axonius.utils.parsing import format_ip
+from axonius.utils.parsing import format_ip, format_ip_raw
 from axonius.smart_json_class import SmartJsonClass
 from axonius.fields import Field, ListField, JsonStringFormat
 
@@ -45,6 +45,7 @@ class AwsInstance(SmartJsonClass):
                        description='Hypervisor.')
     private_ip = ListField(str, 'Private IP\'s,', converter=format_ip, json_format=JsonStringFormat.ip,
                            description='Private ip\'s.')
+    private_ip_raw = ListField(str, converter=format_ip_raw, hidden=True)
     public_dns = ListField(str, 'Public DNS',
                            description='Public DNS.')
     private_dns = ListField(str, 'Private DNS',

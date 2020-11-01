@@ -100,7 +100,7 @@ class CloudHealthAdapter(AdapterBase):
             'type': 'array'
         }
 
-    # pylint: disable=too-many-branches
+    # pylint: disable=too-many-branches, too-many-nested-blocks, too-many-statements
     @staticmethod
     def _fill_aws_fields(device_raw):
         try:
@@ -131,16 +131,20 @@ class CloudHealthAdapter(AdapterBase):
                 for dns in public_dns:
                     if dns:
                         aws_instance.public_dns.append(dns)
-
-            private_ip = device_raw.get('private_ip')
-            if not private_ip:
-                private_ip = []
-            if isinstance(private_ip, str):
-                private_ip = [private_ip]
-            if private_ip:
-                for ip in private_ip:
-                    if ip:
-                        aws_instance.private_ip.append(ip)
+            try:
+                private_ip = device_raw.get('private_ip') or []
+                if isinstance(private_ip, str):
+                    private_ip = [private_ip]
+                if isinstance(private_ip, list) and private_ip:
+                    for ip in private_ip:
+                        if isinstance(ip, str) and ip:
+                            try:
+                                aws_instance.private_ip.append(ip)
+                                aws_instance.private_ip_raw.append(ip)
+                            except Exception:
+                                pass
+            except Exception:
+                pass
 
             private_dns = device_raw.get('private_dns')
             if not private_dns:

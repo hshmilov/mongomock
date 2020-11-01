@@ -12,7 +12,7 @@ from axonius.devices.device_or_container_adapter import DeviceOrContainerAdapter
 from axonius.fields import Field, ListField, JsonStringFormat
 from axonius.smart_json_class import SmartJsonClass
 from axonius.users.user_adapter import UserAdapter
-from axonius.utils.parsing import format_ip
+from axonius.utils.parsing import format_ip, format_ip_raw
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -399,7 +399,9 @@ class AWSLoadBalancer(SmartJsonClass):
     lb_port = Field(int, 'LB Port')
     instance_port = Field(int, 'Instance Port')
     ips = ListField(str, 'External IPs', converter=format_ip, json_format=JsonStringFormat.ip)
+    ips_raw = ListField(str, converter=format_ip_raw, hidden=True)
     last_ip_by_dns_query = Field(str, 'Last IP by DNS Query', converter=format_ip, json_format=JsonStringFormat.ip)
+    last_ip_by_dns_query_raw = ListField(str, converter=format_ip_raw, hidden=True)
 
 
 class SSMComplianceSummary(SmartJsonClass):
