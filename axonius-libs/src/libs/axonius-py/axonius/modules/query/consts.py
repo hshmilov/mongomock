@@ -1,6 +1,6 @@
 INCLUDE_OUTDATED_TEMPLATE = 'INCLUDE OUTDATED: '
 EXISTS_IN_TEMPLATE = 'exists_in('
-OS_DISTRIBUTION_GT_SUFFIX = 'os.distribution >'
-OS_DISTRIBUTION_LT_SUFFIX = 'os.distribution <'
+OS_DISTRIBUTION_GT_SUFFIX = 'os.distribution" >'
+OS_DISTRIBUTION_LT_SUFFIX = 'os.distribution" <'
 NOW_PLACEHOLDER = 'NOW'
 PREFERRED_SUFFIX = '_preferred'

@@ -101,7 +101,7 @@ class AQLParser:
                 relevant_os_distributions = ENUM_WINDOWS_VERSIONS[distribution_enum_index + 1:]
             else:
                 relevant_os_distributions = ENUM_WINDOWS_VERSIONS[:distribution_enum_index]
-            translated_filter = 'os.distribution in [' \
+            translated_filter = 'os.distribution" in [' \
                                 + ','.join('"{0}"'.format(version) for version in relevant_os_distributions) + ']'
             aql_filter = aql_filter.replace(matcher.group(0), translated_filter)
             matcher = re.search(OS_DISTRIBUTION_GT_LT_QUERY_REGEX, aql_filter)
@@ -167,9 +167,9 @@ class AQLParser:
         :param client_labels: List of all the client labels
         :return:
         """
-        query_connection_label_equal = f'{CONNECTION_LABEL} =='
-        query_connection_label_exist = f'{CONNECTION_LABEL} == ({{"$exists":true,"$ne":""}})))'
-        query_connection_label_in = f'{CONNECTION_LABEL} in'
+        query_connection_label_equal = f'{CONNECTION_LABEL}" =='
+        query_connection_label_exist = f'{CONNECTION_LABEL}" == ({{"$exists":true,"$ne":""}})))'
+        query_connection_label_in = f'{CONNECTION_LABEL}" in'
 
         def create_client_id_and_plugin_name_condition(client_id, plugin_unique_name) -> str:
             """
@@ -235,7 +235,7 @@ class AQLParser:
         # transform operator exists with compound condition of labels filtered by selected adapter name (if selected)
         if query_connection_label_exist in aql_filter:
             exists_regexp = re.escape('({"$exists":true,"$ne":""})))')
-            matcher = re.search(fr'\(\(\w+.\w+\.{CONNECTION_LABEL} == {exists_regexp}', aql_filter)
+            matcher = re.search(fr'\(\("\w+.\w+\.{CONNECTION_LABEL}" == {exists_regexp}', aql_filter)
             while matcher:
                 adapter_name = match_adapter_name if match_adapter_name else extract_adapter_name(matcher.group(0))
                 client_labels_ids = client_labels.values()
@@ -247,11 +247,11 @@ class AQLParser:
                     client_details = [create_client_id_and_plugin_name_condition('', '')]
                 all_connection_labels_condition = create_or_separated_condition(client_details)
                 aql_filter = aql_filter.replace(matcher.group(0), all_connection_labels_condition)
-                matcher = re.search(fr'\(\(\w+.\w+\.{CONNECTION_LABEL} == {exists_regexp}', aql_filter)
+                matcher = re.search(fr'\(\("\w+.\w+\.{CONNECTION_LABEL}" == {exists_regexp}', aql_filter)
 
         # # transform operator 'in' with new compound condition per client in OR logic
         if query_connection_label_in in aql_filter:
-            matcher = re.search(fr'\w+.\w+\.{CONNECTION_LABEL}' + r' in \[(.+?)\]', aql_filter)
+            matcher = re.search(fr'"\w+.\w+\.{CONNECTION_LABEL}"' + r' in \[(.+?)\]', aql_filter)
             while matcher:
                 adapter_name = match_adapter_name if match_adapter_name else extract_adapter_name(matcher.group(0))
                 filter_labels = matcher.group(1)
@@ -260,16 +260,16 @@ class AQLParser:
                 aql_filter = aql_filter.replace(matcher.group(0), create_or_separated_condition(label_attributes))
 
                 # in case of complex conditions
-                matcher = re.search(fr'\w+.\w+\.{CONNECTION_LABEL}' + r' in \[(.+?)\]', aql_filter)
+                matcher = re.search(fr'"\w+.\w+\.{CONNECTION_LABEL}"' + r' in \[(.+?)\]', aql_filter)
 
         # transform operator equal with compound condition to match (client_id,plugin_unique_name) tuple
         if query_connection_label_equal in aql_filter:
-            matcher = re.search(fr'\w+.\w+\.{CONNECTION_LABEL} == \"(.+?)\"', aql_filter)
+            matcher = re.search(fr'"\w+.\w+\.{CONNECTION_LABEL}" == \"(.+?)\"', aql_filter)
             while matcher:
                 adapter_name = match_adapter_name if match_adapter_name else extract_adapter_name(matcher.group(0))
                 aql_filter = aql_filter.replace(matcher.group(
                     0), create_label_condition(adapter_name, matcher.group(1)))
-                matcher = re.search(fr'\w+.\w+\.{CONNECTION_LABEL} == \"(.+?)\"', aql_filter)
+                matcher = re.search(fr'"\w+.\w+\.{CONNECTION_LABEL}" == \"(.+?)\"', aql_filter)
 
         return aql_filter
 

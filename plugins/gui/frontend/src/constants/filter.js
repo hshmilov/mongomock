@@ -68,39 +68,39 @@ export const BIGGER_THAN_OPERATOR = '>';
 
 export const osDistributionFormat = 'os-distribution';
 
-const exists = '({field} == ({"$exists":true,"$ne":null}))';
-const exists_str = '({field} == ({"$exists":true,"$ne":""}))';
-const exists_array = '({field} == ({"$exists":true,"$ne":[]}))';
-const equals = '{field} == "{val}"';
-const IN = '{field} in [{val}]';
-const contains = '{field} == regex("{val}", "i")';
-const regex = '{field} == regex("{val}", "i")';
+const exists = '("{field}" == ({"$exists":true,"$ne":null}))';
+const exists_str = '("{field}" == ({"$exists":true,"$ne":""}))';
+const exists_array = '("{field}" == ({"$exists":true,"$ne":[]}))';
+const equals = '"{field}" == "{val}"';
+const IN = '"{field}" in [{val}]';
+const contains = '"{field}" == regex("{val}", "i")';
+const regex = '"{field}" == regex("{val}", "i")';
 const numerical = {
-  equals: '{field} == {val}',
-  IN: '{field} in [{val}]',
-  [SMALLER_THAN_OPERATOR]: '{field} < {val}',
-  [BIGGER_THAN_OPERATOR]: '{field} > {val}',
+  equals: '"{field}" == {val}',
+  IN: '"{field}" in [{val}]',
+  [SMALLER_THAN_OPERATOR]: '"{field}" < {val}',
+  [BIGGER_THAN_OPERATOR]: '"{field}" > {val}',
   exists,
 };
 const date = {
-  [SMALLER_THAN_OPERATOR]: '{field} < date("{val}")',
-  [BIGGER_THAN_OPERATOR]: '{field} > date("{val}")',
-  days: '{field} >= date("NOW {op} {val}d")',
-  next_days: '{field} <= date("NOW {op} {val}d")',
-  hours: '{field} >= date("NOW {op} {val}h")',
-  next_hours: '{field} <= date("NOW {op} {val}h")',
+  [SMALLER_THAN_OPERATOR]: '"{field}" < date("{val}")',
+  [BIGGER_THAN_OPERATOR]: '"{field}" > date("{val}")',
+  days: '"{field}" >= date("NOW {op} {val}d")',
+  next_days: '"{field}" <= date("NOW {op} {val}d")',
+  hours: '"{field}" >= date("NOW {op} {val}h")',
+  next_hours: '"{field}" <= date("NOW {op} {val}h")',
   exists,
 };
 
 export const compOps = {
   array: {
-    [SIZE_OPERATOR]: '{field} == size({val})',
+    [SIZE_OPERATOR]: '"{field}" == size({val})',
     exists: exists_array,
   },
   array_discrete: {
-    count_equals: '{field} == size({val})',
-    count_below: '{field} < size({val})',
-    count_above: '{field} > size({val})',
+    count_equals: '"{field}" == size({val})',
+    count_below: '"{field}" < size({val})',
+    count_above: '"{field}" > size({val})',
     exists: exists_array,
   },
   'date-time': date,
@@ -113,8 +113,8 @@ export const compOps = {
     equals,
     IN,
     regex,
-    isIPv4: '{field} == regex("\\.")',
-    isIPv6: '{field} == regex(":")',
+    isIPv4: '"{field}" == regex("\\.")',
+    isIPv6: '"{field}" == regex(":")',
     exists: exists_str,
   },
   ip_preferred: {
@@ -122,8 +122,8 @@ export const compOps = {
     equals,
     IN,
     regex,
-    isIPv4: '{field} == regex("\\.")',
-    isIPv6: '{field} == regex(":")',
+    isIPv4: '"{field}" == regex("\\.")',
+    isIPv6: '"{field}" == regex(":")',
     exists: exists_str,
   },
   subnet: {
@@ -138,8 +138,8 @@ export const compOps = {
     IN,
     regex,
     exists: exists_str,
-    'earlier than': '{field}_raw < {val}',
-    'later than': '{field}_raw > {val}',
+    'earlier than': '"{field}_raw" < {val}',
+    'later than': '"{field}_raw" > {val}',
   },
   tag: {
     contains,
@@ -154,14 +154,14 @@ export const compOps = {
     contains,
     equals,
     IN,
-    starts: '{field} == regex("^{val}", "i")',
-    ends: '{field} == regex("{val}$", "i")',
+    starts: '"{field}" == regex("^{val}", "i")',
+    ends: '"{field}" == regex("{val}$", "i")',
     regex,
     exists: exists_str,
   },
   bool: {
-    true: '{field} == true',
-    false: '{field} == false',
+    true: '"{field}" == true',
+    false: '"{field}" == false',
   },
   percentage: numerical,
   number: numerical,
@@ -170,11 +170,11 @@ export const compOps = {
     contains,
     equals,
     IN,
-    starts: '{field} == regex("^{val}", "i")',
-    ends: '{field} == regex("{val}$", "i")',
+    starts: '"{field}" == regex("^{val}", "i")',
+    ends: '"{field}" == regex("{val}$", "i")',
     regex,
-    [SMALLER_THAN_OPERATOR]: '{field} < "{val}"',
-    [BIGGER_THAN_OPERATOR]: '{field} > "{val}"',
+    [SMALLER_THAN_OPERATOR]: '"{field}" < "{val}"',
+    [BIGGER_THAN_OPERATOR]: '"{field}" > "{val}"',
     exists: exists_str,
   },
 };

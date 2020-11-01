@@ -133,7 +133,7 @@ const Expression = function (expression, condition, isFirst) {
   };
 };
 
-const getMatchExpression = (field, condition) => `${field} == match([${condition}])`;
+const getMatchExpression = (field, condition) => `"${field}" == match([${condition}])`;
 
 export const isFilterOutExpression = (expression) => _matches(filterOutExpression)(expression);
 

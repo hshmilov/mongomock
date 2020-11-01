@@ -60,24 +60,24 @@ class TestQueryWizard(TestBase):
         self.devices_page.fill_query_string_value('test', parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         query_search_value = self.devices_page.find_search_value()
-        assert query_search_value == '(specific_data.data.hostname == regex("test", "i"))'
+        assert query_search_value == '("specific_data.data.hostname" == regex("test", "i"))'
 
         self.devices_page.fill_query_string_value('test+special-characters', parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         query_search_value = self.devices_page.find_search_value()
-        assert query_search_value == '(specific_data.data.hostname == regex("test\+special\-characters", "i"))'
+        assert query_search_value == '("specific_data.data.hostname" == regex("test\+special\-characters", "i"))'
 
         self.devices_page.select_query_comp_op(COMP_EQUALS, parent=expressions[0])
         self.devices_page.fill_query_string_value('test+special-characters', parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         query_search_value = self.devices_page.find_search_value()
-        assert query_search_value == '(specific_data.data.hostname == "test+special-characters")'
+        assert query_search_value == '("specific_data.data.hostname" == "test+special-characters")'
 
         self.devices_page.select_query_comp_op(COMP_CONTAINS, parent=expressions[0])
         self.devices_page.fill_query_string_value('test+special-characters', parent=expressions[0])
         self.devices_page.wait_for_table_to_be_responsive()
         query_search_value = self.devices_page.find_search_value()
-        assert query_search_value == '(specific_data.data.hostname == regex("test\+special\-characters", "i"))'
+        assert query_search_value == '("specific_data.data.hostname" == regex("test\+special\-characters", "i"))'
 
     def test_query_wizard_search_disabled(self):
         """

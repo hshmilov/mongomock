@@ -20,17 +20,17 @@ class TestQueryEnums(QueryTestBase):
                               f'({JSON_ADAPTER_FILTER})')
         self.devices_page.clear_query_wizard()
         self._test_query_enum(self.devices_page.FIELD_OS_BITNESS, '64', COMP_EQUALS, 'integer',
-                              '(specific_data.data.os.bitness == 64)')
+                              '("specific_data.data.os.bitness" == 64)')
 
     def test_query_enum_cisco(self):
         self.adapters_page.add_server(cisco_json_file_mock_credentials, JSON_ADAPTER_NAME)
         self.adapters_page.wait_for_server_green(position=2)
         self.prepare_to_query()
         self._test_query_enum('Port Access: Port Mode', 'singleHost', COMP_EQUALS, 'string',
-                              '(specific_data.data.port_access.port_mode == "singleHost")')
+                              '("specific_data.data.port_access.port_mode" == "singleHost")')
         self.devices_page.clear_query_wizard()
         self._test_query_enum('Port Access', 'singleHost', COMP_EQUALS, 'string',
-                              '(specific_data.data.port_access == match([(port_mode == "singleHost")]))',
+                              '("specific_data.data.port_access" == match([("port_mode" == "singleHost")]))',
                               subfield='Port Mode')
         self.devices_page.click_search()
         self.adapters_page.restore_json_client()
@@ -40,10 +40,10 @@ class TestQueryEnums(QueryTestBase):
         self.adapters_page.wait_for_server_green(position=2)
         self.prepare_to_query()
         self._test_query_enum('Agent Versions', 'Cylance Agent', COMP_EQUALS, 'string',
-                              '(specific_data.data.agent_versions == match([(adapter_name == "Cylance Agent")]))',
+                              '("specific_data.data.agent_versions" == match([("adapter_name" == "Cylance Agent")]))',
                               subfield='Name')
         self.devices_page.clear_query_wizard()
         self._test_query_enum('Agent Versions: Name', 'Cylance Agent', COMP_EQUALS, 'string',
-                              '(specific_data.data.agent_versions.adapter_name == "Cylance Agent")')
+                              '("specific_data.data.agent_versions.adapter_name" == "Cylance Agent")')
         self.devices_page.click_search()
         self.adapters_page.restore_json_client()

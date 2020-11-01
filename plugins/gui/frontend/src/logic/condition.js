@@ -57,7 +57,7 @@ const Condition = function (field, fieldSchema, adapter, compOp, value, filtered
       result.push([range[1], lastRange[1]]);
     });
     result = result
-      .map((range) => (`${field}_raw == match({"$gte": ${range[0]}, "$lte": ${range[1]}})`))
+      .map((range) => (`"${field}_raw" == match({"$gte": ${range[0]}, "$lte": ${range[1]}})`))
       .join(' or ');
     processedValue = `(${result})`;
     return '';
@@ -77,7 +77,7 @@ const Condition = function (field, fieldSchema, adapter, compOp, value, filtered
       }
     }
     const result = rawIpsArray
-      .map((range) => (`${field}_raw == match({"$gte": ${range[0]}, "$lte": ${range[1]}})`))
+      .map((range) => (`"${field}_raw" == match({"$gte": ${range[0]}, "$lte": ${range[1]}})`))
       .join(' or ');
     processedValue = `(${result})`;
     return '';
@@ -316,7 +316,7 @@ export const getOpsMap = (schema) => {
     ops.exists = compOps[parentSchema.type].exists;
   }
   if (schema.type === 'array' && ops.exists) {
-    ops.exists = `(${ops.exists} and {field} != [])`;
+    ops.exists = `(${ops.exists} and "{field}" != [])`;
   }
   if (schema.name === 'labels') {
     delete ops.size;
