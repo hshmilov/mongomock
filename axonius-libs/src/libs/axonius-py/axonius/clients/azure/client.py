@@ -449,13 +449,19 @@ class AzureCloudConnection(RESTConnection):
         self._oauth2_refresh_token(self._resource)
         self._graph_refresh_token()
         self._ad_graph_refresh_token()
-
+        skipped = 0
         # Get all subscriptions we have access to
         self.__all_subscriptions = {}
         for subscription in self.rm_paginated_get('subscriptions', api_version='2020-01-01'):
+            state = subscription.get('state')
+            if isinstance(state, str) and state.lower() in ['deleted', 'disabled']:
+                logger.warning(f'Skipping subscription {subscription.get("displayName") or "unknown"} with ID '
+                               f'{subscription.get("subscriptionId")} : state is {state}')
+                skipped += 1
+                continue
             self.__all_subscriptions[subscription['subscriptionId']] = subscription
 
-        logger.info(f'Connected with access to {len(self.__all_subscriptions)} subscriptions')
+        logger.info(f'Connected with access to {len(self.__all_subscriptions)} subscriptions plus {skipped} skipped')
 
     def get_device_list(self):
         raise NotImplementedError()
