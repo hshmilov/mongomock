@@ -5,6 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection, RESTException
 from axonius.clients.itop.connection import ItopConnection
 from axonius.devices.device_adapter import DeviceAdapterVlan
+from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_bool_from_raw, int_or_none
@@ -16,7 +17,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 # pylint: disable=logging-format-interpolation
 
 
-class ItopAdapter(AdapterBase):
+class ItopAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(ItopDeviceInstance):
         pass
@@ -58,8 +59,8 @@ class ItopAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    # pylint: disable = arguments-differ
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific domain
 
@@ -69,11 +70,11 @@ class ItopAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(
+                exclude_obsolete=self.__exclude_obsolete
+            )
 
-    @staticmethod
-    # pylint: disable=arguments-differ
-    def _query_users_by_client(client_name, client_data):
+    def _query_users_by_client(self, client_name, client_data):
         """
         Get all users from a specific domain
 
@@ -82,8 +83,13 @@ class ItopAdapter(AdapterBase):
 
         :return: A json with all the attributes returned from the Server
         """
+        if self.__exclude_users:
+            logger.info('Exclude fetch users, doesnt fetch users')
+            return
         with client_data:
-            yield from client_data.get_user_list()
+            yield from client_data.get_user_list(
+                exclude_obsolete=self.__exclude_obsolete
+            )
 
     @staticmethod
     def _clients_schema():
@@ -366,3 +372,37 @@ class ItopAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets, AdapterProperty.UserManagement]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'exclude_obsolete',
+                    'type': 'bool',
+                    'title': 'Exclude obsolete records'
+                },
+                {
+                    'name': 'exclude_users',
+                    'type': 'bool',
+                    'title': 'Exclude users records'
+                }
+            ],
+            'required': [
+                'exclude_obsolete',
+                'exclude_users'
+            ],
+            'pretty_name': 'iTop Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'exclude_obsolete': False,
+            'exclude_users': False
+        }
+
+    def _on_config_update(self, config):
+        self.__exclude_obsolete = config.get('exclude_obsolete') or False
+        self.__exclude_users = config.get('exclude_users') or False

@@ -60,7 +60,7 @@ class ItopConnection(RESTConnection):
         except Exception as e:
             raise ValueError(f'Error: Invalid response from server, please check domain or credentials. {str(e)}')
 
-    def _paginated_device_get(self):
+    def _paginated_device_get(self, exclude_obsolete: bool):
         json_data = {
             'operation': OPERATION_GET,
             'class': DEVICE_CLASS,
@@ -70,16 +70,18 @@ class ItopConnection(RESTConnection):
             'page': '1'
         }
 
-        yield from self._paginated_object_get(object_type=DEVICE_OBJECT, json_data=json_data)
+        yield from self._paginated_object_get(object_type=DEVICE_OBJECT, json_data=json_data,
+                                              exclude_obsolete=exclude_obsolete)
 
-    def get_device_list(self):
+    # pylint: disable=arguments-differ
+    def get_device_list(self, exclude_obsolete: bool=False):
         try:
-            yield from self._paginated_device_get()
+            yield from self._paginated_device_get(exclude_obsolete=exclude_obsolete)
         except RESTException as err:
             logger.exception(str(err))
             raise
 
-    def _paginated_user_get(self):
+    def _paginated_user_get(self, exclude_obsolete: bool):
         json_data = {
             'operation': OPERATION_GET,
             'class': USER_CLASS,
@@ -89,16 +91,17 @@ class ItopConnection(RESTConnection):
             'page': '1'
         }
 
-        yield from self._paginated_object_get(object_type=USER_OBJECT, json_data=json_data)
+        yield from self._paginated_object_get(object_type=USER_OBJECT, json_data=json_data,
+                                              exclude_obsolete=exclude_obsolete)
 
-    def get_user_list(self):
+    def get_user_list(self, exclude_obsolete: bool=False):
         try:
-            yield from self._paginated_user_get()
+            yield from self._paginated_user_get(exclude_obsolete)
         except RESTException as err:
             logger.exception(str(err))
             raise
 
-    def _paginated_object_get(self, object_type: str, json_data: dict):
+    def _paginated_object_get(self, object_type: str, json_data: dict, exclude_obsolete: bool=False):
         try:
             logger.info(f'Start querying for {object_type}')
 
@@ -127,6 +130,12 @@ class ItopConnection(RESTConnection):
                         continue
 
                     obj_fields_raw = obj_raw.get('fields')
+
+                    # Excluding objects with status "obsolete"
+                    if exclude_obsolete and isinstance(obj_fields_raw.get('status'), str) and \
+                            obj_fields_raw.get('status').lower() == 'obsolete':
+                        continue
+
                     obj_fields_raw['key'] = obj_raw.get('key')
                     yield obj_fields_raw
                     total_fetched_objects += 1
