@@ -62,6 +62,7 @@
         :multiple-row-selection="multipleRowSelection"
         :row-class="rowClass"
         :read-only="readOnly"
+        :allow-read-only-clicks="allowReadOnlyClicks"
         @updateColFilters="updateColFilters"
       >
         <template #default="slotProps">
@@ -230,6 +231,10 @@ export default {
     sortColumnIndex: {
       type: Number,
       default: 0,
+    },
+    allowReadOnlyClicks: {
+      type: Boolean,
+      default: false,
     },
     useCache: {
       type: Boolean,
@@ -561,7 +566,11 @@ export default {
       this.allSelected = false;
     },
     onClickAll(selected) {
-      this.enableSelectAll = selected;
+      if (this.readOnly.length > 0) {
+        this.enableSelectAll = false;
+      } else {
+        this.enableSelectAll = selected;
+      }
     },
     updateColFilters(colFilters) {
       this.updateViewFilter({ module: this.module, ...colFilters });

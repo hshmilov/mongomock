@@ -2,7 +2,7 @@
   <XRoleGateway
     :permission-category="$permissionConsts.categories.Reports"
   >
-    <template slot-scope="{ canAdd, canDelete }">
+    <template>
       <XPage
         class="x-reports"
         title="Reports"
@@ -13,7 +13,9 @@
           :on-click-row="navigateReport"
           module="reports"
           title="Reports"
-          :multiple-row-selection="canDelete"
+          :multiple-row-selection="showDeleteColumn"
+          :read-only="readOnlyRows"
+          :allow-read-only-clicks="true"
         >
           <template slot="actions">
             <XButton
@@ -24,7 +26,7 @@
             <XButton
               id="report_new"
               type="primary"
-              :disabled="!canAdd"
+              :disabled="addReportIsDisabled"
               @click="navigateReport('new')"
             >Add Report</XButton>
           </template>
@@ -38,7 +40,7 @@ import { mapState, mapActions } from 'vuex';
 import XPage from '../axons/layout/Page.vue';
 import XTable from '../neurons/data/Table.vue';
 
-import { REMOVE_REPORTS, FETCH_REPORT } from '../../store/modules/reports';
+import { REMOVE_REPORTS } from '../../store/modules/reports';
 
 export default {
   name: 'XReports',
@@ -46,7 +48,8 @@ export default {
   data() {
     return {
       selection: {
-        ids: [], include: true,
+        ids: [],
+        include: true,
       },
     };
   },
@@ -57,7 +60,51 @@ export default {
         if (!user || !user.permissions) return true;
         return user.permissions.Reports === 'ReadOnly';
       },
+      allReports(state) {
+        if (state.reports && state.reports.content && state.reports.content.data.length > 0) {
+          const privates = state.reports.content.data.filter((r) => r);
+          return privates;
+        }
+        return [];
+      },
     }),
+    allPrivateReports() {
+      return this.allReports.filter((r) => r.private).map((r) => r.uuid);
+    },
+    allPublicReports() {
+      return this.allReports.filter((r) => !r.private).map((r) => r.uuid);
+    },
+    canDelete() {
+      return this.$can(this.$permissionConsts.categories.Reports,
+        this.$permissionConsts.actions.Delete);
+    },
+    showDeleteColumn() {
+      return this.canDelete || this.canUsePrivateReports;
+    },
+    canUsePrivateReports() {
+      return this.$can(this.$permissionConsts.categories.Reports,
+        this.$permissionConsts.actions.Private);
+    },
+    canViewReports() {
+      return this.$can(this.$permissionConsts.categories.Reports,
+        this.$permissionConsts.actions.View);
+    },
+    addReportIsDisabled() {
+      const canAdd = this.$can(this.$permissionConsts.categories.Reports,
+        this.$permissionConsts.actions.Add);
+      return !canAdd && !this.canUsePrivateReports;
+    },
+    readOnlyRows() {
+      // Can delete just the public-reports
+      if (!this.canUsePrivateReports && this.allPrivateReports.length > 0) {
+        return this.allPrivateReports;
+      }
+      // Can delete just the private-reports
+      if (this.canUsePrivateReports && (!this.canDelete || !this.canViewReports)) {
+        return this.allPublicReports;
+      }
+      return [];
+    },
     name() {
       return 'reports';
     },
@@ -70,6 +117,11 @@ export default {
         name: 'mailSubject', title: 'Email Subject', type: 'string',
       }, {
         name: 'period', title: 'Scheduled Email', type: 'string',
+      }, {
+        name: 'private',
+        title: 'Access',
+        type: 'bool',
+        cellRenderer: (isPrivate) => (isPrivate ? 'Private' : 'Public'),
       }, {
         name: 'last_updated', title: 'Last Updated', type: 'string', format: 'date-time',
       }, {

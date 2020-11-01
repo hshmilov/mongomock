@@ -52,10 +52,10 @@
                   :schema="item"
                   :api-upload="apiUpload"
                   :read-only="readOnly"
+                  :wrapping-class="wrappingClass"
                   @input="(value) => dataChanged(value, item.name)"
                   @validate="onValidate"
                   @remove-validate="onRemoveValidate"
-                  :wrapping-class="wrappingClass"
                 />
               </XTypeWrap>
               <XButton
@@ -82,7 +82,7 @@
         <ASelect
           :id="`${schema.name}_select`"
           v-model="data"
-          :class="`x-multiple-select ${schema.name}_select`"
+          :class="`x-multiple-select ${schema.name}_select ${validationError && 'x-multiple-select--error'}`"
           mode="multiple"
           option-filter-prop="children"
           dropdown-class-name="x-multiple-select-dropdown"
@@ -163,6 +163,10 @@ export default {
     wrappingClass: {
       type: String,
       default: null,
+    },
+    validationError: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {
@@ -497,6 +501,11 @@ export default {
 
       .x-multiple-select {
         width: 100%;
+        &--error {
+          .ant-select-selection {
+            border:1px red solid;
+          }
+        }
       }
     }
 

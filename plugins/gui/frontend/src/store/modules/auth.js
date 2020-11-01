@@ -6,6 +6,7 @@ import { SHOULD_SHOW_CLOUD_COMPLIANCE } from '@store/modules/settings';
 import { REQUEST_API } from '../actions';
 import { RESET_DEVICES_STATE } from './devices';
 import { RESET_USERS_STATE } from './users';
+import { RESET_REPORTS_STATE } from './reports';
 import {
   RESET_TUNNEL_CONNECTION_CHECKING,
 } from '@store/modules/dashboard';
@@ -347,6 +348,7 @@ export const auth = {
       }).then(() => {
         commit(RESET_DEVICES_STATE);
         commit(RESET_USERS_STATE);
+        commit(RESET_REPORTS_STATE);
         commit(SET_USER, {
           ...payload,
           fetching: false,

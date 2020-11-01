@@ -45,7 +45,7 @@
           :exclude-adapters="colExcludedAdapters"
           :selected="value && value.includes(row[idField])"
           :expandable="expandable"
-          :clickable="onClickRow !== undefined"
+          :clickable="isClickableRow(row[idField])"
           :read-only="readOnly.includes(row[idField])"
           :row-class="rowClass"
           :format-title="formatTitle"
@@ -175,6 +175,10 @@ export default {
       type: Boolean,
       default: true,
     },
+    allowReadOnlyClicks: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -199,7 +203,7 @@ export default {
   },
   methods: {
     clickRow(id) {
-      if (!this.onClickRow || this.readOnly.includes(id)) return;
+      if (!this.isClickableRow(id)) return;
       if (!document.getSelection().isCollapsed) return;
 
       this.onClickRow(id);
@@ -250,6 +254,10 @@ export default {
       this.filterColumnActive = !this.filterColumnActive;
       this.enableExcludeAdaptersFilter = fieldName && !fieldName.startsWith('adapters_data.')
         && !fieldName.endsWith('_preferred');
+    },
+    isClickableRow(id) {
+      return this.onClickRow !== undefined
+      && (!this.readOnly.includes(id) || this.allowReadOnlyClicks);
     },
   },
 };

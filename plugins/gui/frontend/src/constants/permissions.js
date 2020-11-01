@@ -37,6 +37,7 @@ export const PermissionAction = {
   RunManualDiscovery: 'run_manual_discovery',
   Run: 'run',
   Open: 'open',
+  Private: 'private',
 };
 
 export const PermissionCategoryState = {
@@ -108,6 +109,7 @@ export const PermissionsStructure = [
       'permissions.reports.put',
       'permissions.reports.post',
       'permissions.reports.delete',
+      'permissions.reports.private',
     ],
   },
   {

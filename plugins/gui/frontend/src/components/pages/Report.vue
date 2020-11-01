@@ -30,7 +30,7 @@
             ref="name"
             v-model="report.name"
             type="text"
-            :disabled="cannotEditReport"
+            :disabled="!canEditCurrentReport"
             class="report-name-textbox"
             @keyup="onNameChanged"
           >
@@ -47,10 +47,18 @@
         </h5>
         <div>Select the data to include in the report</div>
         <div class="inner-content">
+          <!-- Private Report -->
+          <XCheckbox
+            v-model="report.private"
+            :read-only="!isPrivateEnabled"
+            label="Private report"
+            class="item"
+            @change="onPrivateChange"
+          />
           <XCheckbox
             v-model="report.include_dashboard"
             value="IncludeDashboard"
-            :read-only="cannotEditReport || !canViewDashboard"
+            :read-only="!canEditCurrentReport || !canViewDashboard"
             label="Include dashboard charts"
             class="item"
           />
@@ -62,13 +70,13 @@
               ref="spaces_ref"
               v-model="report.spaces"
               :schema="spacesSchema"
-              :read-only="cannotEditReport"
+              :read-only="!canEditCurrentReport"
+              :validation-error="blockRestrictedForSpace"
             />
           </div>
           <XCheckbox
             v-model="report.include_saved_views"
-            value="IncludeSavedViews"
-            :read-only="cannotEditReport"
+            :read-only="!canEditCurrentReport"
             label="Include saved queries data"
             class="item"
             @change="validateSavedQueries"
@@ -82,7 +90,7 @@
                 v-if="report.add_scheduling"
                 v-model="report.send_csv_attachments"
                 value="IncludeCsv"
-                :read-only="cannotEditReport"
+                :read-only="!canEditCurrentReport"
                 label=" Attach CSV with queries results to email"
                 class="item"
               />
@@ -112,7 +120,7 @@
                   <XButton
                     type="link"
                     class="query-remove"
-                    :disabled="cannotEditReport"
+                    :disabled="!canEditCurrentReport"
                     @click="() => removeQuery(i)"
                   >x</XButton>
                 </div>
@@ -120,7 +128,7 @@
               <XButton
                 type="light"
                 class="query-add"
-                :disabled="cannotEditReport || entityOptions.length === 0"
+                :disabled="!canEditCurrentReport || entityOptions.length === 0"
                 @click="addQuery"
               >+</XButton>
             </div>
@@ -130,7 +138,7 @@
           <div class="header">
             <XCheckbox
               v-model="report.add_scheduling"
-              :read-only="cannotEditReport"
+              :read-only="!canEditCurrentReport"
               value="AddScheduling"
               @change="onAddScheduling"
             />
@@ -149,7 +157,7 @@
               ref="mail_ref"
               v-model="report.mail_properties"
               :schema="mailSchema"
-              :read-only="cannotEditReport"
+              :read-only="!canEditCurrentReport"
               @validate="onValidate"
             />
             <div
@@ -161,7 +169,7 @@
               </h4>
               <XRecurrence
                 v-model="report"
-                :read-only="cannotEditReport"
+                :read-only="!canEditCurrentReport"
                 @validate="validateSendTime"
               />
             </div>
@@ -199,6 +207,27 @@
         </div>
       </div>
     </XBox>
+
+    <AModal
+      centered
+      class="private-report-modal"
+      :visible="showPrivateReportModal"
+      ok-text="Yes, Set Public"
+      :body-style="{paddingTop:'35px'}"
+      :closable="false"
+      :cancel-button-props="{props:{type: 'link'}}"
+      @ok="cleanPrivateReportData"
+      @cancel="cancelCleanPrivateReportData"
+    >
+      <p>
+        Once saved, the selected report will become publicly available to all
+        users and cannot be reset to private.<br><br>
+        A public report cannot include any private dashboards and private saved queries.
+        Therefore, such items will be removed from the report.
+        <br>
+      </p>
+      <p>Do you wish to continue?</p>
+    </AModal>
   </XPage>
 </template>
 
@@ -209,11 +238,13 @@ import {
   mapState, mapMutations, mapActions, mapGetters,
 } from 'vuex';
 import { Modal } from 'ant-design-vue';
+import { fetchReport } from '@api/reports';
 import XPage from '../axons/layout/Page.vue';
 import XBox from '../axons/layout/Box.vue';
 import XCheckbox from '../axons/inputs/Checkbox.vue';
 import XSelectSymbol from '../neurons/inputs/SelectSymbol.vue';
 import XSelect from '../axons/inputs/select/Select.vue';
+import XButton from '../axons/inputs/Button.vue';
 import XRecurrence from '../axons/inputs/Recurrence.vue';
 import {
   formatDate, weekDays, monthDays, getTimeZoneDiff,
@@ -223,21 +254,25 @@ import viewsMixin from '../../mixins/views';
 import XArrayEdit from '../neurons/schema/types/array/ArrayEdit.vue';
 import configMixin from '../../mixins/config';
 import { SHOW_TOASTER_MESSAGE, REMOVE_TOASTER } from '../../store/mutations';
-
-
-import {
-  FETCH_REPORT, SAVE_REPORT, RUN_REPORT, DOWNLOAD_REPORT,
-} from '../../store/modules/reports';
+import { SAVE_REPORT, RUN_REPORT, DOWNLOAD_REPORT } from '../../store/modules/reports';
 import { FETCH_DASHBOARD_SPACES } from '../../store/modules/dashboard';
 import { SET_GETTING_STARTED_MILESTONE_COMPLETION } from '../../store/modules/onboarding';
 import { REPORT_GENERATED } from '../../constants/getting-started';
 import { DATE_FORMAT } from '../../store/getters';
-import { fetchReport } from '@api/reports'
 
 export default {
   name: 'XReport',
   components: {
-    XPage, XBox, XSelect, XCheckbox, XSelectSymbol, XArrayEdit, PulseLoader, XRecurrence,
+    XPage,
+    XBox,
+    XButton,
+    XSelect,
+    XCheckbox,
+    XSelectSymbol,
+    XArrayEdit,
+    PulseLoader,
+    XRecurrence,
+    AModal: Modal,
   },
   mixins: [viewsMixin, configMixin],
   data() {
@@ -262,6 +297,7 @@ export default {
           emailList: [],
           emailListCC: [],
         },
+        private: false,
       },
       downloading: false,
       queryValidity: false,
@@ -276,10 +312,16 @@ export default {
       isLatestReport: false,
       loading: false,
       timeModal: false,
+      showPrivateReportModal: false,
+      initialPrivateReport: null,
     };
   },
   computed: {
     ...mapState({
+      myDashboardSpace(state) {
+        return state.dashboard.spaces.data
+          .find((space) => space.type === SpaceTypesEnum.personal);
+      },
       dashboardSpaces(state) {
         const customSpaces = state.dashboard.spaces.data
           .filter((space) => space.type === SpaceTypesEnum.custom);
@@ -288,8 +330,13 @@ export default {
         if (defaultSpace) {
           customSpaces.unshift(defaultSpace);
         }
+        if (this.myDashboardSpace
+          && this.report.private) {
+          customSpaces.unshift(this.myDashboardSpace);
+        }
         return customSpaces.map((space) => ({ name: space.uuid, title: space.name }));
       },
+      restrictedAtLeastForOneSpace: (state) => state.dashboard.spaces.restrictedAtLeastForOneSpace,
     }),
     ...mapGetters({
       dateFormat: DATE_FORMAT,
@@ -298,9 +345,30 @@ export default {
       return this.$can(this.$permissionConsts.categories.Dashboard,
         this.$permissionConsts.actions.View);
     },
-    cannotEditReport() {
-      return this.$cannot(this.$permissionConsts.categories.Reports,
-        this.$permissionConsts.actions.Update) && this.id !== 'new';
+    canAddReport() {
+      return this.$can(this.$permissionConsts.categories.Reports,
+        this.$permissionConsts.actions.Add);
+    },
+    canEditCurrentReport() {
+      const { canEditReports, canUsePrivateReports } = this;
+      const isPrivateReport = this.report.private;
+
+      if (isPrivateReport) {
+        return canUsePrivateReports;
+      }
+      return canEditReports || this.isNewReport;
+    },
+    canEditReports() {
+      return this.$can(this.$permissionConsts.categories.Reports,
+        this.$permissionConsts.actions.Update);
+    },
+    canViewReports() {
+      return this.$can(this.$permissionConsts.categories.Reports,
+        this.$permissionConsts.actions.View);
+    },
+    canUsePrivateReports() {
+      return this.$can(this.$permissionConsts.categories.Reports,
+        this.$permissionConsts.actions.Private);
     },
     disableDownloadReport() {
       return this.downloading;
@@ -308,7 +376,11 @@ export default {
     id() {
       return this.$route.params.id;
     },
+    isNewReport() {
+      return this.id === 'new';
+    },
     name() {
+      if (this.isNewReport) return 'New Report';
       return this.report.name;
     },
     hideTestNow() {
@@ -321,7 +393,7 @@ export default {
       return !this.report.last_generated;
     },
     valid() {
-      if (this.cannotEditReport) {
+      if (!this.canEditCurrentReport) {
         return false;
       }
       if (!this.report.name || !this.validateReportName()) {
@@ -339,6 +411,9 @@ export default {
         if (this.validity.error) {
           return false;
         }
+      }
+      if (this.blockRestrictedForSpace) {
+        return false;
       }
       return !this.validity.error;
     },
@@ -360,13 +435,16 @@ export default {
       if (this.report.add_scheduling) {
         return this.validity.error;
       }
+      if (this.blockRestrictedForSpace) {
+        return 'At least one dashboard space must be selected';
+      }
       return this.validity.error;
     },
     spacesSchema() {
       return {
         name: 'spaces_config',
         title: 'Dashboard spaces:',
-        placeholder: 'Select spaces (or empty for all)',
+        placeholder: this.dashboardSpacesFieldTitle,
         items: {
           title: '',
           name: 'uuid',
@@ -435,30 +513,48 @@ export default {
         this.$forceUpdate();
       },
     },
+    isPrivateEnabled() {
+      const addPermited = (this.isNewReport && this.canAddReport)
+       || (!this.isNewReport && this.initialPrivateReport && this.canEditReports);
+      return this.canUsePrivateReports && this.canViewReports && addPermited;
+    },
+    blockRestrictedForSpace() {
+      return this.report.include_dashboard
+      && this.restrictedAtLeastForOneSpace && this.report.spaces.length < 1;
+    },
+    dashboardSpacesFieldTitle() {
+      return !this.restrictedAtLeastForOneSpace ? 'Select spaces (or empty for all)' : '';
+    },
   },
   async created() {
     if (this.canViewDashboard) {
       await this.fetchDashboard();
     }
     if (this.id === 'new') {
+      this.setPrivateValue();
+      this.initialPrivateReport = this.report.private;
       return;
     }
     this.loading = true;
     try {
       this.report = await fetchReport(this.id);
       this.initData();
+      this.initialPrivateReport = this.report.private;
     } catch (error) {
-      if (!error.response.status === 401) {
-        throw error;
+      if (error.response.status === 404) {
+        this.$router.push('/reports');
+      } else if (error.response.status === 401) {
+        Modal.confirm({
+          title: 'This report cannot be viewed.',
+          content: 'You are missing permissions for at least one dashboard space included in this report.',
+          cancelButtonProps: { style: { display: 'none' } },
+          icon: 'exclamation-circle',
+          centered: true,
+          onOk: () => this.exit(),
+        });
+      } else {
+        throw (error);
       }
-      Modal.confirm({
-        title: 'This report cannot be viewed.',
-        content: 'You are missing permissions for at least one dashboard space included in this report.',
-        cancelButtonProps: { style: { display: 'none' } },
-        icon: 'exclamation-circle',
-        centered: true,
-        onOk: () => this.exit(),
-      });
     }
     this.loading = false;
   },
@@ -552,7 +648,7 @@ export default {
       });
     },
     toggleScheduling() {
-      if (this.cannotEditReport) {
+      if (!this.canEditCurrentReport) {
         return;
       }
       this.report.add_scheduling = !this.report.add_scheduling;
@@ -628,7 +724,7 @@ export default {
       this.validateSavedQueries();
     },
     canEditSavedView(index) {
-      if (this.cannotEditReport) {
+      if (!this.canEditCurrentReport) {
         return false;
       }
       if (this.report.views[index] && this.report.views[index].entity) {
@@ -641,7 +737,8 @@ export default {
         return [];
       }
       const { entity, id } = this.report.views[index];
-      return this.viewSelectOptionsGetter(true)(entity, id);
+      return this.viewSelectOptionsGetter(!this.report.private
+       && !this.showPrivateReportModal)(entity, id);
     },
     onNameChanged() {
       if (this.validity.error && this.validity.fields.length === 1 && this.validity.fields[0] === 'name') {
@@ -691,6 +788,31 @@ export default {
     showToaster(message, timeout = 2500) {
       this.showToasterMessage({ message, timeout });
     },
+    onPrivateChange(isChecked) {
+      if (!isChecked) {
+        this.showPrivateReportModal = true;
+      }
+    },
+    cleanPrivateReportData() {
+      // remove my-dashboard space
+      this.report.spaces = this.report.spaces.filter((r) => r !== this.myDashboardSpace.uuid);
+      // remove all private queries
+      if (this.report.views && this.report.views.length) {
+        const publicEntities = ({ entity, id }) => this.publicViews[entity]
+        && this.publicViews[entity].map((e) => e.name).includes(id);
+        this.report.views = this.report.views.filter(publicEntities);
+      }
+
+      if (this.report.views.length === 0) {
+        this.report.include_saved_views = false;
+        this.report.views.push({ entity: '', name: '' });
+      }
+      this.showPrivateReportModal = false;
+    },
+    cancelCleanPrivateReportData() {
+      this.showPrivateReportModal = false;
+      this.report.private = true;
+    },
     validateSendTime(isSendTimeValid) {
       const getTimePickerError = ((i) => i.field === 'send_time');
       if (!isSendTimeValid) {
@@ -715,6 +837,14 @@ export default {
     validateReportName() {
       const reportNameRegex = /^[\p{L}\p{N}\s@.\-_]*$/u;
       return this.report.name && reportNameRegex.test(this.report.name);
+    },
+    setPrivateValue() {
+      if (this.report.private || (!this.isNewReport && !this.report.private)) {
+        return;
+      }
+      const isChecked = (this.isNewReport && (!this.canAddReport || !this.canViewReports))
+       || (!this.isNewReport && this.canEditReports);
+      this.report.private = this.canUsePrivateReports && isChecked;
     },
   },
 };

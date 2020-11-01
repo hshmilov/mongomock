@@ -4,7 +4,7 @@ import logging
 import re
 import threading
 from datetime import datetime, timedelta
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 import json
 
 import pymongo
@@ -21,7 +21,8 @@ from axonius.consts.gui_consts import (EXEC_REPORT_EMAIL_CONTENT,
                                        EXEC_REPORT_FILE_NAME,
                                        EXEC_REPORT_GENERATE_PDF_THREAD_ID,
                                        EXEC_REPORT_THREAD_ID,
-                                       LAST_UPDATED_FIELD, UPDATED_BY_FIELD, DASHBOARD_SPACE_TYPE_PERSONAL)
+                                       LAST_UPDATED_FIELD, UPDATED_BY_FIELD, DASHBOARD_SPACE_TYPE_PERSONAL,
+                                       PRIVATE_FIELD)
 from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_MAIN_FIELD,
                                           ACTIONS_POST_FIELD,
                                           ACTIONS_SUCCESS_FIELD)
@@ -35,6 +36,7 @@ from axonius.utils.threading import run_and_forget
 from gui.logic.db_helpers import beautify_db_entry
 from gui.logic.filter_utils import filter_archived
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
+from gui.routes.dashboard.charts import NO_ACCESS_ERROR_MESSAGE
 from gui.routes.reports.report_generator import ReportGenerator
 
 # pylint: disable=import-error,no-member,no-self-use,too-many-branches,too-many-statements,invalid-name
@@ -45,7 +47,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 @gui_category_add_rules('reports')
 class Reports:
 
-    def _get_reports(self, limit, mongo_filter, mongo_sort, skip):
+    def _get_reports(self, limit, mongo_filter, mongo_sort, skip, no_access):
         sort = []
         for field, direction in mongo_sort.items():
             if field in [ACTIONS_MAIN_FIELD, ACTIONS_SUCCESS_FIELD, ACTIONS_FAILURE_FIELD, ACTIONS_POST_FIELD]:
@@ -60,7 +62,8 @@ class Reports:
                 'name': report['name'],
                 LAST_UPDATED_FIELD: report.get(LAST_UPDATED_FIELD),
                 UPDATED_BY_FIELD: report.get(UPDATED_BY_FIELD),
-                report_consts.LAST_GENERATED_FIELD: report.get(report_consts.LAST_GENERATED_FIELD)
+                report_consts.LAST_GENERATED_FIELD: report.get(report_consts.LAST_GENERATED_FIELD),
+                PRIVATE_FIELD: report.get(PRIVATE_FIELD)
             }
             if report.get('add_scheduling'):
                 beautify_object['period'] = report.get('period').capitalize()
@@ -69,8 +72,9 @@ class Reports:
             return beautify_db_entry(beautify_object)
 
         reports_collection = self.reports_config_collection
-        result = [beautify_report(enforcement) for enforcement in reports_collection.find(
-            mongo_filter).sort(sort).skip(skip).limit(limit)]
+        reports_filter = self._get_query_of_relevant_reports(no_access, mongo_filter)
+        result = [beautify_report(report) for report in reports_collection.find(
+            reports_filter).sort(sort).skip(skip).limit(limit)]
         return result
 
     def _generate_and_schedule_report(self, report):
@@ -81,8 +85,8 @@ class Reports:
     @paginated()
     @filtered()
     @sorted_endpoint()
-    @gui_route_logged_in(methods=['GET'])
-    def get_reports(self, limit, skip, mongo_filter, mongo_sort):
+    @gui_route_logged_in(methods=['GET'], proceed_and_set_access=True)
+    def get_reports(self, limit, skip, mongo_filter, mongo_sort, no_access):
         """
         GET results in list of all currently configured enforcements, with their query id they were created with
 
@@ -90,10 +94,14 @@ class Reports:
 
         :return:
         """
-        return jsonify(self._get_reports(limit, mongo_filter, mongo_sort, skip))
 
-    @gui_route_logged_in(methods=['PUT'])
-    def add_reports(self):
+        if self._unauthorized_private_access(no_access):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+
+        return jsonify(self._get_reports(limit, mongo_filter, mongo_sort, skip, no_access))
+
+    @gui_route_logged_in(methods=['PUT'], activity_params=['name', 'private'], proceed_and_set_access=True)
+    def add_reports(self, no_access):
         """
         PUT Send report_service a new enforcement to be configured
 
@@ -101,6 +109,8 @@ class Reports:
 
         :return:
         """
+        if self._unauthorized_private_access(no_access):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
 
         report_to_add = request.get_json()
         reports_collection = self.reports_config_collection
@@ -118,6 +128,10 @@ class Reports:
         if report:
             return 'Report name already taken by another report', 400
 
+        if report_to_add.get('private', False) and report_to_add.get('include_dashboard', False) \
+                and not self.is_admin_user() and self._is_restricted_by_role(report_to_add):
+            return 'At least one dashboard space must be selected', 400
+
         if not self.is_axonius_user():
             report_to_add['user_id'] = get_connected_user_id()
             report_to_add[LAST_UPDATED_FIELD] = datetime.now()
@@ -125,23 +139,31 @@ class Reports:
         upsert_result = self._upsert_report_config(report_to_add['name'], report_to_add, False)
         report_to_add['uuid'] = str(upsert_result)
         self._generate_and_schedule_report(report_to_add)
-        return jsonify(report_to_add), 201
+        return json.dumps({'name': report_to_add['name'],
+                           'private': 'private' if report_to_add.get('private') else ''}), 201
 
-    @gui_route_logged_in(methods=['DELETE'], activity_params=['count'])
-    def delete_reports(self):
+    @gui_route_logged_in(methods=['DELETE'], activity_params=['count'], proceed_and_set_access=True)
+    def delete_reports(self, no_access):
         """
         path: /api/reports
         """
-        return self._delete_report_configs(self.get_request_data_as_object()), 200
+        if self._unauthorized_private_access(no_access):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+
+        return self._delete_report_configs(self.get_request_data_as_object(), no_access), 200
 
     @filtered()
-    @gui_route_logged_in('count')
-    def reports_count(self, mongo_filter):
+    @gui_route_logged_in('count', proceed_and_set_access=True)
+    def reports_count(self, mongo_filter, no_access):
         """
         path: /api/reports/count
         """
+        if self._unauthorized_private_access(no_access):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+
         reports_collection = self.reports_config_collection
-        return jsonify(reports_collection.count_documents(mongo_filter))
+        reports_filter = self._get_query_of_relevant_reports(no_access, mongo_filter)
+        return jsonify(reports_collection.count_documents(reports_filter))
 
     def _is_restricted_by_role(self, report_to_check):
         report_spaces = report_to_check.get('spaces', [])
@@ -163,36 +185,41 @@ class Reports:
                 return True
         return False
 
-    @gui_route_logged_in('<report_id>', methods=['GET'])
-    def get_report_by_id(self, report_id):
+    @gui_route_logged_in('<report_id>', methods=['GET'], proceed_and_set_access=True)
+    def get_report_by_id(self, report_id, no_access):
         """
         :param report_id:
+        :param no_access: get report permission
 
         path: /api/reports/<report_id>
 
         :return:
         """
+        if self._unauthorized_private_access(no_access):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
         reports_collection = self.reports_config_collection
-        report = reports_collection.find_one({
-            '_id': ObjectId(report_id)
-        }, {
-            LAST_UPDATED_FIELD: 0,
-            UPDATED_BY_FIELD: 0,
-            'user_id': 0
-        })
+        report = reports_collection.find_one(
+            self._get_query_of_relevant_reports(no_access, {'_id': ObjectId(report_id)}),
+            {LAST_UPDATED_FIELD: 0, UPDATED_BY_FIELD: 0, 'user_id': 0}
+        )
         if not report:
-            return return_error(f'Report with id {report_id} was not found', 400)
+            return return_error(f'Report with id {report_id} was not found', 404)
 
-        if not self.is_admin_user() and self._is_restricted_by_role(report):
+        if not self.is_admin_user() and report.get('include_dashboard', False) \
+                and self._is_restricted_by_role(report):
             return return_error('Report restricted', 401)
 
         return jsonify(beautify_db_entry(report))
 
-    @gui_route_logged_in('<report_id>', methods=['POST'])
-    def update_report_by_id(self, report_id):
+    @gui_route_logged_in('<report_id>',
+                         methods=['POST'], activity_params=['name', 'private'], proceed_and_set_access=True)
+    def update_report_by_id(self, no_access, report_id):
         """
         path: /api/reports/<report_id>
         """
+        if self._unauthorized_private_access(no_access):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+
         report_to_update = request.get_json(silent=True)
         if not self.is_axonius_user():
             report_to_update[LAST_UPDATED_FIELD] = datetime.now()
@@ -201,7 +228,8 @@ class Reports:
         self._upsert_report_config(report_to_update['name'], report_to_update, True)
         self._generate_and_schedule_report(report_to_update)
 
-        return jsonify(report_to_update), 200
+        return json.dumps({'name': report_to_update['name'],
+                           'private': 'private' if report_to_update.get('private') else ''}), 201
 
     def generate_new_reports_offline(self):
         """
@@ -330,8 +358,8 @@ class Reports:
                 logger.info(f'DELETE: {uuid}')
                 self.db_files.delete_file(ObjectId(uuid))
 
-    @gui_route_logged_in('<report_id>/pdf')
-    def export_report(self, report_id):
+    @gui_route_logged_in('<report_id>/pdf', skip_activity=True, proceed_and_set_access=True)
+    def export_report(self, report_id, no_access):
         """
         Gets definition of report from DB for the dynamic content.
         Gets all the needed data for both pre-defined and dynamic content definitions.
@@ -345,14 +373,18 @@ class Reports:
 
         :return:
         """
-        report_name, report_data, attachments_data = self._get_executive_report_and_attachments(report_id)
+        if self._unauthorized_private_access(no_access):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+        report_name, report_data, attachments_data, is_private = self._get_executive_report_and_attachments(
+            report_id)
         response = Response(report_data, mimetype='application/pdf', direct_passthrough=True)
         self.log_activity_user(AuditCategory.Reports, AuditAction.Download, {
-            'name': report_name
+            'name': report_name,
+            'private': 'private' if is_private else ''
         })
         return response
 
-    def _get_executive_report_and_attachments(self, report_id) -> Tuple[str, object, List[object]]:
+    def _get_executive_report_and_attachments(self, report_id) -> Tuple[str, object, List[object], bool]:
         """
         Opens the report pdf and attachment csv's from the db,
         save them in a temp files and return their path
@@ -375,6 +407,7 @@ class Reports:
 
         attachments_data = []
         attachments = report.get('attachments')
+        is_private = report_config.get('private', False)
         if attachments:
             for attachment_uuid in attachments:
                 try:
@@ -386,7 +419,7 @@ class Reports:
                 except Exception:
                     logger.error(f'failed to retrieve attachment {attachment_uuid}')
         report_data = self.db_files.get_file(ObjectId(uuid))
-        return name, report_data, attachments_data
+        return name, report_data, attachments_data, is_private
 
     def generate_report(self, generated_date, report):
         """
@@ -397,11 +430,19 @@ class Reports:
         try:
             generator_params = {}
             space_ids = report.get('spaces') or []
+            user_id = report.get(UPDATED_BY_FIELD) or None
             generator_params['dashboard'] = self._get_dashboard(space_ids=space_ids, exclude_personal=True)
             generator_params['default_sort'] = self._system_settings['defaultSort']
             generator_params['saved_view_count_func'] = self._get_entity_count
-            generator_params['spaces'] = self._dashboard_spaces_collection.find(filter_archived(
-                {'type': {'$ne': DASHBOARD_SPACE_TYPE_PERSONAL}}))
+
+            spaces_filter = {'type': {'$ne': DASHBOARD_SPACE_TYPE_PERSONAL}}
+            # if private report:
+            # fetch all public spaces & 'My-Dashboard' of specific user.
+            if report.get('private'):
+                my_dashboard_private_space = {'user_id': user_id, 'type': DASHBOARD_SPACE_TYPE_PERSONAL}
+                spaces_filter = {'$or': [spaces_filter, my_dashboard_private_space]}
+            generator_params['spaces'] = self._dashboard_spaces_collection.find(filter_archived(spaces_filter))
+
             system_config = self.system_collection.find_one({'type': 'server'}) or {}
             server_name = str(self._saml_login.get('axonius_external_url') or '').strip()
             if server_name:
@@ -417,16 +458,21 @@ class Reports:
             logger.exception(f'Failed to generate report {report.get("name", "")}')
             return None, None
 
-    @gui_route_logged_in('send_email', methods=['POST'], required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.Reports))
-    def test_exec_report(self):
+    @gui_route_logged_in('send_email', methods=['POST'], activity_params=['name', 'private'],
+                         required_permission=PermissionValue.get(PermissionAction.View, PermissionCategory.Reports),
+                         proceed_and_set_access=True)
+    def test_exec_report(self, no_access):
         """
         path: /api/reports/send_email
         """
+        if self._unauthorized_private_access(no_access):
+            return return_error(NO_ACCESS_ERROR_MESSAGE, 401)
+
         try:
             report = self.get_request_data_as_object()
             self._send_report_thread(report=report)
-            return ''
+            return json.dumps({'name': report['name'],
+                               'private': 'private' if report.get('private') else ''}), 201
         except Exception as e:
             logger.exception('Failed sending test report by email.')
             return return_error(f'Problem testing report by email: {repr(e)}', 400)
@@ -560,23 +606,44 @@ class Reports:
         }, upsert=True, return_document=pymongo.ReturnDocument.AFTER)
         return result['_id']
 
-    def _delete_report_configs(self, reports):
+    def _delete_report_configs(self, reports, no_access):
         reports_collection = self.reports_config_collection
         reports['ids'] = [ObjectId(id) for id in reports['ids']]
-        ids = self.get_selected_ids(reports_collection, reports, {})
+        ids_filter = {}
+        if self._has_private_reports_permission():
+            if self._has_view_reports_permission():
+                ids_filter = {
+                    '$or': [
+                        {'private': True,
+                         'user_id': get_connected_user_id()
+                         },
+                        {'private': False}
+                    ]
+                }
+            else:
+                ids_filter = {
+                    'private': True,
+                    'user_id': get_connected_user_id()
+                }
+        else:
+            ids_filter = {
+                'private': False
+            }
+        ids = self.get_selected_ids(reports_collection, reports, ids_filter)
         for report_id in ids:
             existed_report = reports_collection.find_one_and_delete({
                 'archived': {
                     '$ne': True
                 },
-                '_id': ObjectId(report_id)
+                '_id': ObjectId(report_id),
             }, projection={
                 'name': 1
             })
-
             if existed_report is None:
-                logger.info(f'Report with id {report_id} does not exists')
-                return return_error('Report does not exist')
+                logger.info(f'Report with id {report_id} does not exists. Private access mode {no_access}')
+                return json.dumps({
+                    'count': '0'
+                })
             name = existed_report['name']
             exec_report_thread_id = EXEC_REPORT_THREAD_ID.format(name)
             exec_report_job = self._job_scheduler.get_job(exec_report_thread_id)
@@ -599,7 +666,8 @@ class Reports:
         lock = self.exec_report_locks[report_name] if self.exec_report_locks.get(report_name) else threading.RLock()
         self.exec_report_locks[report_name] = lock
         with lock:
-            _, report_data, attachments_data = self._get_executive_report_and_attachments(report['uuid'])
+            _, report_data, attachments_data, _ = self._get_executive_report_and_attachments(
+                report['uuid'])
             if self.mail_sender:
                 try:
                     mail_properties = report['mail_properties']
@@ -634,3 +702,35 @@ class Reports:
                 logger.info('Email cannot be sent because no email server is configured')
                 raise RuntimeWarning('No email server configured')
         logger.info(f'_send_report_thread for the "{report_name}" report ended')
+
+    def _has_view_reports_permission(self):
+        return self.get_user_permissions().get(PermissionCategory.Reports).get(PermissionAction.View)
+
+    def _has_private_reports_permission(self):
+        return self.get_user_permissions().get(PermissionCategory.Reports).get(PermissionAction.Private)
+
+    def _unauthorized_private_access(self, no_access):
+        return no_access and not self._has_private_reports_permission()
+
+    def _get_query_of_relevant_reports(self, no_access, mongo_filter) -> Dict[str, object]:
+        if no_access:
+            reports_filter = {
+                'private': True,
+                'user_id': get_connected_user_id()
+            }
+
+        elif not self._has_private_reports_permission():
+            reports_filter = {
+                'private': False
+            }
+        else:
+            reports_filter = {
+                '$or': [
+                    {'private': False},
+                    {'user_id': get_connected_user_id()}
+                ]
+            }
+        if mongo_filter and mongo_filter != {}:
+            return {'$and': [reports_filter, mongo_filter]}
+
+        return reports_filter

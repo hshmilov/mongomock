@@ -31,11 +31,13 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           LIBS_PATH,
                                           AXONIUS_USER_NAME,
                                           ADMIN_USER_NAME,
+                                          REPORTS_CONFIG_COLLECTION,
                                           CONFIGURABLE_CONFIGS_LEGACY_COLLECTION,
                                           DEVICE_VIEWS_INDIRECT_REFERENCES,
                                           DEVICE_VIEWS_DIRECT_REFERENCES,
                                           USER_VIEWS_DIRECT_REFERENCES,
                                           USER_VIEWS_INDIRECT_REFERENCES)
+
 from axonius.db_migrations import db_migration
 from axonius.entities import EntityType
 from axonius.utils.gui_helpers import (PermissionLevel, PermissionType,
@@ -1511,6 +1513,46 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
                 update_direct_references(origin_id, references, [], user_view_direct)
             generate_indirect_references(EntityType.Users, user_view_direct, user_view_indirect,
                                          drop_collection=False)
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_48(self):
+        print('Upgrade to schema 48 - Private Reports')
+        # Adding Private-permission to Roles
+        roles_collection = self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION)
+        bulk_updates = []
+        roles = roles_collection.find({})
+        for role in roles:
+            role_name = role['name']
+            report_permissions = role.get('permissions', {}).get('reports', {})
+            enabled = role_name in [PREDEFINED_ROLE_ADMIN, PREDEFINED_ROLE_OWNER] or (
+                report_permissions.get('get') and report_permissions.get('put') and
+                report_permissions.get('post') and report_permissions.get('delete') and
+                'private' not in report_permissions)
+
+            bulk_updates.append(UpdateOne(
+                {
+                    '_id': role['_id'],
+                },
+                {
+                    '$set': {
+                        'permissions.reports.private': enabled
+                    }
+                }
+            ))
+
+        if len(bulk_updates) > 0:
+            roles_collection.bulk_write(bulk_updates)
+
+        # Adding default private property to all reports
+        self.db.get_collection(GUI_PLUGIN_NAME, REPORTS_CONFIG_COLLECTION).update_many({
+            'private': {
+                '$exists': False
+            }
+        }, {
+            '$set': {
+                'private': False
+            }
+        })
 
     def _update_default_locked_actions_legacy(self, new_actions):
         """

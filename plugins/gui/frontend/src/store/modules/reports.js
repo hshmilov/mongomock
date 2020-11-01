@@ -7,23 +7,34 @@ export const SAVE_REPORT = 'SAVE_REPORT';
 export const REMOVE_REPORTS = 'REMOVE_REPORTS';
 export const RUN_REPORT = 'RUN_REPORT';
 export const DOWNLOAD_REPORT = 'DOWNLOAD_REPORT';
+export const RESET_REPORTS_STATE = 'RESET_REPORTS_STATE';
+
+const getReportsInitialState = () => ({
+  /* Reports DataTable State */
+  content: { data: [], fetching: false, error: '' },
+  count: { data: 0, fetching: false, error: '' },
+  view: {
+    page: 0,
+    pageSize: 20,
+    coloumnSizes: [],
+    query: {
+      filter: '', expressions: [],
+    },
+    sort: {
+      field: '', desc: true,
+    },
+  },
+});
 
 export const reports = {
   state: {
-    /* Reports DataTable State */
-    content: { data: [], fetching: false, error: '' },
-    count: { data: 0, fetching: false, error: '' },
-    view: {
-      page: 0,
-      pageSize: 20,
-      coloumnSizes: [],
-      query: {
-        filter: '', expressions: [],
-      },
-      sort: {
-        field: '', desc: true,
-      },
+    ...getReportsInitialState(),
+  },
+  mutations: {
+    [RESET_REPORTS_STATE](state) {
+      state = getReportsInitialState();
     },
+
   },
   actions: {
     [SAVE_REPORT]({ dispatch }, report) {

@@ -59,6 +59,7 @@ class Labels:
             'permissions.reports.put': 'Add report',
             'permissions.reports.post': 'Edit reports',
             'permissions.reports.delete': 'Delete report',
+            'permissions.reports.private': 'Use private reports',
 
             'permissions.instances': 'Instances',
             'permissions.instances.get': 'View instances',
@@ -215,15 +216,15 @@ class Labels:
 
             'audit.reports': 'Reports',
             'audit.reports.put': 'Add Report',
-            'audit.reports.put.template': 'Added report \'{name}\'',
+            'audit.reports.put.template': 'Added {private} report \'{name}\'',
             'audit.reports.post': 'Edit Report',
-            'audit.reports.post.template': 'Edited report \'{name}\'',
+            'audit.reports.post.template': 'Edited {private} report \'{name}\'',
             'audit.reports.delete': 'Delete Report',
             'audit.reports.delete.template': 'Deleted {count} reports',
             'audit.reports.download': 'Download Report',
-            'audit.reports.download.template': 'Downloaded report \'{name}\'',
+            'audit.reports.download.template': 'Downloaded {private} report \'{name}\'',
             'audit.reports.send_email': 'Manual Sent Report',
-            'audit.reports.send_email.template': 'Manually sent report \'{name}\'',
+            'audit.reports.send_email.template': 'Manually sent {private} report \'{name}\'',
             'audit.reports.trigger': 'Sent Report',
             'audit.reports.trigger.template': 'Report \'{name}\' sent',
 

@@ -43,6 +43,7 @@ class PermissionAction(Enum):
     ResetApiKey = 'reset_api_key'
     RunManualDiscovery = 'run_manual_discovery'
     Run = 'run'
+    Private = 'private'
 
     @classmethod
     def has_value(cls, value):
@@ -126,6 +127,7 @@ def get_permissions_structure(default_permission: bool) -> dict:
             PermissionAction.Add: default_permission,
             PermissionAction.Update: default_permission,
             PermissionAction.Delete: default_permission,
+            PermissionAction.Private: default_permission,
         },
         PermissionCategory.Instances: {
             PermissionAction.View: default_permission,

@@ -1,7 +1,7 @@
 <template>
   <tr
     class="x-table-row"
-    :class="[{clickable: clickable && !readOnly, selected}, getRowClass]"
+    :class="[{clickable, selected}, getRowClass]"
     @mouseenter="onEnter"
     @mouseleave="onLeave"
   >
@@ -9,7 +9,7 @@
       v-if="selected !== undefined && multipleRowSelection"
       class="w-14 top"
     >
-      <x-checkbox
+      <XCheckbox
         :data="selected"
         :read-only="readOnly"
         @change="onSelect"
@@ -41,13 +41,15 @@
 
 <script>
 import _isFunction from 'lodash/isFunction';
-import xCheckbox from '../inputs/Checkbox.vue';
+import XIcon from '@axons/icons/Icon';
+import XCheckbox from '../inputs/Checkbox.vue';
 import { validateClassName } from '../../../constants/utils';
 
 export default {
   name: 'XTableRow',
   components: {
-    xCheckbox,
+    XCheckbox,
+    XIcon,
   },
   props: {
     data: {

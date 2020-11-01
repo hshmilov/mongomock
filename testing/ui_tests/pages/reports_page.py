@@ -24,6 +24,7 @@ class ReportConfig(DataClassJsonMixin):
     period: str = ReportFrequency.daily
     spaces: list = None
     period_config: object = None
+    private: bool = None
 
 
 class ReportsPage(EntitiesPage):
@@ -40,11 +41,14 @@ class ReportsPage(EntitiesPage):
     ADD_SCHEDULING_CHECKBOX = 'Email Configuration'
     INCLUDE_QUERIES_CHECKBOX = 'Include saved queries data'
     INCLUDE_DASHBOARD_CHECKBOX = 'Include dashboard charts'
+    PRIVATE_REPORT_CHECKBOX_XPATH = '//label[.//text()=\"Private report\"]/parent::div'
     EMAIL_BOX_CSS = 'input.md-input__inner.md-chips-input__inner'
     EMAIL_BOX_RECIPIENTS = 'Recipients'
     EDIT_REPORT_XPATH = '//td[.//text()=\'{report_name}\']'
     REPORT_GENERATED_XPATH = '//td[.//text()=\'{report_name}\']/following::td/div'
     REPORT_TR_XPATH = '//td[.//text()=\'{report_name}\']/parent::tr'
+    REPORT_SELECT_CHECKBOX_XPATH = '//td[.//text()=\'{report_name}\']//' \
+                                   'parent::tr//child::div[contains(@class, "x-checkbox")]'
     EMAIL_SUBJECT_ID = 'mailSubject'
     UPGRADE_EMAIL_SUBJECT_ID = 'Upgrade mail subject'
     SELECT_VIEW_ENTITY_ELEMENT_CSS = '.saved-query .x-select-symbol'
@@ -64,6 +68,11 @@ class ReportsPage(EntitiesPage):
     BEFORE_SAVE_MESSAGE = 'Saving the report...'
     REPORT_NAME_DUPLICATE_ERROR = 'Report name already taken by another report'
     SPACES_LABEL = 'Dashboard spaces'
+    SPACES_DROP_DOWN_CSS = '.dashboard-spaces .ant-select-dropdown-content li'
+    AXONIUS_DASHBOARD_SELECTOR_XPATH = '//*[contains(text(), "Axonius Dashboard")]'
+    MY_DASHBOARD_SELECTOR_XPATH = '//*[contains(text(), "My Dashboard")]'
+    PRIVATE_REPORT_MODAL_SELECTOR_CSS = '.private-report-modal'
+    SET_PUBLIC_MODAL_BUTTON_XPATH = './/button[contains(@class, \'ant-btn\') and child::span[text()="Yes, Set Public"]]'
     SPACES_HELP_MESSAGE = 'Select spaces (or empty for all)'
     SEND_EMAIL_BUTTON_TEXT = 'Send Email'
     SELECT_PERIOD_TIME_CSS = '.send-hour .time-picker-text input'
@@ -137,6 +146,9 @@ class ReportsPage(EntitiesPage):
 
     def click_include_dashboard(self):
         self.find_element_by_text(self.INCLUDE_DASHBOARD_CHECKBOX).click()
+
+    def click_private_report(self):
+        self.find_element_by_xpath(self.PRIVATE_REPORT_CHECKBOX_XPATH).click()
 
     def is_include_dashboard(self):
         return self.is_toggle_has_selected_classes(
@@ -370,6 +382,8 @@ class ReportsPage(EntitiesPage):
             self.select_saved_views(report_config.queries)
         if report_config.add_scheduling:
             self.config_scheduling(report_config)
+        if report_config.private:
+            self.click_private_report()
         self.click_save()
         if wait_for_toaster:
             self.wait_for_report_is_saved_toaster()
@@ -404,6 +418,12 @@ class ReportsPage(EntitiesPage):
 
     def is_include_saved_queries_checkbox_disabled(self):
         return self.is_element_has_disabled_class(self.find_element_parent_by_text(self.INCLUDE_QUERIES_CHECKBOX))
+
+    def is_private_report_checkbox_disabled(self):
+        return 'disabled' in self.find_element_by_xpath(self.PRIVATE_REPORT_CHECKBOX_XPATH).get_attribute('class')
+
+    def is_private_report_checked(self):
+        return 'checked' in self.find_element_by_xpath(self.PRIVATE_REPORT_CHECKBOX_XPATH).get_attribute('class')
 
     def is_saved_queries_disabled(self):
         if 'checked' not in self.find_element_parent_by_text(self.INCLUDE_QUERIES_CHECKBOX).get_attribute('class'):
@@ -461,3 +481,10 @@ class ReportsPage(EntitiesPage):
 
     def click_restricted_report_modal_confirm(self):
         self.click_ant_button('OK')
+
+    def report_is_selectable(self, report):
+        return 'disabled' not in self.find_element_by_xpath(self.REPORT_SELECT_CHECKBOX_XPATH.format(
+            report_name=report)).get_attribute('class')
+
+    def is_download_report_disabled(self):
+        return self.is_element_disabled(self.get_button('Download Report'))

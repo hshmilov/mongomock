@@ -169,8 +169,19 @@ class Dashboard(Charts, Notifications):
             'type': space['type']
         } for space in self._dashboard_spaces_collection.find(spaces_filter)]
 
+        restricted_at_least_for_one_space = False
+        if not self.is_admin_user():
+            restricted_at_least_for_one_space_query = {
+                'public': False,
+                'roles': {'$nin': [str(self.get_user_role_id())]},
+                'type': DASHBOARD_SPACE_TYPE_CUSTOM
+            }
+            restricted_at_least_for_one_space = self._dashboard_spaces_collection.find_one(
+                restricted_at_least_for_one_space_query) is not None
+
         return jsonify({
-            'spaces': spaces
+            'spaces': spaces,
+            'restricted_at_least_for_one_space': restricted_at_least_for_one_space
         })
 
     @gui_route_logged_in('<space_id>', methods=['GET'], enforce_trial=False, activity_params=[SPACE_NAME])

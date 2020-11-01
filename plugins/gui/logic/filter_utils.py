@@ -6,7 +6,6 @@ from bson import ObjectId
 from axonius.consts.gui_consts import (PRIVATE_FIELD, USER_ID_FIELD)
 from axonius.utils.gui_helpers import get_connected_user_id
 
-
 logger = logging.getLogger(f'axonius.{__name__}')
 
 

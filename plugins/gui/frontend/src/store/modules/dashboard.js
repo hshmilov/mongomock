@@ -41,7 +41,9 @@ export const GET_SPACE_BY_ID = 'GET_SPACE_BY_ID';
 export const dashboard = {
   state: {
     lifecycle: { data: {}, fetching: false, error: '' },
-    spaces: { data: [], fetching: false, error: '' },
+    spaces: {
+      data: [], fetching: false, error: '', restrictedAtLeastForOneSpace: false,
+    },
     tunnelDisconnected: false,
   },
   mutations: {
@@ -66,6 +68,7 @@ export const dashboard = {
       if (!payload.data) {
         return;
       }
+      state.spaces.restrictedAtLeastForOneSpace = payload.data.restricted_at_least_for_one_space || false;
       state.spaces.data = payload.data.spaces;
     },
     [UPDATE_ADDED_SPACE](state, payload) {
