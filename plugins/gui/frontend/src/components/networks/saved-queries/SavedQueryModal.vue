@@ -100,8 +100,12 @@ import { getEntityPermissionCategory, EntitiesEnum as Entities } from '@constant
    * @returns {Boolean} true if valid
    */
 const uniqueQueryName = function uniqueQueryName(inputValue) {
-  if ((this.isEdit && inputValue === this.initialName) || _isEmpty(inputValue)) return true;
-  return !this.existingQueriesNamesList.has(inputValue.toLocaleLowerCase());
+  const newName = inputValue.toLocaleLowerCase();
+  const initialName = (this.initialName || '').toLocaleLowerCase();
+  // allow renaming a queryName to a different case
+  if ((this.isEdit && newName === initialName) || _isEmpty(newName)) return true;
+  // prevent using a queryName that's already been taken by another query
+  return !this.existingQueriesNamesList.has(newName);
 };
 
 export default {
