@@ -1601,6 +1601,11 @@
     "link": "https://docs.axonius.com/docs/okta",
     "description": "Okta provides cloud software that helps companies manage their employees' passwords, by providing a “single sign-on” experience."
   },
+  "lync_adapter": {
+    "title": "Microsoft Lync - BETA",
+    "link": "https://docs.axonius.com/docs/microsoft_lync",
+    "description": "Microsoft Lync enables instant messaging (IM), audio and video calls, Lync Meetings, availability (presence) information, and sharing capabilities."
+  },
   "beyond_trust_adapter": {
     "title": "BeyondTrust Privilege Management for Windows",
     "link": "https://docs.axonius.com/docs/beyondtrust-privilege-management-for-windows",
