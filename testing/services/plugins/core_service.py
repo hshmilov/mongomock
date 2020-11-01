@@ -1228,6 +1228,12 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
                 }
             )
 
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_34(self):
+        print('Upgrade to 34')
+        # https://axonius.atlassian.net/browse/AX-9691
+        self.migrate_adapter_advanced_settings_to_connection('okta_adapter', 'parallel_requests')
+
     def migrate_adapter_advanced_settings_to_connection(
             self,
             adapter_name: str,
@@ -1242,7 +1248,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
 
         # Get all registered plugin unique names
         all_adapter_pun = [
-            x[PLUGIN_UNIQUE_NAME] for x in self.db.client[CORE_UNIQUE_NAME]['clients'].find(
+            x[PLUGIN_UNIQUE_NAME] for x in self.db.client[CORE_UNIQUE_NAME]['configs'].find(
                 {PLUGIN_NAME: adapter_name},
                 projection={PLUGIN_UNIQUE_NAME: 1}
             )

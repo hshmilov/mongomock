@@ -7,7 +7,6 @@ import requests
 import uritools
 import aiohttp
 
-
 from axonius.utils.json import from_json
 from axonius.async.utils import async_request
 from axonius.clients.rest.connection import RESTConnection
@@ -15,20 +14,21 @@ from axonius.clients.rest.consts import get_default_timeout
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
-
 PARALLEL_REQUESTS_DEFAULT = 75
 DEFAULT_SLEEP_TIME = 60
 _MAX_PAGE_COUNT = 10000
 
 
 class OktaConnection:
-    def __init__(self, url: str, api_key: str, https_proxy: str):
+    def __init__(self, url: str, api_key: str, https_proxy: str, parallel_requests: int):
         url = RESTConnection.build_url(url).strip('/')
         self.__base_url = url
         self.__api_key = api_key
-        self.__parallel_requests = PARALLEL_REQUESTS_DEFAULT
         self.__https_proxy = https_proxy
         self._sleep_between_requests_in_sec = 0
+        if not parallel_requests or parallel_requests <= 0:
+            parallel_requests = PARALLEL_REQUESTS_DEFAULT
+        self.__parallel_requests = parallel_requests
 
     # pylint: disable=W0102
     def __make_request(self, api='', params={}, forced_url=None):
@@ -207,13 +207,14 @@ class OktaConnection:
         return users_to_data
 
     # pylint: disable=R1702,R0912,R0915
-    def get_users(self, parallel_requests, fetch_apps=False, fetch_factors=False,
+    def get_users(self, fetch_apps=False, fetch_factors=False,
                   fetch_logs=False, fetch_groups=True,
                   sleep_between_requests_in_sec=0) -> Iterable[dict]:
         """
         Fetches all users
         :return: iterable of dict
         """
+
         def get_users_page(api='', forced_url=None):
             response = self.__make_request(api=api, forced_url=forced_url)
             users_page = response.json()
@@ -240,9 +241,6 @@ class OktaConnection:
             return users_page, response
         if sleep_between_requests_in_sec:
             self._sleep_between_requests_in_sec = sleep_between_requests_in_sec
-        if parallel_requests <= 0:
-            parallel_requests = PARALLEL_REQUESTS_DEFAULT
-        self.__parallel_requests = parallel_requests
         users_to_logs = {}
         if fetch_logs:
             logger.info('Starting to fetch logs')

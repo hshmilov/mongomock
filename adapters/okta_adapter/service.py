@@ -56,7 +56,8 @@ class OktaAdapter(AdapterBase, Configurable):
     def _connect_client(self, client_config):
         connection = OktaConnection(url=client_config['url'],
                                     api_key=client_config['api_key'],
-                                    https_proxy=client_config.get('https_proxy'))
+                                    https_proxy=client_config.get('https_proxy'),
+                                    parallel_requests=client_config.get('parallel_requests'))
         try:
             connection.is_alive()
         except Exception as e:
@@ -65,8 +66,7 @@ class OktaAdapter(AdapterBase, Configurable):
 
     # pylint: disable=W0221
     def _query_users_by_client(self, client_name, client_data):
-        return client_data.get_users(self.__parallel_requests,
-                                     fetch_apps=self.__fetch_apps,
+        return client_data.get_users(fetch_apps=self.__fetch_apps,
                                      fetch_groups=self.__fetch_groups,
                                      fetch_factors=self.__fetch_factors,
                                      sleep_between_requests_in_sec=self.__sleep_between_requests_in_sec,
@@ -87,6 +87,12 @@ class OktaAdapter(AdapterBase, Configurable):
                     'format': 'password'
                 },
                 {
+                    'name': 'parallel_requests',
+                    'title': 'Number of parallel requests',
+                    'type': 'integer',
+                    'default': 75
+                },
+                {
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
@@ -96,6 +102,7 @@ class OktaAdapter(AdapterBase, Configurable):
             'required': [
                 'url',
                 'api_key',
+                'parallel_requests'
             ],
             'type': 'array'
         }
@@ -248,11 +255,6 @@ class OktaAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
-                    'name': 'parallel_requests',
-                    'title': 'Number of parallel requests',
-                    'type': 'integer'
-                },
-                {
                     'name': 'sleep_between_requests_in_sec',
                     'type': 'integer',
                     'title': 'Time in seconds to sleep between each request'
@@ -265,7 +267,6 @@ class OktaAdapter(AdapterBase, Configurable):
             ],
             'required': [
                 'fetch_apps',
-                'parallel_requests',
                 'fetch_factors',
                 'fetch_groups',
                 'fetch_logs'
@@ -280,7 +281,6 @@ class OktaAdapter(AdapterBase, Configurable):
             'fetch_apps': False,
             'fetch_factors': False,
             'fetch_logs': False,
-            'parallel_requests': 75,
             'email_domain_whitelist': None,
             'sleep_between_requests_in_sec': None,
             'fetch_groups': True
@@ -288,7 +288,6 @@ class OktaAdapter(AdapterBase, Configurable):
 
     def _on_config_update(self, config):
         self.__fetch_apps = config['fetch_apps']
-        self.__parallel_requests = config['parallel_requests']
         self.__fetch_factors = config.get('fetch_factors')
         self.__fetch_logs = config.get('fetch_logs')
         self.__sleep_between_requests_in_sec = config.get('sleep_between_requests_in_sec') or 0
