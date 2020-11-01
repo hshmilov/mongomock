@@ -407,10 +407,8 @@ class IbossCloudAdapter(AdapterBase):
             user.policy_group = int_or_none(user_raw.get('groupNumber'))
             user.policy_group_name = user_raw.get('groupName')
             try:
-                ip_v4 = user_raw.get('ipAddress')
-                user.ip_v4 = ip_v4
-                if ip_v4 is not None and isinstance(ip_v4, str):
-                    user.ip_v4_raw = [ip_v4]
+                user.ip_v4 = user_raw.get('ipAddress')
+                user.ip_v4_raw = user_raw.get('ipAddress')
             except Exception:
                 pass
             user.note = user_raw.get('note')

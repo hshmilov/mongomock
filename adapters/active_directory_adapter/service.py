@@ -54,7 +54,7 @@ from axonius.utils.parsing import (ad_integer8_to_timedelta,
                                    get_first_object_from_dn,
                                    get_member_of_list_from_memberof,
                                    get_organizational_units_from_dn,
-                                   parse_bool_from_raw, format_ip_raw)
+                                   parse_bool_from_raw)
 from axonius.utils.ssl import get_ca_bundle
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -76,7 +76,6 @@ RESOLVE_CHANGE_STATUS_INTERVAL = 60 * 60 * 1  # 1 hour
 class AvailableIp(SmartJsonClass):
     """ A definition for the json-schema for an available IP and its origin"""
     ip = Field(str, 'IP', converter=format_ip, json_format=JsonStringFormat.ip)
-    ip_raw = ListField(str, converter=format_ip_raw, hidden=True)
     source_dns = Field(str, 'DNS server that gave the result')
 
 
@@ -982,23 +981,10 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                         logger.debug(f"Found ip conflict. details: {str(available_ips)} on {host['id']}")
                         self.devices.add_label([(self.plugin_unique_name, host['id'])], "IP Conflicts")
 
-                        parsed_ips = list()
-                        for ip, dns in available_ips.items():
-                            if ip is not None and isinstance(ip, str):
-                                try:
-                                    avail_ip = AvailableIp(
-                                        ip=ip,
-                                        ip_raw=[ip],
-                                        source_dns=dns
-                                    )
-                                    parsed_ips.append(avail_ip)
-                                except Exception:
-                                    logger.warning(f'Unable to create Available IP object: {ip} / {dns}')
-                                    continue
-
                         serialized_available_ips = AvailableIps(
-                            available_ips=parsed_ips)
-
+                            available_ips=[AvailableIp(ip=ip, source_dns=dns)
+                                           for ip, dns in available_ips.items()]
+                        )
                         self.devices.add_data([(self.plugin_unique_name, host['id'])], "IP Conflicts",
                                               serialized_available_ips.to_dict())
                     else:

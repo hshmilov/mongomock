@@ -40,7 +40,7 @@ class ContainerService(SmartJsonClass):
 
 class ContainerNetworkBindings(SmartJsonClass):
     bind_ip = Field(str, 'IPs', converter=format_ip, json_format=JsonStringFormat.ip)
-    bind_ip_raw = ListField(str, converter=format_ip_raw, hidden=True)
+    bind_ip_raw = Field(str, converter=format_ip_raw, hidden=True)
     container_port = Field(int, 'Container port')
     host_port = Field(int, 'Host port')
     name = Field(str, 'Name')

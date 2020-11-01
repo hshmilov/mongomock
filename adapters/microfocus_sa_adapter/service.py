@@ -7,10 +7,10 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter, AGENT_NAMES
-from axonius.fields import Field, JsonStringFormat, ListField
+from axonius.fields import Field, JsonStringFormat
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import format_ip, format_ip_raw
+from axonius.utils.parsing import format_ip
 from microfocus_sa_adapter.connection import MicrofocusSaConnection
 from microfocus_sa_adapter.consts import STR_FIELDS, DT_FIELDS, BOOL_FIELDS, IP_FIELDS
 
@@ -28,11 +28,9 @@ def parse_date_type(obj):
     return obj
 
 
-def parse_ip_type(obj, is_raw=False):
+def parse_ip_type(obj):
     if obj:
         try:
-            if is_raw:
-                return format_ip_raw(obj)
             return format_ip(obj)
         except Exception:
             msg = f'Failed to parse IP address {obj}'
@@ -80,15 +78,12 @@ def add_fields_bool(device, device_raw):
 
 
 def add_fields_ips(device, device_raw):
-    for field_name, provider_field_name in IP_FIELDS.items():
+    for k, v in IP_FIELDS.items():
         try:
-            field_value = device_raw.get(provider_field_name) or None
-            setattr(device, field_name, parse_ip_type(field_value))
-            if isinstance(field_value, str):
-                field_value = [field_value]
-            setattr(device, f'{field_name}_raw', parse_ip_type(field_value, is_raw=True))
+            setattr(device, k, parse_ip_type(device_raw.get(v, None) or None))
         except Exception:
-            logger.exception(f'Error adding device attr {field_name!r} from raw IP attr {provider_field_name!r}')
+            msg = f'Error adding device attr {k!r} from raw IP attr {v!r}'
+            logger.exception(msg)
 
 
 def add_field_complex_agent(device, device_raw):
@@ -135,11 +130,9 @@ class MicrofocusSaAdapter(AdapterBase):
         default_gw = Field(
             field_type=str, title='Default Gateway', converter=format_ip, json_format=JsonStringFormat.ip
         )
-        default_gw_raw = ListField(field_type=str, converter=format_ip_raw, hidden=True)
         default_gw_ipv6 = Field(
             field_type=str, title='Default Gateway IPv6', converter=format_ip, json_format=JsonStringFormat.ip
         )
-        default_gw_ipv6_raw = ListField(field_type=str, converter=format_ip_raw, hidden=True)
         discovered_date = Field(field_type=datetime.datetime, title='Discovered Date')
         facility = Field(field_type=str, title='Facility')
         first_detect_dt = Field(field_type=datetime.datetime, title='First Detected Date')
@@ -150,11 +143,9 @@ class MicrofocusSaAdapter(AdapterBase):
         locale = Field(field_type=str, title='Locale')
         log_change = Field(field_type=bool, title='Is Logging Changes')
         loopback_ip = Field(field_type=str, title='Loopback IP', converter=format_ip, json_format=JsonStringFormat.ip)
-        loopback_ip_raw = ListField(field_type=str, converter=format_ip_raw, hidden=True)
         management_ip = Field(
             field_type=str, title='Management IP', converter=format_ip, json_format=JsonStringFormat.ip
         )
-        management_ip_raw = ListField(field_type=str, converter=format_ip_raw, hidden=True)
         modified_date = Field(field_type=datetime.datetime, title='Modified Date')
         netbios_name = Field(field_type=str, title='Netbios Name')
         origin = Field(field_type=str, title='Origin')
@@ -163,9 +154,7 @@ class MicrofocusSaAdapter(AdapterBase):
         os_service_pack = Field(field_type=str, title='Operating System Service Pack')
         os_version = Field(field_type=str, title='Operating System Version')
         peer_ip = Field(field_type=str, title='Peer IP', converter=format_ip, json_format=JsonStringFormat.ip)
-        peer_ip_raw = ListField(field_type=str, converter=format_ip_raw, hidden=True)
         primary_ip = Field(field_type=str, title='Primary IP', converter=format_ip, json_format=JsonStringFormat.ip)
-        primary_ip_raw = ListField(field_type=str, converter=format_ip_raw, hidden=True)
         realm = Field(field_type=str, title='Realm')
         reboot_required = Field(field_type=bool, title='Is Reboot Required')
         reporting = Field(field_type=bool, title='Is Reporting')

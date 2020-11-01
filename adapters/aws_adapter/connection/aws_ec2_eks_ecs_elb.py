@@ -934,40 +934,21 @@ def parse_raw_data_inner_regular(
 
                     for lb_raw in associated_lbs:
                         try:
+                            ips = lb_raw.get('ips')
                             lb_scheme = lb_raw.get('scheme')
                             elb_dns = lb_raw.get('dns')
-
-                            ips = lb_raw.get('ips')
-                            if ips is not None and isinstance(ips, list):
-                                parsed_ips = ips
-                            else:
-                                parsed_ips = []
-
-                            last_ip_by_dns_query = lb_raw.get('last_ip_by_dns_query')
-                            if last_ip_by_dns_query is not None and \
-                                    isinstance(last_ip_by_dns_query, str):
-                                last_ip_by_dns_query_raw = [last_ip_by_dns_query]
-                            else:
-                                last_ip_by_dns_query_raw = []
-
-                            try:
-                                device.add_aws_load_balancer(
-                                    name=lb_raw.get('name'),
-                                    dns=elb_dns,
-                                    scheme=lb_scheme,
-                                    type=lb_raw.get('type'),
-                                    lb_protocol=lb_raw.get('lb_protocol'),
-                                    lb_port=lb_raw.get('lb_port'),
-                                    instance_protocol=lb_raw.get('instance_protocol'),
-                                    instance_port=lb_raw.get('instance_port'),
-                                    ips=parsed_ips,
-                                    ips_raw=parsed_ips,
-                                    last_ip_by_dns_query=last_ip_by_dns_query,
-                                    last_ip_by_dns_query_raw=last_ip_by_dns_query_raw,
-                                )
-                            except Exception:
-                                pass
-
+                            device.add_aws_load_balancer(
+                                name=lb_raw.get('name'),
+                                dns=elb_dns,
+                                scheme=lb_scheme,
+                                type=lb_raw.get('type'),
+                                lb_protocol=lb_raw.get('lb_protocol'),
+                                lb_port=lb_raw.get('lb_port'),
+                                instance_protocol=lb_raw.get('instance_protocol'),
+                                instance_port=lb_raw.get('instance_port'),
+                                ips=ips,
+                                last_ip_by_dns_query=lb_raw.get('last_ip_by_dns_query')
+                            )
                             if elb_dns:
                                 device.dns_names.append(elb_dns)
                         except Exception:
@@ -1180,22 +1161,13 @@ def parse_raw_data_inner_regular(
                             logger.exception(f'Problem parsing network interface {network_interface}')
 
                     for network_binding in (container_raw.get('networkBindings') or []):
-                        try:
-                            bind_ip = network_binding.get('bindIP')
-                            if bind_ip is not None and isinstance(bind_ip, str):
-                                bind_ip_raw = [bind_ip]
-                            else:
-                                bind_ip_raw = []
-
-                            device.add_network_binding(
-                                bind_ip=bind_ip,
-                                bind_ip_raw=bind_ip_raw,
-                                container_port=network_binding.get('containerPort'),
-                                host_port=network_binding.get('hostPort'),
-                                protocol=network_binding.get('protocol')
-                            )
-                        except Exception as ex:
-                            logger.exception(f'Error occurred while parsing bind_ip/bind_ip_raw: {str(ex)}')
+                        device.add_network_binding(
+                            bind_ip=network_binding.get('bindIP'),
+                            bind_ip_raw=network_binding.get('bindIP'),
+                            container_port=network_binding.get('containerPort'),
+                            host_port=network_binding.get('hostPort'),
+                            protocol=network_binding.get('protocol')
+                        )
 
                     # Parse Task
                     try:
@@ -1331,40 +1303,21 @@ def parse_raw_data_inner_regular(
                                 try:
                                     if private_ip and private_ip[0] in elb_by_ip:
                                         for lb_raw in elb_by_ip[private_ip[0]]:
+                                            ips = lb_raw.get('ips')
                                             lb_scheme = lb_raw.get('scheme')
                                             elb_dns = lb_raw.get('dns')
-
-                                            ips = lb_raw.get('ips')
-                                            if ips is not None and isinstance(ips, list):
-                                                parsed_ips = ips
-                                            else:
-                                                parsed_ips = []
-
-                                            last_ip_by_dns_query = lb_raw.get('last_ip_by_dns_query')
-                                            if last_ip_by_dns_query is not None and \
-                                                    isinstance(last_ip_by_dns_query, str):
-                                                last_ip_by_dns_query_raw = [last_ip_by_dns_query]
-                                            else:
-                                                last_ip_by_dns_query_raw = []
-
-                                            try:
-                                                device.add_aws_load_balancer(
-                                                    name=lb_raw.get('name'),
-                                                    dns=elb_dns,
-                                                    scheme=lb_scheme,
-                                                    type=lb_raw.get('type'),
-                                                    lb_protocol=lb_raw.get('lb_protocol'),
-                                                    lb_port=lb_raw.get('lb_port'),
-                                                    instance_protocol=lb_raw.get('instance_protocol'),
-                                                    instance_port=lb_raw.get('instance_port'),
-                                                    ips=parsed_ips,
-                                                    ips_raw=parsed_ips,
-                                                    last_ip_by_dns_query=last_ip_by_dns_query,
-                                                    last_ip_by_dns_query_raw=last_ip_by_dns_query_raw,
-                                                )
-                                            except Exception:
-                                                pass
-
+                                            device.add_aws_load_balancer(
+                                                name=lb_raw.get('name'),
+                                                dns=elb_dns,
+                                                scheme=lb_scheme,
+                                                type=lb_raw.get('type'),
+                                                lb_protocol=lb_raw.get('lb_protocol'),
+                                                lb_port=lb_raw.get('lb_port'),
+                                                instance_protocol=lb_raw.get('instance_protocol'),
+                                                instance_port=lb_raw.get('instance_port'),
+                                                ips=ips,
+                                                last_ip_by_dns_query=lb_raw.get('last_ip_by_dns_query')
+                                            )
                                             if elb_dns:
                                                 device.dns_names.append(elb_dns)
                                 except Exception:
@@ -1416,41 +1369,21 @@ def parse_raw_data_inner_regular(
             lb_scheme = elb_raw.get('scheme')
             elb_dns = elb_raw.get('dns')
             subnets = []
-
-            ips = elb_raw.get('ips')
-            if ips is not None and isinstance(ips, list):
-                parsed_ips = ips
-            else:
-                parsed_ips = []
-
-            last_ip_by_dns_query = elb_raw.get('last_ip_by_dns_query')
-            if last_ip_by_dns_query is not None and \
-                    isinstance(last_ip_by_dns_query, str):
-                last_ip_by_dns_query_raw = [last_ip_by_dns_query]
-            else:
-                last_ip_by_dns_query_raw = []
-
             for subnet_id in (elb_raw.get('subnets') or []):
                 subnet_name = (subnets_by_id.get(subnet_id) or {}).get('name')
                 if subnet_name:
                     subnets.append(f'{subnet_id} ({subnet_name})')
                 else:
                     subnets.append(subnet_id)
-            try:
-                device.add_aws_load_balancer(
-                    name=elb_raw.get('name'),
-                    dns=elb_dns,
-                    scheme=lb_scheme,
-                    type=elb_raw.get('type'),
-                    ips=parsed_ips,
-                    ips_raw=parsed_ips,
-                    last_ip_by_dns_query=last_ip_by_dns_query,
-                    last_ip_by_dns_query_raw=last_ip_by_dns_query_raw,
-                    subnets=subnets
-                )
-            except Exception:
-                pass
-
+            device.add_aws_load_balancer(
+                name=elb_raw.get('name'),
+                dns=elb_dns,
+                scheme=lb_scheme,
+                type=elb_raw.get('type'),
+                ips=ips,
+                last_ip_by_dns_query=last_ip_by_dns_query,
+                subnets=subnets
+            )
             if elb_dns:
                 device.dns_names.append(elb_dns)
             device.vpc_id = elb_raw.get('vpcid')

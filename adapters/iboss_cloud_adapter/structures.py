@@ -58,4 +58,4 @@ class IbossCloudUserInstance(UserAdapter):
     first_seen = Field(datetime.datetime, 'First Seen')
     group_association = ListField(str, 'Group Association')
     ip_v4 = Field(str, 'IPv4', converter=format_ip, json_format=JsonStringFormat.ip)
-    ip_v4_raw = ListField(str, converter=format_ip_raw, hidden=True)
+    ip_v4_raw = Field(str, converter=format_ip_raw, hidden=True)

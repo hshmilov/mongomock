@@ -625,12 +625,15 @@ def bytes_image_to_base64(value):
 def format_ip_raw(value):
     try:
         address = ipaddress.ip_address(value)
-        if isinstance(address, ipaddress.IPv4Address) or isinstance(address, ipaddress.IPv6Address):
+        if isinstance(address, ipaddress.IPv4Address):
             return address._ip
-
         return None
-    except Exception as ex:
-        raise ValueError(f'Invalid raw IP address: {value} , Error: {ex}')
+        # TODO: Add support to ipv6
+        # decimal128_ctx = create_decimal128_context()
+        # with decimal.localcontext(decimal128_ctx) as ctx:
+        # return Decimal128(ctx.create_decimal(str(address._ip)))
+    except Exception:
+        raise ValueError(f'Invalid raw IP address: {value}')
 
 
 def parse_versions_raw(version):
