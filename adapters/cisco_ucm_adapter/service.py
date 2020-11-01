@@ -2,19 +2,21 @@ import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.cisco_ucm.connection import CiscoUcmConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
+from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
-from cisco_ucm_adapter.connection import CiscoUcmConnection
+from axonius.utils.parsing import parse_bool_from_raw, parse_date
 from cisco_ucm_adapter.client_id import get_client_id
+from cisco_ucm_adapter.structures import CicsoUcmDeviceAdapter
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class CiscoUcmAdapter(AdapterBase):
+class CiscoUcmAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
-    class MyDeviceAdapter(DeviceAdapter):
+    class MyDeviceAdapter(CicsoUcmDeviceAdapter):
         pass
 
     def __init__(self, *args, **kwargs):
@@ -49,8 +51,7 @@ class CiscoUcmAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -60,7 +61,7 @@ class CiscoUcmAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(fetch_inactive_devices=self.__fetch_inactive_devices)
 
     @staticmethod
     def _clients_schema():
@@ -109,30 +110,46 @@ class CiscoUcmAdapter(AdapterBase):
 
     def _create_device(self, device_raw):
         try:
-            if device_raw.tag != 'phone' or device_raw[0].tag != 'name':
+            device = self._new_device_adapter()
+
+            device_id = device_raw.get('uuid')
+            if not device_id:
+                logger.warning(f'Bad device with no id: {device_raw}')
                 return None
 
-            device = self._new_device_adapter()
-            device.id = device_raw.attrib.get('uuid')
-            hostname = device_raw[0].text
-            device.hostname = hostname
-            try:
-                if hostname.startswith('SEP'):
-                    # This would either take the form of `SEPMACADDRESS123` OR `SEPSOMEHOSTNAME`
-                    # In some cases the SEP tag won't be there
-                    # And in some cases it won't be a valid MAC at all
-                    # So try to find a mac in there, and if not log the error
-                    mac = hostname[3:]
-                else:
-                    mac = hostname
-                # Try to add the MAC. If the mac is invalid, the following method would fail with an exception,
-                # Which is good.
-                device.add_nic(mac=mac)
-            except Exception as e:
-                logger.warning(f'Failed to add nic for {str(device_raw)}: {str(e)}')
+            device.id = f'{device_id}_{device_raw.get("name") or ""}'
+            device.description = device_raw.get('description')
+            device.name = device_raw.get('name')
+            device.uuid = device_raw.get('uuid')
+            device.owner = device_raw.get('ownerUserName')
+            device.device_model = device_raw.get('model')
 
-            device.set_raw({})
+            if parse_bool_from_raw(device_raw.get('isActive')) is not None:
+                device.device_disabled = not parse_bool_from_raw(device_raw.get('isActive'))
+
+            hostname = device_raw.get('name')
+            if isinstance(hostname, str) and hostname.startswith('SEP'):
+                # This would either take the form of `SEPMACADDRESS123` OR `SEPSOMEHOSTNAME`
+                # In some cases the SEP tag won't be there
+                # And in some cases it won't be a valid MAC at all
+                # So try to find a mac in there, and if not log the error
+                mac = hostname[3:]
+            else:
+                mac = hostname
+            device.add_nic(mac=mac)
+            device.last_seen = parse_date(device_raw.get('loginTime'))
+
+            device.protocol = device_raw.get('protocol')
+            device.protocol_side = device_raw.get('protocolSide')
+            device.product = device_raw.get('product')
+            device.class_id = device_raw.get('class')
+            device.network_location = device_raw.get('networkLocation')
+            device.dual_mode = parse_bool_from_raw(device_raw.get('isDualMode'))
+            device.protected = parse_bool_from_raw(device_raw.get('isProtected'))
+
+            device.set_raw(device_raw)
             return device
+
         except Exception:
             logger.exception(f'Problem with fetching CiscoUcm Device for {device_raw}')
             return None
@@ -146,3 +163,39 @@ class CiscoUcmAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Manager, AdapterProperty.Network]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        """
+        Return the schema this class wants to have for the config
+        """
+        return {
+            'items': [
+                {
+                    'name': 'fetch_inactive_devices',
+                    'title': 'Fetch inactive devices',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'fetch_inactive_devices'
+            ],
+            'pretty_name': 'Cisco UCM Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        """
+        Return the default configuration for this class
+        """
+        return {
+            'fetch_inactive_devices': False
+        }
+
+    def _on_config_update(self, config):
+        """
+        Virtual
+        This is called on every inheritor when the config was updated.
+        """
+        self.__fetch_inactive_devices = parse_bool_from_raw(config.get('fetch_inactive_devices')) or False
