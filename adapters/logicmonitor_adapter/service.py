@@ -147,6 +147,7 @@ class LogicmonitorAdapter(AdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-locals, too-many-nested-blocks, too-many-branches, too-many-statements
     def _create_device(self, device_raw):
         # pylint: disable=too-many-statements
         try:
@@ -173,42 +174,61 @@ class LogicmonitorAdapter(AdapterBase):
                                        ips=sys_nic.get('ip_address'))
 
             device.type = device_raw.get('deviceType')
-            related = device_raw.get('relatedDeviceId')
-            if related > -1:
-                device.related_device_id = related
-            device.current_collector_id = device_raw.get('currentCollectorId')
-            device.preferred_collector_id = device_raw.get('preferredCollectorId')
-            device.preferred_collector_group_id = device_raw.get('preferredCollectorGroupId')
+            if isinstance(device_raw.get('relatedDeviceId'), int):
+                related = device_raw.get('relatedDeviceId')
+                if related > -1:
+                    device.related_device_id = related
+            if isinstance(device_raw.get('currentCollectorId'), int):
+                device.current_collector_id = device_raw.get('currentCollectorId')
+            if isinstance(device_raw.get('preferredCollectorId'), int):
+                device.preferred_collector_id = device_raw.get('preferredCollectorId')
+            if isinstance(device_raw.get('preferredCollectorGroupId'), int):
+                device.preferred_collector_group_id = device_raw.get('preferredCollectorGroupId')
             device.preferred_collector_group_name = device_raw.get(
                 'preferredCollectorGroupName')
             device.description = device_raw.get('description')
-            device.disable_alerting = device_raw.get('disableAlerting')
+            if isinstance(device_raw.get('disableAlerting'), bool):
+                device.disable_alerting = device_raw.get('disableAlerting')
             device.auto_props_assigned_on = parse_date(device_raw.get('autoPropsAssignedOn'))
             device.auto_props_updated_on = parse_date(device_raw.get('autoPropsUpdatedOn'))
-            device.scan_config_id = device_raw.get('scanConfigId')
+            if isinstance(device_raw.get('scanConfigId'), int):
+                device.scan_config_id = device_raw.get('scanConfigId')
             device.link = device_raw.get('link')
-            device.enable_netflow = device_raw.get('enableNetflow')
-            device.netflow_collector_id = device_raw.get('netflowCollectorId')
-            device.netflow_collector_group_id = device_raw.get('netflowCollectorGroupId')
+            if isinstance(device_raw.get('enableNetflow'), bool):
+                device.enable_netflow = device_raw.get('enableNetflow')
+            if isinstance(device_raw.get('netflowCollectorId'), int):
+                device.netflow_collector_id = device_raw.get('netflowCollectorId')
+            if isinstance(device_raw.get('netflowCollectorGroupId'), int):
+                device.netflow_collector_group_id = device_raw.get('netflowCollectorGroupId')
             device.netflow_collector_group_name = device_raw.get('netflowCollectorGroupName')
             device.last_data_time = parse_date(device_raw.get('lastDataTime'))
             device.last_raw_data_time = parse_date(device_raw.get('lastRawdataTime'))
-            device.host_group_ids = device_raw.get('hostGroupIds').split(',')
-            device.sdt_status = device_raw.get('sdtStatus').split('-')
+            if device_raw.get('hostGroupIds'):
+                device.host_group_ids = device_raw.get('hostGroupIds').split(',')
+            if device_raw.get('sdtStatus'):
+                device.sdt_status = device_raw.get('sdtStatus').split('-')
             device.user_permission = device_raw.get('userPermission')
             device.host_status = device_raw.get('hostStatus')
-            device.alert_status = device_raw.get('alertStatus').split('-')
-            device.alert_status_priority = device_raw.get('alertStatusPriority')
-            device.awsState = device_raw.get('awsState')
-            device.alert_disabled_status = device_raw.get(
-                'alertDisableStatus').split('-')
-            device.alerting_disabled_on = device_raw.get('alertingDisabledOn')
+            if device_raw.get('alertStatus'):
+                device.alert_status = device_raw.get('alertStatus').split('-')
+            if isinstance(device_raw.get('alertStatusPriority'), int):
+                device.alert_status_priority = device_raw.get('alertStatusPriority')
+            if isinstance(device_raw.get('awsState'), int):
+                device.awsState = device_raw.get('awsState')
+            if device_raw.get('alertDisableStatus'):
+                device.alert_disabled_status = device_raw.get('alertDisableStatus').split('-')
+            if isinstance(device_raw.get('alertingDisabledOn'), bool):
+                device.alerting_disabled_on = device_raw.get('alertingDisabledOn')
             device.collector_description = device_raw.get('collectorDescription')
             device.netflow_collector_description = device_raw.get('netflowCollectorDescription')
-            device.uptime_in_seconds = device_raw.get('upTimeInSeconds')
-            device.deleted_time_in_ms = device_raw.get('deletedTimeInMs')
-            device.to_delete_time_in_ms = device_raw.get('toDeleteTimeInMs')
-            device.has_disabled_subresource = device_raw.get('hasDisabledSubResource')
+            if isinstance(device_raw.get('upTimeInSeconds'), int):
+                device.uptime_in_seconds = device_raw.get('upTimeInSeconds')
+            if isinstance(device_raw.get('deletedTimeInMs'), int):
+                device.deleted_time_in_ms = device_raw.get('deletedTimeInMs')
+            if isinstance(device_raw.get('toDeleteTimeInMs'), int):
+                device.to_delete_time_in_ms = device_raw.get('toDeleteTimeInMs')
+            if isinstance(device_raw.get('hasDisabledSubResource'), bool):
+                device.has_disabled_subresource = device_raw.get('hasDisabledSubResource')
             device.manual_discovery_flags = device_raw.get('manualDiscoveryFlags')
 
             for prop in device_raw.get('customProperties'):

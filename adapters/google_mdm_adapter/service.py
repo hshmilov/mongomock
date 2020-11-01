@@ -13,6 +13,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.files import get_local_config_file
+from axonius.mixins.configurable import Configurable
 from axonius.adapter_exceptions import ClientConnectionException
 from dateutil.parser import parse as parse_date
 from datetime import datetime
@@ -36,7 +37,7 @@ class OauthApp(SmartJsonClass):
     scopes_descriptions = ListField(str, 'Scopes Descriptions')
 
 
-class GoogleMdmAdapter(AdapterBase):
+class GoogleMdmAdapter(AdapterBase, Configurable):
     """
     Adapter to access Google MDM suite
     """
@@ -100,6 +101,8 @@ class GoogleMdmAdapter(AdapterBase):
             raise ClientConnectionException(str(e))
 
     def _query_devices_by_client(self, client_name, client_data: GSuiteAdminConnection):
+        if not self.__fetch_devices:
+            return [], []
         return client_data.get_mobile_devices(), client_data.get_chromeosdevices_devices()
 
     # pylint: disable=arguments-differ
@@ -358,3 +361,29 @@ class GoogleMdmAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.UserManagement]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_devices',
+                    'title': 'Fetch MDM devices',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'fetch_devices'
+            ],
+            'pretty_name': 'G Suite Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_devices': True
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_devices = config['fetch_devices'] if 'fetch_devices' in config else True

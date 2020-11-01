@@ -7,6 +7,7 @@ from axonius.clients.rest.connection import RESTConnection, RESTException
 from axonius.clients.awake.connection import AwakeConnection
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
+from axonius.mixins.configurable import Configurable
 from axonius.utils.parsing import parse_bool_from_raw, int_or_none
 from awake_adapter.client_id import get_client_id
 from awake_adapter.structures import AwakeDeviceInstance
@@ -14,7 +15,7 @@ from awake_adapter.structures import AwakeDeviceInstance
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class AwakeAdapter(AdapterBase):
+class AwakeAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(AwakeDeviceInstance):
         pass

@@ -49,22 +49,34 @@ class TwistlockVuln(SmartJsonClass):
     twistlock = Field(bool, 'Twistlock')
 
 
+class TwistlockContainer(SmartJsonClass):
+    id = Field(str, 'Container ID')
+    mac = Field(str, 'MAC Address')
+    ips = ListField(str, 'IP Addresses')
+    scantime = Field(datetime.datetime, 'Host Scan Time')
+    name = Field(str, 'Conatiner Name')
+    container_app = Field(str, 'Container Application')
+    image_name = Field(str, 'Image Name')
+    profile_id = Field(str, 'Profile ID')
+    compliance_risk_score = Field(str, 'Compliance Risk Score')
+    compliance_distribution = Field(VulnerabilitiesCount, 'Compliance Distribution')
+
+
 class TwistlockAdapter(AdapterBase):
     # pylint: disable=R0902
     class MyDeviceAdapter(DeviceAdapter):
+        containers_data = ListField(TwistlockContainer, 'Containers Data')
+        compliance_risk_score = Field(str, 'Compliance Risk Score')
+        compliance_distribution = Field(VulnerabilitiesCount, 'Compliance Distribution')
+        scantime = Field(datetime.datetime, 'Host Scan Time')
+        last_modified = Field(datetime.datetime, 'Last Modified')
         agent_type = Field(str, 'Agent Type')
         is_connected = Field(bool, 'Is Connected')
         proxy_listener_type = Field(str, 'Proxy Listener Type')
         proxy_target_type = Field(str, 'Proxy Target Type')
         registry_scanner = Field(bool, 'Registry Scanner')
-        scantime = Field(datetime.datetime, 'Host Scan Time')
         cve_vulnerability_distribution = Field(VulnerabilitiesCount, 'CVE Vulnerability Distribution')
-        compliance_distribution = Field(VulnerabilitiesCount, 'Compliance Distribution')
-        container_app = Field(str, 'Container Application')
-        image_name = Field(str, 'Image Name')
         profile_id = Field(str, 'Profile ID')
-        last_modified = Field(datetime.datetime, 'Last Modified')
-        compliance_risk_score = Field(str, 'Compliance Risk Score')
         twistlock_vulns = ListField(TwistlockVuln, 'Twistlock Vulnerabilities')
 
     def __init__(self, *args, **kwargs):
@@ -157,21 +169,15 @@ class TwistlockAdapter(AdapterBase):
             'type': 'array'
         }
 
-    def _create_container_device(self, device_raw):
+    @staticmethod
+    def _create_container_device(device_raw):
         try:
-            device = self._new_device_adapter()
-            if not device_raw.get('_id'):
-                logger.warning(f'Bad device with no id {device_raw}')
-                return None
-            device.id = 'CONTAINER_' + device_raw.get('_id') + '_' + (device_raw.get('hostname') or '')
-            device.hostname = device_raw.get('hostname')
+            device = TwistlockContainer()
+            device.id = device_raw.get('_id')
             device.scantime = parse_date(device_raw.get('scanTime'))
-            device.last_seen = parse_date(device_raw.get('scanTime'))
             device_info = device_raw.get('info') or {}
-            mac = device_info.get('MacAddress') if device_info.get('MacAddress') else None
-            ips = device_info.get('IPAddress').split(',') if device_info.get('IPAddress') else None
-            if mac or ips:
-                device.add_nic(mac, ips)
+            device.mac = device_info.get('MacAddress') if device_info.get('MacAddress') else None
+            device.ips = device_info.get('IPAddress').split(',') if device_info.get('IPAddress') else None
             device.name = device_info.get('name')
             device.container_app = device_info.get('app')
             device.image_name = device_info.get('imageName')
@@ -187,20 +193,14 @@ class TwistlockAdapter(AdapterBase):
                     except Exception:
                         logger.exception(f'Problem with key {key} and value {value}')
                 device.compliance_distribution = compliance_distribution
-            device.set_raw(device_raw)
             return device
         except Exception:
             logger.exception(f'Problem with container device {device_raw}')
             return None
 
-    def _create_defender_device(self, device_raw):
+    @staticmethod
+    def _create_defender_device(device, device_raw):
         try:
-            device = self._new_device_adapter()
-            if not device_raw.get('hostname'):
-                logger.warning(f'Bad device with no Host name {device_raw}')
-                return None
-            device.id = 'AGENT_' + device_raw.get('hostname') + '_' + (device_raw.get('ips') or '')
-            device.hostname = device_raw.get('hostname')
             ips = device_raw.get('ips')
             try:
                 if ips and isinstance(ips, list):
@@ -224,24 +224,15 @@ class TwistlockAdapter(AdapterBase):
                 device.registry_scanner = agent_features.get('registryScanner')
                 device.proxy_target_type = agent_features.get('proxyTargetType')
                 device.proxy_listener_type = agent_features.get('proxyListenerType')
-            device.set_raw(device_raw)
-            return device
         except Exception:
             logger.exception(f'Problem with defender device {device_raw}')
-            return None
 
     # pylint: disable=R0912,R1702
     # pylint: disable=too-many-locals, too-many-branches, too-many-statements
-    def _create_host_device(self, device_raw):
+    @staticmethod
+    def _create_host_device(device, device_raw):
         try:
-            device = self._new_device_adapter()
-            if not device_raw.get('hostname'):
-                logger.warning(f'Bad device with no Host name {device_raw}')
-                return None
-            device.id = 'HOST_' + device_raw.get('hostname')
-            device.hostname = device_raw.get('hostname')
             device.scantime = parse_date(device_raw.get('scanTime'))
-            device.last_seen = parse_date(device_raw.get('scanTime'))
             device_info = device_raw.get('info') or {}
             try:
                 device.figure_os(device_info.get('distro'))
@@ -333,25 +324,36 @@ class TwistlockAdapter(AdapterBase):
                     device.twistlock_vulns.append(twist_vuln_obj)
                 except Exception:
                     logger.exception(f'Problem with vulnerability raw {vulnerability_raw}')
-            device.set_raw(device_raw)
-            return device
         except Exception:
             logger.exception(f'Problem with host device {device_raw}')
-            return None
 
     def _parse_raw_data(self, devices_raw_data):
+        device_dict = dict()
         for device_raw, device_type in devices_raw_data:
-            device = None
+            hostname = device_raw.get('hostname')
+            if not hostname:
+                logger.error(f'Twistlock device with no hostname {device_raw}')
+                continue
+            hostname = str(hostname).lower()
+            if hostname not in device_dict:
+                device_dict[hostname] = [self._new_device_adapter(), {'containers_data': []}]
+                device_dict[hostname][0].id = hostname
+                device_dict[hostname][0].hostname = hostname
             if device_type == CONTAINERS_NAME:
-                device = self._create_container_device(device_raw)
+                container_data = self._create_container_device(device_raw)
+                if container_data:
+                    device_dict[hostname][0].containers_data.append(container_data)
+                device_dict[hostname][1]['containers_data'].append(device_raw)
             elif device_type == HOSTS_NAME:
-                device = self._create_host_device(device_raw)
+                self._create_host_device(device_dict[hostname][0], device_raw)
+                device_dict[hostname][1]['host_data'] = device_raw
             elif device_type == DEFENDERS_NAME:
-                device = self._create_defender_device(device_raw)
-            if device:
-                yield device
+                self._create_defender_device(device_dict[hostname][0], device_raw)
+                device_dict[hostname][1]['agent_data'] = device_raw
+        for device, raw_data in device_dict.values():
+            device.set_raw(raw_data)
+            yield device
 
     @classmethod
     def adapter_properties(cls):
-        # AUTOADAPTER - check if you need to add other properties'
         return [AdapterProperty.Assets]
