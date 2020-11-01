@@ -1,75 +1,26 @@
-import datetime
 import ipaddress
 import logging
 
-from axonius.smart_json_class import SmartJsonClass
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
-from axonius.devices.device_adapter import DeviceAdapter
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
-from axonius.fields import Field, ListField
 from axonius.utils.datetime import parse_date
+from axonius.utils.parsing import parse_bool_from_raw
 from riskiq_adapter.connection import RiskiqConnection
 from riskiq_adapter.client_id import get_client_id
+from riskiq_adapter.consts import RISKIQ_API_URL_DEFAULT
+from riskiq_adapter.structures import RiskIqDeviceInstance, WebsiteComponent, RiskIqOrganization, \
+    RiskIqBrand, RiskIqTag
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class WebsiteComponent(SmartJsonClass):
-    type = Field(str, 'Type')
-    name = Field(str, 'Name')
-    version = Field(str, 'Version')
-    name_ver = Field(str, 'Name Version')
-    first_seen = Field(datetime.datetime, 'First Seen')
-    last_seen = Field(datetime.datetime, 'Last Seen')
-    affected = Field(bool, 'Affected by known CVE')
-
-
-class SecpolRecord(SmartJsonClass):
-    name = Field(str, 'Policy Name')
-    first_clean = Field(datetime.datetime, 'First clean')
-    last_clean = Field(datetime.datetime, 'Last clean')
-    affected = Field(bool, 'Currently affected')
-    last_affected = Field(datetime.datetime, 'Last affected')
-    first_affected = Field(datetime.datetime, 'First affected')
-    description = Field(str, 'Policy status description')
-
-
-class IPBlock(SmartJsonClass):
-    asset_id = Field(int, 'RiskIQ Asset ID')
-    ip_block = Field(str, 'IP Block')
-    ip_start = Field(str, 'IP Start')
-    ip_end = Field(str, 'IP End')
-    cidr = Field(int, 'CIDR')
-
-
 class RiskiqAdapter(AdapterBase, Configurable):
-    # pylint: disable=too-many-instance-attributes
-    class MyDeviceAdapter(DeviceAdapter):
-        cname = Field(str, 'CName')
-        host = Field(str, 'Host')
-        full_host = Field(str, 'Full Host')
-        workspace = Field(int, 'Workspace ID')
-        asset_status = Field(str, 'Asset status')
-        inventory_state = Field(str, 'Inventory State')
-        detail_state = Field(str, 'Detail state')
-        last_changed = Field(datetime.datetime, 'Last Changed')
-        last_detailed = Field(datetime.datetime, 'Last Detailed')
-        created_time = Field(datetime.datetime, 'Created at')
-        updated_time = Field(datetime.datetime, 'Updated at')
-        init_url = Field(str, 'Initial website URL')
-        final_url = Field(str, 'Final website URL')
-        https = Field(bool, 'HTTPS Enabled')
-        final_https = Field(bool, 'HTTPS Enabled on final URL')
-        parked_page = Field(bool, 'Parked page')
-        blacklisted = Field(bool, 'Blacklisted')
-        site_status = Field(str, 'Site Status')
-        secpol = ListField(SecpolRecord, 'Security Policy records')
-        web_components = ListField(WebsiteComponent, 'Website Asset Components')
-        ip_block = Field(IPBlock, 'IP Block data')
+    class MyDeviceAdapter(RiskIqDeviceInstance):
+        pass
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -128,7 +79,7 @@ class RiskiqAdapter(AdapterBase, Configurable):
                 {
                     'name': 'domain',
                     'title': 'RiskIQ Domain',
-                    'default': 'https://ws.riskiq.net',
+                    'default': RISKIQ_API_URL_DEFAULT,
                     'type': 'string'
                 },
                 {
@@ -162,127 +113,176 @@ class RiskiqAdapter(AdapterBase, Configurable):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-branches, too-many-statements, invalid-triple-quote
+    @staticmethod
+    def _fill_riskiq_device_fields(device: RiskIqDeviceInstance, device_raw: dict):
+        """ Parse the raw information, first the stuff that's generic to all RiskIQ asset types,
+        and then the stuff that is specific to HOST_ASSET .
+        The order allows the best chance to parse the most information.
+        """  # XXX What's up with pylint suddenly not liking my docstrings?
+        device.updated_time = parse_date(device_raw.get('updatedAt'))
+        device.created_time = parse_date(device_raw.get('createdAt'))
+        device.inventory_state = device_raw.get('state')
+        device.external_id = device_raw.get('externalID')
+        device.device_type = device_raw.get('type')
+        device.is_auto_confirm = parse_bool_from_raw(device_raw.get('autoConfirmed'))
+        device.is_enterprise = parse_bool_from_raw(device_raw.get('enterprise'))
+        device.confidence = device_raw.get('confidence')
+        device.priority = device_raw.get('priority')
+        device.removed_state = device_raw.get('removedState')
+        device.riskiq_label = device_raw.get('label')
+        device.is_keystone = parse_bool_from_raw(device_raw.get('keystone'))
+        device.external_metadata = device_raw.get('externalMetadata')
+
+        # organizations
+        orgs_raw = device_raw.get('organizations')
+        if orgs_raw and isinstance(orgs_raw, list):
+            for org_raw in orgs_raw:
+                if not isinstance(org_raw, dict):
+                    continue
+                try:
+                    org = RiskIqOrganization(
+                        workspace_id=org_raw.get('workspaceID'),
+                        workspace_org_id=org_raw.get('workspaceOrganizationID'),
+                        status=org_raw.get('status'),
+                        name=org_raw.get('name'),
+                        org_id=org_raw.get('id'),
+                        created=parse_date(org_raw.get('createdAt')),
+                        updated=parse_date(org_raw.get('updatedAt'))
+                    )
+                    device.orgs.append(org)
+                except Exception as e:
+                    logger.debug(f'Error parsing org {org_raw}: {str(e)}')
+
+        # brands
+        brands_raw = device_raw.get('brands')
+        if brands_raw and isinstance(brands_raw, list):
+            for brand_raw in brands_raw:
+                if not isinstance(brand_raw, dict):
+                    continue
+                try:
+                    brand = RiskIqBrand(
+                        workspace_id=brand_raw.get('workspaceID'),
+                        workspace_brand_id=brand_raw.get('workspaceBrandID'),
+                        status=brand_raw.get('status'),
+                        name=brand_raw.get('name'),
+                        brand_id=brand_raw.get('id'),
+                        created=parse_date(brand_raw.get('createdAt')),
+                        updated=parse_date(brand_raw.get('updatedAt'))
+                    )
+                    device.brands.append(brand)
+                except Exception as e:
+                    logger.debug(f'Error parsing brand {brand_raw}: {str(e)}')
+
+        # tags
+        tags_raw = device_raw.get('tags')
+        if tags_raw and isinstance(tags_raw, list):
+            for tag_raw in tags_raw:
+                if not isinstance(tag_raw, dict):
+                    continue
+                try:
+                    tag = RiskIqTag(
+                        workspace_id=tag_raw.get('workspaceID'),
+                        workspace_tag_id=tag_raw.get('workspaceTagID'),
+                        workspace_tag_type=tag_raw.get('workspaceTagType'),
+                        status=tag_raw.get('status'),
+                        name=tag_raw.get('name'),
+                        tag_id=tag_raw.get('id'),
+                        created=parse_date(tag_raw.get('createdAt')),
+                        updated=parse_date(tag_raw.get('updatedAt')),
+                        tag_color=tag_raw.get('color')
+                    )
+                    device.tags.append(tag)
+                except Exception as e:
+                    logger.debug(f'Error parsing tag {tag_raw}: {str(e)}')
+
+        # HOST_ASSET specific stuff
+        asset_raw = device_raw.get('asset')  # Everything after this line relies on this dict
+        if not (asset_raw and isinstance(asset_raw, dict)):  # Meaningless to continue if asset dict invalid or empty
+            logger.warning(f'Invalid asset dict: Got {type(asset_raw)}')
+            return
+
+        device.host = asset_raw.get('host')
+        device.alexa_rank = asset_raw.get('alexaRank')
+
+        # web components
+        wc_data = asset_raw.get('webComponents')
+        if wc_data and isinstance(wc_data, list):
+            for web_component in wc_data:
+                if not isinstance(web_component, dict):
+                    continue
+                try:
+                    component = WebsiteComponent(
+                        category=web_component.get('webComponentCategory'),
+                        name=web_component.get('webComponentName'),
+                        version=web_component.get('webComponentVersion'),
+                        affected=bool(web_component.get('cves')),  # Do not parse the cves, only whether they exist
+                        last_seen=parse_date(web_component.get('lastSeen')),
+                        first_seen=parse_date(web_component.get('firstSeen'))
+                    )
+                    if web_component.get('ruleid') and isinstance(web_component.get('ruleid'), list):
+                        component.rule_ids = web_component.get('ruleid')
+                    device.web_components.append(component)
+                except Exception as e:
+                    logger.debug(f'Failed to parse web component {web_component}: {str(e)}')
+
     # pylint: disable=R0912,R0915
     def _create_device(self, device_raw):
         try:
             device = self._new_device_adapter()
-            device_id = device_raw.get('assetID')
+            device_id = device_raw.get('id')
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = str(device_id) + '_' + (device_raw.get('name') or '')
-            host_info = device_raw.get('host')
-            if not host_info:
+            device.id = str(device_id) + '_' + (device_raw.get('uuid') or '')
+            # Basics
+            device.last_seen = parse_date(device_raw.get('lastSeen'))
+            device.first_seen = parse_date(device_raw.get('firstSeen'))
+            device.description = device_raw.get('description')
+            device.name = device_raw.get('name')
+            device.uuid = device_raw.get('uuid')
+            # Whitelist
+            inventory_state = device_raw.get('state')
+            if self.__inventory_state_whitelist and inventory_state not in self.__inventory_state_whitelist:
+                return None
+            # Complex stuff
+            host_info = device_raw.get('asset')
+            if not (host_info and isinstance(host_info, dict)):
                 logger.warning(f'Bad device with no host information: {device_raw}')
                 return None
             device.hostname = host_info.get('host')
-            device.name = device_raw.get('name')
-            domain_info = device_raw.get('domain')
+
+            # domain stuff
+            domain_info = host_info.get('domainAsset')
             if domain_info and isinstance(domain_info, dict):
                 device.domain = domain_info.get('domain')
-                device.dns_servers = domain_info.get('nameServers')
-            if host_info.get('ipAddress'):
                 try:
-                    test_ip = ipaddress.ip_address(host_info.get('ipAddress'))
-                    if test_ip.is_private:
-                        device.add_ips_and_macs(ips=[str(test_ip)])
-                    else:
-                        device.add_public_ip(str(test_ip))
-                except Exception:
-                    logger.warning(f'Failed to add IP for {device_raw}')
-            device.first_seen = parse_date(device_raw.get('firstSeen'))
-            # And now for the specific stuff
-            try:
-                device.cname = host_info.get('cname')
-                device.host = host_info.get('host')
-                device.full_host = host_info.get('fullHost')
-                device.workspace = device_raw.get('workspaceID')
-                asset_status = device_raw.get('status')
-                if self.__asset_status_whitelist and asset_status not in self.__asset_status_whitelist:
-                    return None
-                device.asset_status = asset_status
-                inventory_state = device_raw.get('inventoryState')
-                if self.__inventory_state_whitelist and inventory_state not in self.__inventory_state_whitelist:
-                    return None
-                device.inventory_state = inventory_state
-                device.detail_state = device_raw.get('detailState')
-                device.last_changed = parse_date(device_raw.get('lastChanged'))
-                device.last_detailed = parse_date(device_raw.get('lastDetailed'))
-                device.created_time = parse_date(device_raw.get('createdAt'))
-                device.updated_time = parse_date(device_raw.get('updatedAt'))
-            except Exception as e:
-                logger.exception(f'Failed to set some adapter specific properties for device. '
-                                 f'The exception was: {str(e)}. '
-                                 f'Device: {device_raw}')
-            if isinstance(device_raw.get('webSite'), dict):
-                try:
-                    ws_data = device_raw.get('webSite')
-                    device.init_url = ws_data.get('initialUrl')
-                    device.final_url = ws_data.get('finalUrl')
-                    device.https = ws_data.get('https')
-                    device.final_https = ws_data.get('finalUrlHttps')
-                    device.parked_page = ws_data.get('parkedPage')
-                    device.blacklisted = ws_data.get('blacklisted')
-                    device.site_status = ws_data.get('siteStatus')
+                    device.dns_servers = domain_info.get('nameServers')
                 except Exception as e:
-                    logger.exception(f'Failed to set some website properties for device. '
-                                     f'The exception was: {str(e)}. '
-                                     f'website data: {ws_data}')
-                if isinstance(ws_data.get('securityPolicyRecords'), list):
-                    for secpol in ws_data.get('securityPolicyRecords'):
-                        if not isinstance(secpol, dict):
-                            continue
-                        try:
-                            device.secpol.append(SecpolRecord(
-                                name=secpol.get('policyName'),
-                                first_clean=parse_date(secpol.get('firstClean')),
-                                last_clean=parse_date(secpol.get('lastClean')),
-                                affected=secpol.get('currentlyAffected'),
-                                description=secpol.get('description'),
-                                last_affected=parse_date(secpol.get('lastAffected')),
-                                first_affected=parse_date(secpol.get('firstAffected'))
-                            ))
-                        except Exception as e:
-                            logger.exception(f'Failed to set device security policy. '
-                                             f'The exception was: {str(e)}. '
-                                             f'secpol data: {secpol}')
-                if isinstance(ws_data.get('webSiteAssetWebComponents'), list):
-                    for wc_data in ws_data.get('webSiteAssetWebComponents'):
-                        if not isinstance(wc_data, dict):
-                            continue
-                        wc = wc_data.get('webComponent')
-                        if not isinstance(wc, dict):
-                            continue
-                        try:
-                            device.web_components.append(WebsiteComponent(
-                                type=wc.get('type'),
-                                name=wc.get('name'),
-                                version=wc.get('version'),
-                                name_ver=wc.get('nameVersion'),
-                                last_seen=parse_date(wc_data.get('lastSeen')),
-                                first_seen=parse_date(wc_data.get('firstSeen')),
-                                affected=wc_data.get('affected')
-                            ))
-                        except Exception as e:
-                            logger.exception(f'Failed to set device web component. '
-                                             f'The exception was: {str(e)}. '
-                                             f'web component data: {wc}')
-            # Yeah, that's a lot of stuff to do if it's got ws_data
+                    logger.debug(f'Failed to parse name servers: {str(e)}')
+
+            # ips
+            ips_info = host_info.get('ipAddresses')
+            if ips_info and isinstance(ips_info, list):
+                for ip_info in ips_info:
+                    if not isinstance(ip_info, dict):
+                        continue
+                    test_ip = ip_info.get('value')
+                    try:
+                        test_ip = ipaddress.ip_address(test_ip)
+                        if test_ip.is_private:
+                            device.add_ips_and_macs(ips=[str(test_ip)])
+                        else:
+                            device.add_public_ip(str(test_ip))
+                    except Exception as e:
+                        logger.warning(f'Error {str(e)} adding IP {test_ip} for {device_raw}')
+
+            # Adapter-specific stuff
             try:
-                if isinstance(device_raw.get('ipBlock'), dict):
-                    ib_data = device_raw.get('ipBlock')
-                    device.ip_block = IPBlock(
-                        asset_id=ib_data.get('assetID'),
-                        ip_block=ib_data.get('ipBlock'),
-                        ip_start=ib_data.get('ipStart'),
-                        ip_end=ib_data.get('ipEnd'),
-                        cidr=ib_data.get('cidr')
-                    )
+                self._fill_riskiq_device_fields(device, device_raw)
             except Exception as e:
-                message = f'Failed to set ip_block for device. Reason: {str(e)}. ' \
-                          f'Device information: {device_raw}'
-                logger.exception(message)
-            # Aaaaand that's that
+                logger.exception(f'Failed to parse device specific fields for {device_raw}')
+
             device.set_raw(device_raw)
             return device
         except Exception:
@@ -307,11 +307,6 @@ class RiskiqAdapter(AdapterBase, Configurable):
                     'name': 'inventory_state_whitelist',
                     'title': 'Inventory state whitelist',
                     'type': 'string'
-                },
-                {
-                    'name': 'asset_status_whitelist',
-                    'title': 'Asset status whitelist',
-                    'type': 'string'
                 }
             ],
             'required': [
@@ -323,12 +318,9 @@ class RiskiqAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'asset_status_whitelist': None,
             'inventory_state_whitelist': None
         }
 
     def _on_config_update(self, config):
-        self.__asset_status_whitelist = config.get('asset_status_whitelist').split(',') \
-            if config.get('asset_status_whitelist') else None
         self.__inventory_state_whitelist = config.get('inventory_state_whitelist').split(',') \
             if config.get('inventory_state_whitelist') else None
