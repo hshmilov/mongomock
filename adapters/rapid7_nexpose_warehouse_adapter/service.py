@@ -376,7 +376,7 @@ class Rapid7NexposeWarehouseAdapter(ScannerAdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id
+            device.id = str(device_id) + '_' + (device_raw.get('host_name') or '')
 
             device.hostname = device_raw.get('host_name')
             device.device_type = device_raw.get('host_type')

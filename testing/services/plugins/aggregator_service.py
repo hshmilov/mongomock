@@ -1981,6 +1981,32 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             },
             new_id_func)
 
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_60(self):
+        print('Update to schema 60 - Convert Rapid7 Nexpose Warehouse device.id to a new format')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            hostname = data.get('hostname') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'_{hostname}'):
+                return False
+
+            # return new id
+            return f'{current_id}_{hostname}'
+
+        self._migrate_entity_id_generic(
+            EntityType.Devices,
+            'rapid7_nexpose_warehouse_adapter',
+            {
+                'adapters.data.hostname': 1
+            },
+            new_id_func)
+
     def _migrate_entity_id_generic(self, *args, **kwargs):
         number_of_retries = 0
         while True:
