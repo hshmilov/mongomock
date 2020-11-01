@@ -490,6 +490,11 @@
     "link": "https://docs.axonius.com/docs/signal-sciences",
     "description": "Signal Sciences is a web protection platform that protects on-premise, multi-cloud and hybrid-cloud apps, within containers and serverless functions."
   },
+  "cloud_app_security_adapter": {
+    "title": "Trend Micro Cloud App Security - BETA",
+    "link": "https://docs.axonius.com/docs/trend-micro-cloud-app-security",
+    "description": "Trend Micro Cloud App Security provides threat and data protection for cloud applications and services such as Google G Suite, Dropbox, Microsoft 365, and more."
+  },
   "automox_adapter": {
     "title": "Automox",
     "link": "https://docs.axonius.com/docs/automox",
