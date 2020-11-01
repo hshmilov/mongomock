@@ -6,9 +6,10 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.plugin_base import add_rule, return_error
 from axonius.utils.dynamic_fields import put_dynamic_field
 from axonius.utils.files import get_local_config_file
-from google_big_query_adapter.connection import GoogleBigQueryConnection
+from axonius.clients.google_big_query.connection import GoogleBigQueryConnection
 from google_big_query_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -177,3 +178,32 @@ class GoogleBigQueryAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets]
+
+    @add_rule('export_to_google_big_query', methods=['POST'])
+    def export_to_google_big_query(self):
+        if self.get_method() != 'POST':
+            return return_error('Method not supported', 405)
+
+        request_data_dict = self.get_request_data_as_object()
+
+        table_id = request_data_dict.get('table_id')
+        schema = request_data_dict.get('schema')
+        data = request_data_dict.get('data')
+        success = False
+        error_message = ''
+
+        for client_id in self._clients:
+            try:
+                conn = self.get_connection(
+                    self._get_client_config_by_client_id(client_id))
+                with conn:
+                    result_status, error_message = conn.create_table(table_id, schema, data)
+
+                success = success or result_status
+                if success is True:
+                    return '', 200
+                logger.warning(f'client_id "{client_id}" failed while creating a table {error_message}')
+            except Exception as err:
+                logger.exception(f'Could not connect to {client_id}: {str(err)}')
+                error_message = f'{error_message}: {str(err)}'
+        return return_error(error_message, 400)

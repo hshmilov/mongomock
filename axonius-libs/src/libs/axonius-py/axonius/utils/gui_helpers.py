@@ -1488,6 +1488,23 @@ def get_csv(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType,
     return s
 
 
+def get_fields_type_by_name(entity_type: EntityType):
+    fields = entity_fields(entity_type)
+    fields_type_by_name = {}
+    generic_fields = fields['generic']
+    specific_fields = fields['specific']
+    for adapter in specific_fields:
+        generic_fields.extend(specific_fields[adapter])
+
+    for field in generic_fields:
+        if not (field.get('name') and field.get('type')):
+            continue
+
+        fields_type_by_name[field['name']] = field['type']
+
+    return fields_type_by_name
+
+
 def get_csv_iterable(mongo_filter, mongo_sort, mongo_projection, entity_type: EntityType,
                      default_sort=True, history: datetime = None, field_filters: dict = None,
                      excluded_adapters: dict = None, cell_joiner=None, max_rows=None) -> Iterable[str]:

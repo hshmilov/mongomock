@@ -13,6 +13,7 @@ from reports.action_types.alert.send_to_webhook import SendWebhookAction
 from reports.action_types.alert.send_slack_message import SlackSendMessageAction
 from reports.action_types.alert.send_syslog import NotifySyslogAction
 from reports.action_types.base.create_ivanti_sm_computer import IvantiSmComputerAction
+from reports.action_types.base.export_to_google_big_query import ExportToGoogleBigQuery
 from reports.action_types.base.update_ivanti_sm_computer import UpdateIvantiSmComputerAction
 from reports.action_types.base.aws_ec2_add_tags import AwsEc2AddTagsAction
 from reports.action_types.base.aws_ec2_delete_tags import AwsEc2DeleteTagsAction
@@ -149,4 +150,5 @@ AllActionTypes: Dict[str, type(ActionTypeBase)] = {
     'opsgenie_create_alert': OpsgenieCreateAlert,
     'send_json_to_s3': SendJsonToS3,
     'remove_subdomain_from_dns_made_easy': RemoveSubdomainFromDNSME,
+    'export_to_google_big_query': ExportToGoogleBigQuery,
 }

@@ -217,6 +217,9 @@ export const actionsMeta = {
   send_to_webhook: {
     title: 'Send to Webhook',
   },
+  export_to_google_big_query: {
+    title: 'Send to Google BigQuery Table',
+  },
   create_notification: {
     title: 'Push System Notification',
   },
@@ -278,7 +281,7 @@ export const actionsMeta = {
   },
   notify: {
     title: 'Notify',
-    items: ['send_emails', 'send_email_to_entities', 'notify_syslog', 'send_https_log', 'send_to_webhook', 'create_notification', 'slack_send_message', 'send_csv_to_share', 'send_csv_to_s3', 'send_json_to_s3', 'send_csv_to_scp'],
+    items: ['send_emails', 'send_email_to_entities', 'notify_syslog', 'send_https_log', 'send_to_webhook','export_to_google_big_query', 'create_notification', 'slack_send_message', 'send_csv_to_share', 'send_csv_to_s3', 'send_json_to_s3', 'send_csv_to_scp'],
   },
   axonius: {
     title: 'Axonius Utilities',
