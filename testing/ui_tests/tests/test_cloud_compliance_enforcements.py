@@ -5,7 +5,6 @@ from ui_tests.tests.ui_test_base import TestBase
 from ui_tests.tests.ui_consts import AWS_ADAPTER_NAME, AWS_ADAPTER, OKTA_ADAPTER_NAME, OKTA_ADAPTER
 from services.adapters.aws_service import AwsService
 from services.adapters.okta_service import OktaService
-from services.plugins.compliance_service import ComplianceService
 from services.standalone_services.maildiranasaurus_service import MaildiranasaurusService
 from services.standalone_services.smtp_service import generate_random_valid_email
 
@@ -53,13 +52,12 @@ class TestCloudComplianceEnforcements(TestBase):
         self.login_page.switch_user(AXONIUS_USER['user_name'], AXONIUS_USER['password'])
         self.settings_page.toggle_compliance_feature()
 
-        with AwsService().contextmanager(take_ownership=True), \
-                ComplianceService().contextmanager(take_ownership=True):
+        with AwsService().contextmanager(take_ownership=True):
             self.adapters_page.wait_for_adapter(AWS_ADAPTER_NAME)
             # set ax-dev2 to verify csv of ax-dev2 won't sent to aw-dev3 admin.
-            self.adapters_page.create_new_adapter_connection(AWS_ADAPTER_NAME, aws_client_details[3][0])
+            self.adapters_page.create_new_adapter_connection(AWS_ADAPTER_NAME, aws_client_details[2][0])
             # set ax-dev3 account, this account has an admin user with a correlated email between okta and aws.
-            self.adapters_page.create_new_adapter_connection(AWS_ADAPTER_NAME, aws_client_details[4][0])
+            self.adapters_page.create_new_adapter_connection(AWS_ADAPTER_NAME, aws_client_details[3][0])
             self.adapters_page.wait_for_server_green()
 
             self.adapters_page.switch_to_page()
