@@ -81,3 +81,4 @@ class VmwareVropsDeviceInstance(DeviceAdapter):
     badges = ListField(Badge, 'Badges')
     alerts = ListField(Alert, 'Alerts')
     product_name = Field(str, 'Product Name')
+    service_now_config_item_id = Field(str, 'ServiceNow Config Item ID')

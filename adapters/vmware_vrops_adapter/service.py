@@ -244,6 +244,13 @@ class VmwareVropsAdapter(AdapterBase):
                 else:
                     device.product_name = properties_raw.get('summary|config|productName')
 
+                if isinstance(properties_raw.get('summary|customTag:SN_ConfigItemID|customTagValue'), list) and \
+                        properties_raw.get('summary|customTag:SN_ConfigItemID|customTagValue'):
+                    device.service_now_config_item_id = \
+                        properties_raw.get('summary|customTag:SN_ConfigItemID|customTagValue')[0]
+                else:
+                    device.service_now_config_item_id = properties_raw.get(
+                        'summary|customTag:SN_ConfigItemID|customTagValue')
         except Exception:
             logger.exception(f'Failed creating instance for device {device_raw}')
 
@@ -432,6 +439,26 @@ class VmwareVropsAdapter(AdapterBase):
                 else:
                     device.add_hd(total_size=float_or_none(
                         properties_raw.get('config|hardware|diskSpace')))
+
+                if isinstance(properties_raw.get('hardware|enclosureSerialNumberTag'), list) and \
+                        properties_raw.get('hardware|enclosureSerialNumberTag'):
+                    device.device_serial = properties_raw.get('hardware|enclosureSerialNumberTag')[0]
+                else:
+                    device.device_serial = properties_raw.get('hardware|enclosureSerialNumberTag')
+
+                if device.get_field_safe('device_serial') is None and \
+                        properties_raw.get('hardware|serialNumberTag'):
+                    if isinstance(properties_raw.get('hardware|serialNumberTag'), list):
+                        device.device_serial = properties_raw.get('hardware|serialNumberTag')[0]
+                    else:
+                        device.device_serial = properties_raw.get('hardware|serialNumberTag')
+
+                if device.get_field_safe('device_serial') is None and \
+                        properties_raw.get('hardware|serviceTag'):
+                    if isinstance(properties_raw.get('hardware|serviceTag'), list):
+                        device.device_serial = properties_raw.get('hardware|serviceTag')[0]
+                    else:
+                        device.device_serial = properties_raw.get('hardware|serviceTag')
 
             self._fill_vmware_vrops_device_fields(device_raw, device)
             device.cloud_provider = 'VMWare'
