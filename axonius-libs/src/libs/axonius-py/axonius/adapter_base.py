@@ -617,7 +617,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                     do_not_look_at_last_cycle = True
                 return to_json(self.clean_db(do_not_look_at_last_cycle))
         elif job_name == 'update_clients_status':
-            return self._update_clients_status()
+            try:
+                return self._update_clients_status()
+            except Exception:
+                logger.warning(f'Error while updating clients status', exc_info=True)
+                return jsonify('Error while updating clients status')
         elif job_name == 'refetch_device':
             try:
                 self.refetch_device(client_id=post_json.get('client_id'),
@@ -708,7 +712,7 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                 except Exception as e:
                     logger.debug(f'An error happened while trying to insert data to db {str(e)}')
                     continue
-        return jsonify(f'Adapter {self.plugin_unique_name} finished updating clients status')
+        return f'Adapter {self.plugin_unique_name} finished updating clients status'
 
     def _parse_users_raw_data_hook(self, raw_users):
         """
