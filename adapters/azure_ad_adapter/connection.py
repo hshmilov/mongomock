@@ -1,5 +1,6 @@
 import csv
 import logging
+from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Dict, List
 
@@ -213,6 +214,33 @@ class AzureAdClient(RESTConnection):
             yield from result['value']
             page_num += 1
 
+    def _async_device_apps_paged_get(self, requests):
+        page_num = 0
+        while page_num < MAX_PAGE_NUM_TO_AVOID_INFINITE_LOOP:
+            new_requests = []
+            for request, response in zip(requests, self._async_get(requests, retry_on_error=True)):
+                if not self._is_async_response_good(response):
+                    logger.warning(f'Got bad response for {request}: {response}')
+                    continue
+
+                if not isinstance(response.get('value'), list):
+                    logger.warning(f'Response is not in the correct format {response}')
+                    continue
+                for device in response.get('value'):
+                    if not isinstance(device, dict):
+                        continue
+                    device['request_app_id'] = request['app_id']
+                    yield device
+
+                if '@odata.nextLink' in response and page_num < MAX_PAGE_NUM_TO_AVOID_INFINITE_LOOP:
+                    new_requests.append(
+                        {'name': response['@odata.nextLink'], 'force_full_url': True, 'app_id': request['app_id']})
+            if len(new_requests) == 0:
+                break
+            logger.debug(f'Finished page number {page_num}')
+            page_num += 1
+            requests = new_requests
+
     def get_installed_apps(self) -> Dict[str, List[Dict]]:
         """
         Get installed apps on azure Intune.
@@ -222,19 +250,21 @@ class AzureAdClient(RESTConnection):
         so the best thing to do is save a dict containing devices ids and their installed apps.
         :return:dict of devices and their apps, for example: devices_apps[DEVICE_ID] = [{app_data}, ..]
         """
-        devices_apps = {}
+        devices_apps = defaultdict(list)
         try:
             logger.info('Getting Installed Apps')
             apps_got = 0
-            for app_raw in self._paged_get('deviceManagement/detectedApps'):
-                app_id = app_raw.get('id')
-                if not app_id:
+            app_ids = {app.get('id'): app for app in self._paged_get(
+                'deviceManagement/detectedApps') if app.get('id') is not None}
+            requests = [{'name': f'deviceManagement/detectedApps/{app_id}/managedDevices', 'app_id': app_id,
+                         'url_params': {'$select': 'id'}}
+                        for app_id in app_ids]
+
+            for response in self._async_device_apps_paged_get(requests):
+                device_id = response.get('id')
+                if not device_id:
                     continue
-                for device_raw in self._paged_get(f'deviceManagement/detectedApps/{app_id}/managedDevices'):
-                    device_id = device_raw.get('id')
-                    if not device_id:
-                        continue
-                    devices_apps.setdefault(device_id, []).append(app_raw)
+                devices_apps[device_id].append(app_ids[response.get('request_app_id')])
                 apps_got += 1
                 if apps_got % LOG_DEVICES_COUNT == 0:
                     logger.info(f'Got {apps_got} installed apps')
