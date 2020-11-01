@@ -188,7 +188,7 @@ class EsetAdapter(AdapterBase, Configurable):
                 }
             ],
             'required': ['exclude_no_last_seen_devices'],
-            'pretty_name': 'Eset Configuration',
+            'pretty_name': 'ESET Configuration',
             'type': 'array'
         }
 

@@ -63,6 +63,11 @@ class ServiceNowComputerAction(ActionTypeBase):
                     'type': 'string'
                 },
                 {
+                    'name': 'exclude_default_fields',
+                    'type': 'bool',
+                    'title': 'Do not map default Axonius fields'
+                },
+                {
                     'name': 'ax_snow_fields_map',
                     'type': 'string',
                     'title': 'Axonius to ServiceNow field mapping'
@@ -91,11 +96,6 @@ class ServiceNowComputerAction(ActionTypeBase):
                     'name': 'mac_delimiter',
                     'title': 'MAC addresses delimiter',
                     'type': 'string'
-                },
-                {
-                    'name': 'exclude_default_fields',
-                    'type': 'bool',
-                    'title': 'Exclude default fields'
                 }
             ],
             'required': [

@@ -80,7 +80,7 @@ class OfficeScanAdapter(AdapterBase):
             'items': [
                 {
                     'name': 'domain',
-                    'title': 'Trend Micro Apex One Domain',
+                    'title': 'Trend Micro Apex Central IP Address',
                     'type': 'string'
                 },
                 {

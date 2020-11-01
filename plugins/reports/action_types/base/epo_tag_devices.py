@@ -28,7 +28,7 @@ class EpoTagAction(ActionTypeBase):
                 },
                 {
                     'name': 'apply',
-                    'title': 'Add or Remove tag',
+                    'title': 'Add or remove tag',
                     'type': 'string',
                     'enum': APPLY_LIST
                 }

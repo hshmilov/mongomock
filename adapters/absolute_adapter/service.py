@@ -304,7 +304,7 @@ class AbsoluteAdapter(AdapterBase, Configurable):
                 {
                     'name': 'fetch_apps',
                     'type': 'bool',
-                    'title': 'Fetch application'
+                    'title': 'Fetch applications'
                 }
             ],
             'required': [
