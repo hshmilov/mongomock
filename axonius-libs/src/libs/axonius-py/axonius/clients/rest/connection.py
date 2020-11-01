@@ -10,6 +10,7 @@ from json.decoder import JSONDecodeError
 from typing import Tuple, Type
 
 from urllib3.util.url import parse_url
+from requests_ntlm2 import HttpNtlmAdapter
 import requests
 import aiohttp
 import uritools
@@ -115,7 +116,7 @@ class RestList(list):
 
 # pylint: disable=R0902
 class RESTConnection(ABC):
-    # pylint: disable=R0913
+    # pylint: disable=R0913, R0915
     def __init__(self, domain: str, username: str = None, password: str = None, apikey: str = None,
                  verify_ssl=False,
                  http_proxy: str = None, https_proxy: str = None, url_base_prefix: str = '/',
@@ -161,20 +162,31 @@ class RESTConnection(ABC):
         self.revalidate_session_timeout()
         self._port = port
         self._proxies = {}
+        self._proxies_raw = {}
+        self.__proxy_username = proxy_username
+        self.__proxy_password = proxy_password
         if http_proxy is not None:
             http_proxy = http_proxy.strip()
+            self._proxies_raw['http'] = http_proxy
             try:
                 if proxy_username and proxy_password:
-                    http_proxy = f'{proxy_username}:{proxy_password}@{http_proxy}'
+                    scheme = self._get_url_scheme(http_proxy)
+                    if scheme:
+                        http_proxy = http_proxy.lstrip(f'{scheme}://')  # L-strip the scheme to get a valid url later
+                    http_proxy = f'{scheme or "http"}://{proxy_username}:{proxy_password}@{http_proxy}'
             except Exception:
                 logger.exception(f'Problem with username password for proxy')
             self._proxies['http'] = http_proxy
             self._http_proxy = http_proxy
         if https_proxy is not None:
             https_proxy = https_proxy.strip()
+            self._proxies_raw['https'] = https_proxy
             try:
                 if proxy_username and proxy_password:
-                    https_proxy = f'{proxy_username}:{proxy_password}@{https_proxy}'
+                    scheme = self._get_url_scheme(https_proxy)
+                    if scheme:
+                        https_proxy = https_proxy.lstrip(f'{scheme}://')  # L-strip the scheme to get a valid url later
+                    https_proxy = f'{scheme or "https"}://{proxy_username}:{proxy_password}@{https_proxy}'
             except Exception:
                 logger.exception(f'Problem with username password for proxy')
             self._proxies['https'] = https_proxy
@@ -188,7 +200,16 @@ class RESTConnection(ABC):
         self._permanent_headers = headers if headers is not None else {}
         self._session_headers = {}
         self._session = None
+        self._ntlm_proxy_enabled = False
         self._session_lock = threading.Lock()
+
+    @staticmethod
+    def _get_url_scheme(url):
+        try:
+            parsed_url = parse_url(url)
+            return parsed_url.scheme or ''
+        except Exception:
+            return ''
 
     @property
     def client_id(self) -> str:
@@ -318,6 +339,7 @@ class RESTConnection(ABC):
         self._session.close()
         self._session = None
         self._session_headers = {}
+        self._ntlm_proxy_enabled = False
 
     @property
     def _is_connected(self):
@@ -439,6 +461,37 @@ class RESTConnection(ABC):
                                              auth=auth_dict, files=files_param)
         except requests.HTTPError as e:
             self._handle_http_error(e)
+        except requests.exceptions.ProxyError as proxy_error:
+            logger.debug(f'Got ProxyError: {str(proxy_error)}')
+            # Do not retry if ntlm proxy already enabled
+            if self._ntlm_proxy_enabled:
+                logger.debug(f'NTLM proxy already enabled')
+                self._handle_http_error(proxy_error)
+            # If we have information for proxy and the proxy auth failed thus far,
+            # enable ntlm proxy and retry the request.
+            if '407 proxy authentication required' in str(proxy_error).lower() and \
+                    (self.__proxy_username and self.__proxy_password):
+                logger.info(f'Enabling NTLM proxy mode for connection to {self._domain}')
+                self._ntlm_proxy_enabled = True
+                if 'http' in self._proxies_raw:
+                    self._session.mount('http://', HttpNtlmAdapter(self.__proxy_username, self.__proxy_password))
+                if 'https' in self._proxies_raw:
+                    self._session.mount('https://', HttpNtlmAdapter(self.__proxy_username, self.__proxy_password))
+                self._proxies = self._proxies_raw
+                logger.info(f'NTLM proxy connection enabled, using proxies: {self._proxies}')
+                return self._do_request(
+                    method, name, url_params, body_params, force_full_url, do_basic_auth, use_json_in_response,
+                    use_json_in_body, do_digest_auth, return_response_raw, alternative_auth_dict,
+                    extra_headers, raise_for_status, files_param, alternative_proxies, response_type)
+            # In any other case, handle the error gracefully
+            logger.debug(f'NTLM proxy has not been enabled')
+            self._handle_http_error(proxy_error)
+        except requests.exceptions.ConnectionError as conn_error:
+            if self._ntlm_proxy_enabled:
+                message = f'Protocol error when connecting to NTLM proxy: {str(conn_error)}'
+                logger.exception(message)
+                raise RESTConnectionError(message)
+            raise  # If we don't have ntlm enabled, handle this error normally
 
         response = self._handle_response(response,
                                          raise_for_status=raise_for_status,
