@@ -5,7 +5,8 @@ from enum import Enum, auto
 from aws_adapter.consts import FORWARDED_COOKIES, VIEWER_PROTOCOL_POLICY, \
     PROTOCOL_POLICY, SSL_SUPPORT_METHOD, MINIMUM_PROTOCOL_VERSION, \
     CERTIFICATE_SOURCE, CLOUDFRONT_RESTRICTION_TYPE, PRICE_CLASS, \
-    HTTP_VERSION, ALIAS_RECORDALS_STATUS
+    HTTP_VERSION, ALIAS_RECORDALS_STATUS, VPC_STATE, INSTANCE_TENANCY, \
+    CIDR_BLOCK_STATE, VPC_PEERING_STATUS_CODE
 from axonius.devices.device_adapter import DeviceRunningState
 from axonius.devices.device_or_container_adapter import DeviceOrContainerAdapter
 from axonius.fields import Field, ListField, JsonStringFormat
@@ -43,6 +44,7 @@ class AwsRawDataTypes(Enum):
     InternetGateway = auto()
     RouteTable = auto()
     Elasticsearch = auto()
+    VPC = auto()
 
 
 # translation table between AWS values to parsed values
@@ -54,6 +56,56 @@ AWS_POWER_STATE_MAP = {
     'shutting-down': DeviceRunningState.ShuttingDown,
     'stopping': DeviceRunningState.ShuttingDown,
 }
+
+
+class AWSTagKeyValue(SmartJsonClass):
+    """ A definition for a key value field"""
+    key = Field(str, 'AWS Tag Key')
+    value = Field(str, 'AWS Tag Value')
+
+
+class AWSVPCPeeringOptions(SmartJsonClass):
+    allow_dns_resolution_from_remote_vpc = Field(
+        bool,
+        'Allow DNS Resolution From Remote VPC'
+    )
+    allow_egress_from_local_classiclink_to_remote_vpc = Field(
+        bool,
+        'Allow Egress From Local ClassicLink to Remove VPC'
+    )
+    allow_egress_from_local_vpc_to_remote_classiclink = Field(
+        bool,
+        'Allow Egress From Local VPC to Remote ClassicLink'
+    )
+
+
+class AWSVPCPeeringVPCInfo(SmartJsonClass):
+    cidr_block = Field(str, 'CIDR Block')
+    ipv6_cidr_block_set = ListField(str, 'IPv6 CIDR Block Set')
+    ipv4_cidr_block_set = ListField(str, 'IPv4 CIDR Block Set')
+    owner_id = Field(str, 'Owner ID')
+    peering_options = Field(AWSVPCPeeringOptions, 'Peering Options')
+    vpc_id = Field(str, 'VPC ID')
+    region = Field(str, 'Region')
+
+
+class AWSVPCPeeringConnection(SmartJsonClass):
+    connection_id = Field(str, 'VPC Peering Connection ID')
+    accepter_vpc_info = Field(AWSVPCPeeringVPCInfo, 'Accepter VPC Information')
+    requester_vpc_info = Field(AWSVPCPeeringVPCInfo, 'Requester VPC Information')
+    expiration_time = Field(datetime.datetime, 'Expiration Time')
+    status_code = Field(str, 'Status Code', enum=VPC_PEERING_STATUS_CODE)
+    status_message = Field(str, 'Status Message')
+    tags = ListField(AWSTagKeyValue, 'Tags')
+
+
+class AWSCidrBlockAssociationSet(SmartJsonClass):
+    association_id = Field(str, 'ID')
+    cidr_block = Field(str, 'CIDR Block')
+    cidr_block_state = Field(str, 'CIDR Block State', enum=CIDR_BLOCK_STATE)
+    cidr_block_status = Field(str, 'CIDR Block Status Message')
+    network_border_group = Field(str, 'Network Border Group')
+    ipv6_pool = Field(str, 'IPv6 Pool')
 
 
 class AWSCipher(SmartJsonClass):
@@ -222,12 +274,6 @@ class AWSCloudfrontDistribution(SmartJsonClass):
     active_trusted_signers = Field(AWSCloudfrontActiveTrustedSigners, 'Active Trusted Signers')
     distribution_config = Field(AWSCloudfrontDistributionConfig, 'Distribution Configuration')
     alias_ipc_recordals = ListField(AWSCloudfrontAliasRecordals, 'Alias ICP Recordals')
-
-
-class AWSTagKeyValue(SmartJsonClass):
-    """ A definition for a key value field"""
-    key = Field(str, 'AWS Tag Key')
-    value = Field(str, 'AWS Tag Value')
 
 
 class AwsSSMSchemas(Enum):
@@ -760,10 +806,10 @@ class OnlyAWSDeviceAdapter(AWSAdapter):
     aws_device_type = Field(
         str,
         'Device Type (EC2 / ECS / EKS / Elasticsearch / ELB / Internet Gateway / '
-        'Lambda / Managed / NAT / RDS / Route53 / Route Table / S3 / Workspace)',
+        'Lambda / Managed / NAT / RDS / Route53 / Route Table / S3 / VPC / Workspace)',
         enum=['EC2', 'ECS', 'EKS', 'Elasticsearch', 'ELB', 'InternetGateway',
               'Lambda', 'Managed', 'NAT', 'RDS', 'Route53', 'RouteTable', 'S3',
-              'Workspace']
+              'VPC', 'Workspace']
     )
     security_groups = ListField(AWSSecurityGroup, 'Security Groups')
 
@@ -882,6 +928,17 @@ class OnlyAWSDeviceAdapter(AWSAdapter):
 
     # cloudfront (ELB / S3)
     cloudfront_distribution = ListField(AWSCloudfrontDistribution, 'Cloudfront Distribution')
+
+    # vpc
+    cidr_block = Field(str, 'CIDR Block')
+    dhcp_options_id = Field(str, 'DHCP Options ID')
+    state = Field(str, 'State', enum=VPC_STATE)
+    vpc_owner_id = Field(str, 'Owner ID')
+    instance_tenancy = Field(str, 'Instance Tenancy', enum=INSTANCE_TENANCY)
+    ipv6_cidr_block_assoc_set = ListField(AWSCidrBlockAssociationSet, 'IPv6 CIDR Block Association Sets')
+    ipv4_cidr_block_assoc_set = ListField(AWSCidrBlockAssociationSet, 'IPv4 CIDR Block Association Sets')
+    is_default = Field(bool, 'Default')
+    peering_connections = ListField(AWSVPCPeeringConnection, 'VPC Peering Connections')
 
     def add_aws_ec2_tag(self, **kwargs):
         self.aws_tags.append(AWSTagKeyValue(**kwargs))

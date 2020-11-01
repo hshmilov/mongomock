@@ -42,3 +42,12 @@ AWS_SECRET_ACCESS_KEY_NAME = 'aws_secret_access_key'
 AWS_USE_IAM = 'aws_use_iam'
 AWS_S3_BUCKET_NAME = 's3_bucket'
 AWS_S3_KEY_NAME = 's3_key'
+
+# vpc enum
+VPC_STATE = ['pending', 'available']
+INSTANCE_TENANCY = ['default', 'dedicated', 'host']
+CIDR_BLOCK_STATE = ['associating', 'associated', 'disassociating',
+                    'disassociated', 'failing', 'failed']
+VPC_PEERING_STATUS_CODE = ['initiating-request', 'pending-acceptance',
+                           'active', 'deleted', 'rejected', 'failed',
+                           'expired', 'provisioning', 'deleting']

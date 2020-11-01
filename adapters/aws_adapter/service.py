@@ -25,6 +25,7 @@ from aws_adapter.connection.aws_users import parse_raw_data_inner_users, \
     query_users_by_client_for_all_sources, query_roles_by_client_for_all_sources
 from aws_adapter.connection.aws_workspaces import parse_raw_data_inner_workspaces
 from aws_adapter.connection.aws_lambda import parse_raw_data_inner_lambda
+from aws_adapter.connection.aws_vpc import parse_raw_data_inner_vpc
 from aws_adapter.connection.structures import AWSUserAdapter, AWSDeviceAdapter, \
     AWSAdapter, AwsRawDataTypes, AWS_ACCESS_KEY_ID, \
     AWS_ENDPOINT_FOR_REACHABILITY_TEST, REGION_NAME, GET_ALL_REGIONS, \
@@ -729,6 +730,20 @@ class AwsAdapter(AdapterBase, Configurable):
                         logger.exception(f'Problem parsing device from '
                                          f'Elasticsearch')
 
+                elif raw_data_type == AwsRawDataTypes.VPC:
+                    try:
+                        device = parse_raw_data_inner_vpc(self._new_device_adapter(),
+                                                          devices_raw_data_by_source,
+                                                          )
+                        if device:
+                            self.append_metadata_to_entity(device,
+                                                           account_metadata,
+                                                           aws_source)
+                            yield device
+                    except Exception as err:
+                        logger.exception(
+                            (f'Problem parsing device from VPCs: '
+                             f'{devices_raw_data_by_source}: {str(err)}'))
                 else:
                     logger.critical(f'Can not parse data for aws source {aws_source}, '
                                     f'unknown type {raw_data_type.name}')
@@ -908,6 +923,7 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__fetch_route_table_for_devices = config.get('fetch_route_table_for_devices') or False
         self.__fetch_elasticsearch = config.get('fetch_elasticsearch') or False
         self.__fetch_cloudfront = config.get('fetch_cloudfront') or False
+        self.__fetch_vpcs = config.get('fetch_vpcs') or False
         self.__parse_elb_ips = config.get('parse_elb_ips') or False
         self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
         self.__shodan_key = config.get('shodan_key')
@@ -997,6 +1013,11 @@ class AwsAdapter(AdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'fetch_vpcs',
+                    'title': 'Fetch VPCs as devices',
+                    'type': 'bool'
+                },
+                {
                     'name': 'parse_iam_policies',
                     'title': 'Parse IAM policies',
                     'type': 'bool'
@@ -1079,6 +1100,7 @@ class AwsAdapter(AdapterBase, Configurable):
                 'fetch_route_table_for_devices',
                 'fetch_elasticsearch',
                 'fetch_cloudfront',
+                'fetch_vpcs',
                 'parse_elb_ips',
                 'verbose_auth_notifications',
                 'verify_all_roles',
@@ -1113,6 +1135,7 @@ class AwsAdapter(AdapterBase, Configurable):
             'fetch_route_table_for_devices': False,
             'fetch_elasticsearch': False,
             'fetch_cloudfront': False,
+            'fetch_vpcs': False,
             'parse_elb_ips': False,
             'verbose_auth_notifications': False,
             'shodan_key': None,
