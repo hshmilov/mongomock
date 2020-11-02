@@ -362,7 +362,7 @@ class TestDevicesSimpleQuery(TestBase):
 
         self.devices_page.count_selected_entities()
         for index in filtered_out_indices:
-            assert self.devices_page.is_toggle_selected(self.devices_page.get_row_checkbox(index))
+            assert self.devices_page.is_checkbox_selected(self.devices_page.get_row_checkbox(index))
 
     def _text_exclude_entities_on_current_data(self):
         real_devices_count = self.devices_page.count_entities()

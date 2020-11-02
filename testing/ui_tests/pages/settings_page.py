@@ -161,7 +161,7 @@ class SettingsPage(Page):
     HISTORY_SCHEDULE_REPEAT_INPUT_ID = 'historical_schedule_recurrence'
     DISCOVERY_SCHEDULE_INTERVAL_INPUT_CSS = '#system_research_rate'
     DISCOVERY_SCHEDULE_MODE_OPTIONS = '.x-dropdown > .content .x-select-content > .x-select-options > *'
-    HISTORY_ENABLED_CHECKBOX = '//*[contains(text(),\'Enable scheduled historical snapshot\')]'
+    HISTORY_ENABLED_CHECKBOX_TEXT = 'Enable scheduled historical snapshot'
     DISCOVERY_SCHEDULING_WRAPPING_CLASS = '.x-settings .item_discovery_settings'
     HISTORY_SCHEDULING_WRAPPING_CLASS = '.x-settings .item_history_settings'
 
@@ -776,13 +776,13 @@ class SettingsPage(Page):
         return self.driver.find_element_by_css_selector(self.SCHEDULE_RATE_CSS).get_attribute('value')
 
     def find_send_emails_toggle(self):
-        return self.find_checkbox_by_label(self.SEND_EMAILS_LABEL)
+        return self.find_toggle_with_label_by_label(self.SEND_EMAILS_LABEL)
 
     def find_disable_remember_me_toggle(self):
         return self.find_checkbox_by_label_with_single_quote(self.DISABLE_REMEMBER_ME)
 
     def find_getting_started_toggle(self):
-        return self.find_checkbox_by_label(self.GETTING_STARTED_LABEL)
+        return self.find_toggle_with_label_by_label(self.GETTING_STARTED_LABEL)
 
     def open_import_key_and_cert_modal(self):
         try:
@@ -847,10 +847,10 @@ class SettingsPage(Page):
         return self.find_checkbox_with_label_by_label(self.PROVISION_LABEL)
 
     def find_syslog_toggle(self):
-        return self.find_checkbox_by_label(self.USE_SYSLOG_LABEL)
+        return self.find_toggle_with_label_by_label(self.USE_SYSLOG_LABEL)
 
     def set_password_policy_toggle(self, enable=True):
-        password_policy_checkbox = self.find_checkbox_by_label(self.ENFORCE_PASSWORD_POLICY)
+        password_policy_checkbox = self.find_toggle_with_label_by_label(self.ENFORCE_PASSWORD_POLICY)
         self.click_toggle_button(password_policy_checkbox, make_yes=enable)
 
     def restore_initial_password_policy(self):
@@ -861,7 +861,7 @@ class SettingsPage(Page):
         self.wait_for_saved_successfully_toaster()
 
     def find_password_expiration_toggle(self):
-        return self.find_checkbox_by_label(self.PASSWORD_EXPIRATION_LABEL)
+        return self.find_toggle_with_label_by_label(self.PASSWORD_EXPIRATION_LABEL)
 
     def fill_password_policy(self, password_length, min_lowercase, min_uppercase, min_numbers, min_special_chars):
         self.fill_text_field_by_element_id(self.MIN_PASSWORD_LENGTH_ID, password_length)
@@ -1009,7 +1009,7 @@ class SettingsPage(Page):
         self.wait_for_toaster('User permissions saved')
 
     def find_allow_ldap_logins_toggle(self):
-        return self.find_checkbox_by_label(self.LDAP_LOGINS_LABEL)
+        return self.find_toggle_with_label_by_label(self.LDAP_LOGINS_LABEL)
 
     def find_exact_search_toggle(self):
         return self.find_checkbox_by_label(self.EXACT_SEARCH_LABEL)
@@ -1193,20 +1193,20 @@ class SettingsPage(Page):
         self.wait_for_toaster('Role saved')
 
     def set_allow_saml_based_login(self, make_yes=True):
-        toggle = self.find_checkbox_by_label(self.SAML_LOGINS_LABEL)
+        toggle = self.find_toggle_with_label_by_label(self.SAML_LOGINS_LABEL)
         self.click_toggle_button(toggle, make_yes=make_yes, window=TAB_BODY)
 
     def is_saml_login_enabled(self):
-        toggle = self.find_checkbox_by_label(self.SAML_LOGINS_LABEL)
+        toggle = self.find_toggle_with_label_by_label(self.SAML_LOGINS_LABEL)
         return self.is_toggle_selected(toggle)
 
     def set_proxy_settings_enabled(self, make_yes=True):
-        toggle = self.find_checkbox_by_label(self.USE_PROXY)
+        toggle = self.find_toggle_with_label_by_label(self.USE_PROXY)
         self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)
 
     def set_vault_settings_enabled(self, make_yes=True):
         self.wait_for_element_present_by_text(self.ENTERPRISE_PASSWORD_MGMT_TEXT)
-        toggle = self.find_checkbox_by_label(self.USE_PASSWORD_MGR_VAULT)
+        toggle = self.find_toggle_with_label_by_label(self.USE_PASSWORD_MGR_VAULT)
         self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)
 
     def set_gui_ssl_settings_enabled(self, make_yes=True):
@@ -1214,11 +1214,11 @@ class SettingsPage(Page):
         self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=False)
 
     def set_correlation_schedule_settings_enabled(self, make_yes=True):
-        toggle = self.find_checkbox_by_label(self.USE_CORRELATION_SCHEDULE)
+        toggle = self.find_toggle_with_label_by_label(self.USE_CORRELATION_SCHEDULE)
         self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
 
     def set_amazon_settings_enabled(self, make_yes=True):
-        toggle = self.find_checkbox_by_label(self.USE_AMAZON)
+        toggle = self.find_toggle_with_label_by_label(self.USE_AMAZON)
         self.click_toggle_button(toggle, make_yes=make_yes, scroll_to_toggle=True)
 
     def fill_bucket_name(self, bucket_name):
@@ -1337,12 +1337,12 @@ class SettingsPage(Page):
 
     def enable_custom_ca(self, make_yes=True):
         label = self.driver.find_element_by_xpath(self.CA_CERTIFICATE_ENABLED).text
-        toggle = self.find_checkbox_by_label(label)
+        toggle = self.find_toggle_with_label_by_label(label)
         self.click_toggle_button(toggle, make_yes=make_yes)
 
     def disable_custom_ca(self):
         label = self.driver.find_element_by_xpath(self.CA_CERTIFICATE_ENABLED).text
-        toggle = self.find_checkbox_by_label(label)
+        toggle = self.find_toggle_with_label_by_label(label)
         self.click_toggle_button(toggle, scroll_to_toggle=False, make_yes=False)
 
     def click_add_ca_cert(self):
@@ -1410,10 +1410,10 @@ class SettingsPage(Page):
         self._ca_cert_delete(ca_delete_index=2)
 
     def find_session_timeout_toggle(self):
-        return self.find_checkbox_by_label(self.SESSION_TIMEOUT_LABEL)
+        return self.find_toggle_with_label_by_label(self.SESSION_TIMEOUT_LABEL)
 
     def find_queries_cache_toggle(self):
-        return self.find_checkbox_by_label(self.QUERIES_CACHE_LABEL)
+        return self.find_toggle_with_label_by_label(self.QUERIES_CACHE_LABEL)
 
     def set_session_timeout(self, enabled, timeout):
         self.switch_to_page()
@@ -1482,7 +1482,7 @@ class SettingsPage(Page):
                                           date_format)
 
     def set_mutual_tls(self, certificate_file_content):
-        self.find_checkbox_by_label('Enable mutual TLS').click()
+        self.find_toggle_with_label_by_label('Enable mutual TLS').click()
         mutual_tls_cert_element = self.find_elements_by_css(self.MUTUAL_TLS_CERTIFICATE_SELECTOR)[0]
         fname = self.upload_file_on_element(mutual_tls_cert_element, certificate_file_content, is_bytes=True)
         return fname
@@ -1636,7 +1636,7 @@ class SettingsPage(Page):
         self.switch_to_page()
         self.click_global_settings()
         self.wait_for_element_present_by_text(self.ENTERPRISE_PASSWORD_MGMT_TEXT)
-        toggle = self.find_checkbox_by_label(self.USE_PASSWORD_MGR_VAULT)
+        toggle = self.find_toggle_with_label_by_label(self.USE_PASSWORD_MGR_VAULT)
         self.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=False)
         self.click_save_global_settings()
 
@@ -1665,19 +1665,19 @@ class SettingsPage(Page):
 
     def toggle_root_master(self, toggle_value):
         self.wait_for_element_present_by_text(self.USE_ROOT_MASTER)
-        toggle = self.find_checkbox_by_label(self.USE_ROOT_MASTER)
+        toggle = self.find_toggle_with_label_by_label(self.USE_ROOT_MASTER)
         self.click_toggle_button(toggle, make_yes=toggle_value, scroll_to_toggle=False)
 
     def toggle_parallel_fetch(self, toggle_value):
-        toggle = self.find_checkbox_by_label(self.USE_PARALLEL_FETCH)
+        toggle = self.find_toggle_with_label_by_label(self.USE_PARALLEL_FETCH)
         self.click_toggle_button(toggle, make_yes=toggle_value, scroll_to_toggle=False)
 
     def set_s3_integration_settings_enabled(self):
-        toggle = self.find_checkbox_by_label(self.USE_S3_INTEGRATION)
+        toggle = self.find_toggle_with_label_by_label(self.USE_S3_INTEGRATION)
         self.click_toggle_button(toggle, make_yes=True, scroll_to_toggle=False)
 
     def set_s3_integration_settings_disabled(self):
-        toggle = self.find_checkbox_by_label(self.USE_S3_INTEGRATION)
+        toggle = self.find_toggle_with_label_by_label(self.USE_S3_INTEGRATION)
         self.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=False)
 
     def set_s3_backup_settings_enabled(self, make_yes=True):
@@ -1710,7 +1710,7 @@ class SettingsPage(Page):
         self.toggle_auto_querying(make_yes=True)
 
     def toggle_compliance_visible_feature(self, show_feature):
-        cloud_visible_toggle = self.find_checkbox_by_label('Cloud Visible')
+        cloud_visible_toggle = self.find_toggle_with_label_by_label('Cloud Visible')
         self.click_toggle_button(cloud_visible_toggle, make_yes=show_feature)
 
     def toggle_compliance_enable_feature(self, show_feature):
@@ -1791,8 +1791,7 @@ class SettingsPage(Page):
 
     def save_daily_historical_snapshot(self, enable=True):
         self.switch_to_page()
-        label = self.driver.find_element_by_xpath(self.HISTORY_ENABLED_CHECKBOX).text
-        toggle = self.find_checkbox_by_label(label)
+        toggle = self.find_toggle_with_label_by_label(self.HISTORY_ENABLED_CHECKBOX_TEXT)
         self.click_toggle_button(toggle, make_yes=enable)
         self.save_and_wait_for_toaster()
 

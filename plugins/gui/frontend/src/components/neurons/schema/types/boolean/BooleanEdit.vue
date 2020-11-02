@@ -4,7 +4,21 @@
     v-model="data"
     :options="enumOptions"
     @input="input"
-  ></XSelect>
+  />
+
+  <div
+    v-else-if="collapsableSection"
+    class="x-section-toggle"
+  >
+    <ASwitch
+      v-model="data"
+      :class="{'error-border': error}"
+      :disabled="readOnly"
+      @focusout.stop="focusout"
+      @change="input"
+    />
+  </div>
+
   <XCheckbox
     v-else
     :id="schema.name"
@@ -22,11 +36,12 @@ import _isEmpty from 'lodash/isEmpty';
 import XSelect from '@axons/inputs/select/Select.vue';
 import XCheckbox from '@axons/inputs/Checkbox.vue';
 import primitiveMixin from '@mixins/primitive';
+import { Switch as ASwitch } from 'ant-design-vue';
 
 export default {
   name: 'XBoolEdit',
   components: {
-    XSelect, XCheckbox,
+    XSelect, XCheckbox, ASwitch,
   },
   mixins: [primitiveMixin],
   computed: {
@@ -35,6 +50,9 @@ export default {
         return null;
       }
       return this.schema.enum;
+    },
+    collapsableSection() {
+      return this.schema.name === 'enabled';
     },
   },
   methods: {
@@ -46,4 +64,7 @@ export default {
 </script>
 
 <style lang="scss">
+  .x-section-toggle {
+    @include x-switch;
+  }
 </style>

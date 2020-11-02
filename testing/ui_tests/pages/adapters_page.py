@@ -32,8 +32,8 @@ class AdaptersPage(EntitiesPage):
     TABLE_CLASS = '.table'
     TEST_CONNECTIVITY = 'Check Network Connectivity'
     RT_CHECKBOX_CSS = '[for=realtime_adapter]+div'
-    CUSTOM_DISCOVERY_ENABLE_CHECKBOX_CSS = '[for=enabled]+div'
-    CUSTOM_CONNECTION_DISCOVERY_ENABLE_CHECKBOX_CSS = '.item_connection_discovery [for=enabled]+div'
+    CUSTOM_DISCOVERY_TOGGLE_LABEL_TEXT = 'Enable custom scheduling of discovery for this adapter'
+    CUSTOM_CONNECTION_DISCOVERY_TOGGLE_LABEL_TEXT = 'Enable custom scheduling of discovery per adapter connection'
     REPEAT_DAYS = 'repeat_every'
     CHECKBOX_CLASS = 'x-checkbox'
     CHECKED_CHECKBOX_CLASS = 'x-checkbox checked'
@@ -73,7 +73,7 @@ class AdaptersPage(EntitiesPage):
     CLIENT_DISCOVERY_CONFIGURATIONS_TAB = '//div[text()=\'Scheduling Configuration\']'
     CLIENT_DISCOVERY_CONFIGURATIONS_FORM_CSS = '.ant-tabs-content .discovery-configuration'
     CLIENT_DISCOVERY_ENABLED_CSS = '.discovery-configuration #enabled'
-
+    ENABLE_CLIENT_DISCOVERY_LABEL = 'Enable custom scheduling'
     INPUT_TYPE_PWD_VALUE = '********'
 
     CSV_ADAPTER_QUERY = 'adapters_data.csv_adapter.id == exists(true)'
@@ -206,10 +206,10 @@ class AdaptersPage(EntitiesPage):
         time.sleep(1.5)
 
     def check_custom_discovery_schedule(self):
-        self.driver.find_element_by_css_selector(self.CUSTOM_DISCOVERY_ENABLE_CHECKBOX_CSS).click()
+        self.find_toggle_with_label_by_label(self.CUSTOM_DISCOVERY_TOGGLE_LABEL_TEXT).click()
 
     def check_custom_connection_discovery_schedule(self):
-        self.driver.find_element_by_css_selector(self.CUSTOM_CONNECTION_DISCOVERY_ENABLE_CHECKBOX_CSS).click()
+        self.find_toggle_with_label_by_label(self.CUSTOM_CONNECTION_DISCOVERY_TOGGLE_LABEL_TEXT).click()
 
     def change_custom_discovery_interval(self, days):
         self.fill_text_field_by_element_id(self.REPEAT_DAYS, days)
@@ -330,7 +330,7 @@ class AdaptersPage(EntitiesPage):
         for key, value in kwargs.items():
             element: WebElement = self.driver.find_element_by_id(key)
             if isinstance(value, bool):
-                assert self.is_toggle_selected(element) == value
+                assert self.is_checkbox_selected(element) == value
             elif isinstance(value, str):
                 if element.get_attribute('type') == 'password':
                     if not value:
@@ -680,7 +680,7 @@ class AdaptersPage(EntitiesPage):
         self.wait_for_element_present_by_xpath(self.CLIENT_DISCOVERY_CONFIGURATIONS_TAB)
         self.driver.find_element_by_xpath(self.CLIENT_DISCOVERY_CONFIGURATIONS_TAB).click()
         self.wait_for_element_present_by_css(self.CLIENT_DISCOVERY_CONFIGURATIONS_FORM_CSS)
-        self.driver.find_element_by_css_selector(self.CLIENT_DISCOVERY_ENABLED_CSS).click()
+        self.find_toggle_with_label_by_label(self.ENABLE_CLIENT_DISCOVERY_LABEL).click()
         time.sleep(2)
 
         if mode:

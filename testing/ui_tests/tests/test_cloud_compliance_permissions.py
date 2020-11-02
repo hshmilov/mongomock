@@ -15,7 +15,7 @@ class TestInstancesPermissions(PermissionsTestBase):
         self.login_page.login(username=AXONIUS_USER['user_name'], password=AXONIUS_USER['password'])
         self.settings_page.switch_to_page()
         self.settings_page.click_feature_flags()
-        cloud_visible_toggle = self.settings_page.find_checkbox_by_label('Cloud Visible')
+        cloud_visible_toggle = self.settings_page.find_toggle_with_label_by_label('Cloud Visible')
         self.settings_page.click_toggle_button(cloud_visible_toggle, make_yes=True)
         cloud_enabled_toggle = self.settings_page.find_checkbox_by_label('Cloud Enabled')
         self.settings_page.click_toggle_button(cloud_enabled_toggle, make_yes=True)

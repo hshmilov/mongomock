@@ -10,7 +10,7 @@ class TestCloudCompliance(TestBase):
         self.settings_page.switch_to_page()
         self.settings_page.click_feature_flags()
         self.settings_page.fill_trial_expiration_by_remainder(None)
-        cloud_visible_toggle = self.settings_page.find_checkbox_by_label('Cloud Visible')
+        cloud_visible_toggle = self.settings_page.find_toggle_with_label_by_label('Cloud Visible')
         self.settings_page.click_toggle_button(cloud_visible_toggle, make_yes=True)
         self.settings_page.save_and_wait_for_toaster()
         self.login_page.logout()

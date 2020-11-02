@@ -37,7 +37,7 @@ class TestCyberarkIntegration(TestBase):
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
         self.settings_page.wait_for_element_present_by_text(self.settings_page.ENTERPRISE_PASSWORD_MGMT_TEXT)
-        toggle = self.settings_page.find_checkbox_by_label(self.settings_page.USE_PASSWORD_MGR_VAULT)
+        toggle = self.settings_page.find_toggle_with_label_by_label(self.settings_page.USE_PASSWORD_MGR_VAULT)
         self.settings_page.click_toggle_button(toggle, make_yes=False, scroll_to_toggle=False)
         self.settings_page.click_save_global_settings()
 

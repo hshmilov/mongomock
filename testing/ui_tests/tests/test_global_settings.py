@@ -87,7 +87,7 @@ class TestGlobalSettings(TestBase):
 
         assert gui_service.troubleshooting().strip() == b'true'
         toggle = self.settings_page.find_remote_support_toggle()
-        assert self.settings_page.is_toggle_selected(toggle)
+        assert self.settings_page.is_checkbox_selected(toggle)
 
         self.settings_page.set_remote_support_toggle(make_yes=False)
         wait_until(lambda: gui_service.troubleshooting().strip() == b'false')
@@ -97,7 +97,7 @@ class TestGlobalSettings(TestBase):
 
         assert gui_service.analytics().strip() == b'true'
         toggle = self.settings_page.find_analytics_toggle()
-        assert self.settings_page.is_toggle_selected(toggle)
+        assert self.settings_page.is_checkbox_selected(toggle)
 
         self.settings_page.set_analytics_toggle(make_yes=False)
         wait_until(lambda: gui_service.analytics().strip() == b'false')

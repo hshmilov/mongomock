@@ -9,7 +9,7 @@ class TestDataEnrichment(TestBase):
         self.adapters_page.wait_for_server_green()
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
-        self.settings_page.find_checkbox_by_label('Enable device location mapping').click()
+        self.settings_page.find_toggle_with_label_by_label('Enable device location mapping').click()
 
         self._upload_and_check_msg(upload_data='10.0.0.0/8,Iceland\r\n192.168.0.0/16, Greenland',
                                    msg='Uploaded CSV with forbidden fields')
@@ -27,7 +27,7 @@ class TestDataEnrichment(TestBase):
         # Cleanup
         self.settings_page.switch_to_page()
         self.settings_page.click_global_settings()
-        self.settings_page.find_checkbox_by_label('Enable device location mapping').click()
+        self.settings_page.find_toggle_with_label_by_label('Enable device location mapping').click()
         self.settings_page.click_save_global_settings()
         self.adapters_page.restore_json_client()
 

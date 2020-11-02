@@ -77,7 +77,7 @@ BUTTON_TYPE_A = 'a'
 PAGE_BODY = '.x-page > .body'
 TAB_BODY = '.x-tabs > .body'
 TOGGLE_CHECKED_CLASSES = ['x-checkbox', 'checked']
-TOGGLE_CHECKED_CLASS = 'x-checkbox checked'
+CHECKBOX_CHECKED_CLASS = 'x-checkbox checked'
 SWITCH_ACTIVE_CLASS = 'ant-switch-checked'
 TOASTER_BY_TEXT_XPATH = '//div[@class=\'x-toast\']//div[@class=\'content\' and text()=\'{toast_text}\']'
 TABLE_SPINNER_NOT_DISPLAYED_XPATH = '//div[@class=\'v-spinner\' and @style=\'display: none;\']'
@@ -119,6 +119,8 @@ class Page:
     CHECKBOX_WITH_LABEL_XPATH = '//div[contains(@class, \'x-checkbox\') and child::label[text()=\'{label_text}\']]'
     CHECKBOX_WITH_SIBLING_LABEL_XPATH = '//div[contains(@class, \'x-checkbox\') and ' \
                                         'preceding-sibling::label[text()=\'{label_text}\']]'
+    TOGGLE_WITH_PRECEDING_LABEL_XPATH = '//div//label[text()=\'{label_text}\']' \
+                                        '//following-sibling::div/button[contains(@class, \'ant-switch\')]'
     CHECKBOX_CSS = '.x-checkbox .checkbox-container'
     DIV_BY_LABEL_TEMPLATE = '//div[child::label[text()=\'{label_text}\']]'
     DROPDOWN_OVERLAY_CSS = '.x-dropdown-bg'
@@ -723,8 +725,16 @@ class Page:
         return all([toggle_class in toggle.get_attribute('class') for toggle_class in TOGGLE_CHECKED_CLASSES])
 
     @staticmethod
+    def is_checkbox(element):
+        return TOGGLE_CHECKED_CLASSES[0] in element.get_attribute('class')
+
+    @staticmethod
     def is_toggle_selected(toggle):
-        return TOGGLE_CHECKED_CLASS in toggle.get_attribute('class')
+        return SWITCH_ACTIVE_CLASS in toggle.get_attribute('class')
+
+    @staticmethod
+    def is_checkbox_selected(checkbox):
+        return CHECKBOX_CHECKED_CLASS in checkbox.get_attribute('class')
 
     @staticmethod
     def is_toggle_active(toggle):
@@ -736,7 +746,7 @@ class Page:
                             ignore_exc=False,
                             scroll_to_toggle=True,
                             window=PAGE_BODY):
-        is_selected = self.is_toggle_selected(toggle)
+        is_selected = self.is_checkbox_selected(toggle) if self.is_checkbox(toggle) else self.is_toggle_selected(toggle)
 
         if (make_yes and not is_selected) or (not make_yes and is_selected):
             try:
@@ -747,8 +757,8 @@ class Page:
             except WebDriverException:
                 if not ignore_exc:
                     raise
-
-        assert self.is_toggle_selected(toggle) == make_yes
+        is_selected = self.is_checkbox_selected(toggle) if self.is_checkbox(toggle) else self.is_toggle_selected(toggle)
+        assert is_selected == make_yes
         return False
 
     def toggle_switch_button(self, switch_class, make_yes=True):
@@ -1137,6 +1147,12 @@ class Page:
         if not element:
             element = self.driver
         return element.find_element_by_xpath(self.CHECKBOX_WITH_LABEL_XPATH.format(label_text=text))
+
+    def find_toggle_with_label_by_label(self, text, element=None):
+        if not element:
+            element = self.driver
+
+        return element.find_element_by_xpath(self.TOGGLE_WITH_PRECEDING_LABEL_XPATH.format(label_text=text))
 
     def find_field_by_label(self, text):
         return self.driver.find_element_by_xpath(self.FIELD_WITH_LABEL_XPATH.format(label_text=text))
