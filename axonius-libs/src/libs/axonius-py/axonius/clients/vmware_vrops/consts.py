@@ -12,3 +12,6 @@ SECOND_PROPERTIES_URL = 'resources/properties'
 
 PROPERTIES_BLACK_LIST = ['summary|UUID', 'System Properties|resource_kind_type',
                          'System Properties|resource_kind_subtype', 'summary|MOID']
+
+# lowered version of NOT_EXISTING device state
+DEVICE_STATE_NOT_EXISTING = 'not_existing'

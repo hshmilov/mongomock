@@ -5,6 +5,7 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection, RESTException
 from axonius.clients.vmware_vrops.connection import VmwareVropsConnection
 from axonius.devices.device_adapter import DeviceRunningState
+from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import parse_bool_from_raw, int_or_none, float_or_none, is_valid_ip
@@ -24,7 +25,7 @@ def parse_enum(device_raw: dict, field_name: str, whitelist: list):
     return value
 
 
-class VmwareVropsAdapter(AdapterBase):
+class VmwareVropsAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(VmwareVropsDeviceInstance):
         pass
@@ -63,8 +64,7 @@ class VmwareVropsAdapter(AdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific domain
 
@@ -74,7 +74,7 @@ class VmwareVropsAdapter(AdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(ignore_not_existing_devices=self._ignore_not_existing_devices)
 
     @staticmethod
     def _clients_schema():
@@ -419,19 +419,22 @@ class VmwareVropsAdapter(AdapterBase):
                     device.cloud_id = properties_raw.get('summary|hostuuid')
 
                 for i in range(1000):  # Support only 1000 ips and mac to parse.
-                    if isinstance(properties_raw.get(f'net:{4000 + i}|ip_address'), list):
-                        ip_address = properties_raw.get(f'net:{4000 + i}|ip_address')[0]
-                    else:
-                        ip_address = properties_raw.get(f'net:{4000 + i}|ip_address')
+                    ips = []
+                    ip_address = properties_raw.get(f'net:{4000 + i}|ip_address')
+                    if ip_address and isinstance(ip_address, list):
+                        ips = [ip_address[0]]
+                    if isinstance(ip_address, str) and ',' in ip_address:
+                        ips = [ip.strip() for ip in ip_address.split(',')
+                               if ip.strip()]
 
                     if isinstance(properties_raw.get(f'net:{4000 + i}|mac_address'), list):
                         mac_address = properties_raw.get(f'net:{4000 + i}|mac_address')[0]
                     else:
                         mac_address = properties_raw.get(f'net:{4000 + i}|mac_address')
 
-                    if not (ip_address or mac_address):
+                    if not (ips or mac_address):
                         continue
-                    device.add_nic(mac=mac_address, ips=[ip_address])
+                    device.add_nic(mac=mac_address, ips=ips)
 
                 if isinstance(properties_raw.get('config|hardware|diskSpace'), list):
                     device.add_hd(total_size=float_or_none(
@@ -488,3 +491,31 @@ class VmwareVropsAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Virtualization]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'ignore_not_existing_devices',
+                    'title': 'Ignore "NOT_EXISTING" devices',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'ignore_not_existing_devices',
+            ],
+            'pretty_name': 'VMWare vROps Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'ignore_not_existing_devices': True,
+        }
+
+    def _on_config_update(self, config):
+        self._ignore_not_existing_devices = parse_bool_from_raw(config.get('ignore_not_existing_devices'))
+        if self._ignore_not_existing_devices is None:
+            self._ignore_not_existing_devices = True

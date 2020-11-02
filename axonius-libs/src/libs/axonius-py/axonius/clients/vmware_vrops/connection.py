@@ -7,7 +7,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from axonius.clients.vmware_vrops.consts import DEVICE_PER_PAGE, MAX_NUMBER_OF_DEVICES, TOKEN_URL, RESOURCES_URL, \
     DEFAULT_TIMEOUT_HOURS, ALERTS_URL, VIRTUAL_MACHINE_PROPERTIES_URL, PROPERTIES_URL, PROPERTIES_BLACK_LIST, \
-    HOST_SYSTEM_PROPERTIES_URL, SECOND_PROPERTIES_URL
+    HOST_SYSTEM_PROPERTIES_URL, SECOND_PROPERTIES_URL, DEVICE_STATE_NOT_EXISTING
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import int_or_none
 
@@ -203,7 +203,8 @@ class VmwareVropsConnection(RESTConnection):
                 properties_as_dict[resource_property.get('statKey')] = resource_property.get('values')
         return properties_as_dict
 
-    def _paginated_device_get(self):
+    # pylint: disable=too-many-branches
+    def _paginated_device_get(self, ignore_not_existing_devices: bool=True):
         try:
             total_fetched_devices = 0
             alerts_by_resource_id = self._get_alerts_by_resource_id()
@@ -234,6 +235,8 @@ class VmwareVropsConnection(RESTConnection):
             for resource in response.get('resourceList'):
                 if not isinstance(resource, dict):
                     continue
+                if ignore_not_existing_devices and not self._is_existing_device(resource):
+                    continue
                 resource['extra_alerts'] = alerts_by_resource_id.get(resource.get('identifier'))
                 resource['extra_properties'] = properties_by_resource_id.get(resource.get('identifier'))
                 yield resource
@@ -257,6 +260,8 @@ class VmwareVropsConnection(RESTConnection):
                 for resource in response.get('resourceList'):
                     if not isinstance(resource, dict):
                         continue
+                    if ignore_not_existing_devices and not self._is_existing_device(resource):
+                        continue
                     resource['extra_alerts'] = alerts_by_resource_id.get(resource.get('identifier'))
                     resource['extra_properties'] = properties_by_resource_id.get(resource.get('identifier'))
                     yield resource
@@ -269,9 +274,28 @@ class VmwareVropsConnection(RESTConnection):
             logger.exception(f'Invalid request made while paginating devices')
             raise
 
-    def get_device_list(self):
+    @staticmethod
+    def _is_existing_device(device_raw):
+        resource_status_states = device_raw.get('resourceStatusStates')
+        if not isinstance(resource_status_states, list):
+            return True
+        for resource_status_state in resource_status_states:
+            if not isinstance(resource_status_state, dict):
+                continue
+            resource_state = resource_status_state.get('resourceState')
+            if (isinstance(resource_state, str) and
+                    resource_state.lower() == DEVICE_STATE_NOT_EXISTING):
+                logger.debug(f'Ignoring NOT_EXISTING device,'
+                             f' id: {device_raw.get("identifier")},'
+                             f' resourceKey: {device_raw.get("resourceKey")},'
+                             f' resourceStatusStates: {resource_status_states}')
+                return False
+        return True
+
+    # pylint: disable=arguments-differ
+    def get_device_list(self, ignore_not_existing_devices: bool=True):
         try:
-            yield from self._paginated_device_get()
+            yield from self._paginated_device_get(ignore_not_existing_devices=ignore_not_existing_devices)
         except RESTException as err:
             logger.exception(str(err))
             raise
