@@ -574,7 +574,7 @@ export default {
     },
     updateColFilters(colFilters) {
       this.updateViewFilter({ module: this.module, ...colFilters });
-      this.fetchContentPages(false, false);
+      this.fetchContentPages(true, false);
     },
     resetScrollPosition() {
       this.$refs.table.$el.scrollTop = 0;

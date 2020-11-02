@@ -853,6 +853,7 @@ class EntitiesPage(Page):
                 self.add_exclude_adapters_combobox(adapter)
             self.toggle_exclude_adapters_combobox(displayed=False)
         self.save_column_filter_modal()
+        time.sleep(0.2)  # For mutation to complete
 
     def get_field_columns_header_text(self):
         headers = self.driver.find_element_by_xpath(self.TABLE_HEADER_FIELD_XPATH)
@@ -1054,8 +1055,19 @@ class EntitiesPage(Page):
         if remove_col_names:
             self.remove_columns(remove_col_names)
         self.close_edit_columns()
-        self.wait_for_spinner_to_end()
-        self.wait_for_table_to_load()
+        self.wait_for_table_to_be_responsive()
+
+        def is_table_cols_updated():
+            current_column_titles = self.get_columns_header_text()
+            removed_names = remove_col_names or []
+            added_names = add_col_names or []
+            all_removed = all(col not in current_column_titles or (col in added_names and adapter_title)
+                              for col in removed_names)
+            all_added = all(col in current_column_titles or (col in removed_names and not adapter_title)
+                            for col in added_names)
+            return all_removed and all_added
+
+        wait_until(is_table_cols_updated)
 
     def add_columns(self, col_names, adapter_title: str = None):
         if adapter_title:
