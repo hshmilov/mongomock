@@ -17,6 +17,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, DeviceRunningState
 from axonius.fields import Field, JsonArrayFormat, JsonStringFormat, ListField
 from axonius.mixins.configurable import Configurable
+from axonius.multiprocess.multiprocess import concurrent_multiprocess_yield
 from axonius.smart_json_class import SmartJsonClass
 from axonius.users.user_adapter import UserAdapter
 from axonius.utils.datetime import parse_date
@@ -30,6 +31,7 @@ from gce_adapter.consts import SQL_INSTANCE_STATES, SQL_DB_VERSIONS, SQL_SUSP_RE
 logger = logging.getLogger(f'axonius.{__name__}')
 
 GCE_ENDPOINT_FOR_REACHABILITY_TEST = f'https://www.googleapis.com/discovery/v1/apis/compute/v1/rest'
+DEFAULT_PARALLEL_COUNT = 20
 
 POWER_STATE_MAP = {
     NodeState.STOPPED: DeviceRunningState.TurnedOff,
@@ -149,6 +151,58 @@ class SCCFinding(SmartJsonClass):
     create_time = Field(datetime.datetime, 'Creation Time')
     sec_marks = ListField(MapObject, 'Security Marks')
     sec_marks_name = Field(str, 'Security Marks Resource Name')
+
+
+def gcp_get_firewalls(provider):
+    try:
+        # Libcloud does not support 'disabled' firewalls so we have to do this ourselves
+        response = provider.connection.request('/global/firewalls', method='GET').object
+        # Libcloud also does not support destRanges so we have to support that as well.
+        firewalls = []
+        for f in response.get('items', []):
+            if f.get('disabled'):
+                continue
+            fw = provider._to_firewall(f)  # pylint: disable=protected-access
+            if f.get('destinationRanges'):
+                fw.extra['destinationRanges'] = f.get('destinationRanges')
+            firewalls.append(fw)
+        return firewalls
+    except Exception:
+        logger.exception(f'Can not get firewalls')
+        return []
+
+
+def gcp_get_compute_provider(auth_json, project=None, proxy_url=None):
+    return get_driver(Provider.GCE)(
+        auth_json['client_email'],
+        auth_json['private_key'],
+        project=project or auth_json['project_id'],
+        proxy_url=proxy_url
+    )
+
+
+def query_gcp_compute_project(i, all_projects_len, project, auth_json, client_config):
+    logger.info(f'Handling project {i}/{all_projects_len} - {project.get("projectId")}')
+    try:
+        compute_provider = gcp_get_compute_provider(
+            auth_json,
+            project.get('projectId'),
+            client_config.get('https_proxy')
+        )
+        firewalls = gcp_get_firewalls(compute_provider)
+        for device_raw in compute_provider.list_nodes():
+            yield {
+                'type': DeviceType.COMPUTE,
+                'device_data': (device_raw, project.get('projectId'), firewalls)
+            }
+    except Exception as e:
+        message = f'Problem with project {project}: {str(e)}'
+        if 'error may be an authentication issue' in str(e):
+            logger.warning(message)
+        elif 'Compute Engine API has not been used in project' in str(e):
+            logger.warning(f'Problem with project {project}: Compute API not enabled')
+        else:
+            logger.warning(message, exc_info=True)
 
 
 # pylint: disable=too-many-instance-attributes
@@ -303,34 +357,6 @@ class GceAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Error while fetching users for project {project.get("projectId")}')
 
-    @staticmethod
-    def __get_firewalls(provider):
-        try:
-            # Libcloud does not support 'disabled' firewalls so we have to do this ourselves
-            response = provider.connection.request('/global/firewalls', method='GET').object
-            # Libcloud also does not support destRanges so we have to support that as well.
-            firewalls = []
-            for f in response.get('items', []):
-                if f.get('disabled'):
-                    continue
-                fw = provider._to_firewall(f)  # pylint: disable=protected-access
-                if f.get('destinationRanges'):
-                    fw.extra['destinationRanges'] = f.get('destinationRanges')
-                firewalls.append(fw)
-            return firewalls
-        except Exception:
-            logger.exception(f'Can not get firewalls')
-            return []
-
-    @staticmethod
-    def __get_compute_provider(auth_json, project=None, proxy_url=None):
-        return get_driver(Provider.GCE)(
-            auth_json['client_email'],
-            auth_json['private_key'],
-            project=project or auth_json['project_id'],
-            proxy_url=proxy_url
-        )
-
     def _query_database_devices_by_client(self, client_name: str,
                                           client_data: Tuple[GoogleCloudPlatformConnection, dict]):
         client, client_config = client_data
@@ -395,33 +421,28 @@ class GceAdapter(AdapterBase, Configurable):
         try:
             with client:
                 all_projects = list(client.get_project_list())
-            for i, project in enumerate(all_projects):
-                logger.info(f'Handling project {i}/{len(all_projects)} - {project.get("projectId")}')
-                try:
-                    compute_provider = self.__get_compute_provider(
-                        auth_json,
-                        project.get('projectId'),
-                        client_config.get('https_proxy')
-                    )
-                    firewalls = self.__get_firewalls(compute_provider)
-                    for device_raw in compute_provider.list_nodes():
-                        yield {
-                            'type': DeviceType.COMPUTE,
-                            'device_data': (device_raw, project.get('projectId'), firewalls)
-                        }
-                except Exception as e:
-                    message = f'Problem with project {project}: {str(e)}'
-                    if 'error may be an authentication issue' in str(e):
-                        logger.warning(message)
-                    elif 'Compute Engine API has not been used in project' in str(e):
-                        logger.warning(f'Problem with project {project}: Compute API not enabled')
-                    else:
-                        logger.warning(message, exc_info=True)
+
+            _ = (yield from concurrent_multiprocess_yield(
+                [
+                    (
+                        query_gcp_compute_project,
+                        (
+                            i,
+                            len(all_projects),
+                            project,
+                            auth_json,
+                            client_config
+                        ),
+                        {}
+                    ) for i, project in enumerate(all_projects)
+                ],
+                self.__parallel_count
+            ))
+
         except Exception:
             logger.exception(f'exception in getting all projects. using alternative path')
-            provider = self.__get_compute_provider(auth_json, None,
-                                                   client_config.get('https_proxy'))
-            firewalls = self.__get_firewalls(provider)
+            provider = gcp_get_compute_provider(auth_json, None, client_config.get('https_proxy'))
+            firewalls = gcp_get_firewalls(provider)
             for device_raw in provider.list_nodes():
                 yield {
                     'type': DeviceType.COMPUTE,
@@ -491,7 +512,12 @@ class GceAdapter(AdapterBase, Configurable):
                     'title': 'Custom filter expression for SCC findings',
                     # documentation link:
                     # https://cloud.google.com/security-command-center/docs/reference/rest/v1/organizations.sources.findings/list
-                }
+                },
+                {
+                    'name': 'parallel_count',
+                    'title': 'Number of accounts to fetch in parallel',
+                    'type': 'integer'
+                },
             ],
             'required': [
                 'fetch_cloud_sql',
@@ -513,6 +539,7 @@ class GceAdapter(AdapterBase, Configurable):
             'scc_orgs': '',
             'scc_findings_days': SCC_DAYS_MAX,
             'scc_findings_filter': '',
+            'parallel_count': DEFAULT_PARALLEL_COUNT
         }
 
     def _on_config_update(self, config):
@@ -526,6 +553,7 @@ class GceAdapter(AdapterBase, Configurable):
         self.__scc_findings_days = max(min(
             config.get('scc_findings_days', SCC_DAYS_MAX), SCC_DAYS_MAX), 0)
         self.__scc_findings_filter = config.get('scc_findings_filter', '')
+        self.__parallel_count = config.get('parallel_count') or DEFAULT_PARALLEL_COUNT
 
     @staticmethod
     def _clients_schema():
