@@ -1,6 +1,7 @@
 import time
 
 import pytest
+from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.metric_consts import TunnelMetrics
 from axonius.consts.plugin_consts import CORE_UNIQUE_NAME, AUDIT_COLLECTION
@@ -87,6 +88,15 @@ class TestTunnel(TestBase):
             self.wait_and_close_tunnel_modal()
             self.start_tunnel()
 
+            # Wait for system to recognize the connected tunnel
+            self.settings_page.hard_refresh()
+            time.sleep(10)
+            while self.is_tunnel_disconnected_modal_displayed():
+                self.settings_page.hard_refresh()
+                time.sleep(10)
+            self.settings_page.hard_refresh()
+            self._verify_tunnel_status('Connected')
+
     @pytest.mark.skipif(not read_saas_input_params(), reason='Can run only on a tunnel image')
     def test_adapter_page_tunnel_user_notifications(self):
         self.settings_page.switch_to_page()
@@ -147,6 +157,12 @@ class TestTunnel(TestBase):
 
     def _test_click_button(self, text):
         return self.adapters_page.get_button(text).click()
+
+    def is_tunnel_disconnected_modal_displayed(self):
+        try:
+            return self.settings_page.find_elements_by_css('.tunnel-modal') != []
+        except NoSuchElementException:
+            return False
 
     def wait_and_close_tunnel_modal(self):
         self.settings_page.wait_for_tunnel_disconnected_modal()
