@@ -551,7 +551,7 @@ class SettingsPage(Page):
     def update_role(self, role_name, permissions, users_has_this_role=False):
         self.switch_to_page()
         self.click_manage_roles_settings()
-        self.wait_for_table_to_load()
+        self.wait_for_table_to_be_responsive()
         self.click_role_by_name(role_name)
         self.get_role_edit_panel_action().click()
         self.select_permissions(permissions)

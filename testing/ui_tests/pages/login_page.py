@@ -2,12 +2,12 @@ import pytest
 
 from selenium.common.exceptions import NoSuchElementException
 
-from ui_tests.pages.page import Page
+from ui_tests.pages.base_page import BasePage
 from axonius.consts.system_consts import AXONIUS_DNS_SUFFIX
 from test_credentials.test_gui_credentials import AXONIUS_USER
 
 
-class LoginPage(Page):
+class LoginPage(BasePage):
     LOGIN_USERNAME_ID = 'user_name'
     LOGIN_PASSWORD_ID = 'password'
     LOGIN_DOMAIN_ID = 'domain'
@@ -71,7 +71,8 @@ class LoginPage(Page):
                     user_name,
                     user_password,
                     set_new_path=None,
-                    wait_for_getting_started=True):
+                    wait_for_getting_started=True,
+                    wait_for_successfull_login=True):
         self.logout()
         self.wait_for_login_page_to_load()
         if set_new_path:
@@ -81,6 +82,8 @@ class LoginPage(Page):
                    password=user_password,
                    remember_me=False,
                    wait_for_getting_started=wait_for_getting_started)
+        if wait_for_successfull_login:
+            self.wait_for_run_research()
 
     def find_invalid_login_message(self):
         return self.find_element_by_text(self.WRONG_USERNAME_OR_PASSWORD_MESSAGE)

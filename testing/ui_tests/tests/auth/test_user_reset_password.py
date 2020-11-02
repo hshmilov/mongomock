@@ -94,7 +94,8 @@ class TestUserResetPassword(TestBase):
         self.settings_page.click_save_global_settings()
         self.settings_page.wait_for_saved_successfully_toaster()
 
-        self.login_page.switch_user(ui_consts.NOTES_USERNAME, ui_consts.NEW_PASSWORD)
+        self.login_page.switch_user(ui_consts.NOTES_USERNAME, ui_consts.NEW_PASSWORD,
+                                    wait_for_successfull_login=False)
         self.login_page.wait_for_password_expired_warning()
         self.login_page.click_ant_button('OK')
         self.reset_password_page.wait_for_reset_password_page_to_load()
