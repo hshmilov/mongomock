@@ -47,6 +47,10 @@ def get_params_key_id():
     return read_saas_input_params().get('PARAMS_KEY_ARN').split('/')[1]
 
 
+def get_aws_region():
+    return read_saas_input_params().get('PARAMS_KEY_ARN').split(':')[3]
+
+
 if __name__ == '__main__':
     if is_axonius_saas_instance():
         print(json.dumps(read_saas_input_params()))
