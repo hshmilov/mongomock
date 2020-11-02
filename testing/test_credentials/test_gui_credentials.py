@@ -18,11 +18,14 @@ Federal Build -> pbkdf2
 '''
 
 
-def axonius_set_test_passwords():
+def axonius_set_test_passwords(only_internal=False):
     from services.axonius_service import get_service
 
     axonius_system = get_service()
-    users = [AXONIUS_USER, AXONIUS_RO_USER, DEFAULT_USER]
+    if only_internal:
+        users = [AXONIUS_USER, AXONIUS_RO_USER]
+    else:
+        users = [AXONIUS_USER, AXONIUS_RO_USER, DEFAULT_USER]
     for u in users:
         _set_password(axonius_system, u['user_name'], u['password'])
 

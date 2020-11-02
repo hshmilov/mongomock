@@ -37,7 +37,7 @@ fi
 if [[ $* == *--set-debug-passwords* ]]; then
     echo "Setting debug passwords for Axonius users."
     (
-    docker exec axonius-manager python3 ./devops/scripts/automate_dev/set_default_axonius_users.py
+    docker exec axonius-manager python3 ./devops/scripts/automate_dev/set_default_axonius_users.py --internal
     )
 fi
 
