@@ -5,7 +5,8 @@ from typing import Optional
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
-from infoblox_adapter.consts import MAX_NUMBER_OF_PAGES, RESULTS_PER_PAGE, LEASE_TYPE, A_TYPE, ADDRESS_TYPE
+from infoblox_adapter.consts import MAX_NUMBER_OF_PAGES, RESULTS_PER_PAGE, LEASE_TYPE, A_TYPE, ADDRESS_TYPE, \
+    DEFAULT_FETCH_LEASE, DEFAULT_FETCH_A_RECORDS, DEFAULT_FETCH_USED_ADDR
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -67,7 +68,9 @@ class InfobloxConnection(RESTConnection):
 
     # pylint: disable=too-many-branches,arguments-differ,too-many-locals,too-many-statements,too-many-nested-blocks
     def get_device_list(self, date_filter: Optional[int] = None, cidr_blacklist: Optional[str] = None,
-                        result_per_page=RESULTS_PER_PAGE, sleep_between_requests_in_sec=0, fetch_lease=False):
+                        result_per_page=RESULTS_PER_PAGE, sleep_between_requests_in_sec=0,
+                        fetch_lease: bool=DEFAULT_FETCH_LEASE, fetch_used_addresses: bool=DEFAULT_FETCH_USED_ADDR,
+                        fetch_a_records: bool=DEFAULT_FETCH_A_RECORDS):
         # First, get all networks to get additional data about the leases
         networks = dict()
         if sleep_between_requests_in_sec:
@@ -127,9 +130,8 @@ class InfobloxConnection(RESTConnection):
                     pass
                 yield lease_raw, LEASE_TYPE
             logger.info(f'Finished getting leases.')
-        else:
 
-            # Otherwise, get addresses
+        if fetch_used_addresses:
             try:
                 for network_obj, network_raw in networks.items():
                     if not isinstance(network_raw, dict):
@@ -174,10 +176,12 @@ class InfobloxConnection(RESTConnection):
                 logger.info(f'Finished getting addresses.')
             except Exception:
                 logger.exception(f'Problem getting addresses')
-        try:
-            for record_raw in self.__get_items_from_url(self._url + 'record:a',
-                                                        url_params={'_return_fields': 'discovered_data,'
-                                                                                      'ipv4addr,name'}):
-                yield record_raw, A_TYPE
-        except Exception:
-            logger.info(f'Could not get A records', exc_info=True)
+
+        if fetch_a_records:
+            try:
+                for record_raw in self.__get_items_from_url(self._url + 'record:a',
+                                                            url_params={'_return_fields': 'discovered_data,'
+                                                                                          'ipv4addr,name'}):
+                    yield record_raw, A_TYPE
+            except Exception:
+                logger.warning(f'Could not get A records', exc_info=True)

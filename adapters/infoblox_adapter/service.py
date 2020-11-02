@@ -12,7 +12,8 @@ from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import normalize_var_name
 from infoblox_adapter.connection import InfobloxConnection
-from infoblox_adapter.consts import A_TYPE, LEASE_TYPE, RESULTS_PER_PAGE, ADDRESS_TYPE
+from infoblox_adapter.consts import A_TYPE, LEASE_TYPE, RESULTS_PER_PAGE, ADDRESS_TYPE, DEFAULT_FETCH_A_RECORDS, \
+    DEFAULT_FETCH_USED_ADDR, DEFAULT_FETCH_LEASE
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -90,7 +91,9 @@ class InfobloxAdapter(AdapterBase, Configurable):
                 cidr_blacklist=self.__cidr_blacklist,
                 result_per_page=self.__result_per_page,
                 sleep_between_requests_in_sec=self.__sleep_between_requests_in_sec,
-                fetch_lease=self.__fetch_lease
+                fetch_lease=self.__fetch_lease,
+                fetch_used_addresses=self.__fetch_used_addresses,
+                fetch_a_records=self.__fetch_a_records
             )
 
     @staticmethod
@@ -385,10 +388,16 @@ class InfobloxAdapter(AdapterBase, Configurable):
             try:
                 discovered_data = device_raw.get('discovered_data')
                 if isinstance(discovered_data, dict):
+                    discoverer = discovered_data.get('discoverer')
+                    if (self.__ignore_netmri_a_records is True and
+                            isinstance(discoverer, str) and
+                            discoverer.lower() == 'netmri'):
+                        logger.info(f'ignoring device {device_id} discovered by NetMRI')
+                        return None
+                    device.discoverer = discoverer
                     device.last_seen = parse_date(discovered_data.get('last_discovered'))
                     device.first_seen = parse_date(discovered_data.get('first_discovered'))
                     device.figure_os(discovered_data.get('os'))
-                    device.discoverer = discovered_data.get('discoverer')
                     device.infoblox_device_type = discovered_data.get('device_type')
                     device.device_manufacturer = discovered_data.get('device_vendor')
                     mac = discovered_data.get('mac_address')
@@ -450,12 +459,30 @@ class InfobloxAdapter(AdapterBase, Configurable):
                     'name': 'fetch_lease',
                     'type': 'bool',
                     'title': 'Fetch lease information'
+                },
+                {
+                    'name': 'fetch_used_addresses',
+                    'type': 'bool',
+                    'title': 'Fetch used addresses information'
+                },
+                {
+                    'name': 'fetch_a_records',
+                    'type': 'bool',
+                    'title': 'Fetch A records'
+                },
+                {
+                    'name': 'ignore_netmri_a_records',
+                    'type': 'bool',
+                    'title': 'Ignore A records discovered by NetMRI'
                 }
             ],
             'required': [
                 'use_discovered_data',
                 'result_per_page',
-                'fetch_lease'
+                'fetch_lease',
+                'fetch_used_addresses',
+                'fetch_a_records',
+                'ignore_netmri_a_records',
             ],
             'pretty_name': 'Infoblox Configuration',
             'type': 'array'
@@ -468,7 +495,10 @@ class InfobloxAdapter(AdapterBase, Configurable):
             'use_discovered_data': False,
             'result_per_page': RESULTS_PER_PAGE,
             'sleep_between_requests_in_sec': None,
-            'fetch_lease': True,
+            'fetch_lease': DEFAULT_FETCH_LEASE,
+            'fetch_used_addresses': DEFAULT_FETCH_USED_ADDR,
+            'fetch_a_records': DEFAULT_FETCH_A_RECORDS,
+            'ignore_netmri_a_records': False,
         }
 
     def _on_config_update(self, config):
@@ -477,3 +507,8 @@ class InfobloxAdapter(AdapterBase, Configurable):
         self.__result_per_page = config.get('result_per_page') or RESULTS_PER_PAGE
         self.__sleep_between_requests_in_sec = config.get('sleep_between_requests_in_sec') or 0
         self.__fetch_lease = bool(config.get('fetch_lease'))
+        self.__fetch_used_addresses = (bool(config.get('fetch_used_addresses')) or
+                                       # backwards compat
+                                       bool(config.get('fetch_lease_and_used_addr')))
+        self.__fetch_a_records = bool(config.get('fetch_a_records'))
+        self.__ignore_netmri_a_records = bool(config.get('ignore_netmri_a_records'))
