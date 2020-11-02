@@ -41,6 +41,11 @@
       ]
     },
     {
+      "type": "shell",
+      "script": "./wait_for_cloud_init.sh",
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
       "type": "file",
       "source": "{{user `host_installation`}}uploads",
       "destination": "/home/ubuntu/uploads"
