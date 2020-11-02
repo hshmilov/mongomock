@@ -223,15 +223,15 @@ class LinuxSshExecutionMixIn(Triggerable):
         return new_device
 
     @staticmethod
-    def _is_linux_os(device):
+    def _is_unix_os(device):
         """ Checks if the device os is linux.
             if the device has no os return true because we can't know """
 
         os = get_entity_field_list(device.data, 'specific_data.data.os.type')
-        linux_os = True
+        unix_os = True
         if os:
-            linux_os = 'Linux' in os
-        return linux_os
+            unix_os = ('Linux' in os) or ('OS X' in os)
+        return unix_os
 
     # pylint: disable=too-many-return-statements
     def _handle_device(self, device, client_config, job_name):
@@ -241,7 +241,7 @@ class LinuxSshExecutionMixIn(Triggerable):
                 json = {'success': False, 'value': f'{job_title} Error: Adapters not found'}
                 return (device.internal_axon_id, json)
 
-            if not self._is_linux_os(device):
+            if not self._is_unix_os(device):
                 json = {'success': False, 'value': f'{job_title} Error: Invalid Operating System'}
                 return (device.internal_axon_id, json)
 

@@ -767,6 +767,11 @@
     "link": "https://docs.axonius.com/docs/phpipam",
     "description": "phpIPAM is an open-source web IP address management application (IPAM)."
   },
+  "zerto_adapter": {
+    "title": "Zerto",
+    "link": "https://docs.axonius.com/docs/zerto",
+    "description": "Zerto is a data loss protection solution that provides disaster recovery, backup and workload mobility software for virtualized infrastructures and cloud environments."
+  },
   "dynatrace_adapter": {
     "title": "Dynatrace",
     "link": "https://docs.axonius.com/docs/dynatrace",
