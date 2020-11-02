@@ -112,7 +112,8 @@ export default {
       this.isTooManyValues = value;
     },
     isEmpty(content) {
-      return !content.length || (content.length === 1 && content[0].value === 0);
+      const total = _sumBy(content, (slice) => slice.value) || 0;
+      return !content.length || (content.length === 1 && content[0].value === 0) || !total;
     },
     displaySegmentResults(sliceIndex, pageData, history) {
       const segment = pageData[sliceIndex];

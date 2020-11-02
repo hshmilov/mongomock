@@ -1,5 +1,6 @@
 from ui_tests.tests.ui_test_base import TestBase
-from ui_tests.tests.ui_consts import (MANAGED_DEVICES_QUERY_NAME, DEVICES_NOT_SEEN_IN_LAST_30_DAYS_QUERY_NAME,
+from ui_tests.tests.ui_consts import (MANAGED_DEVICES_QUERY_NAME, MANAGED_DEVICES_QUERY,
+                                      DEVICES_NOT_SEEN_IN_LAST_30_DAYS_QUERY_NAME,
                                       DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME, DEVICES_SEEN_IN_LAST_7_DAYS_QUERY)
 
 
@@ -11,7 +12,7 @@ class TestDashboardMatrixChart(TestBase):
     MATRIX_CHART_4 = 'Matrix Chart 4'
 
     DEVICES_SEEN_IN_LAST_7_DAYS_INTERSECTING_QUERY = \
-        f'{DEVICES_SEEN_IN_LAST_7_DAYS_QUERY} and {DEVICES_SEEN_IN_LAST_7_DAYS_QUERY}'
+        f'({MANAGED_DEVICES_QUERY}) and ({DEVICES_SEEN_IN_LAST_7_DAYS_QUERY})'
 
     def _verify_tooltip_and_get_percentage(self, card, item_title_text):
         assert self.dashboard_page.get_tooltip_header_name(card) == item_title_text
@@ -84,18 +85,18 @@ class TestDashboardMatrixChart(TestBase):
         assert len(groups_names) == 1
 
     def test_matrix_chart_click(self):
-        base_queries = [None]
-        intersecting_queries = [DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME]
+        base_queries = [None, MANAGED_DEVICES_QUERY_NAME]
+        intersecting_queries = [DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME, DEVICES_NOT_SEEN_IN_LAST_30_DAYS_QUERY_NAME]
         self.settings_page.switch_to_page()
         self.base_page.run_discovery()
         card = self.dashboard_page.add_matrix_card('Devices', self.MATRIX_CHART, base_queries, intersecting_queries)
         self.dashboard_page.get_matrix_chart_group_slices(card, 0)[0].click()
-        self.devices_page.wait_for_table_to_load()
+        self.devices_page.wait_for_table_to_be_responsive()
         assert self.devices_page.find_search_value() == DEVICES_SEEN_IN_LAST_7_DAYS_QUERY
-        base_queries = [DEVICES_SEEN_IN_LAST_7_DAYS_QUERY_NAME]
-        card = self.dashboard_page.add_matrix_card('Devices', self.MATRIX_CHART_1, base_queries, intersecting_queries)
-        self.dashboard_page.get_matrix_chart_group_slices(card, 0)[0].click()
-        self.devices_page.wait_for_table_to_load()
+        self.dashboard_page.switch_to_page()
+        card = self.dashboard_page.add_matrix_card('Devices', self.MATRIX_CHART, base_queries, intersecting_queries)
+        self.dashboard_page.get_matrix_chart_group_slices(card, 1)[0].click()
+        self.devices_page.wait_for_table_to_be_responsive()
         assert self.devices_page.find_search_value() == self.DEVICES_SEEN_IN_LAST_7_DAYS_INTERSECTING_QUERY
 
     def test_matrix_chart_sort_initial(self):

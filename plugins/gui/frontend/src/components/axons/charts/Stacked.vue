@@ -26,7 +26,7 @@
                 :style="getSliceStyle(intersection)"
                 :class="getSliceClass(intersection.intersectionIndex)"
                 class="intersection-slice"
-                @click="onClick(groupIndex, intersection.originalIndex % 3)"
+                @click="onClick(groupIndex, intersection.index)"
               >
                 <div
                   class="tooltip-invoker"

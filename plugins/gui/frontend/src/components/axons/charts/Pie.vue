@@ -107,11 +107,10 @@ export default {
     },
     processedData() {
       const processData = this.data.map((item, index) => {
-        const { portion, remainder, chart_color: chartColor } = item;
+        const { portion, remainder, index_in_config: indexInConfig } = item;
 
         const colorClassname = this.getLegendItemColorClass(index, item);
-        const sliceColorStyle = this.getPieSliceStyleObject(colorClassname, chartColor);
-
+        const sliceColorStyle = this.getPieSliceStyleObject(colorClassname, indexInConfig);
         return {
           ...item,
           index,
@@ -119,7 +118,6 @@ export default {
           percentage: formatPercentage(portion),
           name: remainder ? getRemainderSliceLabel(item) : item.name,
           sliceColorStyle,
-          chartColor,
         };
       });
 
@@ -151,7 +149,7 @@ export default {
       }
       const hoveredItem = this.processedData[this.inHover];
       const {
-        percentage, name, remainder, intersection, value, class: colorClass, chartColor,
+        percentage, name, remainder, intersection, value, class: colorClass,
       } = hoveredItem;
 
       let tooltip;
@@ -163,9 +161,9 @@ export default {
         tooltip = this.getNormalTooltip(name, value, percentage, colorClass);
       }
 
-      const styleObject = this.getPieSliceStyleObject(colorClass, chartColor);
+      const styleObject = { ...hoveredItem.sliceColorStyle };
       const pieSliceColorIndex = this.getItemIndex(this.inHover, hoveredItem);
-      styleObject.color = getVisibleTextColor(chartColor || styleObject.fill
+      styleObject.color = getVisibleTextColor(styleObject.fill
               || defaultChartsColors.pieColors[pieSliceColorIndex % 10]);
 
       return {
@@ -173,11 +171,11 @@ export default {
         styleObject,
       };
     },
-    totalValue() {
-      return _sumBy(this.data, (slice) => slice.value) || 0;
-    },
     customIntersectingColors() {
       return _get(this.chartConfig, 'intersecting_colors', []);
+    },
+    customViewsColors() {
+      return _get(this.chartConfig, 'views', []).map((view) => view.chart_color);
     },
     styleObject() {
       // If colors defined - mapping it into new style object
@@ -193,18 +191,19 @@ export default {
     this.getLegendItemColorClass = getLegendItemColorClass.bind(this);
   },
   methods: {
-    getPieSliceStyleObject(sliceClassname, sliceColor) {
-      if (sliceColor) {
+    getPieSliceStyleObject(sliceClassname, index) {
+      if (this.customViewsColors.length) {
         return {
-          backgroundColor: sliceColor,
-          fill: sliceColor,
+          backgroundColor: this.customViewsColors[index],
+          fill: this.customViewsColors[index],
         };
       }
 
       const baseColor = this.chartConfig.base_color || this.defaultChartsColors.pieColors[0];
-
-      const firstIntersectionColor = this.customIntersectingColors[0] || this.defaultChartsColors.intersectingColors[0];
-      const secondIntersectionColor = this.customIntersectingColors[1] || this.defaultChartsColors.intersectingColors[1];
+      const colorByIndex = (i) => (this.customIntersectingColors[i]
+              || this.defaultChartsColors.intersectingColors[i]);
+      const firstIntersectionColor = colorByIndex(0);
+      const secondIntersectionColor = colorByIndex(1);
       if (sliceClassname === 'fill-intersection-2-3') {
         return {
           fill: this.customIntersectingColors.length ? `url(#defined-colors-${this.chartId})` : 'intersection-2-3',
@@ -288,16 +287,7 @@ export default {
       this.$emit('click-one', index);
     },
     getTextColor(slice) {
-      // If defined color by index
-      const savedSliceColor = slice.chart_color;
-      if (savedSliceColor) {
-        return {
-          color: getVisibleTextColor(savedSliceColor),
-          fill: getVisibleTextColor(savedSliceColor),
-        };
-      }
-      const sliceColorStyle = this.getPieSliceStyleObject(slice.class);
-      const sliceBgColor = _get(sliceColorStyle, 'backgroundColor');
+      const sliceBgColor = _get(slice, 'sliceColorStyle.backgroundColor');
       return sliceBgColor ? {
         color: getVisibleTextColor(sliceBgColor),
         fill: getVisibleTextColor(sliceBgColor),

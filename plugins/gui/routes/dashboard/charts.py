@@ -10,8 +10,9 @@ from flask import jsonify, make_response, request
 from pymongo import ReturnDocument
 
 from axonius.consts.gui_consts import (FILE_NAME_TIMESTAMP_FORMAT,
-                                       LAST_UPDATED_FIELD, ChartViews,
+                                       LAST_UPDATED_FIELD,
                                        DASHBOARD_SPACE_TYPE_PERSONAL)
+from axonius.dashboard.chart.config import ChartConfig
 from axonius.entities import EntityType
 from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.plugin_base import return_error
@@ -21,8 +22,7 @@ from axonius.utils.permissions_helper import (PermissionAction,
                                               PermissionCategory,
                                               PermissionValue)
 from axonius.utils.revving_cache import WILDCARD_ARG, NoCacheException
-from gui.logic.dashboard_data import (fetch_chart_segment, fetch_chart_adapter_segment,
-                                      generate_dashboard_historical, is_dashboard_paginated)
+from gui.logic.dashboard_data import (generate_dashboard_historical, is_dashboard_paginated)
 from gui.logic.routing_helper import gui_route_logged_in, gui_section_add_rules
 from gui.routes.dashboard.dashboard import generate_dashboard
 
@@ -67,18 +67,6 @@ class ChartTitle(Enum):
 # pylint: disable=no-member
 @gui_section_add_rules('charts')
 class Charts:
-
-    @paginated()
-    @gui_route_logged_in(methods=['GET'], enforce_trial=False, required_permission=PermissionValue.get(
-        PermissionAction.View, PermissionCategory.Dashboard))
-    def get_dashboard_data(self, skip, limit):
-        """
-        Return charts data for the requested page.
-        Charts attached to the Personal dashboard and a different user the connected one, are excluded
-
-        path: /api/dashboard/charts
-        """
-        return jsonify(self._get_dashboard(skip, limit))
 
     def restrict_space_action_by_user_role(self, space_id: ObjectId):
         space = self._dashboard_spaces_collection.find_one({
@@ -224,7 +212,7 @@ class Charts:
             'hide_empty': True,
             'config': {
                 'entity': config['entity'], 'view': config['view'],
-                'field': config['field'], 'value_filter': config['value_filter'],
+                'field': config['field'], 'value_filter': config.get('value_filter', []),
                 'include_empty': config.get('include_empty', False),
                 'timeframe': config['timeframe']
             }, LAST_UPDATED_FIELD: datetime.now()
@@ -332,7 +320,7 @@ class Charts:
         dashboard_data = generated_dashboard.get('data', [])
         if search:
             dashboard_data = [data for data in dashboard_data
-                              if search.lower() in self.get_string_value(data['name']).lower()]
+                              if search.lower() in ChartConfig.string_value_for_search(data['name'])]
         if not skip:
             truncated_dashboard_data = self._process_initial_dashboard_data(dashboard_data,
                                                                             is_dashboard_paginated(generated_dashboard))
@@ -547,7 +535,8 @@ class Charts:
 
     @gui_route_logged_in('<panel_id>/csv', methods=['GET'], required_permission=PermissionValue.get(
         PermissionAction.View, PermissionCategory.Dashboard))
-    def generate_chart_csv(self, panel_id):
+    @sorted_by_method_endpoint()
+    def generate_chart_csv(self, panel_id, sort_by=None, sort_order=None):
         """
         path: /api/dashboard/charts/<panel_id>/csv
         """
@@ -585,11 +574,12 @@ class Charts:
 
         metric = card['metric']
         history = request.args.get('history')
-        if metric in ('timeline', 'segment_timeline'):
-            column_headers, rows = handler_by_metric[metric]['handler'](card)
+        if metric in ('timeline', 'segment_timeline') or not history:
+            generated_dashboard = generate_dashboard(card['_id'], sort_by, sort_order)
         else:
-            column_headers, rows = handler_by_metric[metric]['handler'](card, history)
+            generated_dashboard = generate_dashboard_historical(card['_id'], history, sort_by, sort_order)
 
+        column_headers, rows = handler_by_metric[metric]['handler'](generated_dashboard)
         string_output = io.StringIO()
         dw = csv.DictWriter(string_output, column_headers)
         dw.writeheader()
@@ -606,17 +596,16 @@ class Charts:
         return output_file
 
     @staticmethod
-    def generate_segment_csv(card, date: str = None):
-        if not card['config'].get('field'):
+    def generate_segment_csv(generated_dashboard):
+        if not generated_dashboard['config'].get('field'):
             return return_error('Error: no such data available ', 400)
 
-        data = fetch_chart_segment(ChartViews[card['view']], **card['config'], for_date=date)
-        name = card['config']['field']['title']
-        return [name, 'count'], [{name: x['name'], 'count': x['value']} for x in data]
+        name = generated_dashboard['config']['field']['title']
+        return [name, 'count'], [{name: x['name'], 'count': x['value']}
+                                 for x in generated_dashboard.get('data', [])]
 
     @staticmethod
-    def generate_timeline_csv(card):
-        generated_dashboard = generate_dashboard(card['_id'], sort_by=None, sort_order=None)
+    def generate_timeline_csv(generated_dashboard):
         data = copy.deepcopy(generated_dashboard.get('data', []))
 
         def get_row_data_as_dict(row_data, headers_names):
@@ -660,16 +649,17 @@ class Charts:
         return headers, sorted_data
 
     @staticmethod
-    def generate_adapter_segment_csv(card, date: str = None):
-        data = fetch_chart_adapter_segment(ChartViews[card['view']], **card['config'], for_date=date)
-        return ['Adapter Name', 'count'], [{'Adapter Name': x['fullName'], 'count': x['value']} for x in data]
+    def generate_adapter_segment_csv(generated_dashboard):
+        return ['Adapter Name', 'count'], [{
+            'Adapter Name': x['fullName'],
+            'count': x['value']
+        } for x in (generated_dashboard.get('data', []) or [])]
 
     @staticmethod
-    def generate_segment_timeline_csv(card):
-        generated_dashboard = generate_dashboard(card['_id'], sort_by=None, sort_order=None)
-        data = copy.deepcopy(generated_dashboard.get('data', []))
-        if data is None:
-            return None
-        return ['Date', 'Total segment values', 'Segment count'], \
-               [{'Date': data[index][0], 'Total segment values': data[index][2], 'Segment count': data[index][1]}
-                for index in range(1, len(data))]
+    def generate_segment_timeline_csv(generated_dashboard):
+        data = generated_dashboard.get('data', []) or []
+        return ['Date', 'Total segment values', 'Segment count'], [{
+            'Date': data[index][0],
+            'Total segment values': data[index][2],
+            'Segment count': data[index][1]
+        } for index in range(1, len(data))]

@@ -1,6 +1,9 @@
+import qs from 'qs';
 import { RESET_DEVICES_MERGED_DATA_BY_ID } from '@store/modules/devices';
 import { tunnelConnectionStatuses } from '@constants/settings';
 import _pick from 'lodash/pick';
+import _mapKeys from 'lodash/mapKeys';
+import _snakeCase from 'lodash/snakeCase';
 import { REQUEST_API, downloadFile } from '../actions';
 
 export const FETCH_LIFECYCLE = 'FETCH_LIFECYCLE';
@@ -203,12 +206,12 @@ export const dashboard = {
         data: payload,
       });
     },
-    [FETCH_CHART_CSV]({ dispatch }, { uuid, name, historical }) {
+    [FETCH_CHART_CSV]({ dispatch }, { uuid, name, ...restParams }) {
       let rule = `dashboard/charts/${uuid}/csv`;
-      if (historical) {
-        const encodedDate = encodeURI(historical);
-        rule = `${rule}?date_to=${encodedDate} 23:59:59&date_from=${encodedDate}`;
-      }
+      const pythonizeKeys = (value, key) => (_snakeCase(key));
+      rule += qs.stringify(_mapKeys(restParams, pythonizeKeys), {
+        addQueryPrefix: true, skipNulls: true,
+      });
       return dispatch(REQUEST_API, {
         rule,
       }).then((response) => {

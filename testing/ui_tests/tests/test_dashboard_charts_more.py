@@ -12,8 +12,8 @@ from ui_tests.tests.ui_consts import (LINUX_QUERY_NAME, OS_TYPE_OPTION_NAME,
 
 class TestDashboardChartsMore(TestDashboardChartBase):
     TEST_MOVE_PANEL = 'test move panel'
-    UNCOVERED_QUERY = 'not (((specific_data.data.adapter_properties == "Agent") or ' \
-                      '(specific_data.data.adapter_properties == "Manager")))'
+    UNCOVERED_QUERY = 'not ((specific_data.data.adapter_properties == "Agent") or ' \
+                      '(specific_data.data.adapter_properties == "Manager"))'
     COVERED_QUERY = '((specific_data.data.adapter_properties == "Agent") ' \
                     'or (specific_data.data.adapter_properties == "Manager"))'
     NO_OS_QUERY = 'not (specific_data.data.os.type == exists(true))'

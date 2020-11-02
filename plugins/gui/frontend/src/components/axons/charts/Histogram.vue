@@ -62,6 +62,8 @@
 </template>
 
 <script>
+import _get from 'lodash/get';
+import _isNil from 'lodash/isNil';
 import { pluginMeta } from '@constants/plugin_meta';
 import { formatPercentage } from '@constants/utils';
 import { ChartTypesEnum } from '@constants/dashboard';
@@ -129,8 +131,8 @@ export default {
       const {
         portion,
         value,
-        chart_color: chartColor,
         name,
+        index_in_config: index,
       } = this.hoveredItem;
 
       let styleObject = {};
@@ -142,11 +144,12 @@ export default {
         };
       }
       // design for Query Comparison
-      if (this.metric === ChartTypesEnum.compare && chartColor) {
-        styleObject = {
+      if (this.metric === ChartTypesEnum.compare && !_isNil(index)) {
+        const chartColor = _get(this.chartConfig, `views[${index}].chart_color`);
+        styleObject = chartColor? {
           backgroundColor: chartColor,
           color: getVisibleTextColor(chartColor),
-        };
+        } : {};
       }
       return {
         header: {
@@ -174,9 +177,9 @@ export default {
         return { backgroundColor: this.segmentColor };
       }
       // design for Query Comparison
-      if (this.metric === ChartTypesEnum.compare
-         && this.chartConfig.views && item.chart_color) {
-        return { backgroundColor: item.chart_color };
+      if (this.metric === ChartTypesEnum.compare) {
+        const backgroundColor = _get(this.chartConfig, `views[${item.index_in_config}].chart_color`);
+        return backgroundColor? { backgroundColor } : {};
       }
       return {};
     },

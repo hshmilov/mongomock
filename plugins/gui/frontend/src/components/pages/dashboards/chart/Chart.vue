@@ -478,10 +478,13 @@ export default {
     },
     // actions-menu events callbacks
     exportChartCSV({ trend }) {
+      const { type, order } = this.chartSort;
       const params = {
         uuid: trend ? this.chart.linked_dashboard : this.chart.uuid,
-        historical: trend ? undefined : this.chartFilters.history,
+        history: trend ? undefined : this.chartFilters.history,
         name: this.chart.name,
+        sortBy: type,
+        sortOrder: order,
       };
       this.downloadAsCsv(params);
     },

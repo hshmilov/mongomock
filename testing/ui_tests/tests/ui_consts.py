@@ -129,7 +129,7 @@ IPS_192_168_QUERY_NAME = 'IPs Subnet 192.168.0.0'
 # Query Filters
 MANAGED_DEVICES_QUERY = '(specific_data.data.adapter_properties == "Agent") ' \
                         'or (specific_data.data.adapter_properties == "Manager")'
-DEVICES_SEEN_IN_LAST_7_DAYS_QUERY = '(specific_data.data.last_seen >= date("NOW - 7d"))'
+DEVICES_SEEN_IN_LAST_7_DAYS_QUERY = 'specific_data.data.last_seen >= date("NOW - 7d")'
 HOSTNAME_DC_QUERY = 'specific_data.data.hostname == regex("dc", "i")'
 IPS_192_168_QUERY = 'specific_data.data.network_interfaces.ips == regex("192.168", "i")'
 JSON_ADAPTER_FILTER = '"adapters" == "json_file_adapter"'
