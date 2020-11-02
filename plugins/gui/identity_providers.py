@@ -171,6 +171,11 @@ class IdentityProviders(Configurable):
                             'type': 'bool'
                         },
                         {
+                            'name': 'auto_redirect',
+                            'title': 'Automatically redirect all logins to the identity provider',
+                            'type': 'bool'
+                        },
+                        {
                             'name': 'idp_name',
                             'title': 'Name of the identity provider',
                             'type': 'string'
@@ -259,7 +264,7 @@ class IdentityProviders(Configurable):
                             'required': [EVALUATE_ROLE_ASSIGNMENT_ON, DEFAULT_ROLE_ID]
                         },
                     ],
-                    'required': ['enabled', 'idp_name'],
+                    'required': ['enabled', 'idp_name', 'auto_redirect'],
                     'name': 'saml_login_settings',
                     'title': 'SAML-Based Login Settings',
                     'type': 'array'
@@ -291,6 +296,7 @@ class IdentityProviders(Configurable):
             },
             'saml_login_settings': {
                 'enabled': False,
+                'auto_redirect': False,
                 'idp_name': None,
                 'metadata_url': None,
                 'axonius_external_url': None,

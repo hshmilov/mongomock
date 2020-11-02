@@ -52,10 +52,10 @@
 
 <script>
 import { mapState, mapActions } from 'vuex';
-import XForm from '../../neurons/schema/Form.vue';
-import XModal from '../../axons/popover/Modal/index.vue';
+import XForm from '@neurons/schema/Form.vue';
+import XModal from '@axons/popover/Modal/index.vue';
 
-import { LDAP_LOGIN } from '../../../store/modules/auth';
+import { LDAP_LOGIN } from '@store/modules/auth';
 
 export default {
   name: 'XLoginOptions',
@@ -111,12 +111,9 @@ export default {
     },
   },
   watch: {
-    settings() {
-      this.samlConfig = this.settings.saml;
-      this.ldapConfig = this.settings.ldap;
-      if (this.ldapConfig.default_domain) {
-        this.ldapData.credentials.domain = this.ldapConfig.default_domain;
-      }
+    settings: {
+      handler: 'handleSettingsChange',
+      immediate: true,
     },
   },
   methods: {
@@ -128,10 +125,17 @@ export default {
       this.ldapLogin(this.ldapData.credentials);
     },
     onSamlLogin() {
-      window.location.href = `/api/login/saml?path=${this.$route.path}`;
+      this.$emit('saml-login');
     },
     toggleLdapLogin() {
       this.ldapData.active = !this.ldapData.active;
+    },
+    handleSettingsChange(newSettings) {
+      this.samlConfig = newSettings.saml;
+      this.ldapConfig = newSettings.ldap;
+      if (this.ldapConfig.default_domain) {
+        this.ldapData.credentials.domain = this.ldapConfig.default_domain;
+      }
     },
   },
 };

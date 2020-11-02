@@ -61,7 +61,8 @@ class Login:
             },
             'saml': {
                 'enabled': self._saml_login['enabled'],
-                'idp_name': self._saml_login['idp_name']
+                'idp_name': self._saml_login['idp_name'],
+                'auto_redirect': self._saml_login['auto_redirect'] if not self.disabled_by_referrer() else False
             },
             'standard': {
                 'disable_remember_me': self._system_settings['timeout_settings']['disable_remember_me']
@@ -135,11 +136,7 @@ class Login:
                 self._log_activity_login_password_expiration(user_name)
                 return return_error('password expired', 401, reset_link)
 
-        if request and request.referrer and 'localhost' not in request.referrer \
-                and '127.0.0.1' not in request.referrer \
-                and 'diag-l.axonius.com' not in request.referrer \
-                and 'insider.axonius.lan' not in request.referrer \
-                and not is_axonius_role(role):
+        if request and request.referrer and not self.disabled_by_referrer() and not is_axonius_role(role):
             self.system_collection.replace_one({'type': 'server'},
                                                {'type': 'server', 'server_name': parse_url(request.referrer).host},
                                                upsert=True)
@@ -159,9 +156,7 @@ class Login:
         return False
 
     def _log_activity_login_failure(self, user_name):
-        if request and request.referrer and ('localhost' in request.referrer or '127.0.0.1' in request.referrer
-                                             or 'diag-l.axonius.com' in request.referrer
-                                             or 'insider.axonius.lan' in request.referrer):
+        if self.disabled_by_referrer():
             return
         remote_ip = self.get_remote_ip()
         if remote_ip:
@@ -173,6 +168,12 @@ class Login:
             self.log_activity(AuditCategory.UserSession, AuditAction.Failure, {
                 'user_name': user_name,
             })
+
+    @staticmethod
+    def disabled_by_referrer():
+        return request and request.referrer and ('localhost' in request.referrer or '127.0.0.1' in request.referrer
+                                                 or 'diag-l.axonius.com' in request.referrer
+                                                 or 'insider.axonius.lan' in request.referrer)
 
     @staticmethod
     def get_remote_ip() -> str:

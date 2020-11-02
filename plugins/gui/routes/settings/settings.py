@@ -47,6 +47,11 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
         :return: Settings for the system and Global settings, indicating if Mail and Syslog are enabled
         """
         history_setting = self.plugins.system_scheduler.configurable_configs[SCHEDULER_CONFIG_NAME]
+        do_saml_redirect = False
+        if self._saml_login.get('enabled') and \
+                self._saml_login.get('auto_redirect') and \
+                not self.disabled_by_referrer():
+            do_saml_redirect = self._saml_login.get('auto_redirect')
         return jsonify({
             'defaults': {
                 'system_columns': self._get_system_columns_defaults(),
@@ -61,6 +66,7 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
                 'gettingStartedEnabled': self._getting_started_settings['enabled'],
                 'passwordManagerEnabled': self._vault_settings['enabled'],
                 'customerId': self.node_id,
+                'saml_redirect': do_saml_redirect,
                 'historyEnabled': (history_setting['history_settings'][SCHEDULER_SAVE_HISTORY_CONFIG_NAME]
                                    if history_setting else False)
             }

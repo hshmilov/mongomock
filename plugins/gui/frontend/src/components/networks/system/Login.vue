@@ -40,6 +40,7 @@
           />
           <XLoginOptions
             :settings="loginSettings"
+            @saml-login="redirectToSamlLogin"
           />
         </div>
       </div>
@@ -51,12 +52,11 @@
 <script>
 import { mapState, mapActions } from 'vuex';
 import _get from 'lodash/get';
+import { GET_SIGNUP, GET_LOGIN_OPTIONS } from '@store/modules/auth';
 import XSignupForm from './SignupForm.vue';
 import XLoginForm from './LoginForm.vue';
 import XLoginOptions from './LoginOptions.vue';
 import XResetPasswordForm from './ResetPasswordForm.vue';
-
-import { GET_SIGNUP, GET_LOGIN_OPTIONS } from '../../../store/modules/auth';
 
 export default {
   name: 'XLogin',
@@ -66,6 +66,7 @@ export default {
   data() {
     return {
       loginSettings: null,
+      fetchingLoginSettings: true,
     };
   },
   computed: {
@@ -76,21 +77,25 @@ export default {
       fetchingSignup(state) {
         return state.auth.signup.fetching;
       },
-      fetchingLoginSettings(state) {
-        return state.auth.loginOptions.fetching;
-      },
       error(state) {
         return state.auth.signup.error || state.auth.loginOptions.error;
       },
+      userError(state) {
+        return state.auth.currentUser.error;
+      },
     }),
     showProgressBar() {
-      return this.fetchingSignup || this.fetchingLoginSettings;
+      return this.fetchingSignup
+          || this.fetchingLoginSettings;
     },
     resetPasswordToken() {
       return _get(this.$route.query, 'token', false);
     },
     showResetPassword() {
       return !!this.resetPasswordToken;
+    },
+    disableRedirect() {
+      return _get(this.$route.query, 'redirect') === 'false';
     },
   },
   mounted() {
@@ -107,7 +112,25 @@ export default {
         // request login setting only when user is not in signup mode
         const { status, data } = await this.getLoginSettings();
         this.loginSettings = status === 200 ? data : null;
+        if (!this.disableRedirect
+            && this.isSamlAutoRedirectActive()
+            && !this.isUserThrownByPermissions()) {
+          this.redirectToSamlLogin();
+        } else {
+          this.fetchingLoginSettings = false;
+        }
+      } else {
+        this.fetchingLoginSettings = false;
       }
+    },
+    isSamlAutoRedirectActive() {
+      return _get(this.loginSettings, 'saml.enabled', false) && _get(this.loginSettings, 'saml.auto_redirect', false);
+    },
+    isUserThrownByPermissions() {
+      return this.userError.includes('permissions');
+    },
+    redirectToSamlLogin() {
+      window.location.href = `/api/login/saml?path=${this.$route.path}`;
     },
   },
 };

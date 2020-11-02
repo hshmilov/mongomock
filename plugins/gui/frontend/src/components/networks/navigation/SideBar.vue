@@ -92,6 +92,9 @@ export default {
       collapseSidebar(state) {
         return state.interaction.collapseSidebar;
       },
+      systemSamlRedirect(state) {
+        return _get(state.configuration.data, 'global.saml_redirect', false);
+      },
     }),
     permissionCategoriesMap() {
       return _invert(this.$permissionConsts.categories);
@@ -143,7 +146,11 @@ export default {
     onLogout() {
       this.removeToaster();
       this.logout().then(() => {
-        this.$router.push('/');
+        if (this.systemSamlRedirect) {
+          this.$router.push({ path: '/', query: { redirect: 'false' } });
+        } else {
+          this.$router.push('/');
+        }
       });
     },
   },

@@ -65,6 +65,7 @@ class SettingsPage(Page):
     EXPERIMENTAL_API_LABEL = ''
     NOTIFY_ON_ADAPTERS_FETCH_LABEL = 'Notify on adapters fetch'
     SAML_LOGINS_LABEL = 'Allow SAML-based logins'
+    SAML_AUTO_REDIRECT_LABEL = 'Automatically redirect all logins to the identity provider'
     TRIAL_MODE_FLAG_LABEL = 'Is trial mode'
     GLOBAL_SETTINGS_ADVANCED_SETTINGS_LABEL = 'Advanced Settings'
     EMAIL_PORT_ID = 'smtpPort'
@@ -945,6 +946,10 @@ class SettingsPage(Page):
     def fill_saml_axonius_external_url(self, external_url):
         self.fill_text_field_by_element_id(self.SAML_AXONIUS_EXTERNAL_URL, external_url)
 
+    def toggle_saml_auto_redirect(self, make_yes):
+        toggle = self.find_checkbox_by_label(self.SAML_AUTO_REDIRECT_LABEL)
+        self.click_toggle_button(toggle, make_yes=make_yes, window=TAB_BODY)
+
     def fill_session_timeout(self, timeout):
         self.fill_text_field_by_element_id(self.TIMEOUT_ID, timeout)
 
@@ -1794,6 +1799,13 @@ class SettingsPage(Page):
         toggle = self.find_toggle_with_label_by_label(self.HISTORY_ENABLED_CHECKBOX_TEXT)
         self.click_toggle_button(toggle, make_yes=enable)
         self.save_and_wait_for_toaster()
+
+    def set_saml_auto_redirect(self, make_yes=True):
+        self.switch_to_page()
+        self.click_identity_providers_settings()
+        self.toggle_saml_auto_redirect(make_yes)
+        self.click_save_identity_providers_settings()
+        self.wait_for_saved_successfully_toaster()
 
     def set_saml(self, name, metadata_url, external_url='', default_role_name=None,
                  evaluate_new_and_existing_users=False, assignment_rules=None):

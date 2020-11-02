@@ -173,6 +173,7 @@ PREDEFINED_ROLE_ADMIN = 'Admin'
 PREDEFINED_ROLE_OWNER = 'Owner'
 PREDEFINED_ROLE_OWNER_RO = 'OwnerReadOnly'
 PREDEFINED_ROLE_VIEWER = 'Viewer'
+PREDEFINED_ROLE_NO_ACCESS = 'No Access'
 # Old viewer role name
 PREDEFINED_ROLE_READONLY = 'Read Only User'
 # Old restricted role name
