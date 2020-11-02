@@ -161,7 +161,7 @@ class IbossCloudAdapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = f'{str(device_id)}_{domain or ""}'
+            device.id = f'{str(device_id)}_{domain or ""}_{device_raw.get("deviceName") or ""}'
 
             device.first_seen = parse_date(device_raw.get('firstSeen'))
             device.last_seen = parse_date(device_raw.get('lastSeen'))
@@ -215,7 +215,7 @@ class IbossCloudAdapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = f'{str(device_id)}_{domain or ""}'
+            device.id = f'{str(device_id)}_{domain or ""}_{device_raw.get("nodeName") or ""}'
 
             device.name = device_raw.get('nodeName')
             device.cloud_id = device_raw.get('cloudClusterId')
@@ -303,7 +303,7 @@ class IbossCloudAdapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = f'{str(device_id)}_{domain or ""}'
+            device.id = f'{str(device_id)}_{domain or ""}_{device_raw.get("computerName") or ""}'
 
             device.name = device_raw.get('computerName')
             device.current_logged_user = device_raw.get('username')
