@@ -117,7 +117,11 @@
 
 <script>
 import { Collapse, Form, Select } from 'ant-design-vue';
+import _isNil from 'lodash/isNil';
 import draggable from 'vuedraggable';
+import XListInput from '@axons/inputs/ListInput.vue';
+import { validateEmail } from '@constants/validations';
+import arrayMixin from '@mixins/array';
 import XTypeWrap from './TypeWrap.vue';
 import string from '../string/StringEdit.vue';
 import number from '../numerical/NumberEdit.vue';
@@ -125,9 +129,6 @@ import integer from '../numerical/IntegerEdit.vue';
 import bool from '../boolean/BooleanEdit.vue';
 import file from './FileEdit.vue';
 import range from '../string/RangeEdit.vue';
-import XListInput from '../../../../axons/inputs/ListInput.vue';
-import { validateEmail } from '../../../../../constants/validations';
-import arrayMixin from '../../../../../mixins/array';
 
 const vault = () => import('../string/VaultEdit.vue');
 
@@ -249,16 +250,16 @@ export default {
         // An array, no need to handle recursively
         return;
       }
-      if (this.data[item.name] !== undefined && this.data[item.name] !== null && !this.useVault) {
+      if (item.format && item.format === 'password' && this.useVault) {
+        item.type = 'vault';
+      }
+      if (!_isNil(this.data[item.name])) {
         // Value exists, no need to process
         return;
       }
       if (item.type === 'bool') {
         this.data[item.name] = false;
         updateData = true;
-      }
-      if (item.format && item.format === 'password' && this.useVault) {
-        item.type = 'vault';
       }
       if (!item.default) {
         // Nothing defined to set
