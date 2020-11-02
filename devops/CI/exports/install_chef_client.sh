@@ -13,4 +13,11 @@ fi
 cd /etc/chef/
 
 # Install chef-client
-curl -L https://omnitruck.chef.io/install.sh | sudo bash -s -- -v 14.1.12 || error_exit 'could not install chef-client'
+curl -L https://omnitruck.chef.io/install.sh | sudo bash -s -- -v 16.6.14 || error_exit 'could not install chef-client'
+
+# Accept licenses
+/bin/mkdir -p /etc/chef/accepted_licenses
+touch /etc/chef/accepted_licenses/chef_infra_client
+touch /etc/chef/accepted_licenses/inspec
+
+ls /etc/chef/accepted_licenses

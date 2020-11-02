@@ -160,8 +160,11 @@ def provision():
             node_name = 'node-' + random_part
         node_name_file.write_text(node_name)
 
-        shutil.rmtree('/etc/chef')
-        Path('/etc/chef').mkdir(mode=0o750)
+        chef_dir = Path('/etc/chef')
+        chef_dir.mkdir(mode=0o750, exist_ok=True)
+        licenses_dir = chef_dir.joinpath('accepted_licenses').mkdir(exist_ok=True)
+        licenses_dir.joinpath('chef_infra_client').touch()
+        licenses_dir.joinpath('inspec').touch()
     else:
         node_name = node_name_file.read_text()
 
