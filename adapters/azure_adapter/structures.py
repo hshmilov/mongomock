@@ -49,7 +49,7 @@ class AzureSoftwareUpdate(SmartJsonClass):
     next_run = Field(datetime, 'Next Run')
 
 
-class AzureDeviceInstance(DeviceAdapter, AzureAdapterEntity):
+class OnlyAzureDeviceInstance(SmartJsonClass):
     cloud_name = Field(str, 'Cloud Name')
     account_tag = Field(str, 'Account Tag')
     location = Field(str, 'Azure Location')
@@ -62,5 +62,14 @@ class AzureDeviceInstance(DeviceAdapter, AzureAdapterEntity):
     custom_image_name = Field(str, 'Custom Image Name')
     subscription_id = Field(str, 'Azure Subscription ID')
     subscription_name = Field(str, 'Azure Subscription Name')
+    tenant_id = Field(str, 'Tenant ID')
     virtual_networks = ListField(str, 'Virtual Networks')
     software_updates = ListField(AzureSoftwareUpdate, 'Software Updates')
+
+
+class AzureDeviceInstanceRegular(DeviceAdapter, OnlyAzureDeviceInstance):
+    pass
+
+
+class AzureDeviceInstance(AzureDeviceInstanceRegular, AzureAdapterEntity):
+    pass

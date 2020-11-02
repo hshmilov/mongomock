@@ -35,7 +35,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
 
     @staticmethod
     def _get_client_id(client_config):
-        return client_config[AZURE_TENANT_ID]
+        return client_config[AZURE_TENANT_ID] + '_' + (client_config.get(AZURE_CLIENT_ID) or '')
 
     def _test_reachability(self, client_config):
         return RESTConnection.test_reachability(AUTHORITY_HOST_URL)

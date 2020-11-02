@@ -1576,7 +1576,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
 
     @property
     def mongo_maxpoolsize(self):
-        return 1000
+        return 25000
 
     @property
     def exposed_ports(self):

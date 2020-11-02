@@ -78,7 +78,7 @@ def decrypt_action_data(mongo_client: MongoClient, mongo_enc: ClientEncryption, 
     if config:
         for key, val in config.items():
             if val:
-                config[key] = db_decrypt(mongo_enc, val)
+                config[key] = MongoEncrypt.db_decrypt(mongo_enc, val)
         print(f'{action_name}:')
         pprint(config)
 
@@ -99,7 +99,7 @@ def decrypt_adapter_data(mongo_client: MongoClient, mongo_enc: ClientEncryption,
             if client_config:
                 for key, val in client_config.items():
                     if val:
-                        client_config[key] = db_decrypt(mongo_enc, val)
+                        client_config[key] = MongoEncrypt.db_decrypt(mongo_enc, val)
                 print(f'{client_name}:')
                 pprint(client_config)
             else:

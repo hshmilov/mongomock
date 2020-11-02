@@ -1,1 +1,1 @@
-FROM nginx
+FROM nexus.pub.axonius.com/axonius/openresty:xenial

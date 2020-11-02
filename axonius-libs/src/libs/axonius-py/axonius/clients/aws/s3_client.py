@@ -49,7 +49,7 @@ class S3Client:  # pylint: disable=too-many-instance-attributes
         initial 4 characters, 12 asterisks and the final 4 characters
         (ex. ATEF************BD7H). This is used primarily in the logger.
         """
-        return f'{self._access_key[:4]}{"*"*12}{self._access_key[-4:]}'
+        return f'{self._access_key[:4]}{"*"*12}{self._access_key[-4:]}' if self._access_key else None
 
     def _set_credentials(self,
                          access_key: str,

@@ -39,8 +39,14 @@ class AzureAdapter(AdapterBase, Configurable):
 
     def _get_client_id(self, client_config):
         if not client_config.get('fetch_all_subscriptions'):
-            return f'{client_config.get(AZURE_SUBSCRIPTION_ID)}_{client_config[AZURE_TENANT_ID]}'
-        return f'all_subscriptions_for_{client_config[AZURE_TENANT_ID]}'
+            subscription = str(client_config.get(AZURE_SUBSCRIPTION_ID))
+        else:
+            subscription = 'all_subscriptions_for'
+
+        tenant_id = client_config.get(AZURE_TENANT_ID) or 'unknown_tenant_id'
+        client_id = client_config.get(AZURE_CLIENT_ID) or 'unknown_client_id'
+
+        return f'{subscription}_{tenant_id}_{client_id}'
 
     def _test_reachability(self, client_config):
         raise NotImplementedError

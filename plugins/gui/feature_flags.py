@@ -2,7 +2,8 @@ import logging
 from datetime import datetime, timedelta
 
 from axonius.consts.gui_consts import (FeatureFlagsNames, RootMasterNames, CloudComplianceNames, ParallelSearch,
-                                       DashboardControlNames, LOGGED_IN_MARKER_PATH, USERS_COLLECTION)
+                                       DashboardControlNames, AdvancedGUINames, LOGGED_IN_MARKER_PATH,
+                                       USERS_COLLECTION)
 from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME, AXONIUS_USER_NAME
 from axonius.mixins.configurable import Configurable
 from axonius.modules.common import AxoniusCommon
@@ -275,6 +276,20 @@ class FeatureFlags(Configurable):
                         DashboardControlNames.present_call_limit,
                         DashboardControlNames.historical_call_limit
                     ]
+                },
+                {
+                    'name': AdvancedGUINames.root_key,
+                    'title': 'Advanced GUI Settings',
+                    'type': 'array',
+                    'items': [
+                        {
+                            'name': AdvancedGUINames.additional_nginx_flags_for_external_gui,
+                            'title': 'Additional nginx conf (gui_external.conf)',
+                            'type': 'string',
+                            'format': 'text'
+                        }
+                    ],
+                    'required': []
                 }
             ],
             'required': ['is_trial', FeatureFlagsNames.ExperimentalAPI,  FeatureFlagsNames.LockOnExpiry,
@@ -321,6 +336,9 @@ class FeatureFlags(Configurable):
             DashboardControlNames.root_key: {
                 DashboardControlNames.present_call_limit: 10,
                 DashboardControlNames.historical_call_limit: 5
+            },
+            AdvancedGUINames.root_key: {
+                AdvancedGUINames.additional_nginx_flags_for_external_gui: ''
             }
         }
 

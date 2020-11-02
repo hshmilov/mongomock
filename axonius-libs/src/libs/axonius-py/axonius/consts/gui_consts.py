@@ -291,6 +291,11 @@ class DashboardControlNames:
     historical_call_limit = 'historical_call_limit'
 
 
+class AdvancedGUINames:
+    root_key = 'advanced_gui_names'
+    additional_nginx_flags_for_external_gui = 'additional_nginx_flags_for_external_gui'
+
+
 class Signup:
     SignupCollection = 'signup'
     SignupField = 'signup'
@@ -479,6 +484,9 @@ class TunnelStatuses:
     never_connected = 'never_connected'  # this is a saas machine, never connected to tunnel
     connected = 'connected'  # this is a saas machine, connected to tunnel
     disconnected = 'disconnected'  # this is a saas machine, disconnected from tunnel
+
+
+ADVANCED_GUI_ADDITIONAL_SETTINGS_FILE = '/home/axonius/config/gui_external_configs/additional_advanced_settings.conf'
 
 
 # Saved Queries

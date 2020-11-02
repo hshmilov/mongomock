@@ -610,7 +610,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
         ad_entity.ad_sAMAccountName = raw_data.get("sAMAccountName")
         ad_entity.ad_display_name = raw_data.get("displayName")
         ad_entity.ad_distinguished_name = raw_data.get("distinguishedName")
-        ad_entity.ad_account_expires = parse_date(raw_data.get("accountExpires"))
+        ad_account_expires = parse_date(raw_data.get("accountExpires"))
+        if ad_account_expires and is_date_real(ad_account_expires):
+            ad_entity.ad_account_expires = ad_account_expires
         ad_entity.ad_object_class = [i.lower() for i in raw_data.get("objectClass")]
         ad_entity.ad_object_category = raw_data.get("objectCategory")
         ad_entity.ad_organizational_unit = get_organizational_units_from_dn(raw_data.get("distinguishedName"))
@@ -794,7 +796,9 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                 user.ad_admin_count = user_raw.get("adminCount")\
                     if isinstance(user_raw.get("adminCount"), int) else None
                 use_timestamps = []  # Last usage times
-                user.account_expires = parse_date(user_raw.get("accountExpires"))
+                account_expires = parse_date(user_raw.get("accountExpires"))
+                if account_expires and is_date_real(account_expires):
+                    user.account_expires = account_expires
                 user.last_bad_logon = parse_date(user_raw.get("badPasswordTime"))
                 pwd_last_set = parse_date(user_raw.get("pwdLastSet"))
                 if is_date_real(pwd_last_set):

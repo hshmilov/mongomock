@@ -259,11 +259,16 @@ class Plugins:
                     reader = csv.DictReader(self.lower_and_strip_first_line(StringIO(csv_file)))
                     if any(field not in AVAILABLE_CSV_LOCATION_FIELDS for field in reader.fieldnames):
                         return return_error('Uploaded CSV with forbidden fields', 400)
-                    if any(not ip_network(row['subnet'], strict=False) for row in reader):
-                        return return_error('Uploaded CSV file is not in the desired format', 400)
-            except ValueError:
-                return return_error('Uploaded CSV file is not in the desired format', 400)
-            except Exception:
+                    for row in reader:
+                        if not ip_network(row['subnet'], strict=False):
+                            return return_error(f'Uploaded CSV file is not in the '
+                                                f'desired format - invalid subnet {row["subnet"]!r}', 400
+                                                )
+            except ValueError as e:
+                logger.warning(f'Uploaded CSV file is not in the desired format', exc_info=True)
+                return return_error(f'Uploaded CSV file is not in the desired format - {str(e)!r}', 400)
+            except Exception as e:
+                logger.warning(f'Uploaded CSV file is not in the desired format - {str(e)!r}', exc_info=True)
                 return return_error('Error while parsing the uploaded CSV file', 400)
 
             aws_s3_settings = config_to_set.get('aws_s3_settings')

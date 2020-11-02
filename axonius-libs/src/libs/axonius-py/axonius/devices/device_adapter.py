@@ -439,6 +439,7 @@ class DeviceAdapterInstalledSoftware(SmartJsonClass):
     sw_license = Field(str, 'License')
     path = Field(str, 'Software Path')
     source = Field(str, 'Source')
+    installed_on = Field(datetime.datetime, 'Installed On')
     version_raw = Field(str, hidden=True)
 
 

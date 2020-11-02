@@ -2,6 +2,7 @@ import logging
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from g_naapi_adapter.structures import GNAApiDeviceType
 
 logger = logging.getLogger(f'axonius.{__name__}')
 ENTITIES_PER_PAGE = 100
@@ -23,7 +24,7 @@ class GNaapiConnection(RESTConnection):
         self._permanent_headers['x-api-key'] = self._apikey
 
         try:
-            for _ in self.get_device_list():
+            for _ in self.get_device_list(only_devices=True):
                 break
         except Exception:
             raise ValueError(f'Error: Invalid response from server, please check domain or credentials')
@@ -65,13 +66,62 @@ class GNaapiConnection(RESTConnection):
             logger.exception(f'Invalid request made while paginating devices')
             raise
 
-    def get_device_list(self):
+    # pylint: disable=too-many-branches, arguments-differ
+    def get_device_list(self, only_devices=False):
+        did_pull_one = False
+        last_exc = None
         try:
-            for device in self._paginated_device_get('aws/ec2/instance'):
-                yield device
+            nic_id_to_nic_info = {}
+            if not only_devices:
+                logger.info(f'Pulling microsoft/network/networkinterfaces')
+                try:
+                    for nic in self._paginated_device_get('microsoft/network/networkinterfaces'):
+                        if 'ResourceId' in nic and 'properties' in nic:
+                            nic_id_to_nic_info[nic['ResourceId']] = nic['properties']
+                except Exception:
+                    logger.exception(f'Problem pulling microsoft/network/networkinterfaces, continuing')
+
+            logger.info(f'Pulling microsoft/compute/virtualmachines')
+            for device in self._paginated_device_get('microsoft/compute/virtualmachines'):
+                did_pull_one = True
+                network_interfaces_data = []
+                device_properties = (device.get('properties') or {})
+                for nic in (device_properties.get('networkProfile') or {}).get('networkInterfaces') or []:
+                    nic_id = nic.get('id')
+                    if nic_id and isinstance(nic_id, str) and nic_id in nic_id_to_nic_info:
+                        network_interfaces_data.append(nic_id_to_nic_info[nic_id])
+
+                if network_interfaces_data:
+                    device['axonius_extended'] = {
+                        'microsoft/network/networkinterfaces': network_interfaces_data
+                    }
+                yield device, GNAApiDeviceType.AzureCompute
         except RESTException as err:
+            last_exc = err
             logger.exception(str(err))
-            raise
+
+        try:
+            logger.info(f'Pulling geix/compute/server')
+            for device in self._paginated_device_get('geix/compute/server'):
+                did_pull_one = True
+                yield device, GNAApiDeviceType.GEIXCompute
+        except RESTException as err:
+            last_exc = err
+            logger.exception(str(err))
+
+        try:
+            logger.info(f'Pulling aws/ec2/instance')
+            for device in self._paginated_device_get('aws/ec2/instance'):
+                did_pull_one = True
+                yield device, GNAApiDeviceType.AWSEC2
+        except RESTException as err:
+            last_exc = err
+            logger.exception(str(err))
+
+        if not did_pull_one:
+            if last_exc:
+                raise last_exc
+            raise ValueError(f'Could not get devices - Please check credentials')
 
     @staticmethod
     def _paginated_user_get():

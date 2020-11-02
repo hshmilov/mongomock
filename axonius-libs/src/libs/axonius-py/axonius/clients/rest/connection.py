@@ -222,7 +222,10 @@ class RESTConnection(ABC):
         enough for a specific scenario / environment. for example, a customer which needs a bigger read-timeout
         :return:
         """
-        self._session_timeout = self._requested_session_timeout or get_default_timeout()
+        read_timeout, recv_timeout = self._requested_session_timeout or get_default_timeout()
+        if read_timeout > recv_timeout:
+            recv_timeout = read_timeout
+        self._session_timeout = (read_timeout, recv_timeout)
         logger.debug(f'Session timeout revalidated to {self._session_timeout}')
 
     @staticmethod

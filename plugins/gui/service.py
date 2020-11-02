@@ -54,8 +54,8 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        LATEST_VERSION_URL, INSTALLED_VERISON_KEY, FeatureFlagsNames,
                                        IDENTITY_PROVIDERS_CONFIG, NO_ACCESS_ROLE,
                                        DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES, IS_API_USER, Signup,
-                                       PREDEFINED_SAVED_QUERY_REF_REGEX, UPDATED_BY_FIELD,
-                                       FEATURE_FLAGS_CONFIG)
+                                       PREDEFINED_SAVED_QUERY_REF_REGEX, UPDATED_BY_FIELD, AdvancedGUINames,
+                                       ADVANCED_GUI_ADDITIONAL_SETTINGS_FILE, FEATURE_FLAGS_CONFIG)
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           ADMIN_USER_NAME,
@@ -809,11 +809,17 @@ class GuiService(Triggerable,
     def get_plugin_unique_name(self, plugin_name):
         return self.get_plugin_by_name(plugin_name)[PLUGIN_UNIQUE_NAME]
 
+    # pylint: disable=too-many-branches
     def _on_config_update(self, config):
         self._system_settings = config[SYSTEM_SETTINGS]
         self._mutual_tls_settings = config['mutual_tls_settings']
         mutual_tls_is_mandatory = self._mutual_tls_settings.get('mandatory')
         ca_certificate = self._grab_file_contents(self._mutual_tls_settings.get('ca_certificate'))
+
+        additional_nginx_root_key = self.feature_flags_config().get(AdvancedGUINames.root_key) or {}
+        additional_nginx_flags_for_external_gui = additional_nginx_root_key.get(
+            AdvancedGUINames.additional_nginx_flags_for_external_gui
+        )
 
         if self._mutual_tls_settings.get('enabled') and mutual_tls_is_mandatory:
             # Enable Mutual TLS.
@@ -860,6 +866,44 @@ class GuiService(Triggerable,
                     logger.info(f'Successfuly loaded new mutual TLS settings: {mutual_tls_state}')
             except Exception:
                 logger.exception(f'Can not delete mutual tls settings')
+
+        try:
+            if additional_nginx_flags_for_external_gui and isinstance(additional_nginx_flags_for_external_gui, str):
+                additional_nginx_flags_for_external_gui = additional_nginx_flags_for_external_gui.strip()
+                logger.info(
+                    f'Setting additional_nginx_flags_for_external_gui: {additional_nginx_flags_for_external_gui}'
+                )
+                current_content = None
+                if os.path.isfile(ADVANCED_GUI_ADDITIONAL_SETTINGS_FILE):
+                    with open(ADVANCED_GUI_ADDITIONAL_SETTINGS_FILE, 'rt') as current_file:
+                        current_content = current_file.read().strip()
+
+                if current_content != additional_nginx_flags_for_external_gui:
+                    with open(ADVANCED_GUI_ADDITIONAL_SETTINGS_FILE, 'wt') as advanced_gui_additional_settings_file:
+                        advanced_gui_additional_settings_file.write(additional_nginx_flags_for_external_gui)
+                        logger.info(f'Wrote a new gui advanced settings file')
+
+                        rc = subprocess.call(['openresty', '-t'])   # check before restarting
+                        if rc != 0:
+                            logger.info(f'Invalid openresty configuration, not restarting openresty')
+                            os.unlink(ADVANCED_GUI_ADDITIONAL_SETTINGS_FILE)
+                        else:
+                            subprocess.check_call(['openresty', '-s', 'reload'])
+                            logger.info(f'Successfully restarted the GUI')
+            else:
+                if os.path.isfile(ADVANCED_GUI_ADDITIONAL_SETTINGS_FILE):
+                    logger.info(f'Detected a removal of gui additional settings file')
+                    os.unlink(ADVANCED_GUI_ADDITIONAL_SETTINGS_FILE)
+                    subprocess.check_call(['openresty', '-s', 'reload'])
+                    logger.info(f'Successfully restarted the GUI')
+        except Exception:
+            logger.exception(f'Exception while setting additioal nginx flags for external gui')
+            try:
+                if os.path.isfile(ADVANCED_GUI_ADDITIONAL_SETTINGS_FILE):
+                    os.unlink(ADVANCED_GUI_ADDITIONAL_SETTINGS_FILE)
+                    subprocess.check_call(['openresty', '-s', 'reload'])
+            except Exception:
+                pass
 
     def _global_config_updated(self):
         self.store_proxy_data(self._proxy_settings)

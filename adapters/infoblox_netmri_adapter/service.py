@@ -200,8 +200,18 @@ class InfobloxNetmriAdapter(ScannerAdapterBase, Configurable):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
+            device_mac = device_raw.get('DeviceMAC') or None  # Can be output as empty string
             device_name = device_raw.get('DeviceName')
-            device.id = device_id + '_' + device_name or '' + '_' + device_raw.get('DeviceUniqueKey') or ''
+
+            new_device_id = device_id + '_'
+            if device_name:
+                new_device_id = new_device_id + device_name
+            if not new_device_id.endswith('_'):
+                new_device_id = new_device_id + '_'
+            if device_mac:
+                new_device_id = new_device_id + device_mac
+
+            device.id = new_device_id
             if device_name != 'unknown':
                 device.name = device_name
             if device_raw.get('DeviceDNSName') != 'unknown':
@@ -216,7 +226,6 @@ class InfobloxNetmriAdapter(ScannerAdapterBase, Configurable):
                 logger.warning(f'Failed to parse OS for {device_name}', exc_info=True)
             device.device_managed_by = device_raw.get('DeviceSysContact')
 
-            device_mac = device_raw.get('DeviceMAC') or None  # Can be output as empty string
             ip_dotted = device_raw.get('DeviceIPDotted') or None  # can be an empty string
             device_ip = None
             if ip_dotted:

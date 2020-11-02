@@ -10,15 +10,17 @@ import json
 import logging
 import sys
 import os
+
 from abc import ABC, abstractmethod
 from codecs import BOM_UTF8
 from datetime import date, datetime, timedelta, timezone
 from io import StringIO
 from ipaddress import ip_network, ip_address
-from threading import Event, RLock, Thread
+from threading import Event, RLock, Thread, Lock
 from typing import Any, Dict, Iterable, List, Tuple, Optional
 
 import requests
+import cachetools
 
 import func_timeout
 from bson import ObjectId
@@ -1636,6 +1638,27 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
 
         self._save_field_names_to_db(EntityType.Devices)
 
+    @cachetools.cached(cachetools.TTLCache(maxsize=1, ttl=300), lock=Lock())
+    def get_device_location_mapping_csv(self) -> Optional[list]:
+        try:
+            static_analysis_settings = self._static_analysis_settings
+            if not static_analysis_settings:
+                return None
+            if static_analysis_settings.get(DEVICE_LOCATION_MAPPING, {}).get('enabled') and \
+                    static_analysis_settings.get(DEVICE_LOCATION_MAPPING, {}).get(CSV_IP_LOCATION_FILE):
+                csv_file = self._grab_file_contents(
+                    static_analysis_settings.get(
+                        DEVICE_LOCATION_MAPPING)[CSV_IP_LOCATION_FILE],
+                    stored_locally=False).replace(BOM_UTF8, b'').decode('utf-8')
+
+                reader = csv.DictReader(self.lower_and_strip_first_line(StringIO(csv_file)))
+                ip_location_map = [(ip_network(row['subnet'], strict=False), [(k, v) for k, v in row.items()])
+                                   for row in reader]
+
+                return ip_location_map
+        except Exception:
+            logger.exception(f'Exception while loading device location mapping csv')
+
     def __ip_to_location_csv(self, device):
         """
         Checks every device that have ip address in its network interfaces, if the ip_to_location_csv option
@@ -1643,24 +1666,15 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
         :param device: a Device dict
         :return: Device with location in its network interfaces
         """
-        static_analysis_settings = self._static_analysis_settings
-        if static_analysis_settings and static_analysis_settings.get(DEVICE_LOCATION_MAPPING, {}).get('enabled') and \
-                static_analysis_settings.get(DEVICE_LOCATION_MAPPING, {}).get(CSV_IP_LOCATION_FILE):
-
-            csv_file = self._grab_file_contents(
-                static_analysis_settings.get(
-                    DEVICE_LOCATION_MAPPING)[CSV_IP_LOCATION_FILE],
-                stored_locally=False).replace(BOM_UTF8, b'').decode('utf-8')
-
-            reader = csv.DictReader(self.lower_and_strip_first_line(StringIO(csv_file)))
-            ip_location_map = [(ip_network(row['subnet'], strict=False), row) for row in reader]
-
+        ip_location_map = self.get_device_location_mapping_csv()
+        if ip_location_map:
             nics = device.network_interfaces
             for i, nic in enumerate(nics):
                 ip_locations = self.get_geolocation_of_ip(ip_location_map, nic['ips'] if
                                                           isinstance(nic, dict) and 'ips' in nic else nic.ips)
                 if ip_locations:
                     for ip_location in ip_locations:
+                        ip_location = dict(ip_location)
                         # Handle basic fields
                         if 'subnet' in ip_location:
                             del ip_location['subnet']

@@ -239,7 +239,7 @@ class Instances:
         max_days_configured = history_settings.get('max_days_to_save')
         if history_settings.get('enabled') and max_days_configured >= 0:
             for node in nodes:
-                remaining_snapshots = node[MetricsFields.RemainingSnapshotDays]
+                remaining_snapshots = node.get(MetricsFields.RemainingSnapshotDays)
                 if remaining_snapshots and max_days_configured <= remaining_snapshots:
                     del node[MetricsFields.RemainingSnapshotDays]
         return nodes

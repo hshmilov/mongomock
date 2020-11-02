@@ -15,7 +15,7 @@ import psutil
 
 logger = logging.getLogger(f'axonius.{__name__}')
 CHECK_QUEUE_INTERVAL = 5
-SIGTERM_TO_SIGKILL_TIME = 10
+SIGTERM_TO_SIGKILL_TIME = 20
 
 
 class EnhancedGenerator:
@@ -83,7 +83,7 @@ def kill_ids(pids: list):
             try:
                 proc = psutil.Process(pid)
                 if proc.is_running():
-                    logger.critical(f'Could not kill pid {pid} - process might be stuck!')
+                    logger.warning(f'Could not kill pid {pid} - process might be stuck!')
             except psutil._exceptions.NoSuchProcess:
                 pass
             except Exception:

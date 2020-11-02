@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import shutil
 from collections import defaultdict
 from multiprocessing.pool import ThreadPool
@@ -2032,6 +2033,112 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
                 'adapters.data.name': 1,
             },
             new_id_func)
+
+    def _update_schema_version_62(self):
+        print('Update to schema 62 - Convert NetMRI device.id to a new format')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+
+            data = entity.get('data')
+            if not data:
+                return False
+
+            # device.id = device_id + '_' + (device_name or '') + '_' + (device_mac or '')
+            nics = data.get('network_interfaces') or []
+            if not nics or not isinstance(nics, list):
+                return False
+
+            device_mac = nics[0].get('mac')
+
+            if not device_mac:
+                return False
+
+            # Check if not migrated already
+            if current_id.endswith(f'{device_mac}'):
+                return False
+
+            # return new id. First of all, if it does not end with '_', add '_'
+            new_current_id = current_id
+            if not new_current_id.endswith('_'):
+                new_current_id = new_current_id + '_'
+
+            # Finally append device_mac
+            return f'{new_current_id}{device_mac}'
+
+        self._migrate_entity_id_generic(
+            EntityType.Devices,
+            'infoblox_netmri_adapter',
+            {
+                'adapters.data.id': 1,
+                'adapters.data.network_interfaces': 1
+            },
+            new_id_func)
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_63(self):
+        print('Update to schema 63 - Convert Azure AD client_id')
+
+        def azure_ad_adapter_new_client_id(client_config):
+            return client_config['tenant_id'] + '_' + (client_config.get('client_id') or '')
+
+        self._upgrade_adapter_client_id('azure_ad_adapter', azure_ad_adapter_new_client_id)
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_64(self):
+        print('Update to schema 64 - Convert Azure client_id')
+
+        def azure_adapter_new_client_id(client_config):
+            if not client_config.get('fetch_all_subscriptions'):
+                subscription = str(client_config.get('subscription_id'))
+            else:
+                subscription = 'all_subscriptions_for'
+
+            tenant_id = client_config.get('tenant_id') or 'unknown_tenant_id'
+            client_id = client_config.get('client_id') or 'unknown_client_id'
+
+            return f'{subscription}_{tenant_id}_{client_id}'
+
+        self._upgrade_adapter_client_id('azure_adapter', azure_adapter_new_client_id)
+
+    def _update_schema_version_65(self):
+        print('Update to schema 65 - Convert qualys_scans id')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            if data.get('unscanned_device'):
+                return False
+
+            hostname = data.get('hostname') or ''
+            device_id_addition = f'$#$#${hostname}'
+
+            if current_id.endswith(device_id_addition):
+                return False
+
+            return f'{current_id}{device_id_addition}'
+
+        self._migrate_entity_id_generic(
+            EntityType.Devices,
+            'qualys_scans_adapter',
+            {
+                'adapters.data.id': 1,
+                'adapters.data.hostname': 1,
+                'adapters.data.unscanned_device': 1
+            },
+            new_id_func)
+
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_66(self):
+        print('Update to schema 66 - Convert Sophos client.id')
+
+        def sophos_adapter_new_client_id(client_config):
+            api_declassified = hashlib.md5(client_config['authorization'].encode('utf-8')).hexdigest()
+            api_declassified_2 = hashlib.md5(client_config['apikey'].encode('utf-8')).hexdigest()
+            return client_config['domain'] + '_' + api_declassified + '_' + api_declassified_2
+
+        self._upgrade_adapter_client_id('sophos_adapter', sophos_adapter_new_client_id)
 
     def _migrate_entity_id_generic(self, *args, **kwargs):
         number_of_retries = 0

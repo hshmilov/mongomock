@@ -32,13 +32,13 @@ class PureStorageFlashArrayAdapter(AdapterBase):
         return RESTConnection.test_reachability(client_config.get('domain'),
                                                 https_proxy=client_config.get('https_proxy'))
 
-    @staticmethod
-    def get_connection(client_config):
+    def get_connection(self, client_config):
         connection = PureStorageFlashArrayConnection(domain=client_config['domain'],
                                                      verify_ssl=client_config['verify_ssl'],
                                                      https_proxy=client_config.get('https_proxy'),
                                                      application_id=client_config['application_id'],
-                                                     private_key=client_config['private_key'])
+                                                     private_key=self._grab_file_contents(
+                                                         client_config['private_key_file']).decode('utf-8'))
         with connection:
             pass  # check that the connection credentials are valid
         return connection
@@ -85,11 +85,10 @@ class PureStorageFlashArrayAdapter(AdapterBase):
                     'type': 'string'
                 },
                 {
-                    'name': 'private_key',
-                    'title': 'Private Key',
+                    'name': 'private_key_file',
+                    'title': 'Private Key File',
                     'description': 'Unencrypted Private Key',
-                    'type': 'string',
-                    'format': 'password'
+                    'type': 'file'
                 },
                 {
                     'name': 'verify_ssl',
@@ -105,7 +104,7 @@ class PureStorageFlashArrayAdapter(AdapterBase):
             'required': [
                 'domain',
                 'application_id',
-                'private_key',
+                'private_key_file',
                 'verify_ssl'
             ],
             'type': 'array'

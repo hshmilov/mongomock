@@ -11,7 +11,6 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Set, Dict, List
 from dateutil import tz
-import requests
 
 import pytz
 from apscheduler.executors.pool import \
@@ -925,15 +924,6 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             except Exception:
                 logger.error(f'Failed running save historical phase', exc_info=True)
 
-            try:
-                r = requests.post('https://bandicoot.axonius.local:9090/transfer',
-                                  params={'fetchTime': round(time.time() * 1000)})
-                if r.status_code != 200:
-                    logger.warning(f'Failed to initiate bandicoot transfer got error code: {r.status_code}')
-                else:
-                    logger.info(f'Bandicoot transfer request was successfully sent')
-            except Exception:
-                logger.warning(f'Failed to initiate bandicoot transfer')
             try:
                 # logger.info(f'Restarting Heavy Lifting...')
                 # self._ask_core_to_raise_adapter(HEAVY_LIFTING_PLUGIN_NAME)    # disabled for now

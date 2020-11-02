@@ -26,7 +26,7 @@ class HttpdService(SystemService):
 
     @property
     def volumes_override(self):
-        return [f'{self.service_dir}/httpd:/usr/share/nginx/html:ro']
+        return [f'{self.service_dir}/httpd:/usr/local/openresty/nginx/html:ro']
 
     @property
     def is_unique_image(self):

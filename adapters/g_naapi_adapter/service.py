@@ -1,4 +1,5 @@
 import logging
+from typing import Tuple
 
 from aws_adapter.connection.structures import OnlyAWSDeviceAdapter, AWS_POWER_STATE_MAP, AWSRole, AWSEBSVolume
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -6,17 +7,23 @@ from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceRunningState
+from axonius.fields import Field
+from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
+from axonius.utils.parsing import normalize_var_name
+from azure_adapter.consts import POWER_STATE_MAP
+from azure_adapter.structures import AzureImage
 from g_naapi_adapter.connection import GNaapiConnection
 from g_naapi_adapter.client_id import get_client_id
-from g_naapi_adapter.structures import GNaapiDeviceInstance, GNaapiUserInstance, GNaapiRelationships
+from g_naapi_adapter.structures import GNaapiDeviceInstance, GNaapiUserInstance, GNaapiRelationships, \
+    GNAApiDeviceType, GEIXComputeServer, GNaapiAzureDeviceInstance
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
 # pylint: disable=too-many-branches, too-many-statements
-class GNaapiAdapter(AdapterBase):
+class GNaapiAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(GNaapiDeviceInstance):
         pass
@@ -144,7 +151,6 @@ class GNaapiAdapter(AdapterBase):
             tags_dict = {}
         for key, value in tags_dict.items():
             aws_device.add_aws_ec2_tag(key=key, value=value)
-            device.add_key_value_tag(key, value)
         aws_device.instance_type = device_raw['instanceType']
         aws_device.key_name = device_raw.get('keyName')
         vpc_id = device_raw.get('vpcId')
@@ -231,22 +237,166 @@ class GNaapiAdapter(AdapterBase):
         except Exception:
             logger.exception(f'Error parsing instance volumes')
 
-    def _create_device(self, device_raw: dict, device: MyDeviceAdapter):
+    # pylint: disable=too-many-locals
+    @staticmethod
+    def _create_device_azure(device_raw: dict, azure_device: GNaapiAzureDeviceInstance, device: MyDeviceAdapter):
+        properties = device_raw.get('properties') or device_raw.get('Properties')
+        if not isinstance(properties, dict):
+            logger.error('Error - Azure device properties is not a dict')
+            return
+
+        device.name = device_raw.get('name')
+        device.device_managed_by = device_raw.get('managedBy')
+        azure_device.resources_group = device_raw.get('resourceGroup')
+        azure_device.subscription_id = device_raw.get('subscriptionId')
+        azure_device.tenant_id = device_raw.get('tenantId')
+        azure_device.plan = device_raw.get('plan')
+        azure_device.location = device_raw.get('location')
+
+        instance_view = (device_raw.get('extended') or {}).get('instanceView') or {}
+        power_state_code = (instance_view.get('powerState') or {}).get('code')
+        if isinstance(power_state_code, str):
+            device.power_state = POWER_STATE_MAP.get(power_state_code)
+
+        azure_device.vm_id = properties.get('vmId')
+        device.cloud_id = properties.get('vmId')
+
+        storage_profile = properties.get('storageProfile') or {}
+        network_profile = properties.get('networkProfile') or {}
+        hardware_profile = properties.get('hardwareProfile') or {}
+        os_profile = properties.get('osProfile') or {}
+
+        os_profile.pop('secrets', None)     # pop secrets
+
+        azure_device.instance_type = hardware_profile.get('vmSize')
+        image = storage_profile.get('imageReference') or {}
+        os_disk = storage_profile.get('osDisk') or {}
+        os_info = []
+
+        if os_disk:
+            os_info.append(os_disk.get('osType'))
+            managed_disk_id = (os_disk.get('managedDisk') or {}).get('id')
+            if managed_disk_id:
+                device.add_hd(description=managed_disk_id)
+
+        if image:
+            image_id = image.get('id')
+            if isinstance(image_id, str) and '/images/' in image_id:
+                azure_device.custom_image_name = image_id[image_id.find('/images/') + len('/images/'):].split('/')[0]
+
+            azure_device.image = AzureImage(publisher=image.get('publisher'),
+                                            offer=image.get('offer'),
+                                            sku=image.get('sku'),
+                                            version=image.get('version'),
+                                            exact_version=image.get('exactVersion'))
+            os_info.extend([image.get('offer'), image.get('sku'), image.get('exactVersion')])
+
+        if instance_view and isinstance(instance_view, dict):
+            if instance_view.get('osName'):
+                os_info.append(str(instance_view.get('osName')))
+            if instance_view.get('osVersion'):
+                os_info.append(str(instance_view.get('osVersion')))
+
+        device.figure_os(' '.join([v for v in os_info if v is not None]))
+
+        for disk in (storage_profile.get('datadisks') or []):
+            # add also the attached HDs
+            if disk.get('diskSizeGB'):
+                device.add_hd(total_size=disk.get('diskSizeGB'))
+
+        device.hostname = os_profile.get('computerName')
+        azure_device.admin_username = os_profile.get('adminUsername')
+
+        axonius_extended = device_raw.get('axonius_extended') or {}
+        nics_extended = axonius_extended.get('microsoft/network/networkinterfaces') or []
+
+        for iface in nics_extended:
+            ips = []
+            subnets = []
+            for ip_config_d in iface.get('ipConfigurations', []):
+                ip_config = ip_config_d.get('properties') or {}
+                private_ip = ip_config.get('privateIPAddress')
+                if private_ip:
+                    ips.append(private_ip)
+                public_ip = ip_config.get('publicIpAddress', {}).get('ipAddress')
+                if not public_ip:
+                    public_ip = ip_config.get('publicIPAddress', {}).get('ipAddress')
+                if public_ip:
+                    ips.append(public_ip)
+                    device.add_public_ip(public_ip)
+                try:
+                    if ip_config.get('subnet', {}).get('addressPrefix'):
+                        subnets.append(ip_config.get('subnet', {}).get('addressPrefix'))
+                except Exception:
+                    pass
+                subnet_id = ip_config.get('subnet', {}).get('id')
+                try:
+                    if isinstance(subnet_id, str) and '/virtualNetworks/' in subnet_id:
+                        device.virtual_networks.append(subnet_id[subnet_id.find('/virtualNetworks/') +
+                                                                 len('/virtualNetworks/'):].split('/')[0])
+                except Exception:
+                    pass
+            device.add_nic(
+                mac=iface.get('macAddress'), ips=[ip for ip in ips if ip is not None],
+                subnets=[subnet for subnet in subnets if subnet is not None],
+                name=iface.get('name') or iface.get('id')
+            )
+
+    @staticmethod
+    def _create_device_geix(device_raw: dict, geix_device: GEIXComputeServer, device: MyDeviceAdapter):
+        resource = device_raw.get('Resource') or device_raw.get('resource')
+        if not isinstance(resource, dict):
+            logger.error(f'Error - GEIX with no "Resource"')
+            return
+
+        # pop secrets
+        device_raw.pop('admin_password', None)
+
+        geix_device.region = device_raw.get('Region')
+        geix_device.account_id = device_raw.get('AccountId')
+        geix_device.account_alias = device_raw.get('AccountAlias')
+
+        addresses = resource.get('addresses')
+        if isinstance(addresses, dict):
+            for address_in in addresses.values():
+                if isinstance(address_in, list):
+                    for nic in address_in:
+                        mac = nic.get('OS-EXT-IPS-MAC:mac_addr')
+                        ip = nic.get('addr')
+
+                        if mac or ip:
+                            device.add_nic(mac=mac, ips=([ip] if ip else None))
+
+        device.description = resource.get('description')
+        geix_device.host_id = resource.get('host_id')
+        geix_device.host_status = resource.get('host_status')
+        device.cloud_id = resource.get('id')
+        geix_device.created_at = parse_date(resource.get('created_at'))
+        geix_device.availability_zone = resource.get('availability_zone')
+        geix_device.instance_name = resource.get('instance_name')
+        geix_device.key_name = resource.get('key_name')
+        geix_device.project_id = resource.get('project_id')
+        geix_device.vm_state = resource.get('vm_state')
+
+        metadata = resource.get('metadata') or {}
+        geix_device.owner_name = metadata.get('owner_name')
+        device.device_managed_by = metadata.get('owner_name')
+
+    def _create_device(self, device_raw_tuple: Tuple[dict, GNAApiDeviceType], device: MyDeviceAdapter):
         try:
+            device_raw: dict = device_raw_tuple[0]
+            device_type: GNAApiDeviceType = device_raw_tuple[1]
+
             device_id = device_raw.get('ResourceId')
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
             device.id = device_id
-            device.cloud_id = device_id
-            device.cloud_provider = 'AWS'
             device.g_naapi_index_date = parse_date(device_raw.get('IndexDate'))
             device.g_naapi_ttl = parse_date(device_raw.get('TTL'))
+            device.g_naapi_source = device_raw.get('NaapiSource')
+            device.harvest_date = parse_date(device_raw.get('harvest_date'))
 
-            configuration = device_raw.get('configuration') or device_raw.get('Configuration')
-            if not configuration:
-                logger.exception(f'Bad device with no configuration: {configuration}')
-                return None
             tags = device_raw.get('Tags') or {}
             relationships = device_raw.get('Relationships') or []
             try:
@@ -260,31 +410,82 @@ class GNaapiAdapter(AdapterBase):
                         )
                     )
             except Exception:
-                logger.exception(f'Could not parse relatnionships')
+                logger.exception(f'Could not parse relationships')
 
-            aws_info = OnlyAWSDeviceAdapter()
-            self._create_aws_ec2(configuration, aws_info, device)
+            if device_type == GNAApiDeviceType.AWSEC2:
+                device.cloud_provider = 'AWS'
+                device.cloud_id = device_id
+                configuration = device_raw.get('configuration') or device_raw.get('Configuration')
+                if not configuration:
+                    logger.warning(f'Bad device with no configuration: {configuration}')
+                    return None
+                aws_info = OnlyAWSDeviceAdapter()
+                self._create_aws_ec2(configuration, aws_info, device)
 
-            # Things that come from the root json (aws config info)
-            if tags.get('Name'):
-                device.name = tags.get('Name')
+                try:
+                    if device_raw.get('awsAccountAlias'):
+                        aws_info.aws_account_alias.append(device_raw.get('awsAccountAlias'))
+                    aws_info.aws_account_id = device_raw.get('awsAccountId') or device_raw.get('AccountId')
+                    aws_info.aws_region = device_raw.get('AwsRegion')
+                    aws_info.aws_availability_zone = device_raw.get('AvailabilityZone')
+                    aws_info.instance_arn = device_raw.get('Arn')
+                except Exception:
+                    logger.exception(f'Problem appending extra info')
+
+                    # Things that come from the root json (aws config info)
+                    if tags.get('Name'):
+                        device.name = tags.get('Name')
+
+                device.aws_data = aws_info
+
+            elif device_type == GNAApiDeviceType.AzureCompute:
+                device.cloud_provider = 'Azure'
+                if not device_raw.get('properties') and not device_raw.get('Properties'):
+                    logger.warning(f'Bad Azure device with no properties')
+                    return None
+
+                azure_data = GNaapiAzureDeviceInstance()
+                self._create_device_azure(device_raw, azure_data, device)
+                device.azure_data = azure_data
+            elif device_type == GNAApiDeviceType.GEIXCompute:
+                device.cloud_provider = 'GEIX'
+                device.cloud_id = device_id
+                if not device_raw.get('resource') and not device_raw.get('Resource'):
+                    logger.warning(f'Bad GEIX device with no properties')
+                    return None
+
+                geix_data = GEIXComputeServer()
+                self._create_device_geix(device_raw, geix_data, device)
+                device.geix_data = geix_data
 
             try:
-                if device_raw.get('awsAccountAlias'):
-                    aws_info.aws_account_alias.append(device_raw.get('awsAccountAlias'))
-                aws_info.aws_account_id = device_raw.get('awsAccountId') or device_raw.get('AccountId')
-                aws_info.aws_region = device_raw.get('AwsRegion')
-                aws_info.aws_availability_zone = device_raw.get('AvailabilityZone')
-                aws_info.instance_arn = device_raw.get('Arn')
+                try:
+                    tags_dict = {i['key']: i['value'] for i in device_raw.get('tags', {})}
+                except Exception:
+                    logger.exception(f'Problem parsing tags dict')
+                    tags_dict = {}
+
+                if not tags_dict and isinstance(tags, dict):
+                    tags_dict = tags
+                for key, value in tags_dict.items():
+                    key = key.lower()
+                    device.add_key_value_tag(key=key, value=value)
+
+                    if self.__tags_to_parse_as_fields and key.strip() in self.__tags_to_parse_as_fields:
+                        normalized_key_name = 'tag_naapi_' + normalize_var_name(key.strip())
+                        if not device.does_field_exist(normalized_key_name):
+                            cn_capitalized = ' '.join([word.capitalize() for word in key.strip().split(' ')])
+                            device.declare_new_field(normalized_key_name, Field(str, f'Naapi Tag {cn_capitalized}'))
+
+                        device[normalized_key_name] = str(value)
             except Exception:
-                logger.exception(f'Problem appending extra info')
+                logger.exception(f'Failed adding tags')
 
             device.g_naapi_configuration_item_capture_time = parse_date(device_raw.get('ConfigurationItemCaptureTime'))
-            device.aws_data = aws_info
             device.set_raw(device_raw)
             return device
         except Exception:
-            logger.exception(f'Problem with fetching GNaapi Device for {device_raw}')
+            logger.exception(f'Problem with fetching GNaapi Device')
             return None
 
     def _parse_raw_data(self, devices_raw_data):
@@ -329,3 +530,29 @@ class GNaapiAdapter(AdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets, AdapterProperty.Cloud_Provider]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'list_of_tags_to_parse_as_fields',
+                    'title': 'List of tags to parse as fields',
+                    'type': 'string'
+                }
+            ],
+            'required': [],
+            'pretty_name': 'NAAPI Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'list_of_tags_to_parse_as_fields': None
+        }
+
+    def _on_config_update(self, config):
+        self.__tags_to_parse_as_fields = [
+            x.strip().lower() for x in config.get('list_of_tags_to_parse_as_fields').split(',')
+        ] if isinstance(config.get('list_of_tags_to_parse_as_fields'), str) else None

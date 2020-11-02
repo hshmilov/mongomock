@@ -441,8 +441,11 @@ class FlexeraAdapter(AdapterBase, Configurable):
             device.processor_type = device_raw.get('ProcessorType')
             device.total_physical_memory = device_raw.get('TotalMemory') / (1024 ** 3) \
                 if device_raw.get('TotalMemory') else None
-            device.total_disk_space = device_raw.get('TotalDiskSpace') / (1024 ** 3) \
+            total_disk_space = device_raw.get('TotalDiskSpace') / (1024 ** 3) \
                 if device_raw.get('TotalDiskSpace') else None
+            if total_disk_space:
+                device.total_disk_space = total_disk_space
+                device.add_hd(total_size=total_disk_space)
 
             device.bios_serial = device_raw.get('FirmwareSerialNumber')
             device.device_serial = device_raw.get('SerialNo')
@@ -469,6 +472,9 @@ class FlexeraAdapter(AdapterBase, Configurable):
 
             device.assigned_username = device_raw.get('AssignedUserUserName')
             device.assigned_user_email = device_raw.get('AssignedUserEmail')
+            last_used_user = device_raw.get('AssignedUserEmail') or device_raw.get('AssignedUserUserName')
+            if last_used_user:
+                device.last_used_users.append(str(last_used_user))
             device.email = device_raw.get('AssignedUserEmail')
             device.business_unit = device_raw.get('BusinessUnit')
             device.fnmp_location = device_raw.get('LocationName')

@@ -400,10 +400,10 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id
             device.uuid = device_raw.get('hostUUID')
             hostname = device_raw.get('netbiosName') or device_raw.get('dnsName') or device_raw.get('assetName')
             device.hostname = hostname
+            device.id = f'{device_id}$#$#${hostname or ""}'
             device.name = device_raw.get('assetName')
             device.time_zone = device_raw.get('timeZone')
             device.total_physical_memory = device_raw.get('totalMemory')
@@ -558,7 +558,6 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             got_hostname = False
             got_mac = False
             device.qualys_id = device_id
-            device.id = str(device_id) + '_' + (device_raw.get('name') or '')
             hostname = (device_raw.get('netbiosName') or device_raw.get('dnsHostName')) or device_raw.get('name')
             if device_raw.get('netbiosName') and device_raw.get('dnsHostName') and \
                     device_raw.get('dnsHostName').split('.')[0].lower() == \
@@ -957,6 +956,13 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 return None
             if self.__drop_only_ip_devices and not got_mac and not got_hostname:
                 return None
+
+            device.id = str(device_id) + '_' + (device_raw.get('name') or '') + '$#$#$'
+            try:
+                device.id = device.id + device.hostname
+            except Exception:
+                pass
+
             return device
         except Exception:
             logger.exception(f'Problem with device {device_raw}')

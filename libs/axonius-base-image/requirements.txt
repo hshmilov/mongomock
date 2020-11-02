@@ -104,7 +104,7 @@ graphql-core==2.2.1
 idna==2.8
 promise==2.3
 pytz==2019.3
-requests==2.22.0
+requests==2.24.0
 Rx==1.6.1
 six==1.13.0
 urllib3==1.25.6

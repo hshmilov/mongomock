@@ -305,7 +305,7 @@ class AnsibleTowerAdapter(AdapterBase):
                 device.cloud_provider = 'GCP'
             elif 'deviceId' in attr:
                 device.cloud_id = attr.get('deviceId')
-                device.cloud_provider = 'azure'
+                device.cloud_provider = 'Azure'
 
         except Exception:
             logger.exception(f'ERROR mapping cloud ID for device {device.get_raw()}')

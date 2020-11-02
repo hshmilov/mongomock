@@ -189,6 +189,7 @@ class ChefAdapter(AdapterBase):
                     for software_name, software_params in (device_raw_automatic.get("packages") or {}).items():
                         device.add_installed_software(
                             name=software_name,
+                            installed_on=parse_date(software_params.get('installdate')),
                             version=' '.join(
                                 [(software_params.get('version') or ''), (software_params.get('release') or '')]
                             ),

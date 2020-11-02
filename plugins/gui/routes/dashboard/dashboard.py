@@ -377,7 +377,7 @@ class Dashboard(Charts, Notifications):
         :param clear_slow: Also clear the slow cache
         """
         if clear_slow:
-            generate_dashboard.update_cache()
+            generate_dashboard.update_cache(recalculate_using_semaphore=True)
         adapter_data.update_cache()
         get_fielded_plugins.update_cache()
         first_historical_date.clean_cache()

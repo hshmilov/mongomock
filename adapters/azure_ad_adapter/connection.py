@@ -1,5 +1,6 @@
 import csv
 import logging
+import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Dict, List
@@ -172,6 +173,8 @@ class AzureAdClient(RESTConnection):
             # This token has expiration date
             self._access_token = token_answer['accessToken']
             self._access_token_expires_in = int(token_answer.get('expiresIn') or DEFAULT_EXPIRATION_IN_SECONDS)
+            if self._access_token_expires_in > 600:
+                self._access_token_expires_in = self._access_token_expires_in - 600
             self._token_expires_date = datetime.now() + timedelta(seconds=self._access_token_expires_in)
 
             self._session_headers = {'Authorization': f'Bearer {self._access_token}'}
@@ -203,16 +206,28 @@ class AzureAdClient(RESTConnection):
                                   retry_sleep_time=self._async_retry_time,
                                   **kwargs)
 
-    def _paged_get(self, resource):
+    def _paged_get(self, resource, no_retry=False):
         # Take care of paging generically: https://developer.microsoft.com/en-us/graph/docs/concepts/paging
         result = self._get(resource)
         yield from result['value']
 
         page_num = 1
+        retries = 0
         while '@odata.nextLink' in result and page_num < MAX_PAGE_NUM_TO_AVOID_INFINITE_LOOP:
-            result = self._get(result['@odata.nextLink'], force_full_url=True)
-            yield from result['value']
-            page_num += 1
+            try:
+                result = self._get(result['@odata.nextLink'], force_full_url=True)
+                yield from result['value']
+                page_num += 1
+                retries = 0
+            except Exception as e:
+                if no_retry:
+                    raise
+                retries = retries + 1
+                logger.warning(f'got error for resource {resource} at page {page_num}. '
+                               f'retry: {retries}. error: {str(e)}')
+                if retries == 5:
+                    raise
+                time.sleep(30)
 
     def _async_device_apps_paged_get(self, requests):
         page_num = 0
@@ -454,7 +469,7 @@ class AzureAdClient(RESTConnection):
         self.connect()
         try:
             if self._is_azure_ad_b2c:
-                for _ in self._paged_get(f'users?api-version=1.6'):
+                for _ in self._paged_get(f'users?api-version=1.6', no_retry=True):
                     break
             else:
                 self._get(f'users?$top=1')

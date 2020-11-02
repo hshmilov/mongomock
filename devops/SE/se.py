@@ -9,13 +9,17 @@ import sys
 import os
 import subprocess
 
+import OpenSSL
 import pymongo
 
 from axonius.consts.adapter_consts import SHOULD_NOT_REFRESH_CLIENTS
+from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.utils.debug import redprint, yellowprint, greenprint, blueprint
 from axonius.entities import EntityType
 from axonius.utils.host_utils import PYTHON_LOCKS_DIR, WATCHDOGS_ARE_DISABLED_FILE
+from axonius.utils.ssl import check_associate_cert_with_private_key
+from scripts.instances.network_utils import run_tunnel_for_adapters_register, stop_tunnel_for_adapters_register
 from scripts.watchdog import watchdog_main
 from services.plugins.compliance_service import ComplianceService
 from services.plugins.reimage_tags_analysis_service import ReimageTagsAnalysisService
@@ -87,6 +91,10 @@ def usage():
     {name} kill [adapters] - kill all adapters
     {name} wd [kill/restart] - kill all watchdogs / restart all watchdogs
     {name} wd disable [x] - disable watchdogs for x minutes
+    {name} tc [run/stop] Run tunnel (mongo & core) to core 
+    {name} set_db [schema-version] [db_name] [schema_version] - e.g. set-db schema-version aggregator 46
+    {name} upload_file [file_path] [file_name] - upload file, get mongo-db representation
+    {name} upload_gui_certificate [hostname] [private_key.pem] [certificate.pem] - upload a gui certificate
     '''
 
 
@@ -259,7 +267,7 @@ def main():
     elif component == 'set_db':
         if action == 'schema_version':
             try:
-                db, version = sys.argv[3]
+                db, version = sys.argv[3], sys.argv[4]
                 version = int(version)
             except Exception:
                 print(usage())
@@ -604,6 +612,66 @@ def main():
         else:
             print(usage())
             return -1
+
+    elif component == 'tc':
+        if action == 'run':
+            run_tunnel_for_adapters_register()
+        elif action == 'stop':
+            stop_tunnel_for_adapters_register()
+        else:
+            print(usage())
+            return -1
+
+    elif component == 'upload_file':
+        try:
+            file_path, file_name = sys.argv[3], sys.argv[4]
+        except Exception:
+            print(usage())
+            return -1
+
+        with open(file_path, 'rb') as f:
+            uuid = core.db.db_files.upload_file(f.read(), file_name)
+        print({'uuid': uuid, 'filename': file_name})
+        return 0
+
+    elif component == 'upload_gui_certificate':
+        try:
+            hostname, private_key_name, certificate_name = sys.argv[2], sys.argv[3], sys.argv[4]
+        except Exception:
+            print(usage())
+            return -1
+        with open(private_key_name, 'rb') as f:
+            private_key = f.read()
+
+        with open(certificate_name, 'rb') as f:
+            certificate = f.read()
+
+        try:
+            parsed_cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certificate)
+        except Exception:
+            raise ValueError(f'Error loading certificate')
+        cn = dict(parsed_cert.get_subject().get_components())[b'CN'].decode('utf8')
+        if cn != hostname:
+            raise ValueError(f'Hostname in the cert ({cn!r}) does not match {hostname!r}')
+
+        if not check_associate_cert_with_private_key(certificate.decode('utf-8'), private_key.decode('utf-8')):
+            raise ValueError(f'Certificate file does not match private key (files are not bound)')
+
+        private_key_uuid = core.db.db_files.upload_file(private_key, filename='gui_private_key')
+        certificate_uuid = core.db.db_files.upload_file(certificate, filename='gui_certificate')
+
+        core.db.plugins.core.configurable_configs.update_config(
+            CORE_CONFIG_NAME,
+            {
+                f'global_ssl.enabled': True,
+                f'global_ssl.cert_file': {'uuid': certificate_uuid, 'filename': 'gui_certificate'},
+                f'global_ssl.private_key': {'uuid': private_key_uuid, 'filename': 'gui_private_key'},
+                f'global_ssl.passphrase': '',
+                f'global_ssl.hostname': hostname
+            }
+        )
+
+        greenprint(f'Done, please restart the GUI')
     else:
         print(usage())
         return -1
