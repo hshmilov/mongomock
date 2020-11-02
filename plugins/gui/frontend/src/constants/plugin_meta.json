@@ -1252,6 +1252,11 @@
     "link": "https://docs.axonius.com/docs/gigamon",
     "description": "Gigamon GigaVUE-FM (Fabric Manager) delivers management and monitoring of all physical and virtual nodes across your on-premises, virtual and public-cloud deployments."
   },
+  "bit_fit_adapter": {
+    "title": "bitFit",
+    "link": "https://docs.axonius.com/docs/bitfit",
+    "description": "bitFit is a business development and information technology company that collects all of your IT operations data and combines it into a unified cloud system."
+  },
   "esx_adapter": {
     "title": "VMware ESXi",
     "link": "https://docs.axonius.com/docs/vmware-esxi",
