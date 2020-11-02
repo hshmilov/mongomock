@@ -46,6 +46,9 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         def add_tenable_vuln(self, **kwargs):
             self.plugin_and_severities.append(TenableVulnerability(**kwargs))
 
+        def add_tenable_scap(self, **kwargs):
+            self.plugin_and_severities.append(TenableVulnerability(**kwargs))
+
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
 
@@ -128,7 +131,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                                                    top_n_software=self.__fetch_top_n_installed_software,
                                                    per_device_software=self.__fetch_software_per_device,
                                                    fetch_vulnerabilities=self.__fetch_vulnerabilities,
-                                                   info_vulns_plugin_ids=self.__info_vulns_plugin_ids)
+                                                   info_vulns_plugin_ids=self.__info_vulns_plugin_ids,
+                                                   fetch_scap=self.__fetch_scap)
 
     def _clients_schema(self):
         return {
@@ -349,6 +353,40 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
 
         linux_kernel_version = None
         os_string = raw_device_data.get('os') or raw_device_data.get('osCPE') or ''
+
+        for scap in raw_device_data.get('scap') or []:
+            try:
+                severity = (scap.get('severity') or {}).get('name')
+
+                exploit_value = (scap.get('exploitAvailable') or '').lower()
+                if exploit_value:
+                    exploit_available = exploit_value == 'yes'
+
+                xref = scap.get('xref') or []
+                if isinstance(xref, str) and xref:
+                    xref = xref.split(',')
+
+                device.add_tenable_scap(plugin_id=scap.get('pluginID'),
+                                        plugin=scap.get('pluginName'),
+                                        severity=severity,
+                                        cpe=scap.get('cpe'),
+                                        cve=scap.get('cve'),
+                                        cvss_base_score=scap.get('baseScore'),
+                                        exploit_available=exploit_available,
+                                        synopsis=scap.get('synopsis'),
+                                        see_also=scap.get('seeAlso'),
+                                        plugin_text=scap.get('pluginText'),
+                                        first_seen=parse_date(scap.get('firstSeen')),
+                                        last_seen=parse_date(scap.get('lastSeen')),
+                                        last_mitigated=parse_date(scap.get('lastMitigated')),
+                                        has_been_mitigated=parse_bool_from_raw(scap.get('hasBeenMitigated')),
+                                        xref=xref,
+                                        port=int_or_none(scap.get('port')),
+                                        protocol=scap.get('protocol'))
+
+            except Exception:
+                logger.exception(f'Problem adding tenable scap')
+
         for vulnerability in raw_device_data.get('vulnerabilities') or []:
             try:
                 plugin_name = vulnerability.get('pluginName')
@@ -518,6 +556,11 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                     'type': 'bool'
                 },
                 {
+                    'name': 'fetch_scap',
+                    'title': 'Fetch SCAP scans',
+                    'type': 'bool'
+                },
+                {
                     'name': 'drop_only_unauth_scans',
                     'title': 'Do not fetch devices with unauthenticated scans only',
                     'type': 'bool'
@@ -537,7 +580,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                 'drop_only_ip_devices',
                 'fetch_software_per_device',
                 'fetch_vulnerabilities',
-                'drop_only_unauth_scans'
+                'drop_only_unauth_scans',
+                'fetch_scap'
             ],
             'pretty_name': 'Tenable.sc Configuration',
             'type': 'array'
@@ -552,7 +596,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             'fetch_vulnerabilities': False,
             'drop_only_unauth_scans': False,
             'info_vulns_plugin_ids': '',
-            'repository_name_exclude_list': None
+            'repository_name_exclude_list': None,
+            'fetch_scap': False
         }
 
     @staticmethod
@@ -574,6 +619,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         self.__repository_name_exclude_list = config['repository_name_exclude_list'].split(',') \
             if config.get('repository_name_exclude_list') else None
         self.__info_vulns_plugin_ids = self._parse_info_vulns_plugin_ids_config(config.get('info_vulns_plugin_ids'))
+        self.__fetch_scap = parse_bool_from_raw(config.get('fetch_scap')) or False
 
     def outside_reason_to_live(self) -> bool:
         """

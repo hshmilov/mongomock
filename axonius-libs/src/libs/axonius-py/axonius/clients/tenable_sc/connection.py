@@ -121,10 +121,10 @@ class TenableSecurityScannerConnection(RESTConnection):
         except Exception:
             logger.exception(f'Problem with repository {repository_id}')
 
-    # pylint: disable=arguments-differ, too-many-nested-blocks, too-many-branches
+    # pylint: disable=arguments-differ, too-many-nested-blocks, too-many-branches, too-many-locals
     def get_device_list(self, drop_only_ip_devices, top_n_software=0,
                         per_device_software=False, fetch_vulnerabilities=False,
-                        info_vulns_plugin_ids: List[str] = None):
+                        info_vulns_plugin_ids: List[str] = None, fetch_scap=False):
         repositories = self._get('repository')
         repositories_ids = [repository.get('id') for repository in repositories if repository.get('id')]
         for repository_id in repositories_ids:
@@ -145,6 +145,10 @@ class TenableSecurityScannerConnection(RESTConnection):
                     logger.info(f'Fetching top {top_n_software} installed software')
                     software_mapping = self._get_software_device_mapping(top_n=top_n_software,
                                                                          repository_id=repository_id)
+
+                if fetch_scap:
+                    logger.info(f'Fetching SCAP scans')
+                    scap_mapping = self._get_scap_mapping(repository_id=repository_id)
 
                 for device in device_list:
                     device['software'] = []
@@ -170,6 +174,8 @@ class TenableSecurityScannerConnection(RESTConnection):
                                 device['software'].append(software.get('name'))
                     if fetch_vulnerabilities:
                         device['vulnerabilities'] = vuln_mapping.get(self._vuln_id(device)) or []
+                    if fetch_scap:
+                        device['scap'] = scap_mapping.get(self._vuln_id(device)) or []
                     yield device
 
             except Exception:
@@ -265,6 +271,37 @@ class TenableSecurityScannerConnection(RESTConnection):
 
             result[vuln_id].append(vuln)
         return dict(result)
+
+    def _get_scap_list(self, repository_id):
+        filter_ = {
+            'filterName': 'pluginType',
+            'id': 'pluginType',
+            'isPredefined': True,
+            'operator': '=',
+            'type': 'vuln',
+            'value': 'compliance',
+        }
+
+        try:
+            yield from self.do_analysis(repository_id=repository_id,
+                                        analysis_type='vuln',
+                                        source_type='individual',
+                                        query_tool='sumid',
+                                        query_type='vuln',
+                                        extra_filter=filter_)
+        except Exception:
+            logger.exception(f'Problem with repository {repository_id}')
+
+    def _get_scap_mapping(self, repository_id):
+        scap_mapping = defaultdict(list)
+        scap_list = self._get_scap_list(repository_id) or []
+        for scap in scap_list:
+            scap_id = self._vuln_id(scap)
+            if not scap_id:
+                continue
+
+            scap_mapping[scap_id].append(scap)
+        return dict(scap_mapping)
 
     @staticmethod
     def _vuln_id(device):
