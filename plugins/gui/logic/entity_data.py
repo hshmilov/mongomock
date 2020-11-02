@@ -287,7 +287,7 @@ def entity_data_field_csv(entity_type: EntityType, entity_id, field_name, mongo_
                           history_date: datetime = None, field_filters: dict = None, excluded_adapters: dict = None,
                           search_term: str = None):
     """
-    Generate a csv file from the data of given field, with fields' pretty titles as coloumn headers
+    Generate a csv file from the data of given field, with fields' pretty titles as column headers
 
     :param entity_type:  Type of entity to search for
     :param entity_id:    internal_axon_id to find the entity by

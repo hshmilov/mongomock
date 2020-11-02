@@ -353,6 +353,8 @@ class Labels:
             'audit.devices.notes.template': 'Edited notes',
             'audit.devices.labels': 'Edit Tags',
             'audit.devices.labels.template': 'Edited tags',
+            'audit.devices.tasks_csv': 'Export CSV',
+            'audit.devices.tasks_csv.template': 'Exported enforcement tasks for device to CSV',
 
             'audit.users': 'Users',
             'audit.users.enforce': 'Run Enforcement',
@@ -371,6 +373,8 @@ class Labels:
             'audit.users.notes.template': 'Edited notes',
             'audit.users.labels': 'Edit Tags',
             'audit.users.labels.template': 'Edited tags',
+            'audit.users.tasks_csv': 'Export CSV',
+            'audit.users.tasks_csv.template': 'Exported enforcement tasks for user to CSV',
 
             'audit.compliance': 'Cloud Asset Compliance',
             'audit.compliance.csv': 'Export CSV',

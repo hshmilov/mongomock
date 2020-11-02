@@ -188,7 +188,12 @@ def get_clean_rule(rule: str):
     :return: The only part of the path with no parameter, or None if there are more
     """
     clean_rule_parts = [part for part in rule.split('/') if not re.match(r'<.+>', part)]
-    return clean_rule_parts[0] if len(clean_rule_parts) == 1 else None
+    rule_len = len(clean_rule_parts)
+    if rule_len == 1:
+        return clean_rule_parts[0]
+    if rule_len == 2:
+        return f'{clean_rule_parts[0]}_{clean_rule_parts[1]}'
+    return None
 
 
 def get_activity_params(param_names: List[str], request_args: dict, request_data: dict, response_data: str) -> dict:
