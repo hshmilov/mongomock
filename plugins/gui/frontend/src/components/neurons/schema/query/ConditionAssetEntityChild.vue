@@ -1,36 +1,43 @@
 <template>
-  <div class="x-condition-asset-entity-child x-condition__child">
-    <div class="child-field">
-      <div class="child-field__type">
-        <XStringView
-          :value="parentField"
-          :schema="{format: 'logo'}"
-        />
-      </div>
-      <XSelect
-        v-model="field"
-        :options="schema"
-        searchable
-        :read-only="readOnly"
-        class="field-select"
-      />
-    </div>
-    <XConditionFunction
-      :schema="fieldSchema"
-      :operator="condition.compOp"
-      :argument="condition.value"
-      :read-only="readOnly"
-      @update="onUpdateConditionFunction"
-    />
-    <ExpressionActions
-      v-if="!readOnly"
+  <div class="x-condition-asset-entity-child x-condition__child x-condition__scaled">
+    <XExpressionOperators
+      :first="first"
+      :expression="condition"
+      :disabled="readOnly"
       :is-column-in-table="isColumnInTable"
       :disabled-toggle-field="!condition.field"
-      class-name="child"
+      @change="updateExpression"
       @duplicate="$emit('duplicate')"
       @toggle-column="$emit('toggle-column', condition.field)"
       @remove="$emit('remove')"
-    />
+    >
+      <template #default>
+        <div class="x-condition-asset-entity-child__content">
+          <div class="child-field">
+            <div class="child-field__type">
+              <XStringView
+                :value="parentField"
+                :schema="{format: 'logo'}"
+              />
+            </div>
+            <XSelect
+              v-model="field"
+              :options="schema"
+              searchable
+              :read-only="readOnly"
+              class="field-select"
+            />
+          </div>
+          <XConditionFunction
+            :schema="fieldSchema"
+            :operator="condition.compOp"
+            :argument="condition.value"
+            :read-only="readOnly"
+            @update="onUpdateConditionFunction"
+          />
+        </div>
+      </template>
+    </XExpressionOperators>
   </div>
 </template>
 
@@ -39,13 +46,13 @@ import _keyBy from 'lodash/keyBy';
 import XStringView from '@neurons/schema/types/string/StringView.vue';
 import XSelect from '@axons/inputs/select/Select.vue';
 import XConditionFunction from '@neurons/schema/query/ConditionFunction.vue';
-import ExpressionActions from '@neurons/schema/query/ExpressionActions.vue';
+import XExpressionOperators from './ExpressionOperators.vue';
 import { getUpdatedValueAfterFieldChange } from '@/logic/condition';
 
 export default {
   name: 'XConditionAssetEntityChild',
   components: {
-    XStringView, XSelect, XConditionFunction, ExpressionActions,
+    XStringView, XSelect, XConditionFunction, XExpressionOperators,
   },
   model: {
     prop: 'condition',
@@ -68,9 +75,17 @@ export default {
       type: Boolean,
       default: false,
     },
+    first: {
+      type: Boolean,
+      default: false,
+    },
     viewFields: {
       type: Array,
       default: () => ([]),
+    },
+    fieldType: {
+      type: String,
+      default: '',
     },
   },
   computed: {
@@ -97,6 +112,9 @@ export default {
     },
   },
   methods: {
+    updateExpression(value) {
+      this.$emit('change', { ...this.condition, ...value });
+    },
     onUpdateConditionFunction(conditionFunction) {
       this.$emit('change', { ...this.condition, ...conditionFunction });
     },
@@ -111,30 +129,14 @@ export default {
 
 <style lang="scss">
 .x-condition-asset-entity-child {
-  .child-field {
-    display: flex;
-
-    &__type {
-      width: calc(60px + 16px);
-      border: 1px solid $grey-2;
-      border-radius: 2px 0 0 2px;
-      padding: 0 8px;
-      display: flex;
-      align-items: center;
-
-      .logo {
-        max-width: 30px;
-        height: auto;
-        max-height: 24px;
-      }
-    }
-
-    .x-select {
-      margin-left: -1px;
-      border-radius: 0 2px 2px 0;
-      width: 100%;
-      max-width: 180px;
-    }
+  &.x-condition__child {
+    display: block;
+  }
+  &__content {
+    display: grid;
+    grid-gap: 4px;
+    grid-template-columns: 240px auto;
+    min-width: 0;
   }
 }
 </style>

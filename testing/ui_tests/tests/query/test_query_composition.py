@@ -5,7 +5,6 @@ from ui_tests.tests.ui_consts import (WINDOWS_QUERY_NAME,
 
 
 class TestQueryComposition(QueryTestBase):
-    ERROR_TEXT_QUERY_BRACKET = 'Missing {direction} bracket'
 
     def test_query_not(self):
         self.devices_page.create_saved_query(self.devices_page.FILTER_OS_WINDOWS, WINDOWS_QUERY_NAME)

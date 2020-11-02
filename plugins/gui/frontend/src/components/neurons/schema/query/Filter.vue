@@ -54,6 +54,7 @@
     >
       <XButton
         type="light"
+        class="add-expression"
         @click="addEmptyExpression"
       >+</XButton>
       <div
@@ -155,11 +156,10 @@ export default {
     },
     duplicateExpression(index) {
       const logicOp = this.expressions[index].logicOp || 'and';
-      const duplicateIndex = index + 1;
       this.$emit('change', [
         ...this.expressions.slice(0, index + 1),
-        { ...this.expressions[index], logicOp, i: duplicateIndex },
-        ...this.expressions.slice(index + 1).map((item, itemIndex) => ({ ...item, i: duplicateIndex + itemIndex + 1 })),
+        { ...this.expressions[index], logicOp, i: this.maxIndex },
+        ...this.expressions.slice(index + 1),
       ]);
     },
     toggleColumn(columnName) {
@@ -197,6 +197,11 @@ export default {
         .footer {
             display: flex;
             justify-content: space-between;
+            .add-expression {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
         }
         .expression__container > .x-expression {
             width: 100%;

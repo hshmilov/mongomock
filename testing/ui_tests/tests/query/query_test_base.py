@@ -2,6 +2,7 @@ from ui_tests.tests.ui_test_base import TestBase
 
 
 class QueryTestBase(TestBase):
+    ERROR_TEXT_QUERY_BRACKET = 'Missing {direction} bracket'
 
     def prepare_to_query(self):
         self.settings_page.switch_to_page()

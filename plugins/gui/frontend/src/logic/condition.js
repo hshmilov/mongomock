@@ -32,7 +32,7 @@ const convertSubnetToRaw = (val) => {
  * @return {{formatCondition: function, composeCondition: function}}
  * @constructor
  */
-const Condition = function (field, fieldSchema, adapter, compOp, value, filteredAdapters) {
+const Condition = function (field, fieldSchema, adapter, compOp, value, filteredAdapters, not) {
   const operator = getOpsMap(fieldSchema)[compOp];
   let processedValue = '';
 
@@ -130,11 +130,12 @@ const Condition = function (field, fieldSchema, adapter, compOp, value, filtered
       // escape regex special characters.
       val = val.replace(regexSpecialCharacters, '\\$&');
     }
-    return cond.replace(/{val}/g, () => {
+    cond = cond.replace(/{val}/g, () => {
       if (iVal === undefined) return val;
       iVal = (iVal + 1) % val.length;
       return val[iVal];
     });
+    return not ? `not (${cond})` : cond;
   };
 
   /**

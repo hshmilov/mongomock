@@ -1,8 +1,49 @@
 import _matches from 'lodash/matches';
 
-import { getExcludedAdaptersFilter } from '../constants/utils';
-import { filterOutExpression, sizeLtGtFields, expression as emptyExpression } from '../constants/filter';
+import { getExcludedAdaptersFilter } from '@constants/utils';
+import {
+  filterOutExpression,
+  sizeLtGtFields,
+  expression as emptyExpression,
+  validateBrackets,
+} from '@constants/filter';
 
+
+const addOperatorsToCondition = (item, index) => {
+  const resultCondition = [];
+  if (index) {
+    resultCondition.push(` ${item.expression.logicOp ? item.expression.logicOp : 'and'} `);
+  }
+  if (item.expression.leftBracket) {
+    resultCondition.push('(');
+  }
+  resultCondition.push(item.condition);
+  if (item.expression.rightBracket) {
+    resultCondition.push(')');
+  }
+  return resultCondition.join('');
+};
+
+const filterExpressionChildren = (children) => {
+  if (!children || !children.length) {
+    return [];
+  }
+  return children.filter((item) => item.condition);
+};
+
+const calcBracketsWeight = (total, childExpression) => {
+  if (childExpression.expression.leftBracket) {
+    // eslint-disable-next-line no-param-reassign
+    total -= 1;
+  }
+  if (childExpression.expression.rightBracket) {
+    // eslint-disable-next-line no-param-reassign
+    total += 1;
+  }
+  return total;
+};
+
+const getMatchExpression = (field, condition) => `"${field}" == match([${condition}])`;
 /**
  * Calculator of a single expression with a single condition or with nested conditions
  * @param {object} expression - the expression attributes
@@ -16,6 +57,27 @@ const Expression = function (expression, condition, isFirst) {
      * compiles the expression into a string filter
      * @returns {{error: string}|{filter: string, bracketWeight: number}}
      */
+
+  const childExpressionCond = () => {
+    const childExpressionsToCheck = filterExpressionChildren(expression.children)
+      .map(addOperatorsToCondition);
+    return childExpressionsToCheck.join('');
+  };
+
+  const calcChildExpressionBracketsWeight = () => {
+    const childExpressionsToCheck = filterExpressionChildren(expression.children);
+    return childExpressionsToCheck.reduce(calcBracketsWeight, 0);
+  };
+
+  const checkErrors = () => {
+    if (!isFirst && !expression.logicOp) {
+      return 'Logical operator is needed to add expression to the filter';
+    } if (expression.context && !expression.field) {
+      return 'Select an object to add nested conditions';
+    }
+    return validateBrackets([calcChildExpressionBracketsWeight()]);
+  };
+
   const compileExpression = () => {
     if (!expression.field || (expression.context && !childExpressionCond() && expression.context !== 'CMP')) {
       return { filter: '', bracketWeight: 0 };
@@ -76,7 +138,7 @@ const Expression = function (expression, condition, isFirst) {
             break;
         }
       } else if (expression.context !== 'CMP') {
-        const adapterChildExpression = `plugin_name == '${expression.field}' and ${childExpressionCond()}`;
+        const adapterChildExpression = `plugin_name == '${expression.field}' and (${childExpressionCond()})`;
         filterStack.push(getMatchExpression('specific_data', adapterChildExpression));
       }
     } else if (sizeLtGtFields.includes(expression.field) && expression.compOp == 'sizegt') {
@@ -114,26 +176,10 @@ const Expression = function (expression, condition, isFirst) {
     return { filter: filterStack.join(''), bracketWeight };
   };
 
-  const checkErrors = () => {
-    if (!isFirst && !expression.logicOp) {
-      return 'Logical operator is needed to add expression to the filter';
-    } if (expression.context && !expression.field) {
-      return 'Select an object to add nested conditions';
-    }
-    return '';
-  };
-
-  const childExpressionCond = () => expression.children
-    .filter((item) => item.condition)
-    .map((item) => item.condition)
-    .join(' and ');
-
   return {
     compileExpression,
   };
 };
-
-const getMatchExpression = (field, condition) => `"${field}" == match([${condition}])`;
 
 export const isFilterOutExpression = (expression) => _matches(filterOutExpression)(expression);
 

@@ -32,6 +32,18 @@ export const filterOutExpression = {
   showIds: false,
 };
 
+export const contextOptions = [
+  { title: 'Aggregated Data', name: '' },
+  { title: 'Complex Field', name: 'OBJ' },
+  { title: 'Asset Entity', name: 'ENT' },
+  { title: 'Field Comparison', name: 'CMP' },
+];
+
+export const logicOps = [
+  { name: 'and', title: 'and' },
+  { name: 'or', title: 'or' },
+];
+
 export const equalsFilter = [{
   name: 'equals',
   title: 'equals',
@@ -198,3 +210,21 @@ export const sizeLtGtFields = [
 ];
 
 export const regexSpecialCharacters = /[-[\]{}()*+?.,\\^$|#]/g;
+
+export const validateBrackets = (bracketWeights) => {
+  let imbalance;
+  const totalBrackets = bracketWeights.reduce((accumulator, currentVal) => {
+    if (accumulator > 0) {
+      imbalance = true;
+    }
+    return accumulator + currentVal;
+  }, 0);
+
+  if (imbalance) {
+    return 'Missing left bracket';
+  }
+  if (totalBrackets !== 0) {
+    return (totalBrackets < 0) ? 'Missing right bracket' : 'Missing left bracket';
+  }
+  return '';
+};

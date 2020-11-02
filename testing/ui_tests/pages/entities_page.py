@@ -69,7 +69,7 @@ class EntitiesPage(Page):
     QUERY_BRACKET_RIGHT_CSS = '.expression-bracket-right'
     QUERY_NOT_CSS = '.expression-not'
     QUERY_CONTEXT_CSS = '.expression-context'
-    QUERY_ASSET_ENTITY_ADAPTER_CSS = '.x-condition-asset-entity .parent-field .x-select-symbol'
+    QUERY_ASSET_ENTITY_ADAPTER_CSS = '.x-condition-asset-entity .x-select-symbol'
     QUERY_ASSET_ENTITY_CHILDREN_CSS = '.x-condition-asset-entity-child'
     QUERY_ASSET_ENTITY_FIELD_CSS = '.child-field .x-select'
     QUERY_REMOVE_EXPRESSION_CSS = '.x-button.expression-remove'
@@ -264,9 +264,10 @@ class EntitiesPage(Page):
     SCHEDULE_TRIGGER_DROPDOWN_CSS = '.item_conditional .x-select .x-select-trigger'
 
     SAVE_QUERY_APPROVE_TEXT = 'Yes, Save'
-    EXPRESSION_TOGGLE_BUTTON = '.expression-toggle-column'
-    CHILD_TOGGLE_BUTTON = '.child-toggle-column'
-    CHILD_DUPLICATE_BUTTON = '.child-duplicate'
+    EXPRESSION_TOGGLE_BUTTON = './div[@class="x-expression-ops"]/div[@class="expression-actions"]' \
+                               '/button[contains(@class, "expression-toggle-column")][1]'
+    EXPRESSION_DUPLICATE_BUTTON = './div[@class="x-expression-ops"]/div[@class="expression-actions"]' \
+                                  '/button[contains(@class, "expression-duplicate")][1]'
     ADD_FIELDS_TO_COLUMN = 'Add Field to Columns'
     REMOVE_FIELD_FROM_COLUMNS = 'Remove Field from Columns'
 
@@ -304,11 +305,7 @@ class EntitiesPage(Page):
                                  self.ADD_FIELDS_TO_COLUMN if add else self.REMOVE_FIELD_FROM_COLUMNS)
 
     def assert_parent_toggle_column(self, parent, disabled, add):
-        button = parent.find_element_by_css_selector(self.EXPRESSION_TOGGLE_BUTTON)
-        self.assert_toggle_column(button, disabled, add)
-
-    def assert_child_toggle_column(self, parent, disabled, add):
-        button = parent.find_element_by_css_selector(self.CHILD_TOGGLE_BUTTON)
+        button = parent.find_element_by_xpath(self.EXPRESSION_TOGGLE_BUTTON)
         self.assert_toggle_column(button, disabled, add)
 
     def select_query_field(self, text, parent=None, partial_text=True, select_num=0):
@@ -587,9 +584,13 @@ class EntitiesPage(Page):
             lambda: self.driver.find_element_by_css_selector(self.QUERY_ADD_EXPRESSION_CSS).click())
         return self.find_expressions()[-1]
 
+    def duplicate_condition(self, expression_element):
+        self._call_wizard_command_with_timeout(
+            lambda: expression_element.find_element_by_xpath(self.EXPRESSION_DUPLICATE_BUTTON).click())
+
     def duplicate_expression(self, expression_element):
         count = len(self.find_expressions())
-        expression_element.find_element_by_css_selector('.expression-duplicate').click()
+        expression_element.find_element_by_xpath(self.EXPRESSION_DUPLICATE_BUTTON).click()
         wait_until(lambda: len(self.find_expressions()) == count + 1)
         return self.find_expressions()[-1]
 
@@ -2015,9 +2016,9 @@ class EntitiesPage(Page):
         options = parent.find_elements_by_css_selector(self.SAVED_QUERY_OPTIONS_CSS)
         return [option.text for option in options]
 
-    def toggle_column(self, field, exist_in_table, parent, button_selector):
+    def toggle_column(self, field, exist_in_table, parent):
         assert (field in self.get_columns_header_text()) == exist_in_table
-        button = parent.find_element_by_css_selector(button_selector)
+        button = parent.find_element_by_xpath(self.EXPRESSION_TOGGLE_BUTTON)
         self.assert_toggle_column(button, disabled=False, add=not exist_in_table)
         button.click()
         self.assert_toggle_column(button, disabled=False, add=exist_in_table)

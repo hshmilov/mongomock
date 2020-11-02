@@ -31,7 +31,7 @@
       <XButton
         :disabled="!secondField"
         type="link"
-        class="child-toggle-column"
+        class="expression-toggle-column"
         :title="isColumnInTable ? 'Remove Field from Columns' : 'Add Field to Columns'"
         @click="$emit('toggle-column', secondField)"
       >
@@ -203,8 +203,7 @@ export default {
 
 <style lang="scss">
 .x-condition__child.x-condition-field-comparison {
-  grid-template-columns: 240px auto;
-  .child-toggle-column {
+  .expression-toggle-column {
     margin-left: auto;
   }
 }

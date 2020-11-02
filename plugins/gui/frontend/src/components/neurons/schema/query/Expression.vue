@@ -1,80 +1,42 @@
 <template>
   <div class="x-expression">
-    <!-- Choice of logical operator, available from second expression --->
-    <XSelect
-      v-if="!first"
-      v-model="logicOp"
-      :options="logicOps"
-      :read-only="disabled"
-      placeholder="op..."
-      class="x-select-logic"
-    />
-    <div v-else />
-    <!-- Option to add '(', to negate expression and choice of field to filter -->
-    <XButton
+    <XExpressionOperators
+      :first="first"
+      :expression="expression"
       :disabled="disabled"
-      type="light"
-      class="checkbox-label expression-bracket-left"
-      :on="expression.leftBracket"
-      @click="toggleLeftBracket"
-    >(</XButton>
-    <XButton
-      :disabled="disabled"
-      type="light"
-      class="checkbox-label expression-not"
-      :on="expression.not"
-      @click="toggleNot"
-    >NOT</XButton>
-    <XSelect
-      v-model="context"
-      :options="contextOptions"
-      present-selection-value
-      :read-only="disabled"
-      placeholder="ALL"
-      :class="{selected: contextSelected}"
-      class="expression-context"
-    />
-    <XCondition
-      v-model="expressionCond"
-      :module="module"
-      :context="context"
-      :read-only="disabled"
-      :view-fields="viewFields"
-      @toggle-column="toggleColumn"
-    />
-
-    <!-- Option to add ')' and to remove the expression -->
-    <XButton
-      :disabled="disabled"
-      type="light"
-      class="checkbox-label expression-bracket-right"
-      :on="expression.rightBracket"
-      @click="toggleRightBracket"
-    >)</XButton>
-
-    <ExpressionActions
-      v-if="!disabled"
       :is-column-in-table="isColumnInTable"
       :disabled-toggle-field="disableColumnToggle"
-      class-name="expression"
+      @change="updateExpression"
       @duplicate="$emit('duplicate')"
       @toggle-column="$emit('toggle-column', expression.field)"
       @remove="$emit('remove')"
-    />
+    >
+      <template #default>
+        <XCondition
+          v-model="expressionCond"
+          :expression="expression"
+          :module="module"
+          :read-only="disabled"
+          :view-fields="viewFields"
+          @update-context="updateExpression"
+          @toggle-column="$emit('toggle-column', $event)"
+        />
+      </template>
+    </XExpressionOperators>
   </div>
 </template>
 
 <script>
 import { mapGetters } from 'vuex';
-import XSelect from '@axons/inputs/select/Select.vue';
 import { AUTO_QUERY, GET_MODULE_FIELDS } from '@store/getters';
-import ExpressionActions from '@neurons/schema/query/ExpressionActions.vue';
+import XExpressionOperators from './ExpressionOperators.vue';
 import XCondition from './Condition.vue';
+
 
 export default {
   name: 'XExpression',
   components: {
-    XSelect, XCondition, ExpressionActions,
+    XCondition, XExpressionOperators,
   },
   model: {
     prop: 'expression',
@@ -83,7 +45,7 @@ export default {
   props: {
     expression: {
       type: Object,
-      default: () => {},
+      default: () => ({}),
     },
     module: {
       type: String,
@@ -102,31 +64,11 @@ export default {
       default: () => ([]),
     },
   },
-  data() {
-    return {
-      contextOptions: [{
-        title: 'Aggregated Data', name: '',
-      }, {
-        title: 'Complex Field', name: 'OBJ',
-      }, {
-        title: 'Asset Entity', name: 'ENT',
-      }, {
-        title: 'Field Comparison', name: 'CMP',
-      }],
-    };
-  },
   computed: {
     ...mapGetters({
       autoQuery: AUTO_QUERY,
       getModuleFields: GET_MODULE_FIELDS,
     }),
-    logicOps() {
-      return [{
-        name: 'and', title: 'and',
-      }, {
-        name: 'or', title: 'or',
-      }];
-    },
     expressionCond: {
       get() {
         return {
@@ -143,27 +85,6 @@ export default {
         this.updateExpression(condition);
       },
     },
-    logicOp: {
-      get() {
-        return this.expression.logicOp;
-      },
-      set(logicOp) {
-        this.updateExpression({ logicOp });
-      },
-    },
-    context: {
-      get() {
-        return this.expression.context || '';
-      },
-      set(context) {
-        this.updateExpression({
-          context, compOp: '', value: null, field: '', children: [],
-        });
-      },
-    },
-    contextSelected() {
-      return this.context !== '';
-    },
     isColumnInTable() {
       return this.viewFields.includes(this.expression.field);
     },
@@ -175,21 +96,6 @@ export default {
     updateExpression(update) {
       this.$emit('change', { ...update });
     },
-    toggleLeftBracket() {
-      this.updateExpression({
-        leftBracket: !this.expression.leftBracket,
-      });
-    },
-    toggleRightBracket() {
-      this.updateExpression({
-        rightBracket: !this.expression.rightBracket,
-      });
-    },
-    toggleNot() {
-      this.updateExpression({
-        not: !this.expression.not,
-      });
-    },
     toggleColumn(columnName) {
       this.$emit('toggle-column', columnName);
     },
@@ -199,44 +105,23 @@ export default {
 
 <style lang="scss">
   .x-expression {
-    display: grid;
-    grid-template-columns: 60px 30px 30px 60px auto 30px 66px;
-    align-items: start;
-    grid-gap: 8px;
-    margin-top: 8px;
-    margin-bottom: 8px;
-
     select, input:not([type=checkbox]) {
       height: 32px;
       width: 100%;
     }
-
-    .checkbox-label {
-      margin-bottom: 0;
-      font-size: 12px;
-      padding: 0;
-      height: 32px;
-
-      &::before {
-        margin: 0;
-      }
-    }
-
-    .x-button.ant-btn-light {
-      input {
-        display: none;
-      }
-    }
-
     .expression-nest {
       text-align: left;
+      position: relative;
+      left: -114px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
-
     .expression-context {
+      height: 32px;
       .content.expand {
         min-width: max-content;
       }
-
       &.selected .x-select-trigger {
         background: $theme-black;
         color: $grey-2;

@@ -177,6 +177,7 @@ export default {
 
 <style lang="scss">
   .x-query-wizard {
+
     .content {
       padding: 12px;
 

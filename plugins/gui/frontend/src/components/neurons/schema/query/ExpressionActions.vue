@@ -5,7 +5,7 @@
     <XButton
       :disabled="disabledToggleField"
       type="link"
-      :class="`${className}-toggle-column`"
+      class="expression-toggle-column"
       :title="isColumnInTable ? 'Remove Field from Columns' : 'Add Field to Columns'"
       @click="$emit('toggle-column')"
     >
@@ -16,7 +16,7 @@
     </XButton>
     <XButton
       type="link"
-      :class="`${className}-duplicate`"
+      class="expression-duplicate"
       title="Duplicate Row"
       @click="$emit('duplicate')"
     >
@@ -42,11 +42,6 @@
 export default {
   name: 'XExpressionActions',
   props: {
-    className: {
-      type: String,
-      required: true,
-      validator: (value) => ['expression', 'child'].includes(value),
-    },
     isColumnInTable: {
       type: Boolean,
       default: false,

@@ -1,42 +1,58 @@
 <template>
-  <div class="x-condition-complex-field-child x-condition__child">
-    <XSelect
-      v-model="field"
-      :options="schema"
-      searchable
-      :read-only="readOnly"
-      class="field-select"
-    />
-    <XConditionFunction
-      :schema="fieldSchema"
-      :operator="condition.compOp"
-      :argument="condition.value"
-      :read-only="readOnly"
-      @update="onUpdateConditionFunction"
-    />
-    <ExpressionActions
-      v-if="!readOnly"
+  <div class="x-condition-complex-field-child x-condition__child x-condition__scaled">
+    <XExpressionOperators
+      :first="first"
+      :expression="condition"
+      :disabled="readOnly"
       :is-column-in-table="isColumnInTable"
       :disabled-toggle-field="!condition.field"
-      class-name="child"
+      @change="updateExpression"
       @duplicate="$emit('duplicate')"
       @toggle-column="$emit('toggle-column', fullField)"
       @remove="$emit('remove')"
-    />
+    >
+      <template #default>
+        <div class="x-condition-complex-field-child__content">
+          <div class="child-field">
+            <div class="child-field__type">
+              <XStringView
+                :value="fieldType"
+                :schema="{format: 'logo'}"
+              />
+            </div>
+            <XSelect
+              v-model="field"
+              :options="schema"
+              searchable
+              :read-only="readOnly"
+              class="field-select"
+            />
+          </div>
+          <XConditionFunction
+            :schema="fieldSchema"
+            :operator="condition.compOp"
+            :argument="condition.value"
+            :read-only="readOnly"
+            @update="onUpdateConditionFunction"
+          />
+        </div>
+      </template>
+    </XExpressionOperators>
   </div>
 </template>
 
 <script>
 import _keyBy from 'lodash/keyBy';
+import XStringView from '@neurons/schema/types/string/StringView.vue';
 import XSelect from '@axons/inputs/select/Select.vue';
 import XConditionFunction from '@neurons/schema/query/ConditionFunction.vue';
-import ExpressionActions from '@neurons/schema/query/ExpressionActions.vue';
+import XExpressionOperators from './ExpressionOperators.vue';
 import { getUpdatedValueAfterFieldChange } from '@/logic/condition';
 
 export default {
   name: 'XConditionComplexFieldChild',
   components: {
-    XSelect, XConditionFunction, ExpressionActions,
+    XStringView, XSelect, XConditionFunction, XExpressionOperators,
   },
   model: {
     prop: 'condition',
@@ -55,11 +71,19 @@ export default {
       type: Boolean,
       default: false,
     },
+    first: {
+      type: Boolean,
+      default: false,
+    },
     viewFields: {
       type: Array,
       default: () => ([]),
     },
     parentField: {
+      type: String,
+      default: '',
+    },
+    fieldType: {
       type: String,
       default: '',
     },
@@ -91,6 +115,9 @@ export default {
     },
   },
   methods: {
+    updateExpression(value) {
+      this.$emit('change', { ...this.condition, ...value });
+    },
     onUpdateConditionFunction(conditionFunction) {
       this.$emit('change', { ...this.condition, ...conditionFunction });
     },
@@ -105,8 +132,14 @@ export default {
 
 <style lang="scss">
 .x-condition-complex-field-child {
-  > .x-select {
-    margin-left: 60px;
+  &.x-condition__child {
+    display: block;
+  }
+  &__content {
+    display: grid;
+    grid-gap: 4px;
+    grid-template-columns: 240px auto;
+    min-width: 0;
   }
 }
 </style>

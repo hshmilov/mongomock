@@ -22,13 +22,13 @@
 import _isEmpty from 'lodash/isEmpty';
 import _get from 'lodash/get';
 import { mapState, mapGetters } from 'vuex';
-import XSelectTypedField from '../../inputs/SelectTypedField.vue';
-import XConditionFunction from './ConditionFunction.vue';
-
 import {
   GET_DATA_SCHEMA_BY_NAME,
   GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL,
-} from '../../../../store/getters';
+} from '@store/getters';
+import XSelectTypedField from '../../inputs/SelectTypedField.vue';
+import XConditionFunction from './ConditionFunction.vue';
+
 import { getOpsMap, getUpdatedValueAfterFieldChange } from '../../../../logic/condition';
 
 export default {
@@ -158,7 +158,5 @@ export default {
 </script>
 
 <style lang="scss">
-.x-condition__child.x-condition-aggregated-data {
-  grid-template-columns: 240px auto;
-}
+
 </style>

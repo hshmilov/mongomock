@@ -1,18 +1,20 @@
 <template>
   <div class="x-condition-asset-entity x-condition__parent">
-    <div class="parent-field">
-      <XSelectSymbol
-        v-model="field"
-        :options="schema"
-        minimal
-        :read-only="readOnly"
-      />
-      <div
-        v-if="field"
-        class="parent-field__name"
-      >{{ fieldTitle }}</div>
+    <div class="x-condition__parent__header">
+      <div class="x-condition-asset-entity__symbol-select">
+        <XSelectSymbol
+          v-model="field"
+          :options="schema"
+          minimal
+          :read-only="readOnly"
+        />
+        <div
+          v-if="field"
+          class="x-condition-asset-entity__name"
+        >{{ fieldTitle }}</div>
+      </div>
     </div>
-    <template v-for="{ i, expression } in children">
+    <template v-for="( { i, expression }, index ) in children">
       <XConditionAssetEntityChild
         :key="`condition_${i}`"
         :schema="childrenSchema"
@@ -20,6 +22,7 @@
         :parent-field="field"
         :read-only="readOnly"
         :view-fields="viewFields"
+        :first="!index"
         @change="onChangeChild(i, $event)"
         @remove="onRemoveChild(i)"
         @duplicate="onDuplicateChild(i)"
@@ -114,16 +117,15 @@ export default {
 
 <style lang="scss">
 .x-condition-asset-entity {
-
-  .parent-field {
-    display: flex;
-
-    .x-select-symbol {
-      width: 60px;
-      border-radius: 2px 0 0 2px;
-    }
-
-    &__name {
+  .x-select-symbol {
+    width: 60px;
+    border-radius: 2px 0 0 2px;
+  }
+  &__symbol-select {
+    display: grid;
+    grid-template-columns: 60px auto;
+  }
+  &__name {
       width: 180px;
       border: 1px solid #DEDEDE;
       border-radius: 0 2px 2px 0;
@@ -134,6 +136,5 @@ export default {
       padding: 0 4px;
       margin-left: -1px;
     }
-  }
 }
 </style>

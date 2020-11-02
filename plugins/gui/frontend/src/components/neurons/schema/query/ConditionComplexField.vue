@@ -1,13 +1,15 @@
 <template>
   <div class="x-condition-complex-field x-condition__parent">
-    <XSelectTypedField
-      :value="field"
-      :filtered-adapters="condition.filteredAdapters"
-      :options="schema"
-      :read-only="readOnly"
-      @input="onChangeField"
-    />
-    <template v-for="{ i, expression } in children">
+    <div class="x-condition__parent__header">
+      <XSelectTypedField
+        :value="field"
+        :filtered-adapters="condition.filteredAdapters"
+        :options="schema"
+        :read-only="readOnly"
+        @input="onChangeField"
+      />
+    </div>
+    <template v-for="( { i, expression }, index ) in children">
       <XConditionComplexFieldChild
         :key="`condition_${i}`"
         :parent-field="field"
@@ -15,6 +17,8 @@
         :condition="expression"
         :read-only="readOnly"
         :view-fields="viewFields"
+        :first="!index"
+        :field-type="fieldType"
         @change="onChangeChild(i, $event)"
         @remove="onRemoveChild(i)"
         @duplicate="onDuplicateChild(i)"
@@ -54,6 +58,10 @@ export default {
     viewFields: {
       type: Array,
       default: () => ([]),
+    },
+    fieldType: {
+      type: String,
+      default: '',
     },
   },
   computed: {
@@ -111,10 +119,5 @@ export default {
 </script>
 
 <style lang="scss">
-  .x-condition-complex-field {
 
-    .x-select-typed-field {
-      width: 240px;
-    }
-  }
 </style>

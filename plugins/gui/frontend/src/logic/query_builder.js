@@ -2,29 +2,10 @@ import _find from 'lodash/find';
 import _matchesProperty from 'lodash/matchesProperty';
 import _get from 'lodash/get';
 
-import { getTypeFromField } from '@constants/utils'
-import { INCLUDE_OUDATED_MAGIC } from '../constants/filter';
+import { getTypeFromField } from '@constants/utils';
+import { INCLUDE_OUDATED_MAGIC, validateBrackets } from '@constants/filter';
 import Expression from './expression';
 import Condition from './condition';
-
-const validateBrackets = (bracketWeights) => {
-  // eslint-disable-next-line arrow-body-style
-  let imbalance;
-  const totalBrackets = bracketWeights.reduce((accumulator, currentVal) => {
-    if (accumulator > 0) {
-      imbalance = true;
-    }
-    return accumulator + currentVal;
-  }, 0);
-
-  if (imbalance) {
-    return 'Missing left bracket';
-  }
-  if (totalBrackets !== 0) {
-    return (totalBrackets < 0) ? 'Missing right bracket' : 'Missing left bracket';
-  }
-  return '';
-};
 
 /**
  * Builds the query filter from the expressions list and the meta data
@@ -38,26 +19,30 @@ const validateBrackets = (bracketWeights) => {
 const QueryBuilder = (schema, expressions, meta, prevExpressionsQuery) => {
   const errors = [];
 
-  const compileCondition = (expression, fieldSchema) => {
+  const compileCondition = (childExpression, fieldSchema) => {
     const conditionCalculator = Condition(
-      expression.field,
+      childExpression.field,
       fieldSchema,
-      expression.fieldType,
-      expression.compOp,
-      expression.value,
-      expression.filteredAdapters,
+      childExpression.fieldType,
+      childExpression.compOp,
+      childExpression.value,
+      childExpression.filteredAdapters,
+      childExpression.not,
     );
     const conditionError = conditionCalculator.formatCondition();
     if (conditionError) {
       throw conditionError;
     }
-    return !expression.context ? conditionCalculator.composeCondition() : '';
+    return !childExpression.context ? conditionCalculator.composeCondition() : '';
   };
 
   const addFilterOutExpression = (otherFilters) => {
     const { fields } = _find(schema, _matchesProperty('name', meta.filterOutExpression.fieldType));
     const fieldSchema = _find(fields, _matchesProperty('name', meta.filterOutExpression.field));
-    const filterOutConditionFilter = compileCondition(meta.filterOutExpression, fieldSchema);
+    // we compile the same expression as a condition
+    // and as a expression later on, remove the duplicate 'not' in the final filter
+    const filterOutCondition = { ...meta.filterOutExpression, not: undefined };
+    const filterOutConditionFilter = compileCondition(filterOutCondition, fieldSchema);
 
     const filterOutFilter = Expression(
       meta.filterOutExpression,
@@ -102,7 +87,10 @@ const QueryBuilder = (schema, expressions, meta, prevExpressionsQuery) => {
         const fieldSchema = _find(fields, _matchesProperty('name', expression.field));
         let compiledFilter = '';
         try {
-          compiledFilter = compileCondition(expression, fieldSchema);
+          // we compile the same expression as a condition
+          // and as a expression later on, remove the duplicate 'not' in the final filter
+          const condition = { ...expression, not: undefined };
+          compiledFilter = compileCondition(condition, fieldSchema);
         } catch (error) {
           errors.push(error);
           if (expression.filter) {
