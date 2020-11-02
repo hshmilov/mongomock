@@ -928,7 +928,7 @@ class StaticAnalysisService(Triggerable, PluginBase):
                 device_last_used_users_fields_sets[associcated_field] = set()
             for last_used_user in device_last_used_users_set:
                 # if last used user is in one of them, it will also be in the second. so 'or' == 'and' here.
-                if last_used_user in users_to_devices_fields[ASSOCIATED_FIELD[0]]:
+                if last_used_user in (users_to_devices_fields.get(ASSOCIATED_FIELD[0]) or []):
                     for associcated_field in ASSOCIATED_FIELD:
                         if users_to_devices_fields[associcated_field].get(last_used_user):
                             device_last_used_users_fields_sets[associcated_field].add(users_to_devices_fields
