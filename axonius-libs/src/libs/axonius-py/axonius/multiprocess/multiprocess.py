@@ -152,6 +152,7 @@ def concurrent_multiprocess_yield(to_execute: List[Tuple[Callable, Tuple, Dict]]
             all_pids = []
             all_pids.extend(pool._processes.keys())
             all_pids.append(manager._process.pid)
+            manager.shutdown()
             threading.Thread(target=kill_ids, args=(all_pids,), daemon=True).start()
 
     return results
