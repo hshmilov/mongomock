@@ -1591,6 +1591,11 @@
     "link": "https://docs.axonius.com/docs/microsoft-hyper-v",
     "description": "Microsoft Hyper-V is a native hypervisor; it can create virtual machines on x86-64 systems running Windows."
   },
+  "bitbucket_adapter": {
+    "title": "Bitbucket - BETA",
+    "link": "https://docs.axonius.com/docs/bitbucket",
+    "description": "Bitbucket is a web-based version control repository hosting service for source code and development projects that use either Mercurial or Git revision control systems."
+  },
   "symantec_altiris_adapter": {
     "title": "Symantec Endpoint Management Suite (Altiris)",
     "link": "https://docs.axonius.com/docs/symantec-endpoint-management-suite-altiris",
