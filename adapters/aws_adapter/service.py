@@ -872,7 +872,8 @@ class AwsAdapter(AdapterBase, Configurable):
                     access_key=client_config.get(AWS_ACCESS_KEY_ID_NAME),
                     secret_key=client_config.get(AWS_SECRET_ACCESS_KEY),
                     use_instance_role=client_config.get(USE_ATTACHED_IAM_ROLE),
-                    region=client_config.get('region_name')
+                    region=client_config.get(REGION_NAME),
+                    https_proxy=client_config.get(PROXY),
                 )
             except Exception as err:
                 message = f'Unable to create an S3 client: {str(err)}'

@@ -11,7 +11,7 @@ from reports.action_types.base.aws_utils import AWSActionUtils, \
     ACTION_CONFIG_USE_ADAPTER, ACTION_CONFIG_PARENT_TAG, \
     DEFAULT_S3_EC_OBJECT_KEY, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, \
     AWS_USE_IAM, AWS_S3_BUCKET_NAME, AWS_S3_KEY_NAME, ADAPTER_NAME, \
-    AWS_REGION_NAME
+    AWS_REGION_NAME, PROXY
 
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -45,6 +45,11 @@ class SendJsonToS3(ActionTypeAlert):
                     'type': 'bool',
                 },
                 {
+                    'name': PROXY,
+                    'title': 'HTTPS proxy',
+                    'type': 'string'
+                },
+                {
                     'name': AWS_S3_BUCKET_NAME,
                     'title': 'Amazon S3 bucket name',
                     'type': 'string',
@@ -52,6 +57,11 @@ class SendJsonToS3(ActionTypeAlert):
                 {
                     'name': AWS_S3_KEY_NAME,
                     'title': 'Amazon S3 object location (key)',
+                    'type': 'string',
+                },
+                {
+                    'name': AWS_REGION_NAME,
+                    'title': 'Amazon Region',
                     'type': 'string',
                 },
                 {
@@ -86,8 +96,10 @@ class SendJsonToS3(ActionTypeAlert):
             AWS_ACCESS_KEY_ID: None,
             AWS_SECRET_ACCESS_KEY: None,
             AWS_USE_IAM: False,
+            PROXY: None,
             AWS_S3_BUCKET_NAME: None,
             AWS_S3_KEY_NAME: None,
+            AWS_REGION_NAME: None,
             'append_datetime': False,
             'overwrite_existing_file': False
         })
@@ -175,8 +187,6 @@ class SendJsonToS3(ActionTypeAlert):
                 'overwrite_existing_file': self._config.get(
                     'overwrite_existing_file') or False,
                 'append_datetime': self._config.get('append_datetime'),
-                # 'secret_key_for_upload': self._config.get(AWS_SECRET_ACCESS_KEY),
-                # 'region_name': self._config.get(AWS_REGION_NAME),
             }
 
             # make the call to send_json_to_s3 in aws_adapter/service.py
@@ -206,7 +216,6 @@ class SendJsonToS3(ActionTypeAlert):
                 message = f'Finished sending JSON to S3 (Adapter Mode)'
                 logger.info(message)
                 return AlertActionResult(True, message)
-
             # old skool, enter the creds in the EC and run normally
             else:
                 logger.info(f'Started sending JSON to S3 (EC Mode)')
@@ -214,8 +223,9 @@ class SendJsonToS3(ActionTypeAlert):
                     client = S3Client(
                         access_key=self._config.get(AWS_ACCESS_KEY_ID),
                         secret_key=self._config.get(AWS_SECRET_ACCESS_KEY),
+                        region=self._config.get(AWS_REGION_NAME),
                         use_instance_role=self._config.get(AWS_USE_IAM),
-                        region=self._config.get(AWS_REGION_NAME)
+                        https_proxy=self._config.get(PROXY),
                     )
                 except Exception as err:
                     message = f'Unable to create S3 client: {str(err)}'

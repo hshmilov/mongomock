@@ -6,7 +6,8 @@ from time import strftime
 
 import boto3
 
-from axonius.clients.aws.aws_clients import get_paginated_continuation_token_api
+from axonius.clients.aws.aws_clients import get_paginated_continuation_token_api, get_boto3_session, \
+    get_boto3_client_by_session
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -22,7 +23,7 @@ class S3Client:  # pylint: disable=too-many-instance-attributes
                  secret_key: str = None,
                  region: str = 'us-east-1',
                  use_instance_role: bool = False,
-                 config: dict = None,
+                 https_proxy: str = None,
                  session_token: str = None,
                  use_ssl: bool = True,
                  verify: bool = True
@@ -30,7 +31,7 @@ class S3Client:  # pylint: disable=too-many-instance-attributes
         self.__session_token = session_token
         self._use_ssl = use_ssl
         self._verify = verify
-        self._config = config
+        self._https_proxy = https_proxy
         self.buckets = list()
 
         self._use_instance_role = use_instance_role
@@ -80,18 +81,19 @@ class S3Client:  # pylint: disable=too-many-instance-attributes
     def create_client(self):
         """ Build an S3 client object """
         try:
-            return boto3.client(service_name='s3',
-                                aws_access_key_id=self._access_key,
-                                aws_secret_access_key=self.__secret_key,
-                                aws_session_token=self.__session_token,
-                                region_name=self.region,
-                                use_ssl=self._use_ssl,
-                                verify=self._verify,
-                                config=self._config
-                                )
+            session = get_boto3_session(
+                aws_access_key_id=self._access_key,
+                aws_secret_access_key=self.__secret_key,
+                https_proxy=self._https_proxy,
+            )
+            return get_boto3_client_by_session('s3',
+                                               session=session,
+                                               region_name=self.region,
+                                               https_proxy=self._https_proxy)
         except Exception:
             logger.exception(f'Unable to create an S3 client using '
                              f'{self.access_key}')
+            raise
 
     # pylint: disable=invalid-triple-quote
     def list_buckets(self):
@@ -171,7 +173,7 @@ class S3Client:  # pylint: disable=too-many-instance-attributes
                 logger.info(f'Resetting S3 client to previous settings '
                             f'in {previous_region}')
                 self.region = previous_region
-                self.create_client()
+                self.client = self.create_client()
             else:
                 logger.warning(f'Malformed region: {str(region)}')
         except self.client.exceptions.BucketAlreadyExists:
