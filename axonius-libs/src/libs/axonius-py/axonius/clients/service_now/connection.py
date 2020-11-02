@@ -1,10 +1,12 @@
+import datetime
 import io
 import json
 import logging
 from math import ceil
-from typing import Generator, Tuple, List, Optional, Dict
+from typing import Generator, Tuple, List, Optional, Dict, Union
 from aiohttp import ClientResponse
 import requests
+from funcy import repeat
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
@@ -18,12 +20,10 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
 
     TABLE_API_PREFIX = 'table/'
+    USE_BASIC_AUTH = True
 
     def __init__(self, *args, url_base_prefix: str = 'api/now/', **kwargs):
-        """ Initializes a connection to ServiceNow using its rest API
-
-        """
-        self.__users_table = dict()
+        """ Initializes a connection to ServiceNow using its rest API """
         self.__number_of_offsets = consts.NUMBER_OF_OFFSETS
         self.__offset_size = consts.OFFSET_SIZE
         super().__init__(*args, url_base_prefix=url_base_prefix, **kwargs)
@@ -59,7 +59,15 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
             for table_result in table_results_chunk:
                 yield table_key, table_result
 
-    def _get_table_async_request_params(self, table_name: str, offset: int, page_size: int,
+    @staticmethod
+    def raise_status_callback(_, response: ClientResponse, ____):
+        if response.status in [404, 400]:
+            return
+        # raises ClientResponseError on http_code >= 400
+        response.raise_for_status()
+
+    @classmethod
+    def _get_table_async_request_params(cls, table_name: str, offset: int, page_size: int,
                                         additional_url_params: Optional[dict]=None):
         if not additional_url_params:
             additional_url_params = dict()
@@ -68,13 +76,21 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
         if isinstance(additional_query, str):
             # Note: ^ == AND
             sysparm_query = f'{sysparm_query}^{additional_query}'
-        return {'name': f'{self.TABLE_API_PREFIX}{str(table_name)}',
-                'do_basic_auth': True,
-                # See: https://hi.service-now.com/kb_view.do?sysparm_article=KB0727636
-                'url_params': {'sysparm_limit': page_size,
-                               'sysparm_offset': offset,
-                               'sysparm_query': sysparm_query,
-                               **additional_url_params}}
+        # Add explicit field names from consts
+        explicit_fields = consts.TABLE_NAME_TO_FIELDS.get(table_name)
+        if isinstance(explicit_fields, list):
+            additional_url_params['sysparm_fields'] = ','.join(explicit_fields)
+        return {
+            'name': f'{cls.TABLE_API_PREFIX}{str(table_name)}',
+            'do_basic_auth': cls.USE_BASIC_AUTH,
+            # See: https://hi.service-now.com/kb_view.do?sysparm_article=KB0727636
+            'url_params': {'sysparm_limit': page_size,
+                           'sysparm_offset': offset,
+                           'sysparm_query': sysparm_query,
+                           'sysparm_display_value': 'true',
+                           **additional_url_params},
+            'callback': cls.raise_status_callback,
+        }
 
     def _iter_async_table_chunks_by_key(self, table_name_by_key: dict,
                                         additional_params_by_table_key: Optional[dict] = None,
@@ -137,6 +153,153 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
 
             logger.debug(f'yielding {len(table_results_chunk)} results for table_key {table_key}')
             yield table_key, table_results_chunk
+
+    @staticmethod
+    def _iter_sysparm_fields_chunks(extra_fields: List[str],
+                                    dotwalking_per_request_limit: int=consts.DEFAULT_DOTWALKING_PER_REQUEST,
+                                    required_fields: Optional[List[str]]=None,
+                                    max_query_len: int=consts.MAX_EXTRA_FIELDS_QUERY_LEN):
+        if not isinstance(extra_fields, list):
+            return
+        if not required_fields:
+            required_fields = consts.DEFAULT_EXTRA_FIELDS_REQUIRED_LIST
+
+        dotwalk_cost = 0
+        fields_chunk = required_fields.copy()
+
+        for field in extra_fields:
+            # if adding this field would exceed the max_query_len
+            curr_cost = field.count('.')
+            curr_query = ','.join([*fields_chunk, field])
+            if ((dotwalk_cost + curr_cost > dotwalking_per_request_limit) or
+                    len(curr_query) > max_query_len):
+                # yield the query and prepare a new one
+                yield ','.join(fields_chunk)
+                dotwalk_cost = 0
+                fields_chunk = required_fields.copy()
+
+            fields_chunk.append(field)
+            dotwalk_cost += curr_cost
+
+        if fields_chunk:
+            yield ','.join(fields_chunk)
+
+    def _get_table_async_field_request_params(
+            self, table_name, offset, extra_fields: List[str],
+            additional_url_params: Optional[dict]=None,
+            dotwalking_per_request_limit: int = consts.DEFAULT_DOTWALKING_PER_REQUEST):
+
+        field_requests = []
+        additional_url_params = additional_url_params or dict()
+        for fields_query in self._iter_sysparm_fields_chunks(extra_fields,
+                                                             dotwalking_per_request_limit=dotwalking_per_request_limit):
+            chunk_params = additional_url_params.copy()
+            chunk_params['sysparm_fields'] = fields_query
+            field_requests.append(self._get_table_async_request_params(
+                table_name, offset, self.__offset_size, additional_url_params=chunk_params))
+        return field_requests
+
+    # pylint: disable=too-many-locals
+    def _iter_async_table_chunks_and_extra_by_key(
+            self, table_name_by_key: dict,
+            extra_fields: Optional[list] = None,
+            async_chunks: int = consts.DEFAULT_ASYNC_CHUNK_SIZE,
+            last_seen_timedelta: Optional[datetime.timedelta]=None,
+            dotwalking_per_request_limit: int = consts.DEFAULT_DOTWALKING_PER_REQUEST) \
+            -> Generator[Tuple[str, List[dict]], None, None]:
+        """
+        yields table chunks in the form of (table_key, List[table_result_dict]) tuple.
+        """
+
+        additional_url_params = {}
+        if isinstance(last_seen_timedelta, datetime.timedelta):
+            last_timestamp = datetime.datetime.utcnow() - last_seen_timedelta
+            last_date = last_timestamp.strftime('%Y-%m-%d')
+            last_time = last_timestamp.strftime('%H:%M:%S')
+
+            # pylint: disable=line-too-long
+            # https://community.servicenow.com/community?id=community_question&sys_id=ba88032adb9ee780fb115583ca9619e4&view_source=searchResult
+            additional_url_params['sysparm_query'] = \
+                f'sys_updated_on>javascript:gs.dateGenerate(\'{last_date}\',\'{last_time}\')'
+            # pylint: enable=line-too-long
+
+        # prepare initial request for each table
+        # Note: these requests are only to retrieve the total count
+        initial_request_params_by_key = {
+            table_key: {
+                **self._get_table_async_request_params(table_name, 0, 1,
+                                                       additional_url_params=additional_url_params),
+                # Note: Initial requests needs to return in raw form to read its headers
+                'return_response_raw': True,
+            } for table_key, table_name in table_name_by_key.items()}
+
+        # run the initial requests to retrieve the total count (ignore first page results)
+        table_total_counts_by_key = {}
+        for table_key, raw_response in zip(initial_request_params_by_key.keys(),
+                                           self._async_get(list(initial_request_params_by_key.values()),
+                                                           retry_on_error=True, chunks=async_chunks)):
+            if not (self._is_async_response_good(raw_response) and isinstance(raw_response, ClientResponse)):
+                logger.warning(f'Async response returned bad, its {raw_response}')
+                continue
+
+            try:
+                table_total_counts_by_key[table_key] = int(raw_response.headers['X-Total-Count'])
+            except Exception:
+                logger.warning(f'Unable to retrieve totals for table_key {table_key}.')
+                continue
+        logger.info(f'Requested counts: {table_total_counts_by_key}')
+
+        # prepare requests for all table pages whose total we achieved successfully
+        # Chunks are comprised as such: [PAGE_1, PAGE_1_EXTRA_FIELDS_CHUNKS...,
+        #                                PAGE_2, PAGE_2_EXTRA_FIELDS_CHUNKS..., ...]
+        # Each descriptor is {TABLE_KEY: count}
+        # The descriptor for each table page is repeated by the number in count
+        page_descriptors: List[dict] = []
+        chunk_requests = []
+        for table_key, total_count in table_total_counts_by_key.items():
+            # compute page count
+            number_of_offsets = min(ceil(total_count / float(self.__offset_size)),
+                                    self.__number_of_offsets)
+            table_name = table_name_by_key[table_key]
+            for page_offset in range(0, number_of_offsets):
+                curr_page = {'table_key': table_key, 'count': 0}
+                offset = page_offset * self.__offset_size
+
+                curr_page['count'] += 1
+                chunk_requests.append(self._get_table_async_request_params(table_name, offset, self.__offset_size,
+                                                                           additional_url_params=additional_url_params))
+
+                if extra_fields and isinstance(extra_fields, list):
+                    field_requests = self._get_table_async_field_request_params(
+                        table_name, offset, extra_fields,
+                        additional_url_params=additional_url_params,
+                        dotwalking_per_request_limit=dotwalking_per_request_limit)
+                    curr_page['count'] += len(field_requests)
+                    chunk_requests.extend(field_requests)
+
+                # Append this page's descriptors
+                page_descriptors.extend(repeat(curr_page, curr_page['count']))
+
+        # run all the async requests
+        curr_page_results = []
+        for page_descriptor, response in zip(page_descriptors, self._async_get(chunk_requests, retry_on_error=True,
+                                                                               chunks=async_chunks)):
+            # Note: async_get promises well get something as a response
+            table_key = page_descriptor['table_key']
+            page_descriptor['count'] -= 1
+            try:
+                table_results_chunk = self.__parse_results_chunk_from_response(response, table_key)
+                # Note: Invalid response and data validity in response are audited and checked in the parse method
+                if not table_results_chunk:
+                    continue
+
+                curr_page_results.extend(table_results_chunk)
+
+            finally:
+                # Note: Hack to always execute this scope even after continue
+                if page_descriptor['count'] == 0:
+                    yield (table_key, curr_page_results)
+                    curr_page_results = []
 
     def __parse_results_chunk_from_response(self, response, table_key):
 
@@ -293,3 +456,95 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
         except Exception:
             logger.exception(f'Exception while creating incident with connection dict {connection_dict}')
             return False, None
+
+    @staticmethod
+    def _prepare_extra_fields(extra_fields: List[Union[str, List[str]]]):
+        fields = []
+        for field_name in extra_fields:
+            if isinstance(field_name, str):
+                field_name = [field_name]
+            if not isinstance(field_name, list):
+                logger.error(f'Unknown field definition {field_name}')
+                continue
+            fields.extend(field_name)
+        return fields
+
+    # pylint: disable=arguments-differ
+    def _iter_device_table_chunks_by_details(self,
+                                             parallel_requests: int = consts.DEFAULT_ASYNC_CHUNK_SIZE,
+                                             last_seen_timedelta: Optional[datetime.timedelta]=None,
+                                             use_dotwalking: bool = False,
+                                             dotwalking_per_request_limit: int=consts.DEFAULT_DOTWALKING_PER_REQUEST) \
+            -> Generator[Tuple[str, str, List[dict]], None, None]:
+
+        if not use_dotwalking:
+            # If dot walking was disabled, use generic (non-REST specific) device fetching mechanism
+            yield from super()._iter_device_table_chunks_by_details(
+                parallel_requests=parallel_requests,
+                last_seen_timedelta=last_seen_timedelta,
+                use_dotwalking=use_dotwalking,
+                dotwalking_per_request_limit=dotwalking_per_request_limit)
+            return
+
+        # Rest Based TABLE API Based ServiceNow Adapters need a separate device fetching mechanism
+        #     due to the usage of "dotwalking" for reference resolution on ServiceNow's side.
+        # https://developer.servicenow.com/blog.do?p=/post/dot-walking-in-the-rest-table-api-2/
+
+        # prepare extra fields (for dotwalking)
+        extra_fields = self._prepare_extra_fields(list(consts.DEVICE_EXTRA_FIELDS_BY_TARGET.values()))
+
+        # prepare table_name_by_key for async requests
+        for table_key, page_chunks in self._iter_async_table_chunks_and_extra_by_key(
+                consts.TABLE_NAME_BY_DEVICE_TYPE,
+                extra_fields=extra_fields,
+                async_chunks=parallel_requests,
+                last_seen_timedelta=last_seen_timedelta,
+                dotwalking_per_request_limit=dotwalking_per_request_limit):
+
+            # consolidate page_chunks into single device dicts
+            devices_by_table_key = {}
+            for page_result in page_chunks:
+                # consolidats each device's fields dicts into devices_by_table_key
+                self._handle_table_result(page_result, table_key, devices_by_table_key)
+            curr_devices_by_id = devices_by_table_key.get(table_key)
+            if not isinstance(curr_devices_by_id, dict):
+                logger.warning(f'page had no devices for table_key {table_key}')
+                continue
+
+            for device_raw in curr_devices_by_id.values():
+                yield (table_key, device_raw)
+
+    def _iter_user_table_chunks_by_details(self,
+                                           parallel_requests: int = consts.DEFAULT_ASYNC_CHUNK_SIZE,
+                                           dotwalking_per_request_limit: int=consts.DEFAULT_DOTWALKING_PER_REQUEST) \
+            -> Generator[Tuple[str, str, List[dict]], None, None]:
+
+        # prepare extra fields (for dotwalking)
+        extra_fields = self._prepare_extra_fields(list(consts.USER_EXTRA_FIELDS_BY_TARGET.values()))
+
+        # consolidate page_chunks into single device dicts
+        tables_by_key = {}
+
+        # prepare table_name_by_key for async requests
+        for table_key, page_chunks in self._iter_async_table_chunks_and_extra_by_key(
+                {consts.USERS_TABLE_KEY: consts.USERS_TABLE},
+                extra_fields=extra_fields,
+                async_chunks=parallel_requests,
+                dotwalking_per_request_limit=dotwalking_per_request_limit):
+
+            for page_result in page_chunks:
+                # consolidats each user's fields dicts into users_by_table_key
+                self._handle_table_result(page_result, table_key, tables_by_key)
+        # FETCH ALL in memory
+        # TO DO - find dotwalking for user<->manager
+        users_table_dict = tables_by_key.get(consts.USERS_TABLE_KEY) or {}
+
+        for user in users_table_dict.values():
+            user_to_yield = user.copy()
+            try:
+                if (user.get('manager') or {}).get('value'):
+                    user_to_yield['manager_full'] = users_table_dict.get(user.get('manager').get('value'))
+            except Exception:
+                logger.exception(f'Problem getting manager for user {user}')
+
+            yield user_to_yield

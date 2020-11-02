@@ -1,6 +1,6 @@
 import logging
 
-from typing import Optional, Dict, Generator, Tuple
+from typing import Optional, Generator, Tuple, Dict
 
 from axonius.clients.mssql.connection import MSSQLConnection
 from axonius.clients.service_now import consts
@@ -29,10 +29,10 @@ class ServiceNowMSSQLConnection(MSSQLConnection, ServiceNowConnectionMixin):
                                    parallel_requests: int = consts.DEFAULT_ASYNC_CHUNK_SIZE) \
             -> Generator[Tuple[str, dict], None, None]:
         self.set_devices_paging(parallel_requests)
-        for table_key, table_name in subtables_key_to_name.items():
+        for device_type, table_name in subtables_key_to_name.items():
             try:
                 for table_result in self.query(f'Select * from dbo.{table_name}'):
                     table_result = {k: v for k, v in table_result.items() if v != 'NULL'}
-                    yield table_key, table_result
+                    yield device_type, table_result
             except Exception as e:
                 logger.exception(f'Failed querying table dbo.{table_name}: {str(e)}')

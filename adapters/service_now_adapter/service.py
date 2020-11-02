@@ -1,12 +1,12 @@
 import logging
 
+from typing import Callable
+
 from axonius.adapter_base import AdapterProperty
 from axonius.clients.service_now import consts
-from axonius.clients.service_now.service.adapter_base import ServiceNowAdapterBase
-from axonius.adapter_exceptions import ClientConnectionException
+from axonius.clients.service_now.external import service_now_get_connection
+from axonius.clients.service_now.service.base import ServiceNowAdapterBase
 from axonius.clients.rest.connection import RESTConnection
-from axonius.clients.rest.exception import RESTException
-from axonius.clients.service_now.connection import ServiceNowConnection
 from axonius.clients.service_now.service.structures import SnowDeviceAdapter, SnowUserAdapter
 from axonius.mixins.configurable import Configurable
 from axonius.types.correlation import CorrelationResult, CorrelationReason
@@ -40,24 +40,12 @@ class ServiceNowAdapter(ServiceNowAdapterBase, Configurable):
         return RESTConnection.test_reachability(client_config.get('domain'),
                                                 https_proxy=client_config.get('https_proxy'))
 
-    @staticmethod
-    def get_connection(client_config):
-        try:
-            https_proxy = client_config.get('https_proxy')
-            if https_proxy and https_proxy.startswith('http://'):
-                https_proxy = 'https://' + https_proxy[len('http://'):]
-            connection = ServiceNowConnection(
-                domain=client_config['domain'], verify_ssl=client_config['verify_ssl'],
-                username=client_config['username'],
-                password=client_config['password'], https_proxy=https_proxy)
-            with connection:
-                pass  # check that the connection credentials are valid
-            return connection
-        except RESTException as e:
-            message = 'Error connecting to client with domain {0}, reason: {1}'.format(
-                client_config['domain'], str(e))
-            logger.warning(message, exc_info=True)
-            raise ClientConnectionException(message)
+    def get_connection_external(self) -> Callable:
+        return service_now_get_connection
+
+    def get_connection(self, client_config):
+        connection = service_now_get_connection(client_config)
+        return connection
 
     def _clients_schema(self):
         """

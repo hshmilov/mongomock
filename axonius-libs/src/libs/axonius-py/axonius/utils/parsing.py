@@ -130,6 +130,11 @@ def int_or_none(val):
     try:
         return int(val)
     except Exception:
+        if isinstance(val, str):
+            try:
+                return int(re.sub(r'[^\d.]', '', val))
+            except Exception:
+                pass
         return None
 
 
@@ -139,6 +144,11 @@ def float_or_none(val):
     try:
         return float(val)
     except Exception:
+        if isinstance(val, str):
+            try:
+                return float(re.sub(r'[^\d.]', '', val))
+            except Exception:
+                pass
         return None
 
 

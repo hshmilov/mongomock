@@ -1,18 +1,26 @@
 import datetime
+import logging
+
+from funcy import chunks
 
 from axonius.clients.rest.exception import RESTException
 from axonius.clients.service_now.connection import ServiceNowConnection
 from axonius.utils.parsing import int_or_none
+
+logger = logging.getLogger(f'axonius.{__name__}')
+
+DEFAULT_BASE_URL_PREFIX = 'digital/servicenowtablesprod/v1'
 
 
 class ServiceNowAkanaConnection(ServiceNowConnection):
 
     # NOTE - Akana gateway has no TABLE_API specific prefix
     TABLE_API_PREFIX = ''
+    USE_BASIC_AUTH = False
 
-    def __init__(self, *args, token_endpoint: str, **kwargs):
+    def __init__(self, *args, token_endpoint: str, url_base_prefix: str, **kwargs):
         super(ServiceNowAkanaConnection, self).__init__(*args,
-                                                        url_base_prefix='digital/servicenowtablesqa/v1',
+                                                        url_base_prefix=url_base_prefix or DEFAULT_BASE_URL_PREFIX,
                                                         **kwargs)
         self._token_endpoint = token_endpoint
         self._session_refresh = None
@@ -39,9 +47,13 @@ class ServiceNowAkanaConnection(ServiceNowConnection):
         expires_in = int_or_none(response.get('expires_in'))
         if expires_in is None:
             raise RESTException(f'Auth response contains invalid expires_in')
+        logger.info(f'Revalidated token, expires in: {expires_in}')
+        if expires_in > 600:
+            expires_in = expires_in - 600
         self._session_refresh = datetime.datetime.now() + datetime.timedelta(seconds=expires_in)
 
     def _refresh_token(self):
+        # If session refresh will expire in 10 minutes, refresh
         if self._session_refresh and self._session_refresh > datetime.datetime.now():
             self._session_headers['Authorization'] = f'Bearer {self._token}'
             return
@@ -52,27 +64,8 @@ class ServiceNowAkanaConnection(ServiceNowConnection):
         self._set_new_token()
         self._get('cmdb_ci_computer', url_params={'sysparm_limit': 1})
 
-    # pylint: disable=arguments-differ
-    def _async_get(self, *args, **kwargs):
-        """
-        From docs provided for Akana integration, It appears that token can be quite short-lived.
-        We inject a (potential) token refresh for every "chunk" handled.
-        """
-        self._refresh_token()
-        return super()._async_get(*args, **kwargs)
-
-    def _get_table_async_request_params(self, table_name: str, offset: int, page_size: int,
-                                        additional_url_params=None):
-        if not additional_url_params:
-            additional_url_params = dict()
-        sysparm_query = 'ORDERBYDESCsys_created_on'
-        additional_query = additional_url_params.get('sysparm_query')
-        if isinstance(additional_query, str):
-            # Note: ^ == AND
-            sysparm_query = f'{sysparm_query}^{additional_query}'
-        return {'name': f'{self.TABLE_API_PREFIX}{str(table_name)}',
-                # See: https://hi.service-now.com/kb_view.do?sysparm_article=KB0727636
-                'url_params': {'sysparm_limit': page_size,
-                               'sysparm_offset': offset,
-                               'sysparm_query': sysparm_query,
-                               **additional_url_params}}
+    #pylint: disable=arguments-differ
+    def _async_get(self, list_of_requests, *args, **kwargs):
+        for higher_level_chunk in chunks(100, list_of_requests):
+            self._refresh_token()
+            yield from super()._async_get(higher_level_chunk, *args, **kwargs)

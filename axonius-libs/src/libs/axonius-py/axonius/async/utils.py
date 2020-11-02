@@ -8,7 +8,8 @@ import logging
 from inspect import isawaitable
 
 import certifi
-from aiohttp import ClientSession, ClientTimeout, ClientResponse, BasicAuth, TCPConnector, ClientConnectorError
+from aiohttp import ClientSession, ClientTimeout, ClientResponse, BasicAuth, TCPConnector, ClientConnectorError, \
+    ClientResponseError
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -97,7 +98,7 @@ async def async_http_request(session: ClientSession, should_run_event=None, hand
                 else:
                     await handle_callback(callback, text, response, session)
                     return text, response
-        except ClientConnectorError as e:
+        except (ClientConnectorError, ClientResponseError) as e:
             if not retry_on_error:
                 raise e
             logger.warning(f'Got error on http request, retry: {retries} - ({str(e)})', exc_info=True)

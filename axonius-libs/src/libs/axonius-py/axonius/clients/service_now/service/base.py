@@ -1,16 +1,21 @@
 import logging
 import re
 from abc import abstractmethod
-from typing import Optional, List
+from datetime import timedelta
+from typing import Optional, List, Callable
 
 import chardet
 
 from axonius.adapter_base import AdapterProperty, AdapterBase
 from axonius.clients.service_now import consts
+from axonius.clients.service_now.external import generic_service_now_query_devices_by_client, \
+    generic_service_now_query_users_by_client
+from axonius.clients.service_now.parse import InjectedRawFields
 from axonius.clients.service_now.service.structures import RelativeInformationNode1, RelativeInformationLeaf, \
-    MaintenanceSchedule, CiIpData, SnowComplianceException
+    MaintenanceSchedule, CiIpData, SnowComplianceException, SnowDeviceContract
+from axonius.multiprocess.multiprocess import concurrent_multiprocess_yield
 from axonius.utils.datetime import parse_date
-from axonius.utils.parsing import make_dict_from_csv, float_or_none, parse_bool_from_raw
+from axonius.utils.parsing import make_dict_from_csv, float_or_none, parse_bool_from_raw, int_or_none
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -41,6 +46,16 @@ class ServiceNowAdapterBase(AdapterBase):
             'title': 'Operational Status ENUM CSV File',
             'type': 'file'
         },
+        {
+            'name': 'verification_install_status_file',
+            'title': 'Verification table install status ENUM CSV file',
+            'type': 'file'
+        },
+        {
+            'name': 'verification_operational_status_file',
+            'title': 'Verification table operational status ENUM CSV file',
+            'type': 'file'
+        },
     ]
     SERVICE_NOW_CLIENTS_SCHEMA_REQUIRED = []
     SERVICE_NOW_DB_CONFIG_SCHEMA_ITEMS = [
@@ -53,6 +68,11 @@ class ServiceNowAdapterBase(AdapterBase):
             'name': 'fetch_users',
             'type': 'bool',
             'title': 'Create users'
+        },
+        {
+            'name': 'use_cached_users',
+            'type': 'bool',
+            'title': 'Use existing user data during device fetching'
         },
         {
             'name': 'fetch_ips',
@@ -130,16 +150,57 @@ class ServiceNowAdapterBase(AdapterBase):
             'title': 'RAM from source in GB'
         },
         {
+            'name': 'fetch_software_product_model',
+            'type': 'bool',
+            'title': 'Fetch OS information from "cmdb_software_product_model"'
+        },
+        {
+            'name': 'fetch_cmdb_model',
+            'type': 'bool',
+            'title': 'Fetch model information from "cmdb_model"'
+        },
+        {
             'name': 'fetch_business_unit_table',
             'type': 'bool',
             'title': 'Fetch business unit from \'business_unit\' table'
         },
+        {
+            'name': 'fetch_installed_software',
+            'type': 'bool',
+            'title': 'Fetch Software package information from \'cmdb_sam_sw_install\' table'
+        },
+        {
+            'name': 'contract_parent_numbers',
+            'type': 'string',
+            'title': 'Fetch Device contract information from \'ast_contract\''
+                     ' for the following parent contract numbers',
+        },
+        {
+            'name': 'snow_last_updated',
+            'title': 'Fetch devices updated in ServiceNow in the last X hours (0: All)',
+            'type': 'number',
+            'min': 0,
+        },
+        {
+            'name': 'use_dotwalking',
+            'title': 'Use dotwalking queries',
+            'type': 'bool',
+        },
+        {
+            'name': 'dotwalking_per_request_limit',
+            'title': 'Max dotwalking fields per request',
+            'type': 'number',
+            'min': 1,
+            'max': consts.MAX_DOTWALKING_PER_REQUEST,
+        },
     ]
     SERVICE_NOW_DB_CONFIG_SCHEMA_REQUIRED = [
         'fetch_users',
-        'fetch_ips', 'use_ci_table_for_install_status',
+        'fetch_ips',
+        'use_ci_table_for_install_status',
         'exclude_disposed_devices',
         'fetch_users_info_for_devices',
+        'use_cached_users',
         'exclude_no_strong_identifier',
         'exclude_vm_tables',
         'fetch_only_active_users',
@@ -150,12 +211,17 @@ class ServiceNowAdapterBase(AdapterBase):
         'fetch_compliance_exceptions',
         'use_exclusion_field',
         'is_ram_in_gb',
+        'fetch_software_product_model',
+        'fetch_cmdb_model',
         'fetch_business_unit_table',
+        'fetch_installed_software',
+        'use_dotwalking',
     ]
     SERVICE_NOW_DB_CONFIG_DEFAULT = {
         'fetch_users': True,
         'fetch_ips': True,
         'fetch_users_info_for_devices': True,
+        'use_cached_users': False,
         'exclude_disposed_devices': False,
         'exclude_no_strong_identifier': False,
         'use_ci_table_for_install_status': False,
@@ -170,118 +236,63 @@ class ServiceNowAdapterBase(AdapterBase):
         'fetch_compliance_exceptions': False,
         'use_exclusion_field': False,
         'is_ram_in_gb': False,
+        'fetch_software_product_model': True,
+        'fetch_cmdb_model': True,
         'fetch_business_unit_table': False,
+        'fetch_installed_software': False,
+        'contract_parent_numbers': None,
+        'snow_last_updated': 0,
+        'use_dotwalking': False,
+        'dotwalking_per_request_limit': consts.DEFAULT_DOTWALKING_PER_REQUEST,
     }
 
     @abstractmethod
     def get_connection(self, client_config):
         pass
 
+    @abstractmethod
+    def get_connection_external(self) -> Callable:
+        pass
+
     def _connect_client(self, client_config):
-        return (self.get_connection(client_config),
+        # get_connection will throw in case of any error in the connection
+        self.get_connection(client_config)
+        return (client_config,
+                self.get_connection_external(),
                 self._get_config_enum_from_file(client_config.get('install_status_file')),
-                self._get_config_enum_from_file(client_config.get('operational_status_file')))
-
-    @classmethod
-    def _get_optional_raw_reference(cls, device_raw: dict, field_name: str):
-        if not (isinstance(device_raw, dict) and isinstance(field_name, str)):
-            return None
-        raw_value = device_raw.get(field_name)
-        if not raw_value:
-            return None
-        return raw_value
-
-    @classmethod
-    def _parse_optional_reference(cls, device_raw: dict, field_name: str, reference_table: dict):
-        raw_reference = cls._get_optional_raw_reference(device_raw, field_name)
-        if not isinstance(raw_reference, dict):
-            return raw_reference
-        return reference_table.get(raw_reference.get('value'))
-
-    @classmethod
-    def _parse_optional_reference_value(cls, device_raw: dict, field_name: str,
-                                        reference_table: dict, reference_table_field: str):
-        raw_value = cls._parse_optional_reference(device_raw, field_name, reference_table)
-        if not isinstance(raw_value, dict):
-            return None
-        return raw_value.get(reference_table_field)
+                self._get_config_enum_from_file(client_config.get('operational_status_file')),
+                {
+                    'fetch_users_info_for_devices': self.__fetch_users_info_for_devices,
+                    'fetch_ci_relations': self.__fetch_ci_relations,
+                    'fetch_compliance_exceptions': self._fetch_compliance_exceptions,
+                    'fetch_software_product_model': self._fetch_software_product_model,
+                    'fetch_cmdb_model': self._fetch_cmdb_model,
+                    'fetch_installed_software': self._fetch_installed_software,
+                    'last_seen_timedelta': self._snow_last_updated_threashold,
+                    'contract_parent_numbers': self._contract_parent_numbers,
+                    'parallel_requests': self.__parallel_requests,
+                    'use_dotwalking': self._use_dotwalking,
+                    'dotwalking_per_request_limit': self._dotwalking_per_request_limit,
+                    'use_cached_users': self._use_cached_users,
+                    'plugin_name': self.plugin_name,
+                },
+                self._get_config_enum_from_file(client_config.get('verification_install_status_file')),
+                self._get_config_enum_from_file(client_config.get('verification_operational_status_file')))
 
     # pylint: disable=R0912,R0915,R0914
     def create_snow_device(self,
                            device_raw,
-                           table_type=None,
-                           snow_location_table_dict=None,
                            fetch_ips=True,
-                           snow_department_table_dict=None,
-                           users_table_dict=None,
-                           snow_nics_table_dict=None,
-                           users_username_dict=None,
-                           ci_ips_table_dict=None,
-                           snow_alm_asset_table_dict=None,
-                           snow_user_groups_table_dict=None,
-                           companies_table_dict=None,
-                           ips_table_dict=None,
                            install_status_dict=None,
-                           supplier_table_dict=None,
-                           relations_table_dict=None,
-                           relations_info_dict=None,
-                           snow_software_product_table_dict=None,
-                           snow_maintenance_sched_dict=None,
-                           snow_model_dict=None,
-                           snow_logicalci_dict=None,
                            operational_status_dict=None,
-                           u_division_dict=None,
-                           business_unit_dict=None,
-                           snow_compliance_exception_ids_dict=None,
-                           snow_compliance_exception_data_dict=None):
+                           verification_install_status_dict=None,
+                           verification_operational_status_dict=None):
         got_nic = False
         got_serial = False
         if not install_status_dict:
             install_status_dict = consts.INSTALL_STATUS_DICT
         if not operational_status_dict:
             operational_status_dict = consts.INSTALL_STATUS_DICT
-        if ci_ips_table_dict is None:
-            ci_ips_table_dict = dict()
-        if users_username_dict is None:
-            users_username_dict = dict()
-        if snow_user_groups_table_dict is None:
-            snow_user_groups_table_dict = dict()
-        if companies_table_dict is None:
-            companies_table_dict = dict()
-        if snow_location_table_dict is None:
-            snow_location_table_dict = dict()
-        if snow_nics_table_dict is None:
-            snow_nics_table_dict = dict()
-        if ips_table_dict is None:
-            ips_table_dict = dict()
-        if snow_alm_asset_table_dict is None:
-            snow_alm_asset_table_dict = dict()
-        if users_table_dict is None:
-            users_table_dict = dict()
-        if snow_department_table_dict is None:
-            snow_department_table_dict = dict()
-        if supplier_table_dict is None:
-            supplier_table_dict = dict()
-        if relations_table_dict is None:
-            relations_table_dict = dict()
-        if relations_info_dict is None:
-            relations_info_dict = dict()
-        if snow_software_product_table_dict is None:
-            snow_software_product_table_dict = dict()
-        if snow_maintenance_sched_dict is None:
-            snow_maintenance_sched_dict = dict()
-        if snow_model_dict is None:
-            snow_model_dict = dict()
-        if snow_logicalci_dict is None:
-            snow_logicalci_dict = dict()
-        if u_division_dict is None:
-            u_division_dict = dict()
-        if business_unit_dict is None:
-            business_unit_dict = dict()
-        if snow_compliance_exception_ids_dict is None:
-            snow_compliance_exception_ids_dict = dict()
-        if snow_compliance_exception_data_dict is None:
-            snow_compliance_exception_data_dict = dict()
         try:
             if self._use_exclusion_field and parse_bool_from_raw(device_raw.get('u_exclude_from_discovery')):
                 logger.debug(f'ignoring excluded device {device_raw.get("sys_id")}')
@@ -296,7 +307,7 @@ class ServiceNowAdapterBase(AdapterBase):
                 return None
             device.id = str(device_id) + '_' + (device_raw.get('name') or '')
             device.sys_id = str(device_id)
-            device.table_type = table_type
+            device.table_type = device_raw.pop(InjectedRawFields.ax_device_type.value, None)
             device.category = device_raw.get('u_category') or device_raw.get('category')
             device.u_subcategory = device_raw.get('u_subcategory')
             device.asset_tag = device_raw.get('asset_tag')
@@ -371,26 +382,18 @@ class ServiceNowAdapterBase(AdapterBase):
             except Exception:
                 logger.warning(f'Problem getting NIC at {device_raw}', exc_info=True)
             try:
-                # Parse support_group
-                # Some clients have support_group through u_cmdb_ci_logicalci table
-                snow_logicalci_value = \
-                    self._parse_optional_reference(device_raw, 'u_logical_ci', snow_logicalci_dict) or {}
-
-                device.support_group = (
-                    self._parse_optional_reference_value(device_raw, 'support_group',
-                                                         snow_user_groups_table_dict, 'name') or
-                    self._parse_optional_reference_value(snow_logicalci_value, 'support_group',
-                                                         snow_user_groups_table_dict, 'name'))
-
-                snow_support_group_value = (self._parse_optional_reference(device_raw, 'support_group',
-                                                                           snow_user_groups_table_dict) or
-                                            self._parse_optional_reference(snow_logicalci_value, 'support_group',
-                                                                           snow_user_groups_table_dict))
-                if isinstance(snow_support_group_value, dict):
-                    device.u_director = self._parse_optional_reference_value(snow_support_group_value, 'u_director',
-                                                                             users_table_dict, 'name')
-                    device.u_manager = self._parse_optional_reference_value(snow_support_group_value, 'u_manager',
-                                                                            users_table_dict, 'name')
+                support_group = device_raw.pop(InjectedRawFields.support_group.value, None)
+                if isinstance(support_group, dict):
+                    support_group = support_group.get('display_value')
+                device.support_group = support_group
+                u_director = device_raw.pop(InjectedRawFields.u_director.value, None)
+                if isinstance(u_director, dict):
+                    u_director = u_director.get('display_value')
+                device.u_director = u_director
+                u_manager = device_raw.pop(InjectedRawFields.u_manager.value, None)
+                if isinstance(u_manager, dict):
+                    u_manager = u_manager.get('display_value')
+                device.u_manager = u_manager
             except Exception:
                 logger.warning(f'Problem adding support group to {device_raw}', exc_info=True)
 
@@ -401,20 +404,16 @@ class ServiceNowAdapterBase(AdapterBase):
             except Exception:
                 logger.exception(f'Problem getting mac 2 for {device_raw}')
 
-            os_title = device_raw.get('os')
-            u_operating_system = self._parse_optional_reference(device_raw, 'u_operating_system',
-                                                                snow_software_product_table_dict)
-            if isinstance(u_operating_system, dict):
-                software_product = u_operating_system or {}
-                os_title = os_title or software_product.get('title')
+            os_title = device_raw.get('os') or device_raw.pop(InjectedRawFields.os_title.value, None)
+            os_major_version = device_raw.pop(InjectedRawFields.major_version.value, None)
+            os_minor_version = device_raw.pop(InjectedRawFields.minor_version.value, None)
+            os_build_version = device_raw.pop(InjectedRawFields.build_version.value, None)
+            u_operating_system = ''
+            if os_major_version or os_minor_version or os_build_version:
                 # Take new fields and add them
-                u_operating_system = (f'{software_product.get("major_version") or ""}'
-                                      f'.{software_product.get("major_version") or ""}'
-                                      f' {software_product.get("build_version") or ""}')
-            if u_operating_system and not isinstance(u_operating_system, str):
-                logger.warning(f'Unknown non-empty u_operating_system type: {u_operating_system}')
-                u_operating_system = ''
-
+                u_operating_system = (f'{os_major_version or ""}'
+                                      f'.{os_minor_version or ""}'
+                                      f' {os_build_version or ""}')
             device.figure_os(' '.join([os_title or '',
                                        (device_raw.get('os_address_width') or ''),
                                        (u_operating_system or ''),
@@ -422,10 +421,8 @@ class ServiceNowAdapterBase(AdapterBase):
                                        (device_raw.get('os_service_pack') or ''),
                                        (device_raw.get('os_version') or '')]))
             device.os.install_date = parse_date(device_raw.get('install_date'))
-            device_model = None
-            curr_model_dict = self._parse_optional_reference(device_raw, 'model_id', snow_model_dict) or {}
+            model_u_classification = device_raw.pop(InjectedRawFields.model_u_classification.value, None)
             try:
-                model_u_classification = curr_model_dict.get('u_classification')
                 if isinstance(model_u_classification, str):
                     try:
                         # see if its an integer string, e.g. '6'
@@ -440,7 +437,7 @@ class ServiceNowAdapterBase(AdapterBase):
                                               or model_u_classification)
                 device.model_u_classification = model_u_classification
             except Exception:
-                logger.warning(f'Problem getting model classification at {curr_model_dict}', exc_info=True)
+                logger.warning(f'Problem getting model classification at {model_u_classification}', exc_info=True)
             try:
                 use_count = device_raw.get('use_count')
                 if isinstance(use_count, int):
@@ -493,17 +490,12 @@ class ServiceNowAdapterBase(AdapterBase):
                 device.u_uninstall_date = parse_date(device_raw.get('u_uninstall_date'))
             except Exception:
                 logger.warning(f'Failed parsing SNOW JSON fields', exc_info=True)
+            device_model = device_raw.pop(InjectedRawFields.device_model.value, None)
+            device.device_model = device_model
+            device_serial = device_raw.get('serial_number') or ''
             try:
-                device.device_model = (self._get_optional_raw_reference(device_raw, 'model_number') or
-                                       self._parse_optional_reference_value(device_raw, 'model_id',
-                                                                            snow_model_dict, 'name') or
-                                       curr_model_dict.get('display_name'))
-            except Exception:
-                logger.warning(f'Problem getting model at {device_raw}', exc_info=True)
-            try:
-                device_serial = device_raw.get('serial_number') or ''
                 if (device_serial or '').startswith('VMware'):
-                    device_serial += device_model or ''
+                    device_serial += (device_model or '')
                 if not any(bad_serial in device_serial for bad_serial in
                            ['Pending Discovery',
                             'Virtual Machine',
@@ -546,229 +538,167 @@ class ServiceNowAdapterBase(AdapterBase):
             except Exception:
                 logger.warning(f'Problem getting FQDN in {device_raw}', exc_info=True)
             device.description = device_raw.get('short_description')
+            device.snow_department = device_raw.pop(InjectedRawFields.snow_department.value, None)
+            device.physical_location = device_raw.pop(InjectedRawFields.physical_location.value, None)
+
+            install_status = None
             try:
-                device.snow_department = self._parse_optional_reference_value(device_raw, 'department',
-                                                                              snow_department_table_dict, 'name')
-            except Exception:
-                logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
-            try:
-                device.physical_location = self._parse_optional_reference_value(device_raw, 'location',
-                                                                                snow_location_table_dict, 'name')
-            except Exception:
-                logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
-            try:
-                snow_asset = self._parse_optional_reference(device_raw, 'asset', snow_alm_asset_table_dict) or {}
-                install_status = None
-                if snow_asset:
-                    try:
-                        install_status = install_status_dict.get(snow_asset.get('install_status'))
-                    except Exception:
-                        logger.warning(f'Problem getting install status for {device_raw}', exc_info=True)
-                    device.u_loaner = snow_asset.get('u_loaner')
-                    device.u_shared = snow_asset.get('u_shared')
-                    try:
-                        device.first_deployed = parse_date(snow_asset.get('u_first_deployed'))
-                    except Exception:
-                        logger.warning(f'Problem getting first deployed at {device_raw}', exc_info=True)
-                    device.u_altiris_status = snow_asset.get('u_altiris_status')
-                    device.u_casper_status = snow_asset.get('u_casper_status')
-                    try:
-                        device.substatus = snow_asset.get('substatus')
-                    except Exception:
-                        logger.warning(f'Problem adding hardware status to {device_raw}', exc_info=True)
-                    try:
-                        device.purchase_date = parse_date(snow_asset.get('purchase_date'))
-                    except Exception:
-                        logger.warning(f'Problem adding purchase date to {device_raw}', exc_info=True)
-                    try:
-                        device.snow_location = self._parse_optional_reference_value(snow_asset, 'location',
-                                                                                    snow_location_table_dict, 'name')
-                    except Exception:
-                        logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
-                    device.u_last_inventory = parse_date(snow_asset.get('u_last_inventory'))
+                install_status_raw = device_raw.pop(InjectedRawFields.asset_install_status.value, None)
                 try:
-                    device.u_business_segment = self._parse_optional_reference_value(
-                        device_raw, 'u_business_segment', snow_department_table_dict, 'name')
+                    install_status = install_status_dict.get(install_status_raw)
                 except Exception:
-                    logger.warning(f'Problem adding u_business_segment to {device_raw}', exc_info=True)
-
+                    logger.warning(f'Problem getting install status for {install_status_raw}', exc_info=True)
+                device.u_loaner = device_raw.pop(InjectedRawFields.asset_u_loaner.value, None)
+                device.u_shared = device_raw.pop(InjectedRawFields.asset_u_shared.value, None)
                 try:
-                    snow_nics = snow_nics_table_dict.get(device_raw.get('sys_id'))
-                    if isinstance(snow_nics, list):
-                        for snow_nic in snow_nics:
-                            try:
-                                device.add_nic(mac=snow_nic.get('mac_address'), ips=[snow_nic.get('ip_address')])
-                                try:
-                                    ci_ip_data = ci_ips_table_dict.get(snow_nic.get('correlation_id'))
-                                    if not isinstance(ci_ip_data, list):
-                                        ci_ip_data = []
-
-                                    for ci_ip in ci_ip_data:
-                                        u_authorative_dns_name = ci_ip.get('u_authorative_dns_name')
-                                        u_ip_version = ci_ip.get('u_ip_version')
-                                        u_ip_address = ci_ip.get('u_ip_address')
-                                        u_lease_contract = ci_ip.get('u_lease_contract')
-                                        u_netmask = ci_ip.get('u_netmask')
-                                        u_network_address = ci_ip.get('u_network_address')
-                                        u_subnet = ci_ip.get('u_subnet')
-                                        u_zone = ci_ip.get('u_zone')
-                                        u_ip_address_property = ci_ip.get('u_ip_address_property')
-                                        u_ip_network_class = ci_ip.get('u_ip_network_class')
-                                        u_last_discovered = parse_date(ci_ip.get('u_last_discovered'))
-                                        u_install_status = ci_ip.get('u_install_status')
-                                        ci_ip_data = CiIpData(u_authorative_dns_name=u_authorative_dns_name,
-                                                              u_ip_version=u_ip_version,
-                                                              u_ip_address=u_ip_address,
-                                                              u_lease_contract=u_lease_contract,
-                                                              u_netmask=u_netmask,
-                                                              u_network_address=u_network_address,
-                                                              u_subnet=u_subnet,
-                                                              u_zone=u_zone,
-                                                              u_ip_address_property=u_ip_address_property,
-                                                              u_ip_network_class=u_ip_network_class,
-                                                              u_last_discovered=u_last_discovered,
-                                                              u_install_status=u_install_status
-                                                              )
-                                        device.ci_ips.append(ci_ip_data)
-                                except Exception:
-                                    logger.exception(f'Problem getting ci ips table')
-                            except Exception:
-                                logger.exception(f'Problem with snow nic {snow_nic}')
+                    device.first_deployed = parse_date(device_raw.pop(InjectedRawFields.asset_first_deployed.value,
+                                                                      None))
+                except Exception:
+                    logger.warning(f'Problem getting first deployed at {device_raw}', exc_info=True)
+                device.u_altiris_status = device_raw.pop(InjectedRawFields.asset_altiris_status.value, None)
+                device.u_casper_status = device_raw.pop(InjectedRawFields.asset_casper_status.value, None)
+                try:
+                    device.substatus = device_raw.pop(InjectedRawFields.asset_substatus.value, None)
+                except Exception:
+                    logger.warning(f'Problem adding hardware status to {device_raw}', exc_info=True)
+                try:
+                    device.purchase_date = parse_date(device_raw.pop(InjectedRawFields.asset_purchase_date.value, None))
+                except Exception:
+                    logger.warning(f'Problem adding purchase date to {device_raw}', exc_info=True)
+                device.u_last_inventory = parse_date(device_raw.pop(InjectedRawFields.asset_last_inventory.value, None))
+                try:
+                    snow_location = device_raw.pop(InjectedRawFields.snow_location.value, None)
+                    if isinstance(snow_location, dict):
+                        snow_location = snow_location.get('display_value')
+                    device.snow_location = snow_location
                 except Exception:
                     logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
-                try:
-                    snow_ips = ips_table_dict.get(device_raw.get('sys_id'))
-                    if isinstance(snow_ips, list):
-                        for snow_ip in snow_ips:
-                            try:
-                                device.add_nic(ips=[snow_ip.get('u_address').split(',')[0]])
-                            except Exception:
-                                logger.exception(f'Problem with snow ips {snow_ip}')
-                except Exception:
-                    logger.warning(f'Problem adding assigned_to to {device_raw}', exc_info=True)
-                if not install_status or self.__use_ci_table_for_install_status:
-                    install_status = install_status_dict.get(device_raw.get('install_status'))
-                if self.__exclude_disposed_devices and install_status \
-                        and install_status in ['Disposed', 'Decommissioned']:
-                    return None
-                device.install_status = install_status
-                try:
-                    if (self.__install_status_exclude_list and
-                            device_raw.get('install_status') and
-                            str(device_raw.get('install_status')) in self.__install_status_exclude_list):
-
-                        return None
-                except Exception:
-                    logger.warning(f'Problem with install status exclude list')
             except Exception:
                 logger.warning(f'Problem at asset table information {device_raw}', exc_info=True)
+            try:
+                device.u_business_segment = device_raw.pop(InjectedRawFields.u_business_segment.value, None)
+            except Exception:
+                logger.warning(f'Problem adding u_business_segment to {device_raw}', exc_info=True)
 
-            device.owner = self._parse_optional_reference_value(device_raw, 'owned_by', users_table_dict, 'name')
-            owned_by = self._parse_optional_reference(device_raw, 'owned_by', users_table_dict) or {}
-            if isinstance(owned_by, dict) and owned_by.get('email'):
-                device.email = owned_by.get('email')
+            snow_nics = device_raw.pop(InjectedRawFields.snow_nics.value, None)
+            ci_ip_data = device_raw.pop(InjectedRawFields.ci_ip_data.value, None)
+            if isinstance(snow_nics, list):
+                if not isinstance(ci_ip_data, list):
+                    ci_ip_data = []
+                for snow_nic in snow_nics:
+                    try:
+                        device.add_nic(mac=snow_nic.get('mac_address'), ips=[snow_nic.get('ip_address')])
+                        try:
+
+                            for ci_ip in ci_ip_data:
+                                u_authorative_dns_name = ci_ip.get('u_authorative_dns_name')
+                                u_ip_version = ci_ip.get('u_ip_version')
+                                u_ip_address = ci_ip.get('u_ip_address')
+                                u_lease_contract = ci_ip.get('u_lease_contract')
+                                u_netmask = ci_ip.get('u_netmask')
+                                u_network_address = ci_ip.get('u_network_address')
+                                u_subnet = ci_ip.get('u_subnet')
+                                u_zone = ci_ip.get('u_zone')
+                                u_ip_address_property = ci_ip.get('u_ip_address_property')
+                                u_ip_network_class = ci_ip.get('u_ip_network_class')
+                                u_last_discovered = parse_date(ci_ip.get('u_last_discovered'))
+                                u_install_status = ci_ip.get('u_install_status')
+                                ci_ip_data = CiIpData(u_authorative_dns_name=u_authorative_dns_name,
+                                                      u_ip_version=u_ip_version,
+                                                      u_ip_address=u_ip_address,
+                                                      u_lease_contract=u_lease_contract,
+                                                      u_netmask=u_netmask,
+                                                      u_network_address=u_network_address,
+                                                      u_subnet=u_subnet,
+                                                      u_zone=u_zone,
+                                                      u_ip_address_property=u_ip_address_property,
+                                                      u_ip_network_class=u_ip_network_class,
+                                                      u_last_discovered=u_last_discovered,
+                                                      u_install_status=u_install_status
+                                                      )
+                                device.ci_ips.append(ci_ip_data)
+                        except Exception:
+                            logger.exception(f'Problem getting ci ips table')
+                    except Exception:
+                        logger.exception(f'Problem with snow nic {snow_nic}')
+
+            snow_ips = device_raw.pop(InjectedRawFields.snow_ips.value, None)
+            if isinstance(snow_ips, list):
+                for snow_ip in snow_ips:
+                    try:
+                        device.add_nic(ips=[snow_ip.get('u_address').split(',')[0]])
+                    except Exception:
+                        logger.exception(f'Problem with snow ips {snow_ip}')
+
+            if not install_status or self.__use_ci_table_for_install_status:
+                install_status = install_status_dict.get(device_raw.get('install_status'))
+            if self.__exclude_disposed_devices and install_status \
+                    and install_status in ['Disposed', 'Decommissioned']:
+                return None
+            device.install_status = install_status
+            try:
+                if (self.__install_status_exclude_list and
+                        device_raw.get('install_status') and
+                        str(device_raw.get('install_status')) in self.__install_status_exclude_list):
+
+                    return None
+            except Exception:
+                logger.warning(f'Problem with install status exclude list')
+
+            device.owner = device_raw.pop(InjectedRawFields.owner_name.value, None)
+            device.assigned_to = device_raw.get(InjectedRawFields.assigned_to_name.value, None)
+
+            assigned_to_email = device_raw.pop(InjectedRawFields.assigned_to_email.value, None)
+            owner_email = device_raw.pop(InjectedRawFields.owner_email.value, None)
+            device.email = assigned_to_email or owner_email
 
             try:
-                device.assigned_to = self._parse_optional_reference_value(device_raw, 'assigned_to',
-                                                                          users_table_dict, 'name')
-                assigned_to = self._parse_optional_reference(device_raw, 'assigned_to', users_table_dict) or {}
-                if assigned_to:
-                    device.email = assigned_to.get('email')
-                    device.assigned_to_country = assigned_to.get('country')
-                    try:
-                        device.assigned_to_division = (
-                            # u_division[assigned_to.u_division].name
-                            self._parse_optional_reference_value(
-                                assigned_to, 'u_division', u_division_dict, 'name') or
-                            assigned_to.get('u_division'))
-                        assigned_to_business_unit = (
-                            # departments[assigned_to.u_business_unit].name
-                            self._parse_optional_reference_value(assigned_to, 'u_business_unit',
-                                                                 snow_department_table_dict, 'name') or
-                            # companies[assigned_to.u_business_unit].name
-                            self._parse_optional_reference_value(assigned_to, 'u_business_unit',
-                                                                 companies_table_dict, 'name') or
-                            # business_unit[assigned_to.u_business_unit].name
-                            self._parse_optional_reference_value(assigned_to, 'u_business_unit',
-                                                                 business_unit_dict, 'name') or
-                            # assigned_to.u_business_unit
-                            assigned_to.get('u_business_unit'))
-                        if isinstance(assigned_to_business_unit, str):
-                            device.assigned_to_business_unit = assigned_to_business_unit
-                    except Exception:
-                        logger.exception(f'Problem with business unit')
-                    try:
-                        # users[username_to_user[assigned_to.manager]]
-                        manager_sys_id = self._parse_optional_reference(assigned_to, 'manager', users_username_dict)
-                        if manager_sys_id:
-                            manager_raw = users_table_dict.get(manager_sys_id) or {}
-                            device.manager_email = manager_raw.get('email')
-                    except Exception:
-                        logger.exception(f'Problem getting manager {device_raw}')
-                    try:
-                        device.assigned_to_location = self._parse_optional_reference_value(
-                            assigned_to, 'location', snow_location_table_dict, 'name')
-                    except Exception:
-                        logger.exception(f'Problem getting assing to location in {device_raw}')
+                device.assigned_to_country = device_raw.pop(InjectedRawFields.assigned_to_country.value, None)
+                assigned_to_division = device_raw.pop(InjectedRawFields.assigned_to_u_division.value, None)
+                if isinstance(assigned_to_division, dict):
+                    assigned_to_division = assigned_to_division.get('display_value')
+                device.assigned_to_division = assigned_to_division
+                assigned_to_business_unit = device_raw.pop(InjectedRawFields.assigned_to_business_unit.value, None)
+                if isinstance(assigned_to_business_unit, dict):
+                    assigned_to_business_unit = assigned_to_business_unit.get('display_value')
+                device.assigned_to_business_unit = assigned_to_business_unit
+                device.manager_email = device_raw.pop(InjectedRawFields.manager_email.value, None)
+                assigned_to_location = device_raw.pop(InjectedRawFields.assigned_to_location.value, None)
+                if isinstance(assigned_to_location, dict):
+                    assigned_to_location = assigned_to_location.get('display_value')
+                device.assigned_to_location = assigned_to_location
             except Exception:
                 logger.exception(f'Problem adding assigned_to to {device_raw}')
+            device.u_business_unit = device_raw.pop(InjectedRawFields.u_business_unit.value, None)
+            device.device_managed_by = device_raw.pop(InjectedRawFields.device_managed_by.value, None)
             try:
-                device.u_business_unit = (
-                    self._parse_optional_reference_value(device_raw, 'u_business_unit',
-                                                         snow_department_table_dict, 'name') or
-                    self._parse_optional_reference_value(device_raw, 'u_business_unit',
-                                                         companies_table_dict, 'name'))
-            except Exception:
-                logger.exception(f'Problem with device_raw u_business_unit')
-            try:
-                device.device_managed_by = (self._parse_optional_reference_value(device_raw, 'managed_by',
-                                                                                 users_table_dict, 'name'))
-            except Exception:
-                logger.exception(f'Problem with device_raw device_managed_by')
-            try:
-                try:
-                    device.vendor = self._parse_optional_reference_value(device_raw, 'vendor',
-                                                                         companies_table_dict, 'name')
-                except Exception:
-                    logger.exception(f'Problem getting vendor for {device_raw}')
+                device.vendor = device_raw.pop(InjectedRawFields.vendor.value, None)
                 u_vendor_ban = device_raw.get('u_vendor_ban')
                 if isinstance(u_vendor_ban, str):
                     device.u_vendor_ban = u_vendor_ban
-                try:
-                    device.device_manufacturer = (
-                        self._parse_optional_reference_value(device_raw, 'manufacturer', companies_table_dict,
-                                                             'name') or
-                        self._parse_optional_reference_value(curr_model_dict, 'manufacturer', companies_table_dict,
-                                                             'name') or
-                        device_raw.get('u_manufacturer_name'))
-                except Exception:
-                    logger.exception(f'Problem getting manufacturer for {device_raw}')
-                cpu_manufacturer = None
-                try:
-                    cpu_manufacturer = self._parse_optional_reference_value(device_raw, 'cpu_manufacturer',
-                                                                            companies_table_dict, 'name')
-                except Exception:
-                    logger.exception(f'Problem getting manufacturer for {device_raw}')
-                ghz = device_raw.get('cpu_speed')
-                if ghz:
-                    ghz = float(ghz) / 1024.0
-                else:
-                    ghz = None
+                device_manufacturer = device_raw.pop(InjectedRawFields.device_manufacturer.value, None)
+                if isinstance(device_manufacturer, dict):
+                    device_manufacturer = device_manufacturer.get('display_value')
+                device.device_manufacturer = device_manufacturer
+                if (device_manufacturer and
+                        any(s in device_manufacturer.lower() for s in ['aws', 'amazon']) and
+                        (isinstance(device_serial, str) and device_serial.lower().startswith('i-'))):
+                    device.cloud_id = device_serial
+                    device.cloud_provider = 'AWS'
+
+                cpu_manufacturer = device_raw.pop(InjectedRawFields.cpu_manufacturer.value, None)
+                ghz = float_or_none(device_raw.get('cpu_speed'))
+                if ghz and isinstance(ghz, float):
+                    ghz = ghz / 1024.0
                 device.add_cpu(name=device_raw.get('cpu_name'),
-                               cores=int(device_raw.get('cpu_count'))
-                               if device_raw.get('cpu_count') else None,
-                               cores_thread=int(device_raw.get('cpu_core_thread'))
-                               if device_raw.get('cpu_core_thread') else None,
+                               cores=int_or_none(device_raw.get('cpu_count')),
+                               cores_thread=int_or_none(device_raw.get('cpu_core_thread')),
                                ghz=ghz,
                                manufacturer=cpu_manufacturer)
             except Exception:
-                logger.exception(f'Problem adding cpu stuff to {device_raw}')
+                logger.debug(f'Problem adding cpu stuff to {device_raw}', exc_info=True)
             try:
-                device.company = self._parse_optional_reference_value(device_raw, 'company',
-                                                                      companies_table_dict, 'name')
-            except Exception:
-                logger.exception(f'Problem getting company for {device_raw}')
-            try:
+                device.company = device_raw.pop(InjectedRawFields.company.value, None)
                 device.discovery_source = device_raw.get('discovery_source')
                 device.first_discovered = parse_date(device_raw.get('first_discovered'))
                 last_discovered = parse_date(device_raw.get('last_discovered'))
@@ -786,77 +716,55 @@ class ServiceNowAdapterBase(AdapterBase):
             except Exception:
                 logger.exception(f'Problem addding source stuff to {device_raw}')
             try:
-                if device_raw.get('disk_space'):
-                    device.add_hd(total_size=float(device_raw.get('disk_space')))
+                if float_or_none(device_raw.get('disk_space')):
+                    device.add_hd(total_size=float_or_none(device_raw.get('disk_space')))
             except Exception:
                 logger.exception(f'Problem adding disk stuff to {device_raw}')
-            try:
-                device.u_supplier = self._parse_optional_reference_value(device_raw, 'u_supplier',
-                                                                         supplier_table_dict, 'u_supplier')
-            except Exception:
-                logger.exception(f'Problem getting supplier_info {device_raw}')
-            self._fill_relation(device, device_raw.get('sys_id'), consts.RELATIONS_TABLE_PARENT_KEY,
-                                relations_table_dict, relations_info_dict)
-            self._fill_relation(device, device_raw.get('sys_id'), consts.RELATIONS_TABLE_CHILD_KEY,
-                                relations_table_dict, relations_info_dict)
-            maintenance_dict = self._parse_optional_reference(device_raw, 'maintenance_schedule',
-                                                              snow_maintenance_sched_dict)
+            device.u_supplier = device_raw.pop(InjectedRawFields.u_supplier.value, None)
+            self._fill_relations(device, device_raw)
+            maintenance_dict = device_raw.pop(InjectedRawFields.maintenance_schedule.value, None)
             if isinstance(maintenance_dict, dict):
                 self._fill_maintenance_schedule(device, maintenance_dict)
             try:
-                device.u_access_authorisers = self._parse_optional_reference_value(device_raw, 'u_access_authorisers',
-                                                                                   users_table_dict, 'name')
+                device.u_access_authorisers = device_raw.pop(InjectedRawFields.u_access_authorisers.value, None)
                 device.u_access_control_list_extraction_method = device_raw.get(
                     'u_access_control_list_extraction_method')
-                device.u_acl_contacts = self._parse_optional_reference_value(device_raw, 'u_acl_contacts',
-                                                                             users_table_dict, 'name')
+                device.u_acl_contacts = device_raw.pop(InjectedRawFields.u_acl_contacts.value, None)
                 device.u_acl_contacts_mailbox = device_raw.get('u_acl_contacts_mailbox')
                 device.u_atm_category = device_raw.get('u_atm_category')
                 device.u_atm_line_address = device_raw.get('u_atm_line_address')
                 device.u_atm_security_carrier = device_raw.get('u_atm_security_carrier')
                 device.u_attestation_date = parse_date(device_raw.get('u_attestation_date'))
                 device.u_bted_id = device_raw.get('u_bted_id')
-                device.u_bucf_contacts = self._parse_optional_reference_value(device_raw, 'u_bucf_contacts',
-                                                                              users_table_dict, 'name')
+                device.u_bucf_contacts = device_raw.pop(InjectedRawFields.u_bucf_contacts.value, None)
                 device.u_bucf_contacts_mailbox = device_raw.get('u_bucf_contacts_mailbox')
-                device.u_business_owner = self._parse_optional_reference_value(device_raw, 'u_business_owner',
-                                                                               users_table_dict, 'name')
+                device.u_business_owner = device_raw.pop(InjectedRawFields.u_business_owner.value, None)
                 device.u_cmdb_data_mgt_journal = device_raw.get('u_cmdb_data_mgt_journal')
-                device.u_cmdb_data_owner = self._parse_optional_reference_value(device_raw, 'u_cmdb_data_owner',
-                                                                                users_table_dict, 'name')
-                device.u_cmdb_data_owner_group = self._parse_optional_reference_value(
-                    device_raw, 'u_cmdb_data_owner_group', snow_user_groups_table_dict, 'name')
-                device.u_cmdb_data_owner_team = self._parse_optional_reference_value(
-                    device_raw, 'u_cmdb_data_owner_team', snow_user_groups_table_dict, 'name')
-                device.u_cmdb_data_steward = self._parse_optional_reference_value(device_raw, 'u_cmdb_data_steward',
-                                                                                  users_table_dict, 'name')
-                device.u_custodian = self._parse_optional_reference_value(device_raw, 'u_custodian',
-                                                                          users_table_dict, 'name')
-                device.u_custodian_group = self._parse_optional_reference_value(device_raw, 'u_custodian_group',
-                                                                                snow_user_groups_table_dict, 'name')
+                device.u_cmdb_data_owner = device_raw.pop(InjectedRawFields.u_cmdb_data_owner.value, None)
+                device.u_cmdb_data_owner_group = device_raw.pop(InjectedRawFields.u_cmdb_data_owner_group.value, None)
+                device.u_cmdb_data_owner_team = device_raw.pop(InjectedRawFields.u_cmdb_data_owner_team.value, None)
+                device.u_cmdb_data_steward = device_raw.pop(InjectedRawFields.u_cmdb_data_steward.value, None)
+                device.u_custodian = device_raw.pop(InjectedRawFields.u_custodian.value, None)
+                device.u_custodian_group = device_raw.pop(InjectedRawFields.u_custodian_group.value, None)
                 device.u_custodian_team = device_raw.get('u_custodian_team')
                 device.u_delivery_of_access_control_list = device_raw.get('u_delivery_of_access_control_list')
-                device.u_fulfilment_group = self._parse_optional_reference_value(device_raw, 'u_fulfilment_group',
-                                                                                 snow_user_groups_table_dict, 'name')
+                device.u_fulfilment_group = device_raw.pop(InjectedRawFields.u_fulfilment_group.value, None)
                 device.u_last_update_from_import = device_raw.get('u_last_update_from_import')
                 device.u_oim_division = device_raw.get('u_oim_division')
                 device.u_organisation = device_raw.get('u_organisation')
-                device.u_orphan_account_contacts = self._parse_optional_reference_value(
-                    device_raw, 'u_orphan_account_contacts', users_table_dict, 'name')
-                device.u_orphan_account_manager = self._parse_optional_reference_value(
-                    device_raw, 'u_orphan_account_manager', users_table_dict, 'name')
+                device.u_orphan_account_contacts = device_raw.pop(
+                    InjectedRawFields.u_orphan_account_contacts.value, None)
+                device.u_orphan_account_manager = device_raw.pop(InjectedRawFields.u_orphan_account_manager.value, None)
                 device.u_permitted_childless = device_raw.get('u_permitted_childless')
                 device.u_permitted_parentless = device_raw.get('u_permitted_parentless')
-                device.u_primary_support_group = self._parse_optional_reference_value(
-                    device_raw, 'u_primary_support_group', snow_user_groups_table_dict, 'name')
-                device.u_primary_support_sme = self._parse_optional_reference_value(device_raw, 'u_primary_support_sme',
-                                                                                    users_table_dict, 'name')
+                device.u_primary_support_group = device_raw.pop(InjectedRawFields.u_primary_support_group.value, None)
+                device.u_primary_support_sme = device_raw.pop(InjectedRawFields.u_primary_support_sme.value, None)
                 device.u_primary_support_team = device_raw.get('u_primary_support_team')
                 device.u_reason_for_childless = device_raw.get('u_reason_for_childless')
                 device.u_reason_for_parentless = device_raw.get('u_reason_for_parentless')
                 device.u_recertification_approach = device_raw.get('u_recertification_approach')
-                device.u_recertification_contacts = self._parse_optional_reference_value(
-                    device_raw, 'u_recertification_contacts', users_table_dict, 'name')
+                device.u_recertification_contacts = device_raw.pop(InjectedRawFields.u_recertification_contacts.value,
+                                                                   None)
                 device.u_recertification_type = device_raw.get('u_recertification_type')
                 device.u_record_date_time = device_raw.get('u_record_date_time')
                 device.u_record_id = device_raw.get('u_record_id')
@@ -868,24 +776,20 @@ class ServiceNowAdapterBase(AdapterBase):
                 device.u_ref_3_label = device_raw.get('u_ref_3_label')
                 device.u_ref_3_value = device_raw.get('u_ref_3_value')
                 device.u_role = device_raw.get('u_role')
-                device.u_security_administrators = self._parse_optional_reference_value(device_raw,
-                                                                                        'u_security_administrators',
-                                                                                        users_table_dict, 'name')
+                device.u_security_administrators = device_raw.pop(InjectedRawFields.u_security_administrators.value,
+                                                                  None)
                 device.u_si_id = device_raw.get('u_si_id')
                 device.u_source_name = device_raw.get('u_source_name')
                 device.u_source_target_class = device_raw.get('u_source_target_class')
                 device.u_sox_control = device_raw.get('u_sox_control')
                 device.u_suspensions_deletions = device_raw.get('u_suspensions_deletions')
-                device.u_technical_admin_contacts = self._parse_optional_reference_value(
-                    device_raw, 'u_technical_admin_contacts', users_table_dict, 'name')
+                device.u_technical_admin_contacts = device_raw.pop(InjectedRawFields.u_technical_admin_contacts.value,
+                                                                   None)
                 device.u_tech_admin_mailbox = device_raw.get('u_tech_admin_mailbox')
-                device.u_toxic_division_group = self._parse_optional_reference_value(
-                    device_raw, 'u_toxic_division_group', snow_user_groups_table_dict, 'name')
-                device.u_uar_contacts = self._parse_optional_reference_value(device_raw, 'u_uar_contacts',
-                                                                             users_table_dict, 'name')
+                device.u_toxic_division_group = device_raw.pop(InjectedRawFields.u_toxic_division_group.value, None)
+                device.u_uar_contacts = device_raw.pop(InjectedRawFields.u_uar_contacts.value, None)
                 device.u_uar_contacts_mailbox = device_raw.get('u_uar_contacts_mailbox')
-                device.u_uav_delegates = self._parse_optional_reference_value(device_raw, 'u_uav_delegates',
-                                                                              users_table_dict, 'name')
+                device.u_uav_delegates = device_raw.pop(InjectedRawFields.u_uav_delegates.value, None)
                 device.u_work_notes = device_raw.get('u_work_notes')
             except Exception:
                 logger.exception(f'Failed parsing cmdb_ci_computer_atm fields')
@@ -895,18 +799,16 @@ class ServiceNowAdapterBase(AdapterBase):
             except Exception:
                 logger.exception(f'failed parsing cmdb_ci_comm fields')
             try:
-                device.u_it_owner_organization = self._parse_optional_reference_value(
-                    device_raw, 'u_it_owner_organization', u_division_dict, 'name')
-                device.u_managed_by_vendor = self._parse_optional_reference_value(
-                    device_raw, 'u_managed_by_vendor', companies_table_dict, 'name')
+                device.u_it_owner_organization = device_raw.pop(InjectedRawFields.u_it_owner_organization.value, None)
+                device.u_managed_by_vendor = device_raw.pop(InjectedRawFields.u_managed_by_vendor.value, None)
             except Exception:
                 logger.exception(f'failed parsing it_owner_org / managed_by_vendor')
             try:
-                device.u_division = device_raw.get('u_division')
-                device.u_level1_mgmt_org_code = device_raw.get('u_level1_mgmt_org_code')
-                device.u_level2_mgmt_org_code = device_raw.get('u_level2_mgmt_org_code')
-                device.u_level3_mgmt_org_code = device_raw.get('u_level3_mgmt_org_code')
-                device.u_pg_email_address = device_raw.get('u_pg_email_address')
+                device.u_division = device_raw.pop(InjectedRawFields.u_division.value, None)
+                device.u_level1_mgmt_org_code = device_raw.pop(InjectedRawFields.u_level1_mgmt_org_code.value, None)
+                device.u_level2_mgmt_org_code = device_raw.pop(InjectedRawFields.u_level2_mgmt_org_code.value, None)
+                device.u_level3_mgmt_org_code = device_raw.pop(InjectedRawFields.u_level3_mgmt_org_code.value, None)
+                device.u_pg_email_address = device_raw.pop(InjectedRawFields.u_pg_email_address.value, None)
             except Exception:
                 logger.exception(f'failed parsing levelx_mgmt fields')
             device.domain = device_raw.get('dns_domain') or device_raw.get('os_domain')
@@ -931,7 +833,10 @@ class ServiceNowAdapterBase(AdapterBase):
                 device.hardware_substatus = hardware_sub_status
             device.u_number = device_raw.get('u_number')
             device.u_consumption_type = device_raw.get('u_consumption_type')
-            device.u_function = device_raw.get('u_function')
+            u_function = device_raw.get('u_function')
+            if isinstance(u_function, dict):
+                u_function = u_function.get('display_value')
+            device.u_function = u_function
             device.u_ge_data_class = device_raw.get('u_ge_data_class')
             device.u_location_details = device_raw.get('u_location_details')
 
@@ -942,20 +847,24 @@ class ServiceNowAdapterBase(AdapterBase):
             device.u_management_access_type = device_raw.get('u_management_access_type')
             device.u_network_zone = device_raw.get('u_network_zone')
 
-            # prepare compliance exception ids
-            device_compliance_exception_ids_set = set()
-            id_based_exceptions = snow_compliance_exception_ids_dict.get(str(device_id))
-            if isinstance(id_based_exceptions, list):
-                device_compliance_exception_ids_set.update(id_based_exceptions)
-            if name and isinstance(name, str):
-                name_based_exceptions = snow_compliance_exception_ids_dict.get(name.lower())
-                if isinstance(name_based_exceptions, list):
-                    device_compliance_exception_ids_set.update(name_based_exceptions)
-            # parse compliance exceptions
-            if device_compliance_exception_ids_set:
-                device_compliance_exceptions = []
-                for compliance_exception_id in device_compliance_exception_ids_set:
-                    compliance_exception_data: dict = snow_compliance_exception_data_dict.get(compliance_exception_id)
+            try:
+                verification_install_status = device_raw.pop(InjectedRawFields.verification_status.value, None)
+                if verification_install_status_dict:
+                    verification_install_status = verification_install_status_dict.get(verification_install_status)
+                device.verification_install_status = verification_install_status
+
+                verification_operational_status = device_raw.pop(
+                    InjectedRawFields.verification_operational_status.value, None)
+                if verification_operational_status_dict:
+                    verification_operational_status = verification_operational_status_dict.get(
+                        verification_operational_status)
+                device.verification_operational_status = verification_operational_status
+            except Exception:
+                logger.warning(f'Failed setting verification table fields', exc_info=True)
+
+            device_compliance_exceptions = device_raw.pop(InjectedRawFields.compliance_exceptions.value, None)
+            if isinstance(device_compliance_exceptions, list):
+                for compliance_exception_data in device_compliance_exceptions:
                     try:
                         if not (isinstance(compliance_exception_data, dict) and
                                 isinstance(compliance_exception_data.get('active'), str)):
@@ -985,6 +894,38 @@ class ServiceNowAdapterBase(AdapterBase):
 
                 device.compliance_exceptions = device_compliance_exceptions
 
+            # Note - explicit '.pop' for removing large dicts for device_raw
+            device_software_list = device_raw.pop(InjectedRawFields.snow_software.value, None)
+            if isinstance(device_software_list, list):
+                for soft_dict in device_software_list:
+                    if not isinstance(soft_dict, dict):
+                        continue
+                    try:
+                        device.add_installed_software(
+                            name=(soft_dict.get('software.name') or  # NON-SAM
+                                  soft_dict.get('display_name')),  # SAM
+                            version=(soft_dict.get('software.version') or  # NON-SAM
+                                     soft_dict.get('version')),  # SAM
+                            vendor=soft_dict.get('software.vendor.name'),  # NON-SAM
+                            publisher=(soft_dict.get('software.manufacturer.name') or  # NON-SAM
+                                       soft_dict.get('publisher')),  # SAM
+                        )
+                    except Exception:
+                        pass
+
+            device_contracts = device_raw.pop(InjectedRawFields.contracts.value, None)
+            if isinstance(device_contracts, list):
+                for contract_dict in device_contracts:
+                    if not isinstance(contract_dict, dict):
+                        continue
+                    try:
+                        device.contracts.append(SnowDeviceContract(
+                            number=contract_dict.get('contract.number'),
+                            short_desc=contract_dict.get('contract.short_description'),
+                            parent_number=contract_dict.get('contract.parent.number'),
+                        ))
+                    except Exception:
+                        logger.debug(f'failed appending contract: {contract_dict}', exc_info=True)
             device.set_raw(device_raw)
             if not got_serial and not got_nic and self.__exclude_no_strong_identifier:
                 return None
@@ -1023,30 +964,44 @@ class ServiceNowAdapterBase(AdapterBase):
 
         :return: A json with all the attributes returned from the ServiceNow Server
         """
-        connection, install_status_dict, operational_status_dict = client_data
-        with connection:
-            for device_raw in connection.get_device_list(
-                    fetch_users_info_for_devices=self.__fetch_users_info_for_devices,
-                    fetch_ci_relations=self.__fetch_ci_relations,
-                    fetch_business_unit_dict=self._fetch_business_unit_dict,
-                    fetch_compliance_exceptions=self._fetch_compliance_exceptions,
-                    parallel_requests=self.__parallel_requests):
-                yield device_raw, install_status_dict, operational_status_dict
+
+        _ = (yield from concurrent_multiprocess_yield(
+            [
+                (
+                    generic_service_now_query_devices_by_client,
+                    (
+                        client_data,
+                    ),
+                    {}
+                )
+            ],
+            1
+        ))
+        # To restore original method:
+        # yield from generic_service_now_query_devices_by_client(client_data)
 
     def _query_users_by_client(self, key, data):
-        connection, _, _ = data
-        if self.__fetch_users:
-            with connection:
-                yield from connection.get_user_list(parallel_requests=self.__parallel_requests)
+        if not self.__fetch_users:
+            return
+        _ = (yield from concurrent_multiprocess_yield(
+            [
+                (
+                    generic_service_now_query_users_by_client,
+                    (
+                        data,
+                    ),
+                    {}
+                )
+            ],
+            1
+        ))
+        # To restore original method:
+        # yield from generic_service_now_query_users_by_client(data)
 
     # pylint: disable=arguments-differ
     def _parse_users_raw_data(self, raw_data):
         for user_raw in raw_data:
             try:
-                # remove subtables from user_raw (otherwise query will fail due to large user_raw)
-                subtables = user_raw.pop(consts.SUBTABLES_KEY, {})
-                snow_department_table_dict = subtables.get(consts.DEPARTMENT_TABLE_KEY) or {}
-                companies_table_dict = subtables.get(consts.COMPANY_TABLE) or {}
                 try:
                     if self._use_exclusion_field and parse_bool_from_raw(user_raw.get('u_exclude_from_discovery')):
                         logger.debug(f'ignoring excluded user {user_raw.get("sys_id")}')
@@ -1105,14 +1060,8 @@ class ServiceNowAdapterBase(AdapterBase):
                 user.u_studio = user_raw.get('u_studio')
                 user.u_sub_department = user_raw.get('u_sub_department')
                 user.u_profession = user_raw.get('u_profession')
-                user.u_company = (self._parse_optional_reference_value(user_raw, 'u_company',
-                                                                       companies_table_dict, 'name') or
-                                  self._parse_optional_reference_value(user_raw, 'company',
-                                                                       companies_table_dict, 'name'))
-                user.u_department = (self._parse_optional_reference_value(user_raw, 'u_department',
-                                                                          snow_department_table_dict, 'name') or
-                                     self._parse_optional_reference_value(user_raw, 'department',
-                                                                          snow_department_table_dict, 'name'))
+                user.u_company = user_raw.pop(InjectedRawFields.u_company.value, None)
+                user.u_department = user_raw.pop(InjectedRawFields.u_department.value, None)
                 if user_raw.get('vip'):
                     user.u_vip = (user_raw.get('vip') == 'true')
                 user.u_business_unit = user_raw.get('u_business_unit')
@@ -1127,8 +1076,10 @@ class ServiceNowAdapterBase(AdapterBase):
                 logger.warning(f'Problem getting user {user_raw}', exc_info=True)
 
     @staticmethod
-    def _fill_relation(device, initial_sys_id, relation_key, relations_table_dict, relations_info_dict,
-                       initial_depth=3) -> Optional[List[dict]]:
+    def _fill_relations(device, device_raw) -> Optional[List[dict]]:
+        relations_raw = device_raw.pop(InjectedRawFields.relations.value, None)
+        if not isinstance(relations_raw, dict):
+            return
 
         # pylint: disable=no-else-return
         def _get_node_class(depth):
@@ -1137,56 +1088,56 @@ class ServiceNowAdapterBase(AdapterBase):
             else:
                 return RelativeInformationLeaf
 
-        def _recursive_prepare_relation(sys_id, depth):
-
-            relations_info = relations_info_dict.get(sys_id)
-            if not relations_info:
+        def _parse_relatives(curr_relatives_raw, depth, is_downstream):
+            if not isinstance(curr_relatives_raw, list):
                 return None
-
-            curr_node_cls = _get_node_class(depth)
-            curr_node = curr_node_cls(name=relations_info.get('name'),
-                                      sys_class_name=relations_info.get('sys_class_name'))
-
-            curr_relations = (relations_table_dict.get(sys_id) or {}).get(relation_key) or []
-            # If we reached max depth or there are no relations, return only the info
-            if (depth == 1) or (not curr_relations):
-                return curr_node
-
-            # parse relation
             curr_relative_objs = []
-            for relative_sys_id in curr_relations:
-                relative_obj = _recursive_prepare_relation(relative_sys_id, depth=depth - 1)
+            for relative_sys_id in curr_relatives_raw:
+                relative_obj = _recursive_prepare_relation_node(relative_sys_id,
+                                                                depth=depth - 1,
+                                                                is_downstream=is_downstream)
                 if not relative_obj:
                     continue
                 curr_relative_objs.append(relative_obj)
+            return curr_relative_objs
 
-            # assign relatives
-            if relation_key == consts.RELATIONS_TABLE_CHILD_KEY:
-                curr_node.downstream = curr_relative_objs
-            elif relation_key == consts.RELATIONS_TABLE_PARENT_KEY:
-                curr_node.upstream = curr_relative_objs
+        def _recursive_prepare_relation_node(curr_relation: dict, depth, is_downstream=False):
+            curr_node_cls = _get_node_class(depth)
+            curr_node = curr_node_cls(name=curr_relation.get('name'),
+                                      sys_class_name=curr_relation.get('sys_class_name'))
 
+            # Recursion explicit stop - last depth should not have relatives
+            if depth == 1:
+                return curr_node
+
+            # Note: the actual recursion occurs here
+            #       _recursive_prepare_relation_node -> _parse_relations -> _recursive_prepare_relation_node
+            # Recursion implicit stop - no relatives, no recursion :)
+            if is_downstream:
+                curr_node.downstream = _parse_relatives(curr_relation.get(consts.RELATIONS_TABLE_CHILD_KEY),
+                                                        depth,
+                                                        is_downstream)
+            else:
+                curr_node.upstream = _parse_relatives(curr_relation.get(consts.RELATIONS_TABLE_PARENT_KEY),
+                                                      depth,
+                                                      is_downstream)
             return curr_node
 
         try:
-            # Handle initial depth differently
-            # if initial sys_id has no relations of relation_key type, return None
-            relative_sys_ids = (relations_table_dict.get(initial_sys_id) or {}).get(relation_key)
-            if not relative_sys_ids:
-                return None
+            # Note: we consider the current device as MAX_DEPTH, its relations begin at MAX_DEPTH-1
+            downstream_raw_list = relations_raw.get(consts.RELATIONS_TABLE_CHILD_KEY)
+            if isinstance(downstream_raw_list, list):
+                device.downstream = [_recursive_prepare_relation_node(downstream_raw, consts.MAX_RELATIONS_DEPTH - 1,
+                                                                      is_downstream=True)
+                                     for downstream_raw in downstream_raw_list]
+            upstream_raw_list = relations_raw.get(consts.RELATIONS_TABLE_PARENT_KEY)
+            if isinstance(upstream_raw_list, list):
+                device.upstream = [_recursive_prepare_relation_node(upstream_raw, consts.MAX_RELATIONS_DEPTH - 1,
+                                                                    is_downstream=False)
+                                   for upstream_raw in upstream_raw_list]
 
-            relative_objs = []
-            for relative_sys_id in relative_sys_ids:
-                relative_obj = _recursive_prepare_relation(relative_sys_id, depth=initial_depth - 1)
-                if not relative_obj:
-                    continue
-                relative_objs.append(relative_obj)
-            if relation_key == consts.RELATIONS_TABLE_CHILD_KEY:
-                device.downstream = relative_objs
-            elif relation_key == consts.RELATIONS_TABLE_PARENT_KEY:
-                device.upstream = relative_objs
         except Exception:
-            logger.exception(f'Failed parsing relation {relation_key}')
+            logger.exception(f'Failed parsing relations')
 
     @staticmethod
     def _fill_maintenance_schedule(device, maintenance_schedule_dict):
@@ -1202,58 +1153,16 @@ class ServiceNowAdapterBase(AdapterBase):
             logger.warning(f'Problem adding maintenance schedule to {maintenance_schedule_dict}', exc_info=True)
 
     def _parse_raw_data(self, devices_raw_data):
-        for table_devices_data, install_status_dict, operational_status_dict in devices_raw_data:
-            users_table_dict = table_devices_data.get(consts.USERS_TABLE_KEY)
-            users_username_dict = table_devices_data.get(consts.USERS_USERNAME_KEY)
-            snow_department_table_dict = table_devices_data.get(consts.DEPARTMENT_TABLE_KEY)
-            snow_location_table_dict = table_devices_data.get(consts.LOCATION_TABLE_KEY)
-            snow_user_groups_table_dict = table_devices_data.get(consts.USER_GROUPS_TABLE_KEY)
-            snow_nics_table_dict = table_devices_data.get(consts.NIC_TABLE_KEY)
-            snow_alm_asset_table_dict = table_devices_data.get(consts.ALM_ASSET_TABLE)
-            companies_table_dict = table_devices_data.get(consts.COMPANY_TABLE)
-            ips_table_dict = table_devices_data.get(consts.IPS_TABLE)
-            ci_ips_table_dict = table_devices_data.get(consts.CI_IPS_TABLE)
-            supplier_table_dict = table_devices_data.get(consts.U_SUPPLIER_TABLE)
-            relations_table_dict = table_devices_data.get(consts.RELATIONS_TABLE)
-            relations_info_dict = table_devices_data.get(consts.RELATIONS_DETAILS_TABLE_KEY)
-            maintenance_sched_dict = table_devices_data.get(consts.MAINTENANCE_SCHED_TABLE)
-            software_product_dict = table_devices_data.get(consts.SOFTWARE_PRODUCT_TABLE)
-            model_dict = table_devices_data.get(consts.MODEL_TABLE)
-            snow_logicalci_dict = table_devices_data.get(consts.LOGICALCI_TABLE)
-            u_division_dict = table_devices_data.get(consts.U_DIVISION_TABLE)
-            business_unit_dict = table_devices_data.get(consts.BUSINESS_UNIT_TABLE)
-            snow_compliance_exc_ids_dict = table_devices_data.get(consts.COMPLIANCE_EXCEPTION_TO_ASSET_TABLE)
-            snow_compliance_exc_data_dict = table_devices_data.get(consts.COMPLIANCE_EXCEPTION_DATA_TABLE)
-
-            for device_raw in table_devices_data[consts.DEVICES_KEY]:
-                device = self.create_snow_device(device_raw=device_raw,
-                                                 snow_department_table_dict=snow_department_table_dict,
-                                                 snow_location_table_dict=snow_location_table_dict,
-                                                 snow_alm_asset_table_dict=snow_alm_asset_table_dict,
-                                                 snow_nics_table_dict=snow_nics_table_dict,
-                                                 users_table_dict=users_table_dict,
-                                                 users_username_dict=users_username_dict,
-                                                 companies_table_dict=companies_table_dict,
-                                                 ci_ips_table_dict=ci_ips_table_dict,
-                                                 snow_user_groups_table_dict=snow_user_groups_table_dict,
-                                                 ips_table_dict=ips_table_dict,
-                                                 fetch_ips=self.__fetch_ips,
-                                                 table_type=table_devices_data[consts.DEVICE_TYPE_NAME_KEY],
-                                                 install_status_dict=install_status_dict,
-                                                 supplier_table_dict=supplier_table_dict,
-                                                 relations_table_dict=relations_table_dict,
-                                                 relations_info_dict=relations_info_dict,
-                                                 snow_maintenance_sched_dict=maintenance_sched_dict,
-                                                 snow_software_product_table_dict=software_product_dict,
-                                                 snow_model_dict=model_dict,
-                                                 snow_logicalci_dict=snow_logicalci_dict,
-                                                 operational_status_dict=operational_status_dict,
-                                                 u_division_dict=u_division_dict,
-                                                 business_unit_dict=business_unit_dict,
-                                                 snow_compliance_exception_ids_dict=snow_compliance_exc_ids_dict,
-                                                 snow_compliance_exception_data_dict=snow_compliance_exc_data_dict)
-                if device:
-                    yield device
+        for (device_raw, install_status_dict, operational_status_dict,
+             verification_install_status_dict, verification_operational_status_dict) in devices_raw_data:
+            device = self.create_snow_device(device_raw=device_raw,
+                                             fetch_ips=self.__fetch_ips,
+                                             install_status_dict=install_status_dict,
+                                             operational_status_dict=operational_status_dict,
+                                             verification_install_status_dict=verification_install_status_dict,
+                                             verification_operational_status_dict=verification_operational_status_dict)
+            if device:
+                yield device
 
     @classmethod
     def adapter_properties(cls):
@@ -1288,6 +1197,19 @@ class ServiceNowAdapterBase(AdapterBase):
         self._fetch_compliance_exceptions = config['fetch_compliance_exceptions']
         self._use_exclusion_field = config['use_exclusion_field']
         self._is_ram_in_gb = config.get('is_ram_in_gb') or False
+        self._fetch_software_product_model = config.get('fetch_software_product_model') or False
+        self._fetch_cmdb_model = config.get('fetch_cmdb_model') or False
         self._fetch_business_unit_dict = config.get('fetch_business_unit_dict') or False
+        self._fetch_installed_software = config.get('fetch_installed_software') or False
+        self._contract_parent_numbers = config.get('contract_parent_numbers')
+        self._use_dotwalking = bool(config.get('use_dotwalking'))
+        self._dotwalking_per_request_limit = config.get('dotwalking_per_request_limit') or \
+            consts.DEFAULT_DOTWALKING_PER_REQUEST
+        self._use_cached_users = bool(config.get('use_cached_users'))
+
+        self._snow_last_updated_threashold = None
+        last_updated = config.get('snow_last_updated')
+        if isinstance(last_updated, int) and last_updated > 0:
+            self._snow_last_updated_threashold = timedelta(hours=last_updated)
 
         self.__parallel_requests = config.get('parallel_requests') or consts.DEFAULT_ASYNC_CHUNK_SIZE

@@ -1,10 +1,11 @@
 import logging
+from collections import Callable
 
-from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.rest.connection import RESTConnection, RESTException
+from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.service_now import consts
-from axonius.clients.service_now.akana import ServiceNowAkanaConnection
-from axonius.clients.service_now.service.adapter_base import ServiceNowAdapterBase
+from axonius.clients.service_now.akana import DEFAULT_BASE_URL_PREFIX
+from axonius.clients.service_now.external import service_now_akana_get_connection
+from axonius.clients.service_now.service.base import ServiceNowAdapterBase
 from axonius.clients.service_now.service.structures import SnowDeviceAdapter, SnowUserAdapter
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
@@ -33,25 +34,12 @@ class ServiceNowAkanaAdapter(ServiceNowAdapterBase, Configurable):
         return RESTConnection.test_reachability(client_config.get('domain'),
                                                 https_proxy=client_config.get('https_proxy'))
 
-    @staticmethod
-    def get_connection(client_config):
-        try:
-            connection = ServiceNowAkanaConnection(domain=client_config.get('domain'),
-                                                   token_endpoint=client_config.get('token_endpoint'),
-                                                   verify_ssl=client_config.get('verify_ssl'),
-                                                   https_proxy=client_config.get('https_proxy'),
-                                                   proxy_username=client_config.get('proxy_username'),
-                                                   proxy_password=client_config.get('proxy_password'),
-                                                   username=client_config.get('username'),
-                                                   password=client_config.get('password'))
-            with connection:
-                pass  # check that the connection credentials are valid
-            return connection
-        except RESTException as e:
-            message = 'Error connecting to client with domain {0}, reason: {1}'.format(
-                client_config['domain'], str(e))
-            logger.warning(message, exc_info=True)
-            raise ClientConnectionException(message)
+    def get_connection_external(self) -> Callable:
+        return service_now_akana_get_connection
+
+    def get_connection(self, client_config):
+        connection = service_now_akana_get_connection(client_config)
+        return connection
 
     @staticmethod
     def _clients_schema():
@@ -71,6 +59,12 @@ class ServiceNowAkanaAdapter(ServiceNowAdapterBase, Configurable):
                     'name': 'token_endpoint',
                     'title': 'Auth Token Endpoint',
                     'type': 'string'
+                },
+                {
+                    'name': 'url_base_prefix',
+                    'title': 'Tables Endpoint Path',
+                    'type': 'string',
+                    'default': DEFAULT_BASE_URL_PREFIX,
                 },
                 {
                     'name': 'username',
@@ -109,6 +103,7 @@ class ServiceNowAkanaAdapter(ServiceNowAdapterBase, Configurable):
             'required': [
                 'domain',
                 'token_endpoint',
+                'url_base_prefix',
                 'username',
                 'password',
                 'verify_ssl',

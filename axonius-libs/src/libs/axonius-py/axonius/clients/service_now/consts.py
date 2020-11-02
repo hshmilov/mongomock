@@ -1,18 +1,24 @@
+from enum import Enum
+from typing import List, Dict, Union
+
 LINK_TEMPLATE = '<<ISSUE_LINK>>'
 TABLE_NAME_KEY = 'table_name'
 DEVICE_TYPE_NAME_KEY = 'device_type_name'
 DEVICES_KEY = 'devices'
-TABLES_DETAILS = [{TABLE_NAME_KEY: 'cmdb_ci_computer', DEVICE_TYPE_NAME_KEY: 'Computer'},
-                  {TABLE_NAME_KEY: 'cmdb_ci_vm', DEVICE_TYPE_NAME_KEY: 'Virtual Machine'},
-                  {TABLE_NAME_KEY: 'cmdb_ci_vm_instance', DEVICE_TYPE_NAME_KEY: 'VCenter Virtual Machine'},
-                  {TABLE_NAME_KEY: 'cmdb_ci_printer', DEVICE_TYPE_NAME_KEY: 'Printer'},
-                  {TABLE_NAME_KEY: 'cmdb_ci_netgear', DEVICE_TYPE_NAME_KEY: 'Network Device'},
-                  {TABLE_NAME_KEY: 'u_cmdb_ci_computer_atm', DEVICE_TYPE_NAME_KEY: 'ATM Computer'},
-                  {TABLE_NAME_KEY: 'cmdb_ci_comm', DEVICE_TYPE_NAME_KEY: 'Communication Device'},
-                  {TABLE_NAME_KEY: 'cmdb_ci_cluster', DEVICE_TYPE_NAME_KEY: 'Cluster'},
-                  {TABLE_NAME_KEY: 'cmdb_ci_cluster_vip', DEVICE_TYPE_NAME_KEY: 'Cluster VIP'},
-                  {TABLE_NAME_KEY: 'cmdb_ci_facility_hardware', DEVICE_TYPE_NAME_KEY: 'Facility Hardware'},
-                  {TABLE_NAME_KEY: 'cmdb_ci_msd', DEVICE_TYPE_NAME_KEY: 'Multi Storage Device'}]
+TABLE_NAME_BY_DEVICE_TYPE = {
+    'Computer': 'cmdb_ci_computer',
+    'Virtual Machine': 'cmdb_ci_vm',
+    'VCenter Virtual Machine': 'cmdb_ci_vm_instance',
+    'Printer': 'cmdb_ci_printer',
+    'Network Device': 'cmdb_ci_netgear',
+    'ATM Computer': 'u_cmdb_ci_computer_atm',
+    'Communication Device': 'cmdb_ci_comm',
+    'Cluster': 'cmdb_ci_cluster',
+    'Cluster VIP': 'cmdb_ci_cluster_vip',
+    'Facility Hardware': 'cmdb_ci_facility_hardware',
+    'Multi Storage Device': 'cmdb_ci_msd',
+}
+
 NUMBER_OF_OFFSETS = 100000
 OFFSET_SIZE = 200
 USERS_TABLE = 'sys_user'
@@ -38,6 +44,18 @@ LOGICALCI_TABLE = 'u_cmdb_ci_logicalci'
 U_DIVISION_TABLE = 'u_division'
 BUSINESS_UNIT_TABLE = 'business_unit'
 COMPLIANCE_EXCEPTION_TO_ASSET_TABLE = 'sn_compliance_m2m_policy_exception_control'
+# pylint: disable=line-too-long
+# ServiceNow has 2 approaches for Software management, either through SAM Based software or CI, read more:
+#       https://docs.servicenow.com/bundle/istanbul-it-operations-management/page/product/discovery/concept/c_DiscoSWAssetMgmtTableSchema.html
+# pylint: enable=line-too-long
+# Non-SAM apprach: cmdb_software_instance -software-> cmdb_ci_spkg
+SOFTWARE_NO_SAM_TO_CI_TABLE = 'cmdb_software_instance'
+SOFTWARE_NO_SAM_TO_CI_TABLE_FIELDS = ['installed_on.sys_id', 'software.sys_id',
+                                      'software.package_name', 'software.version',
+                                      'software.vendor.name', 'software.manufacturer.name']
+SOFTWARE_SAM_TO_CI_TABLE = 'cmdb_sam_sw_install'
+SOFTWARE_SAM_TO_CI_TABLE_FIELDS = ['installed_on.sys_id', 'sys_id', 'display_name', 'version', 'publisher', ]
+
 COMPLIANCE_EXCEPTION_TO_ASSET_TABLE_FIELDS = [
     # Note on how we connect between policy_exception with cmdb_ci asset:
     # consts.COMPLIANCE_EXCEPTION_TO_ASSET_TABLE -control->
@@ -55,8 +73,19 @@ COMPLIANCE_EXCEPTION_DATA_TABLE = 'sn_compliance_policy_exception'
 COMPLIANCE_EXCEPTION_DATA_TABLE_FIELDS = ['sys_id', 'number', 'policy.name', 'policy_statement.name',
                                           'opened_by.name', 'short_description', 'state', 'substate',
                                           'assignment_group.name', 'active']
+
+# DOT-Walking recommandation - max 3 levels
+# https://docs.servicenow.com/bundle/orlando-performance-analytics-and-reporting/page/use/reporting/concept/extended-table-fields-dot-walking.html
+CONTRACT_TO_ASSET_TABLE = 'contract_rel_ci'
+CONTRACT_TO_ASSET_TABLE_FIELDS = ['ci_item.sys_id', 'contract.parent.number', 'contract.number',
+                                  'contract.short_description']
+CONTRACT_DETAILS_TABLE_KEY = 'CONTRACT_DETAILS'
+
+VERIFICATION_TABLE = 'x_gedrt_asset_gree_verified_personal_computer'
+VERIFICATION_TABLE_FIELDS = ['configuration_item.sys_id', 'status', 'operational_status']
 # Note: Relations Details are performed as part of cmdb_rel_ci, they are not queried from snow separately!
 RELATIONS_DETAILS_TABLE_KEY = 'RELATION_DETAILS'
+
 # pylint: disable=C0103
 INSTALL_STATUS_DICT = {'0': 'Retired',
                        '1': 'Deployed',
@@ -113,33 +142,32 @@ RELATIONS_TABLE_PARENT_KEY = 'parent'
 # field names - used for put_dynamic_field
 RELATIONS_FIELD_CHILD = 'downstream'
 RELATIONS_FIELD_PARENT = 'upstream'
-
-RELATIONS_KEY_TO_FIELD = {
-    RELATIONS_TABLE_CHILD_KEY: RELATIONS_FIELD_CHILD,
-    RELATIONS_TABLE_PARENT_KEY: RELATIONS_FIELD_PARENT,
-}
+MAX_RELATIONS_DEPTH = 3
 
 # Note: The commented sections below represent optional subtables added dynamically
 #       on get_device_list according to configuration.
 DEVICE_SUB_TABLES_KEY_TO_NAME = {
-    LOGICALCI_TABLE: LOGICALCI_TABLE,
+    VERIFICATION_TABLE: VERIFICATION_TABLE,
+    # if fetch_installed_software: SOFTWARE_NO_SAM_TO_CI_TABLE: SOFTWARE_NO_SAM_TO_CI_TABLE,
+    #                              SOFTWARE_SAM_TO_CI_TABLE: SOFTWARE_SAM_TO_CI_TABLE,
+    # LOGICALCI_TABLE: LOGICALCI_TABLE,
     # if fetch_users_info_for_devices: USERS_TABLE_KEY: USERS_TABLE,
-    LOCATION_TABLE_KEY: LOCATIONS_TABLE,
-    USER_GROUPS_TABLE_KEY: USER_GROUPS_TABLE,
+    # LOCATION_TABLE_KEY: LOCATIONS_TABLE,
+    # USER_GROUPS_TABLE_KEY: USER_GROUPS_TABLE,
     NIC_TABLE_KEY: NIC_TABLE_KEY,
-    DEPARTMENT_TABLE_KEY: DEPARTMENTS_TABLE,
-    ALM_ASSET_TABLE: ALM_ASSET_TABLE,
-    COMPANY_TABLE: COMPANY_TABLE,
+    # DEPARTMENT_TABLE_KEY: DEPARTMENTS_TABLE,
+    # ALM_ASSET_TABLE: ALM_ASSET_TABLE,
+    # COMPANY_TABLE: COMPANY_TABLE,
     IPS_TABLE: IPS_TABLE,
     CI_IPS_TABLE: CI_IPS_TABLE,
-    U_SUPPLIER_TABLE: U_SUPPLIER_TABLE,
+    # U_SUPPLIER_TABLE: U_SUPPLIER_TABLE,
     # if fetch_ci_relations: RELATIONS_TABLE: RELATIONS_TABLE,
     MAINTENANCE_SCHED_TABLE: MAINTENANCE_SCHED_TABLE,
-    SOFTWARE_PRODUCT_TABLE: SOFTWARE_PRODUCT_TABLE,
-    MODEL_TABLE: MODEL_TABLE,
+    # if fetch_software_product_model: SOFTWARE_PRODUCT_TABLE: SOFTWARE_PRODUCT_TABLE,
+    # if fetch_cmdb_model: MODEL_TABLE: MODEL_TABLE,
     # if fetch_compliance_exceptions: COMPLIANCE_EXCEPTION_TO_ASSET_TABLE: COMPLIANCE_EXCEPTION_TO_ASSET_TABLE,
     #                                 COMPLIANCE_EXCEPTION_DATA_TABLE: COMPLIANCE_EXCEPTION_DATA_TABLE,
-    U_DIVISION_TABLE: U_DIVISION_TABLE,
+    # U_DIVISION_TABLE: U_DIVISION_TABLE,
     # if fetch_business_unit_table: BUSINESS_UNIT_TABLE: BUSINESS_UNIT_TABLE,
 }
 USER_SUB_TABLES = {
@@ -149,12 +177,197 @@ USER_SUB_TABLES = {
 SUBTABLES_KEY = '_SUBTABLES'
 
 DEFAULT_ASYNC_CHUNK_SIZE = 50
-
+DEFAULT_DOTWALKING_PER_REQUEST = 15
+MAX_DOTWALKING_PER_REQUEST = 50
+# max extra_fields query len
+# ServiceNow doesnt recommend having more than 2048 chars in the whole URL
+# we are restricting the sysparm_fields part to 1024 chars
+# see explanation and solution with generating a view: https://hi.service-now.com/kb_view.do?sysparm_article=KB0829648
+MAX_EXTRA_FIELDS_QUERY_LEN = 1024
+DEFAULT_EXTRA_FIELDS_REQUIRED_LIST = ['sys_id']
 # General subtable parsing cases - table = {'sys_id': general subtable dict}
 GENERIC_PARSED_SUBTABLE_KEYS = [
-    USERS_TABLE_KEY, LOCATION_TABLE_KEY, USER_GROUPS_TABLE_KEY, DEPARTMENT_TABLE_KEY, ALM_ASSET_TABLE,
+    LOCATION_TABLE_KEY, USER_GROUPS_TABLE_KEY, DEPARTMENT_TABLE_KEY, ALM_ASSET_TABLE,
     COMPANY_TABLE, U_SUPPLIER_TABLE, MAINTENANCE_SCHED_TABLE, SOFTWARE_PRODUCT_TABLE, MODEL_TABLE,
-    COMPLIANCE_EXCEPTION_DATA_TABLE, U_DIVISION_TABLE, BUSINESS_UNIT_TABLE]
+    COMPLIANCE_EXCEPTION_DATA_TABLE, U_DIVISION_TABLE, BUSINESS_UNIT_TABLE,
+]
+
+TABLE_NAME_TO_FIELDS: Dict[str, List[str]] = {
+    # SOFTWARE_NO_SAM_TO_CI_TABLE: SOFTWARE_NO_SAM_TO_CI_TABLE_FIELDS,
+    SOFTWARE_SAM_TO_CI_TABLE: SOFTWARE_SAM_TO_CI_TABLE_FIELDS,
+    COMPLIANCE_EXCEPTION_TO_ASSET_TABLE: COMPLIANCE_EXCEPTION_TO_ASSET_TABLE_FIELDS,
+    COMPLIANCE_EXCEPTION_DATA_TABLE: COMPLIANCE_EXCEPTION_DATA_TABLE_FIELDS,
+    # RELATIONS_TABLE: DYNAMICALLY CALCULATED
+    CONTRACT_TO_ASSET_TABLE: CONTRACT_TO_ASSET_TABLE_FIELDS,
+    VERIFICATION_TABLE: VERIFICATION_TABLE_FIELDS,
+}
+
+
+class InjectedRawFields(Enum):
+    # device fields
+    support_group = 'z_support_group'
+    u_director = 'z_u_director'
+    u_manager = 'z_u_manager'
+    device_model = 'z_device_model'
+    snow_department = 'z_snow_department'
+    physical_location = 'z_physical_location'
+    u_business_segment = 'z_u_business_segment'
+    owner_name = 'z_owner_name'
+    owner_email = 'z_owner_email'
+    assigned_to_name = 'z_assigned_to_name'
+    assigned_to_u_division = 'z_assigned_to_u_division'
+    assigned_to_business_unit = 'z_assigned_to_business_unit'
+    assigned_to_manager = 'z_assigned_to_manager'
+    manager_email = 'z_manager_email'
+    u_business_unit = 'z_u_business_unit'
+    assigned_to_location = 'z_assigned_to_location'
+    device_managed_by = 'z_device_managed_by'
+    vendor = 'z_vendor'
+    device_manufacturer = 'z_device_manufacturer'
+    cpu_manufacturer = 'z_cpu_manufacturer'
+    company = 'z_company'
+    u_supplier = 'z_u_supplier'
+    maintenance_schedule = 'z_maintenance_schedule'
+    u_access_authorisers = 'z_u_access_authorisers'
+    u_acl_contacts = 'z_u_acl_contacts'
+    u_bucf_contacts = 'z_u_bucf_contacts'
+    u_business_owner = 'z_u_business_owner'
+    u_cmdb_data_owner = 'z_u_cmdb_data_owner'
+    u_cmdb_data_owner_group = 'z_u_cmdb_data_owner_group'
+    u_cmdb_data_owner_team = 'z_u_cmdb_data_owner_team'
+    u_cmdb_data_steward = 'z_u_cmdb_data_steward'
+    u_custodian = 'z_u_custodian'
+    u_custodian_group = 'z_u_custodian_group'
+    u_fulfilment_group = 'z_u_fulfilment_group'
+    u_orphan_account_contacts = 'z_u_orphan_account_contacts'
+    u_orphan_account_manager = 'z_u_orphan_account_manager'
+    u_primary_support_group = 'z_u_primary_support_group'
+    u_primary_support_sme = 'z_u_primary_support_sme'
+    u_recertification_contacts = 'z_u_recertification_contacts'
+    u_security_administrators = 'z_u_security_administrators'
+    u_technical_admin_contacts = 'z_u_technical_admin_contacts'
+    u_toxic_division_group = 'z_u_toxic_division_group'
+    u_uar_contacts = 'z_u_uar_contacts'
+    u_uav_delegates = 'z_u_uav_delegates'
+    snow_location = 'z_snow_location'
+    snow_nics = 'z_snow_nics'
+    ci_ip_data = 'z_ci_ip_data'
+    snow_ips = 'z_snow_ips'
+    compliance_exceptions = 'z_compliance_exceptions'
+    relations = 'z_relations'
+    u_it_owner_organization = 'z_u_it_owner_organization'
+    u_managed_by_vendor = 'z_u_managed_by_vendor'
+    ax_device_type = 'z_ax_device_type'
+    u_logical_ci = 'z_u_logical_ci'
+    os_title = 'z_os_title'
+    major_version = 'z_major_version'
+    minor_version = 'z_minor_version'
+    build_version = 'z_build_version'
+    model_u_classification = 'z_model_u_classification'
+    asset_install_status = 'z_asset_install_status'
+    asset_u_loaner = 'z_asset_u_loaner'
+    asset_u_shared = 'z_asset_u_shared'
+    asset_first_deployed = 'z_asset_first_deployed'
+    asset_altiris_status = 'z_asset_altiris_status'
+    asset_casper_status = 'z_asset_casper_status'
+    asset_substatus = 'z_asset_substatus'
+    asset_purchase_date = 'z_asset_purchase_date'
+    asset_last_inventory = 'z_asset_last_inventory'
+    assigned_to_email = 'z_assigned_to_email'
+    assigned_to_country = 'z_assigned_to_country'
+    snow_software = 'z_installed_software'
+    u_division = 'z_u_division'
+    u_level1_mgmt_org_code = 'z_u_level1_mgmt_org_code'
+    u_level2_mgmt_org_code = 'z_u_level2_mgmt_org_code'
+    u_level3_mgmt_org_code = 'z_u_level3_mgmt_org_code'
+    u_pg_email_address = 'z_u_pg_email_address'
+    contracts = 'z_contracts'
+    verification_status = 'z_verification_status'
+    verification_operational_status = 'z_verification_operational_status'
+
+    # user fields
+    u_company = 'z_u_company'
+    u_department = 'z_u_department'
+
+
+USER_EXTRA_FIELDS_BY_TARGET = {
+    InjectedRawFields.u_company: ['u_company.name', 'company.name'],
+    InjectedRawFields.u_department: ['u_department.name', 'department.name'],
+}
+
+DEVICE_EXTRA_FIELDS_BY_TARGET: Dict[InjectedRawFields, Union[str, List[str]]] = {
+    # Single value will be consumed per target! the first value is taken.
+    InjectedRawFields.support_group: 'u_logical_ci.support_group',
+    InjectedRawFields.u_director: ['support_group.u_director', 'u_logical_ci.support_group.u_director'],
+    InjectedRawFields.u_manager: ['support_group.u_manager', 'u_logical_ci.support_group.u_manager'],
+    InjectedRawFields.os_title: 'u_operating_system.title',
+    InjectedRawFields.major_version: 'u_operating_system.major_version',
+    InjectedRawFields.minor_version: 'u_operating_system.minor_version',
+    InjectedRawFields.build_version: 'u_operating_system.build_version',
+    InjectedRawFields.model_u_classification: 'model_id.u_classification',
+    # InjectedRawFields.device_model: 'model_id.display_name',
+    # InjectedRawFields.snow_department: 'department.name',
+    # InjectedRawFields.physical_location: 'location.name',
+    InjectedRawFields.asset_install_status: 'asset.install_status',
+    InjectedRawFields.asset_u_loaner: 'asset.u_loaner',
+    InjectedRawFields.asset_u_shared: 'asset.u_shared',
+    InjectedRawFields.asset_first_deployed: 'asset.u_first_deployed',
+    InjectedRawFields.asset_altiris_status: 'asset.u_altiris_status',
+    InjectedRawFields.asset_casper_status: 'asset.u_casper_status',
+    InjectedRawFields.asset_substatus: 'asset.substatus',
+    InjectedRawFields.asset_purchase_date: 'asset.purchase_date',
+    InjectedRawFields.asset_last_inventory: 'asset.u_last_inventory',
+    InjectedRawFields.snow_location: 'asset.location',
+    # InjectedRawFields.u_business_segment: 'u_business_segment.name',
+    # InjectedRawFields.owner_name: 'owned_by.name',
+    # InjectedRawFields.owner_email: 'owned_by.email',
+    # InjectedRawFields.assigned_to_name: 'assigned_to.name',
+    InjectedRawFields.assigned_to_email: 'assigned_to.email',
+    InjectedRawFields.assigned_to_country: 'assigned_to.country',
+    InjectedRawFields.assigned_to_u_division: 'assigned_to.u_division',
+    InjectedRawFields.assigned_to_business_unit: 'assigned_to.u_business_unit',
+    InjectedRawFields.assigned_to_manager: 'assigned_to.manager',
+    # USERNAMES SUBTABLE InjectedRawFields.manager_email: 'assigned_to.manager.email'
+    InjectedRawFields.assigned_to_location: 'assigned_to.location',
+    # InjectedRawFields.u_business_unit: 'u_business_unit.name',
+    # InjectedRawFields.device_managed_by: 'managed_by.name',
+    # InjectedRawFields.vendor: 'vendor.name',
+    InjectedRawFields.device_manufacturer: 'model_id.manufacturer',
+    # InjectedRawFields.cpu_manufacturer: 'cpu_manufacturer.name',
+    # InjectedRawFields.company: 'company.name',
+    InjectedRawFields.u_supplier: ['u_supplier.u_supplier', 'u_supplier'],
+    # MAINTENANCE_SCHEDULE SUBTABLE  InjectedRawFields.maintenance_schedule:
+    # InjectedRawFields.u_access_authorisers: 'u_access_authorisers.name',
+    # InjectedRawFields.u_acl_contacts: 'u_acl_contacts.name',
+    # InjectedRawFields.u_bucf_contacts: 'u_bucf_contacts.name',
+    # InjectedRawFields.u_business_owner: 'u_business_owner.name',
+    # InjectedRawFields.u_cmdb_data_owner: 'u_cmdb_data_owner.name',
+    # InjectedRawFields.u_cmdb_data_owner_group: 'u_cmdb_data_owner_group.name',
+    # InjectedRawFields.u_cmdb_data_owner_team: 'u_cmdb_data_owner_team.name',
+    # InjectedRawFields.u_cmdb_data_steward: 'u_cmdb_data_steward.name',
+    # InjectedRawFields.u_custodian: 'u_custodian.name',
+    # InjectedRawFields.u_custodian_group: 'u_custodian_group.name',
+    # InjectedRawFields.u_fulfilment_group: 'u_fulfilment_group.name',
+    # InjectedRawFields.u_orphan_account_contacts: 'u_orphan_account_contacts.name',
+    # InjectedRawFields.u_orphan_account_manager: 'u_orphan_account_manager.name',
+    # InjectedRawFields.u_primary_support_group: 'u_primary_support_group.name',
+    # InjectedRawFields.u_primary_support_sme: 'u_primary_support_sme.name',
+    # InjectedRawFields.u_recertification_contacts: 'u_recertification_contacts.name',
+    # InjectedRawFields.u_security_administrators: 'u_security_administrators.name',
+    # InjectedRawFields.u_technical_admin_contacts: 'u_technical_admin_contacts.name',
+    # InjectedRawFields.u_toxic_division_group: 'u_toxic_division_group.name',
+    # InjectedRawFields.u_uar_contacts: 'u_uar_contacts.name',
+    # InjectedRawFields.u_uav_delegates: 'u_uav_delegates.name',
+    # InjectedRawFields.u_it_owner_organization: 'u_it_owner_organization.name',
+    # InjectedRawFields.u_managed_by_vendor: 'u_managed_by_vendor.name',
+    InjectedRawFields.u_division: ['assigned_to.u_division', 'owned_by.u_division'],
+    InjectedRawFields.u_level1_mgmt_org_code: ['assigned_to.u_level1_mgmt_org_code', 'owned_by.u_level1_mgmt_org_code'],
+    InjectedRawFields.u_level2_mgmt_org_code: ['assigned_to.u_level2_mgmt_org_code', 'owned_by.u_level2_mgmt_org_code'],
+    InjectedRawFields.u_level3_mgmt_org_code: ['assigned_to.u_level3_mgmt_org_code', 'owned_by.u_level3_mgmt_org_code'],
+    InjectedRawFields.u_pg_email_address: ['assigned_to.u_pg_email_address', 'owned_by.u_pg_email_address'],
+    InjectedRawFields.verification_status: 'u_verification_table_ref.status',
+    InjectedRawFields.verification_operational_status: 'u_verification_table_ref.operational_status',
+}
 
 MODEL_U_CLASSIFICATION_DICT = {
     1: 'App Server',

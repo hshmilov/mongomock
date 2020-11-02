@@ -1,14 +1,14 @@
 import logging
+from functools import partial
 
-from axonius.clients.service_now.service.adapter_base import ServiceNowAdapterBase
+from axonius.clients.service_now.external import service_now_sql_get_connection
+from axonius.clients.service_now.service.base import ServiceNowAdapterBase
 from axonius.clients.service_now.service.structures import SnowDeviceAdapter, SnowUserAdapter
-from axonius.clients.service_now.sql import ServiceNowMSSQLConnection
 from axonius.mixins.configurable import Configurable
 from axonius.utils.files import get_local_config_file
 from axonius.adapter_base import AdapterProperty
 from axonius.clients.rest.connection import RESTConnection
-from axonius.adapter_exceptions import ClientConnectionException
-from service_now_sql_adapter import consts
+from axonius.clients.service_now.service import sql_consts as consts
 from service_now_sql_adapter.client_id import get_client_id
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -38,26 +38,13 @@ class ServiceNowSqlAdapter(ServiceNowAdapterBase, Configurable):
         return RESTConnection.test_reachability(client_config.get('server'),
                                                 port=client_config.get('port'))
 
+    def get_connection_external(self):
+        return partial(service_now_sql_get_connection,
+                       devices_fetched_at_a_time=self._devices_fetched_at_a_time)
+
     def get_connection(self, client_config):
-        try:
-            connection = ServiceNowMSSQLConnection(database=client_config.get(consts.SERVICE_NOW_SQL_DATABASE,
-                                                                              consts.DEFAULT_SERVICE_NOW_SQL_DATABASE),
-                                                   server=client_config[consts.SERVICE_NOW_SQL_HOST],
-                                                   port=client_config.get(consts.SERVICE_NOW_SQL_PORT,
-                                                                          consts.DEFAULT_SERVICE_NOW_SQL_PORT),
-                                                   devices_paging=self._devices_fetched_at_a_time)
-            connection.set_credentials(username=client_config[consts.USER],
-                                       password=client_config[consts.PASSWORD])
-            with connection:
-                pass  # check that the connection credentials are valid
-            return connection
-        except Exception as e:
-            message = f'Error connecting to client host: {client_config[consts.SERVICE_NOW_SQL_HOST]}  ' \
-                      f'database: ' \
-                      f'{client_config.get(consts.SERVICE_NOW_SQL_DATABASE, consts.DEFAULT_SERVICE_NOW_SQL_DATABASE)}.'\
-                      f' {str(e)}'
-            logger.exception(message)
-            raise ClientConnectionException(message)
+        connection = self.get_connection_external()(client_config)
+        return connection
 
     def _clients_schema(self):
         """
@@ -108,40 +95,6 @@ class ServiceNowSqlAdapter(ServiceNowAdapterBase, Configurable):
             'type': 'array'
         }
 
-    # pylint: disable=useless-return
-    @classmethod
-    def _parse_optional_reference(cls, device_raw: dict, field_name: str, reference_table: dict):
-        # ServiceNow SQL references are actually 32 character guid (sys_id) strings!
-        # For now:
-        # * we dont request and parse subtables, so unable to parse references from reference_table
-        # * see _parse_optional_reference_value override on how we handle reference values
-        reference_guid = super()._parse_optional_reference(device_raw, field_name, reference_table)
-        if reference_guid and not isinstance(reference_guid, str):
-            logger.warning(f'Got unexpected reference in SnowSQL: {reference_guid}')
-            # fallthrough
-
-        # TO-DO: For Next phase, switch to parsing reference (32bit GUID) and using reference_table param for it.
-        return None
-
-    @classmethod
-    def _parse_optional_reference_value(cls, device_raw: dict, field_name: str,
-                                        reference_table: dict, reference_table_field: str):
-        """
-        Currently we don't handle raw references.
-        But, we do support references with adjacent display value "dv_*" additional fields which exist
-            in device_raw to replace only as an alternative for reference.get('name').
-        """
-
-        # If reference value asked is name, try to locate it from the raw display value first.
-        # See: https://jasondove.wordpress.com/2012/06/16/a-few-random-tips-for-servicenow-reporting/
-        if reference_table_field == 'name':
-            for curr_field in [f'dv_{field_name}', field_name]:
-                raw_value = device_raw.get(curr_field)
-                if isinstance(raw_value, str) and raw_value:
-                    return raw_value
-
-        return None
-
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets, AdapterProperty.UserManagement]
@@ -173,7 +126,8 @@ class ServiceNowSqlAdapter(ServiceNowAdapterBase, Configurable):
         }
 
     def _on_config_update(self, config):
-        devices_fetched_at_a_time = config.get('devices_fetched_at_a_time') or 1000
+        devices_fetched_at_a_time = (config.get('devices_fetched_at_a_time') or
+                                     consts.DEFAULT_DEVICES_FETECHED_AT_A_TIME)
         # inject parallel_requests
         config['parallel_requests'] = devices_fetched_at_a_time
         super()._on_config_update(config)

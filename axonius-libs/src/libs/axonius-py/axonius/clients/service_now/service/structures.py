@@ -72,6 +72,12 @@ class SnowComplianceException(SmartJsonClass):
     assignment_group = Field(str, 'Assignment Group')
 
 
+class SnowDeviceContract(SmartJsonClass):
+    number = Field(str, 'Number')
+    short_desc = Field(str, 'Short Description')
+    parent_number = Field(str, 'Parent Number')
+
+
 class SnowDeviceAdapter(DeviceAdapter):
     sys_id = Field(str, 'Sys Id')
     table_type = Field(str, 'Table Type')
@@ -234,7 +240,10 @@ class SnowDeviceAdapter(DeviceAdapter):
     u_level3_mgmt_org_code = Field(str, 'Level 3 Management Org. Code')
     u_pg_email_address = Field(str, 'PG Email Address')
     u_last_inventory = Field(datetime.datetime, 'Last Inventory')
+    verification_install_status = Field(str, 'Verification Install Status')
+    verification_operational_status = Field(str, 'Verification Operational Status')
     compliance_exceptions = ListField(SnowComplianceException, 'Compliance Exceptions')
+    contracts = ListField(SnowDeviceContract, 'Contracts')
     # you should keep these last
     upstream = ListField(RelativeInformationNode1, 'Upstream')
     downstream = ListField(RelativeInformationNode1, 'Downstream')
