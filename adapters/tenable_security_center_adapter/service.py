@@ -7,10 +7,11 @@ from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter, TenableVulnerability, NessusInstance
-from axonius.fields import Field
+from axonius.fields import Field, ListField
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import add_rule, return_error
 from axonius.scanner_adapter_base import ScannerAdapterBase
+from axonius.smart_json_class import SmartJsonClass
 from axonius.utils.files import get_local_config_file
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import parse_bool_from_raw, int_or_none
@@ -22,6 +23,12 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 # pylint: disable=logging-format-interpolation
+
+
+class AssetGroup(SmartJsonClass):
+    id = Field(str, 'ID')
+    name = Field(str, 'Name')
+    description = Field(str, 'Description')
 
 
 class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
@@ -42,6 +49,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         has_passive = Field(bool, 'Has Passive')
         has_compliance = Field(bool, 'Has Compliance')
         last_scan = Field(datetime, 'Last Scan')
+        asset_groups = ListField(AssetGroup, 'Asset Groups')
 
         def add_tenable_vuln(self, **kwargs):
             self.plugin_and_severities.append(TenableVulnerability(**kwargs))
@@ -132,7 +140,9 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                                                    per_device_software=self.__fetch_software_per_device,
                                                    fetch_vulnerabilities=self.__fetch_vulnerabilities,
                                                    info_vulns_plugin_ids=self.__info_vulns_plugin_ids,
-                                                   fetch_scap=self.__fetch_scap)
+                                                   fetch_scap=self.__fetch_scap,
+                                                   fetch_asset_groups=self.__fetch_asset_groups,
+                                                   async_chunks=self.__async_chunks)
 
     def _clients_schema(self):
         return {
@@ -350,6 +360,18 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         device.severity_critical = raw_device_data.get('severityCritical')
         device.policy_name = raw_device_data.get('policyName')
         device.mcafee_guid = raw_device_data.get('mcafeeGUID')
+
+        if isinstance(raw_device_data.get('asset_groups'), list):
+            asset_groups = []
+            for asset_group_raw in raw_device_data.get('asset_groups'):
+                if not isinstance(asset_group_raw, dict):
+                    continue
+                asset_group = AssetGroup()
+                asset_group.id = asset_group_raw.get('id')
+                asset_group.name = asset_group_raw.get('name')
+                asset_group.description = asset_group_raw.get('description')
+                asset_groups.append(asset_group)
+            device.asset_groups = asset_groups
 
         linux_kernel_version = None
         os_string = raw_device_data.get('os') or raw_device_data.get('osCPE') or ''
@@ -574,14 +596,26 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                     'name': 'repository_name_exclude_list',
                     'title': 'Repository name exclude list',
                     'type': 'string'
-                }
+                },
+                {
+                    'name': 'fetch_asset_groups',
+                    'title': 'Fetch asset groups',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'async_chunks',
+                    'type': 'integer',
+                    'title': 'Async chunks in parallel'
+                },
             ],
             'required': [
                 'drop_only_ip_devices',
                 'fetch_software_per_device',
                 'fetch_vulnerabilities',
                 'drop_only_unauth_scans',
-                'fetch_scap'
+                'fetch_scap',
+                'fetch_asset_groups',
+                'async_chunks'
             ],
             'pretty_name': 'Tenable.sc Configuration',
             'type': 'array'
@@ -597,7 +631,9 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             'drop_only_unauth_scans': False,
             'info_vulns_plugin_ids': '',
             'repository_name_exclude_list': None,
-            'fetch_scap': False
+            'fetch_scap': False,
+            'fetch_asset_groups': False,
+            'async_chunks': 50
         }
 
     @staticmethod
@@ -620,6 +656,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             if config.get('repository_name_exclude_list') else None
         self.__info_vulns_plugin_ids = self._parse_info_vulns_plugin_ids_config(config.get('info_vulns_plugin_ids'))
         self.__fetch_scap = parse_bool_from_raw(config.get('fetch_scap')) or False
+        self.__fetch_asset_groups = config.get('fetch_asset_groups') or False
+        self.__async_chunks = config.get('async_chunks') or 50
 
     def outside_reason_to_live(self) -> bool:
         """

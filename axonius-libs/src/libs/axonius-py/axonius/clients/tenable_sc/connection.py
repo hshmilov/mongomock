@@ -124,7 +124,8 @@ class TenableSecurityScannerConnection(RESTConnection):
     # pylint: disable=arguments-differ, too-many-nested-blocks, too-many-branches, too-many-locals
     def get_device_list(self, drop_only_ip_devices, top_n_software=0,
                         per_device_software=False, fetch_vulnerabilities=False,
-                        info_vulns_plugin_ids: List[str] = None, fetch_scap=False):
+                        info_vulns_plugin_ids: List[str] = None, fetch_scap=False,
+                        fetch_asset_groups=False, async_chunks=50):
         repositories = self._get('repository')
         repositories_ids = [repository.get('id') for repository in repositories if repository.get('id')]
         for repository_id in repositories_ids:
@@ -149,6 +150,11 @@ class TenableSecurityScannerConnection(RESTConnection):
                 if fetch_scap:
                     logger.info(f'Fetching SCAP scans')
                     scap_mapping = self._get_scap_mapping(repository_id=repository_id)
+
+                if fetch_asset_groups:
+                    asset_groups_mapping = self._get_asset_groups_mapping(repository_id=repository_id,
+                                                                          device_list=device_list,
+                                                                          async_chunks=async_chunks)
 
                 for device in device_list:
                     device['software'] = []
@@ -176,6 +182,8 @@ class TenableSecurityScannerConnection(RESTConnection):
                         device['vulnerabilities'] = vuln_mapping.get(self._vuln_id(device)) or []
                     if fetch_scap:
                         device['scap'] = scap_mapping.get(self._vuln_id(device)) or []
+                    if fetch_asset_groups and device.get('uuid'):
+                        device['asset_groups'] = asset_groups_mapping.get(device.get('uuid'))
                     yield device
 
             except Exception:
@@ -260,6 +268,39 @@ class TenableSecurityScannerConnection(RESTConnection):
             return False
 
         return severity_id == consts.VULN_SEVERITY_ID_INFO
+
+    def _get_asset_groups_mapping(self, repository_id: int, device_list: list, async_chunks: int):
+        try:
+            asset_groups_mapping = {}
+
+            assets_groups_raw_requests = []
+            device_uuid_list = []
+            for device in device_list:
+                if not (isinstance(device, dict) and device.get('uuid')):
+                    continue
+                device_uuid_list.append(device.get('uuid'))
+                assets_groups_raw_requests.append({
+                    'name': f'repository/{repository_id}/assetIntersections/{device.get("uuid")}',
+                })
+
+            for uuid, response in zip(device_uuid_list, self._async_get(assets_groups_raw_requests,
+                                                                        retry_on_error=True,
+                                                                        chunks=async_chunks)):
+                if not self._is_async_response_good(response):
+                    logger.error(f'Async response returned bad, its {response}')
+                    continue
+                if not (isinstance(response, dict) and
+                        isinstance(response.get('response'), dict) and
+                        isinstance(response.get('response').get('assets'), list)):
+                    logger.warning(f'Invalid response returned: {response}')
+                    continue
+
+                asset_groups_mapping[uuid] = response.get('response').get('assets')
+
+            return asset_groups_mapping
+        except Exception:
+            logger.exception(f'Failed to fetch asset groups')
+            return asset_groups_mapping
 
     def _get_vuln_mapping(self, repository_id, info_vulns_plugin_ids):
         result = defaultdict(list)
