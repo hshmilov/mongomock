@@ -1,3 +1,4 @@
+import datetime
 import logging
 from collections import defaultdict
 
@@ -8,8 +9,9 @@ from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field, ListField
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.smart_json_class import SmartJsonClass
+from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
-from axonius.utils.parsing import make_dict_from_csv
+from axonius.utils.parsing import make_dict_from_csv, int_or_none, parse_bool_from_raw
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -17,6 +19,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class VulnStatus(SmartJsonClass):
     track_id = Field(str, 'Tracking ID')
     edfs_owner = Field(str, 'Owner')
+    confirmed_owner = Field(str, 'Confirmed Owner')
     src = Field(str, 'Source')
     edfs_domain = Field(str, 'Domain Name')
     edfs_ip = Field(str, 'IP Address')
@@ -34,6 +37,12 @@ class VulnStatus(SmartJsonClass):
     soc_status = Field(str, 'SOC Status')
     owner_response = Field(str, 'Owner Response')
     vuln_status = Field(str, 'Vulnerability Status')
+    title = Field(str, 'Title')
+    sub_title = Field(str, 'Sub Title')
+    remark = Field(str, 'Remark')
+    mitigation_date = Field(datetime.datetime, 'Mitigation Date')
+    organization = Field(str, 'Organization')
+    score = Field(str, 'Score')
 
 
 class EdfsCsvAdapter(ScannerAdapterBase):
@@ -57,6 +66,8 @@ class EdfsCsvAdapter(ScannerAdapterBase):
         nw_team = Field(bool, 'NW Team')
         brand = Field(str, 'Brand')
         asn = Field(str, 'ASN')
+        focal_point = Field(str, 'Focal Point')
+        organization = Field(str, 'Organization')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -132,6 +143,8 @@ class EdfsCsvAdapter(ScannerAdapterBase):
 
     def _parse_raw_data(self, devices_raw_data):
         def _make_bool_from_data(data_field):
+            if parse_bool_from_raw(data_field) is not None:
+                return parse_bool_from_raw(data_field)
             if not isinstance(data_field, str):
                 return False
             if data_field.lower().strip() == 'yes':
@@ -142,20 +155,17 @@ class EdfsCsvAdapter(ScannerAdapterBase):
         # populate vulnaerability status dict with lists of VulnStatus objects
         # based on the IP Address of the item
         for vuln_raw in vuln_statuses:
-            key = vuln_raw.get('IP Address')
+            key = vuln_raw.get('IP Address') or vuln_raw.get('Public IP')
             if not key:
                 continue
-            try:
-                count_cve = int(vuln_raw.get('# CVE'))
-            except Exception:
-                count_cve = None
             try:
                 vuln_status_dict[key].append(VulnStatus(
                     track_id=vuln_raw.get('Tracking ID'),
                     edfs_owner=vuln_raw.get('Owner'),
+                    confirmed_owner=vuln_raw.get('Confirmed Owner'),
                     src=vuln_raw.get('Source'),
                     edfs_domain=vuln_raw.get('Domain Name'),
-                    edfs_ip=vuln_raw.get('IP Address'),
+                    edfs_ip=key,
                     is_corporate=_make_bool_from_data(vuln_raw.get('Corporate')),
                     is_customer=_make_bool_from_data(vuln_raw.get('Customer')),
                     pmi=_make_bool_from_data(vuln_raw.get('PMI')),
@@ -163,12 +173,18 @@ class EdfsCsvAdapter(ScannerAdapterBase):
                     owner_status=vuln_raw.get('Owner Status'),
                     owner_confirm=vuln_raw.get('Owner confirmation'),
                     vulnerability=vuln_raw.get('Vulnerability'),
-                    count_cve=count_cve,
+                    count_cve=int_or_none(vuln_raw.get('# CVE')),
                     finding=vuln_raw.get('Finding'),
                     descr=vuln_raw.get('Description'),
                     solution=vuln_raw.get('Vulnerability Solution'),
                     owner_response=vuln_raw.get('Owner Response'),
-                    vuln_status=vuln_raw.get('Vulnerability Status')
+                    vuln_status=vuln_raw.get('Vulnerability Status'),
+                    title=vuln_raw.get('Title'),
+                    sub_title=vuln_raw.get('Sub Title'),
+                    remark=vuln_raw.get('Remark'),
+                    mitigation_date=parse_date(vuln_raw.get('Mitigation Date')),
+                    score=vuln_raw.get('Score'),
+                    organization=vuln_raw.get('Organization')
                 ))
             except Exception as e:
                 logger.warning(f'Got {str(e)} when parsing row: {vuln_raw}')
@@ -206,6 +222,9 @@ class EdfsCsvAdapter(ScannerAdapterBase):
                 device.nw_team = _make_bool_from_data(device_raw.get('NW Team'))
                 device.brand = device_raw.get('Brand')
                 device.asn = device_raw.get('ASN')
+                # Potential typo in sample data - "Focel Point" [sic] v.s. "Focal Point" - Handle both cases
+                device.focal_point = device_raw.get('Focel Point') or device_raw.get('Focal Point')
+                device.organization = device_raw.get('Organization')
                 # Now add the vulnerability statuses
                 device.vuln_status = vuln_status_dict[device_id]
                 device.set_raw(device_raw)
