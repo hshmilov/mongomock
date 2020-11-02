@@ -40,7 +40,6 @@
             @click="editItem(index)"
           >
             <XIcon
-              family="action"
               type="edit"
             />
           </XButton>
@@ -52,8 +51,7 @@
             @click="deleteItem(index)"
           >
             <XIcon
-              family="action"
-              type="remove"
+              type="delete"
             />
           </XButton>
         </span>

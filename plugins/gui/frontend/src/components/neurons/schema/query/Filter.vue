@@ -27,11 +27,13 @@
         :key="expression.i"
         :class="expressionContainerCSSClass"
       >
-        <VIcon
+        <XIcon
           v-if="expressions.length > 1"
-          size="15"
+          family="action"
+          type="drag"
+          :rotate="90"
           class="draggable-expression-handle"
-        >$vuetify.icons.draggable</VIcon>
+        />
         <XExpression
           ref="expression"
           v-model="expressions[i]"
@@ -157,9 +159,7 @@ export default {
       this.$emit('change', [
         ...this.expressions.slice(0, index + 1),
         { ...this.expressions[index], logicOp, i: duplicateIndex },
-        ...this.expressions.slice(index + 1).map((item, itemIndex) => {
-          return { ...item, i: duplicateIndex + itemIndex + 1 };
-        }),
+        ...this.expressions.slice(index + 1).map((item, itemIndex) => ({ ...item, i: duplicateIndex + itemIndex + 1 })),
       ]);
     },
     toggleColumn(columnName) {
@@ -219,6 +219,8 @@ export default {
           &:hover {
             .draggable-expression-handle {
               opacity: 1;
+              font-size: 15px;
+              color: $theme-orange;
             }
           }
         }

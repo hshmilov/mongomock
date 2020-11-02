@@ -13,10 +13,12 @@
         class="compliance-action-button"
         @trigger="openCloseMenu"
       >
-        <VIcon
-          :disabled="enforcementRestricted || disabled"
-          size="18"
-        >$vuetify.icons.enforcementsDark</VIcon>
+        <XIcon
+          family="symbol"
+          type="enforcements"
+          class="standard-icon"
+          :class="{'disabled-icon': enforcementRestricted || disabled}"
+        />
         <span class="enforce-title">Enforce</span>
       </XButton>
       <AMenu
@@ -202,6 +204,10 @@ export default {
 </script>
 
 <style scoped lang="scss">
+    XIcon {
+      color: red;
+    }
+
     .enforce-title {
         margin-left: 3px;
     }

@@ -32,11 +32,13 @@
               :key="item.name"
               :class="`item item_${item.name}`"
             >
-              <VIcon
+              <XIcon
                 v-if="shownSchemaItems.length > 1 && draggable"
-                size="15"
-                class="draggable-expression-handle"
-              >$vuetify.icons.draggable</VIcon>
+                family="action"
+                type="drag"
+                :rotate="90"
+                class="drag-handle"
+              />
               <XTypeWrap
                 :name="item.name"
                 :type="item.type"
@@ -444,12 +446,12 @@ export default {
         }
       }
 
-      .draggable-expression-handle {
+      .drag-handle {
         float: left;
-        cursor: move;
         margin-right: 4px;
         margin-bottom: 8px;
         width: 5%;
+        font-size: 15px;
       }
 
       .index {

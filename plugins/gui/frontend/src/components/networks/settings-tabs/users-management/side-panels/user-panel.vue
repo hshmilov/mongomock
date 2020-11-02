@@ -1,7 +1,6 @@
 <script>
 
 import { mapGetters, mapActions, mapMutations } from 'vuex';
-import { mdiDelete } from '@mdi/js';
 
 import {
   GET_SYSTEM_USERS_MAP,
@@ -96,19 +95,16 @@ export default {
             class="action-remove"
             title="Delete"
             onClick={this.callDeleteUser}
-            size="20"
-            color="#fff"
-            icon={mdiDelete}
+            type="delete"
           />);
         }
         panelActions.push(<x-action-item
             class="action-reset-password"
             title="Reset Password"
             onClick={() => this.displayResetPasswordModal(this.userId, this.lastSavedEmail, this.userInfo.user_name)}
-            size="20"
-            color="#fff"
-            icon="$vuetify.icons.resetPassword"
-          />);
+            family="action"
+            type="resetPassword"
+        />);
         return panelActions;
       }
       return null;

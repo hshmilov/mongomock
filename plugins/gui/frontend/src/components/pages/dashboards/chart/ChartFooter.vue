@@ -223,13 +223,8 @@ export default {
 
     .drag-handle {
       font-size: 24px;
-      color: $grey-3;
       position: absolute;
       right: calc((100% / 2) + -12px);
-      cursor: move;
-      &:hover {
-        color: $grey-5;
-      }
     }
   }
 }

@@ -15,8 +15,6 @@ import { xActionItem, xActionsGroup } from '@networks/side-panel/PanelActions';
 import xCombobox from '@axons/inputs/combobox/index.vue';
 import { LAZY_FETCH_DATA_FIELDS } from '@store/actions';
 
-import { mdiPencil, mdiDelete, mdiEyeOutline } from '@mdi/js';
-
 import './saved-query-panel.scss';
 
 import { fetchEntityTags, fetchEntitySavedQueriesNames } from '@api/saved-queries';
@@ -105,7 +103,7 @@ export default {
     },
     userCannotAddSavedQueries() {
       return this.$cannot(this.permissionCategory,
-          this.$permissionConsts.actions.Add, this.$permissionConsts.categories.SavedQueries);
+        this.$permissionConsts.actions.Add, this.$permissionConsts.categories.SavedQueries);
     },
     userCannotRunSavedQueries() {
       return this.$cannot(this.permissionCategory,
@@ -281,7 +279,7 @@ export default {
       this.keepPanelStatic = true;
       this.$emit('set-public', {
         queryData,
-        done: () => { this.keepPanelStatic = false },
+        done: () => { this.keepPanelStatic = false; },
       });
     },
     closePanel() {
@@ -377,18 +375,16 @@ export default {
             class="action-set-public"
             title="Set Public"
             onClick={this.setPublic}
-            size="20"
-            color="#fff"
-            icon={mdiEyeOutline}
+            type="eye"
           />);
         } else if (this.userCanNavigateToEnforcement && !this.query.private) {
           actions.push(<x-action-item
             class="action-enforce"
             title="New Enforcement"
             onClick={this.newEnforcement}
-            size="20"
-            color="#fff"
-            icon="$vuetify.icons.enforcements"
+            family="symbol"
+            type="enforcements"
+            classList="enforcement-icon-light"
         />);
         }
         if (this.userCanDeleteSavedQueries) {
@@ -396,22 +392,17 @@ export default {
             class="action-remove"
             title="Delete"
             onClick={this.removeQuery}
-            size="20"
-            color="#fff"
-            icon={mdiDelete}
+            type="delete"
           />);
         }
       }
-
       if (this.isEditable && !this.editingMode && !this.userCannotEditSavedQueries) {
         actions = [(
           (<x-action-item
                     class="action-edit"
                     title="Edit"
                     onClick={this.toggleEditMode}
-                    size="20"
-                    color="#fff"
-                    icon={mdiPencil}
+                    type="edit"
                 />)
         ), ...actions];
       }
@@ -446,7 +437,6 @@ export default {
             panelClass="saved-query-panel"
             title={this.name}
             onClose={this.onClose}
-
 
 
         >

@@ -37,7 +37,6 @@
 <script>
 import { mapState } from 'vuex';
 
-import { mdiArrowRight } from '@mdi/js';
 import { Modal } from 'ant-design-vue';
 
 export default {

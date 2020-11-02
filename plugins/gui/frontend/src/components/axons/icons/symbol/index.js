@@ -14,6 +14,8 @@ import stacked from './stacked';
 import verticalDots from './verticaldots';
 import trend from './trend';
 import chat from './chat';
+import enforcements from './enforcements';
+import enforcementsLock from './enforcements-lock';
 
 export default {
   funnel,
@@ -32,4 +34,6 @@ export default {
   verticalDots,
   trend,
   chat,
+  enforcements,
+  enforcementsLock,
 };

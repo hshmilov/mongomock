@@ -19,6 +19,7 @@
         <XIcon
           family="action"
           type="drag"
+          rotate="90"
         />
         <XCheckbox
           :value="item.name"
@@ -122,7 +123,6 @@ export default {
           min-width: 16px;
           width: 16px;
           margin: 4px -6px 0 -4px;
-          transform: rotate(90deg);
           position: relative;
           top: -2px;
           cursor: move;

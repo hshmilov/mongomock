@@ -7,7 +7,6 @@
       >
         <XIcon
           class="action-edit"
-          family="action"
           type="edit"
           @click="$emit('edit')"
         />
@@ -20,8 +19,7 @@
       >
         <XIcon
           class="action-remove"
-          family="action"
-          type="remove"
+          type="delete"
           @click="$emit('delete')"
         />
       </ATooltip>
@@ -41,9 +39,4 @@ export default {
 </script>
 
 <style lang="scss">
-  .action-edit, .action-remove {
-    font-size: 20px;
-    vertical-align: middle;
-    color: #fff;
-  }
 </style>

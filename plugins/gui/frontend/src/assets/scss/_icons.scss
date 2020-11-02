@@ -1,0 +1,30 @@
+
+/* General icon styles */
+
+.standard-icon {
+  font-size: 18px;
+}
+
+.disabled-icon {
+  pointer-events: none;
+  opacity: .6;
+}
+
+/* Specific icon styles */
+
+.drag-handle {
+  color: $grey-3;
+  cursor: move;
+  &:hover {
+    color: $grey-5;
+  }
+}
+
+.enforcement-icon-light {
+  path {
+    stroke: $theme-white;
+  }
+  polygon {
+    fill: $theme-white;
+  }
+}

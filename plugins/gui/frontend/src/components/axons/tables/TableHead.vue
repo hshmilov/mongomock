@@ -24,22 +24,23 @@
         />
       </div>
       <div
-        class="filter"
         v-if="filterableType"
+        class="filter"
         @click.stop="toggleColFilter"
       >
-        <VIcon
+        <XIcon
           v-if="!hasFilter && (filterVisible || Boolean(filterColumnName === field.name))"
-          :class="{filterable: true, disabled: filterDisabled, active: Boolean(filterColumnName === field.name)}"
-        >
-          $vuetify.icons.filterable
-        </VIcon>
-        <VIcon
+          type="filter"
+          :class="{filterable: true,
+                   disabled: filterDisabled,
+                   active: Boolean(filterColumnName === field.name)}"
+        />
+        <XIcon
           v-if="hasFilter"
-          class="funnel"
-        >
-          $vuetify.icons.funnel
-        </VIcon>
+          type="filter"
+          theme="filled"
+          class="filter-icon"
+        />
       </div>
     </div>
   </th>
@@ -175,6 +176,13 @@ export default {
         pointer-events: none;
       }
 
+      .filterable {
+        color: $theme-black;
+      }
+
+      .filter-icon {
+        color: $theme-orange;
+      }
     }
 
     > .logo {

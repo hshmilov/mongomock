@@ -6,8 +6,8 @@
   >
     <div class="input-icon">
       <XIcon
-        family="action"
         type="search"
+        class="search-icon"
       />
     </div>
     <slot name="badge" />
@@ -105,13 +105,9 @@ export default {
             padding: 2px 12px;
             line-height: 24px;
 
-            .svg-fill {
-                fill: $grey-4
-            }
-
-            .svg-stroke {
-                stroke: $grey-4
-            }
+          .search-icon {
+            color: $grey-4;
+          }
         }
     }
 </style>

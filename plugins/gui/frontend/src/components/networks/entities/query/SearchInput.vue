@@ -21,13 +21,12 @@
         #badge
       >
         <div class="search-input-badge">
-          <VIcon
-            size="16"
-            color="#fff"
+          <XIcon
+            type="close"
             class="search-input-badge__remove"
             @click.stop="removeSearchTemplate"
-          >{{ closeSvgIconPath }}
-          </VIcon>{{ querySearchTemplate.name }}
+          />
+          <span>{{ querySearchTemplate.name }}</span>
         </div>
       </template>
     </XSearchInput>
@@ -106,7 +105,9 @@
 </template>
 
 <script>
-import { mapState, mapMutations, mapGetters, mapActions } from 'vuex';
+import {
+  mapState, mapMutations, mapGetters, mapActions,
+} from 'vuex';
 import _debounce from 'lodash/debounce';
 import _get from 'lodash/get';
 import _find from 'lodash/find';
@@ -120,10 +121,9 @@ import XMenu from '@axons/menus/Menu.vue';
 import XMenuItem from '@axons/menus/MenuItem.vue';
 import { UPDATE_DATA_VIEW } from '@store/mutations';
 import { EXACT_SEARCH, GET_SYSTEM_COLUMNS } from '@store/getters';
-import { mdiClose } from '@mdi/js';
 import { defaultViewForReset, entities } from '@constants/entities';
-import viewsMixin from '../../../../mixins/views';
 import { FETCH_QUERY_INVALID_REFERENCES } from '@store/actions';
+import viewsMixin from '../../../../mixins/views';
 
 export default {
   name: 'XQuerySearchInput',
@@ -157,7 +157,6 @@ export default {
     return {
       searchInputValue: '',
       queryMenuIndex: -1,
-      closeSvgIconPath: mdiClose,
     };
   },
   computed: {
@@ -338,7 +337,7 @@ export default {
       const viewToUpdateSearchTemplate = _get(view, 'query.meta.searchTemplate', false);
       const columnsGroupName = viewToUpdateSearchTemplate ? viewToUpdateSearchTemplate.name : false;
       if (columnsGroupName) {
-        userDefinedFields = this.userFieldsGroups[_snakeCase(columnsGroupName)]
+        userDefinedFields = this.userFieldsGroups[_snakeCase(columnsGroupName)];
         if (!userDefinedFields) {
           userDefinedFields = this.getSystemColumns(this.module, _snakeCase(columnsGroupName));
         }
@@ -457,13 +456,17 @@ export default {
 
       .search-input-badge {
         flex-shrink: 0;
-        color: white;
+        color: $theme-white;
         background-color: $theme-orange;
         padding: 2px 10px;
         text-transform: capitalize;
+        display: flex;
+        align-items: center;
 
         .search-input-badge__remove {
           margin-right: 5px;
+          color: $theme-white;
+          font-size: 14px;
         }
        }
 

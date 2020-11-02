@@ -10,11 +10,15 @@
         :class="columnButtonClass"
         type="link"
       >
-        <VIcon
-          size="18"
-          class="entityColumn-expression-handle"
-        >$vuetify.icons.entityColumn</VIcon>
-        Edit Columns</XButton>
+        <span>
+          <XIcon
+            family="action"
+            type="entityColumn"
+            class="standard-icon"
+          />
+          Edit Columns
+        </span>
+      </XButton>
       <AMenu
         v-if="dropDownOpened"
         slot="overlay"
@@ -66,11 +70,15 @@
         Exporting...
       </div>
       <div v-else>
-        <VIcon
-          size="18"
-          class="entityExport-expression-handle"
-        >$vuetify.icons.entityExport</VIcon>
-        Export CSV</div>
+        <span>
+          <XIcon
+            disabled="true"
+            type="download"
+            class="standard-icon"
+          />
+          Export CSV
+        </span>
+      </div>
     </XButton>
     <XEditUserColumnsModal
       v-if="columnEditor.user"

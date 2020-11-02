@@ -7,8 +7,8 @@
     :closable="false"
     :width="width"
     :get-container="sidePanelContainer"
-    @close="onClose"
     :mask="mask"
+    @close="onClose"
   >
     <template #title>
       <span
@@ -24,7 +24,6 @@
           @click="onClose"
         >
           <XIcon
-            :style="{fontSize: '20px'}"
             family="action"
             type="close"
           />
@@ -144,6 +143,11 @@ export default {
           display: flex;
           height: 25px;
 
+          .x-icon {
+            font-size: 20px;
+            color: $theme-white;
+          }
+
           .action-close {
             font-size: 20px;
             line-height: 25px;
@@ -187,7 +191,6 @@ export default {
       }
     }
   }
-
 
 
 </style>

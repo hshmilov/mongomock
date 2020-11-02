@@ -11,8 +11,6 @@ import { xActionItem, xActionsGroup } from '@networks/side-panel/PanelActions';
 import XCheckbox from '@axons/inputs/Checkbox.vue';
 import XCombobox from '@axons/inputs/combobox/index.vue';
 
-import { mdiContentDuplicate, mdiDelete, mdiPencil } from '@mdi/js';
-
 import './role-panel.scss';
 import {
   CHANGE_ROLE,
@@ -355,9 +353,7 @@ export default {
           class="action-edit"
           title="Edit"
           onClick={this.toggleEditMode}
-          size="20"
-          color="#fff"
-          icon={mdiPencil}
+          type="edit"
         />);
       }
 
@@ -366,9 +362,7 @@ export default {
           class="action-duplicate"
           title="Duplicate"
           onClick={this.duplicateRole}
-          size="20"
-          color="#fff"
-          icon={mdiContentDuplicate}
+          type="copy"
         />);
       }
       if (this.roleId && this.userCanDeleteRoles
@@ -377,9 +371,7 @@ export default {
           class="action-remove"
           title="Delete"
           onClick={this.deleteRole}
-          size="20"
-          color="#fff"
-          icon={mdiDelete}
+          type="delete"
         />);
       }
       return actions;

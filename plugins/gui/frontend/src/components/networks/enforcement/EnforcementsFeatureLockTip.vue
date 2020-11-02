@@ -11,9 +11,11 @@
     @cancel="onCancel"
   >
     <div class="content">
-      <VIcon
+      <XIcon
+        family="symbol"
+        type="enforcementsLock"
         class="enforcements-lock"
-      >$vuetify.icons.enforcementsLock</VIcon>
+      />
       <div class="compliance-title">
         <span>Ready to run actions on your assets?</span>
       </div>
@@ -34,10 +36,16 @@
       <XButton
         type="link"
         @click="openMail"
-      >Upgrade<VIcon
-        size="20px"
-        color="white"
-      >{{ arrowIcon }}</VIcon>
+      >
+        <span>
+          <span>
+            Upgrade
+          </span>
+          <XIcon
+            type="arrow-right"
+            :style="{ color: 'white', fontSize: '20px'}"
+          />
+        </span>
       </XButton>
     </template>
   </AModal>
@@ -46,7 +54,6 @@
 <script>
 import { mapState } from 'vuex';
 
-import { mdiArrowRight } from '@mdi/js';
 import { Modal } from 'ant-design-vue';
 
 export default {
@@ -73,9 +80,6 @@ export default {
     }),
     modelCollapsePosition() {
       return this.collapseSidebar ? '60px' : '240px';
-    },
-    arrowIcon() {
-      return mdiArrowRight;
     },
   },
   mounted() {
@@ -135,8 +139,7 @@ export default {
                     svg {
                         fill: $theme-white;
                     }
-                    height: 90px;
-                    width: 90px;
+                    font-size: 90px;
                 }
             }
           }
@@ -149,6 +152,13 @@ export default {
             border-bottom-right-radius: 10px;
             .ant-btn-link {
               color: $theme-white;
+              span {
+                display: flex;
+                align-items: center;
+                  i {
+                    margin-left: 5px;
+                  }
+              }
               svg {
                 fill: $theme-white;
               }

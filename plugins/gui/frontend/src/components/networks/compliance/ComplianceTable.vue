@@ -44,10 +44,13 @@
             Exporting...
           </div>
           <div v-else>
-            <VIcon
-              size="18"
-            >$vuetify.icons.entityExport</VIcon>
-            <span class="export-csv-title">Export CSV</span>
+            <span class="export-csv-title">
+              <XIcon
+                type="download"
+                class="standard-icon"
+              />
+              Export CSV
+            </span>
           </div>
         </XButton>
       </template>
