@@ -3,6 +3,29 @@ import datetime
 
 from axonius.fields import Field, ListField
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.smart_json_class import SmartJsonClass
+
+
+class VLAN(SmartJsonClass):
+    name = Field(str, 'Name')
+    domain = Field(str, 'Domain')
+    vlan_internal_id = Field(int, 'Internal ID')
+    vlan_member_internal_id = Field(int, 'Vlan Member Internal ID')
+    vlan_type = Field(str, 'Type')
+    time_collected = Field(datetime.datetime, 'Time Collected')
+    base_bridge_address = Field(str, 'Base Bridge Address')
+    root_bridge_address = Field(str, 'Root Bridge Address')
+    bridge_forward_delay = Field(int, 'Bridge Forward Delay')
+    bridge_max_age = Field(int, 'Bridge Max Age')
+    bridge_member = Field(bool, 'Bridge Member')
+    datasource_id = Field(int, 'DataSource ID')
+    forward_delay = Field(int, 'Forward Delay')
+    interface_id = Field(int, 'Interface ID')
+    max_age = Field(int, 'Max Age')
+    number_of_ports = Field(int, 'Number Of Ports')
+    priority = Field(int, 'Priority')
+    protocol = Field(int, 'Protocol')
+    state = Field(str, 'State')
 
 
 class InfobloxNetmriDeviceInstance(DeviceAdapter):
@@ -27,3 +50,4 @@ class InfobloxNetmriDeviceInstance(DeviceAdapter):
     rev_end_time = Field(datetime.datetime, 'Revision End Time')  # DeviceEndTime
     mgmt_server_id = Field(int, 'Management Server Device ID')  # MgmtServerDeviceID
     virtual_net_id = Field(int, 'Internal NetMRI Virtual Network ID')  # VirtualNetworkID
+    vlans = ListField(VLAN, 'VLANs')

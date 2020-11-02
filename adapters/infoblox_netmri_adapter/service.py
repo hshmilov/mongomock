@@ -2,21 +2,23 @@ import logging
 
 from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
-from axonius.clients.rest.connection import RESTConnection
+from axonius.clients.rest.connection import RESTConnection, ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE
 from axonius.clients.rest.connection import RESTException
+from axonius.devices.device_adapter import DeviceAdapterVlan
+from axonius.mixins.configurable import Configurable
 from axonius.scanner_adapter_base import ScannerAdapterBase
-from axonius.utils.parsing import get_manufacturer_from_mac
+from axonius.utils.parsing import get_manufacturer_from_mac, int_or_none
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import format_ip
 from infoblox_netmri_adapter.connection import InfobloxNetmriConnection
 from infoblox_netmri_adapter.client_id import get_client_id
-from infoblox_netmri_adapter.structures import InfobloxNetmriDeviceInstance
+from infoblox_netmri_adapter.structures import InfobloxNetmriDeviceInstance, VLAN
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class InfobloxNetmriAdapter(ScannerAdapterBase):
+class InfobloxNetmriAdapter(ScannerAdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(InfobloxNetmriDeviceInstance):
         pass
@@ -53,8 +55,7 @@ class InfobloxNetmriAdapter(ScannerAdapterBase):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data):
         """
         Get all devices from a specific  domain
 
@@ -64,7 +65,7 @@ class InfobloxNetmriAdapter(ScannerAdapterBase):
         :return: A json with all the attributes returned from the Server
         """
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(async_chunks=self.__async_chunks)
 
     @staticmethod
     # pylint: disable=arguments-differ
@@ -125,6 +126,7 @@ class InfobloxNetmriAdapter(ScannerAdapterBase):
             'type': 'array'
         }
 
+    # pylint: disable=too-many-statements
     @staticmethod
     def _fill_infoblox_netmri_device_fields(device_raw: dict, device: MyDeviceAdapter):
 
@@ -161,6 +163,34 @@ class InfobloxNetmriAdapter(ScannerAdapterBase):
             device.is_infra = parse_bool(device_raw.get('InfraDeviceInd'))
             device.is_network = parse_bool(device_raw.get('NetworkDeviceInd'))
             device.is_virtual = parse_bool(device_raw.get('VirtualInd'))
+
+            vlans_raw = device_raw.get('extra_vlans')
+            device.vlans = []
+            if isinstance(vlans_raw, list):
+                for vlan_raw in vlans_raw:
+                    if not isinstance(vlan_raw, dict):
+                        continue
+                    vlan = VLAN()
+                    vlan.name = vlan_raw.get('VlanName')
+                    vlan.domain = vlan_raw.get('VTPDomain')
+                    vlan.vlan_internal_id = int_or_none(vlan_raw.get('VlanID'))
+                    vlan.vlan_member_internal_id = int_or_none(vlan_raw.get('VlanMemberID'))
+                    vlan.vlan_type = vlan_raw.get('VlanType')
+                    vlan.time_collected = parse_date(vlan_raw.get('VlanMemberTimestamp'))
+                    vlan.base_bridge_address = vlan_raw.get('BaseBridgeAddress')
+                    vlan.root_bridge_address = vlan_raw.get('RootBridgeAddress')
+                    vlan.bridge_forward_delay = int_or_none(vlan_raw.get('StpBridgeForwardDelay'))
+                    vlan.bridge_max_age = int_or_none(vlan_raw.get('StpBridgeMaxAge'))
+                    vlan.bridge_member = parse_bool(vlan_raw.get('BridgeMemberInd'))
+                    vlan.datasource_id = int_or_none(vlan_raw.get('DataSourceID'))
+                    vlan.forward_delay = int_or_none(vlan_raw.get('StpForwardDelay'))
+                    vlan.interface_id = int_or_none(vlan_raw.get('InterfaceID'))
+                    vlan.max_age = int_or_none(vlan_raw.get('StpMaxAge'))
+                    vlan.number_of_ports = int_or_none(vlan_raw.get('BaseNumPorts'))
+                    vlan.priority = int_or_none(vlan_raw.get('StpPriority'))
+                    vlan.protocol = int_or_none(vlan_raw.get('StpProtocolSpecification'))
+                    vlan.state = vlan_raw.get('VlanState')
+                    device.vlans.append(vlan)
         except Exception:
             logger.exception(f'Failed creating instance for device {device_raw}')
 
@@ -205,6 +235,18 @@ class InfobloxNetmriAdapter(ScannerAdapterBase):
                 device.fw_ip = device_ip
             device.add_nic(device_mac, ips=[device_ip])
 
+            vlans = []
+            vlans_raw = device_raw.get('extra_vlans')
+            if isinstance(vlans_raw, list):
+                for vlan_raw in vlans_raw:
+                    if not isinstance(vlan_raw, dict):
+                        continue
+                    vlan = DeviceAdapterVlan()
+                    vlan.name = vlan_raw.get('VlanName')
+                    vlans.append(vlan)
+
+                device.add_nic(vlans=vlans)
+
             # Now parse specific fields
             self._fill_infoblox_netmri_device_fields(device_raw, device)
             device.set_raw(device_raw)
@@ -234,3 +276,37 @@ class InfobloxNetmriAdapter(ScannerAdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Assets, AdapterProperty.Network]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        """
+        Return the schema this class wants to have for the config
+        """
+        return {
+            'items': [
+                {
+                    'name': 'async_chunks',
+                    'type': 'integer',
+                    'title': 'Number of requests in parallel'
+                }
+            ],
+            'required': ['async_chunks'],
+            'pretty_name': 'Infoblox NetMRI Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        """
+        Return the default configuration for this class
+        """
+        return {
+            'async_chunks': ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE
+        }
+
+    def _on_config_update(self, config):
+        """
+        Virtual
+        This is called on every inheritor when the config was updated.
+        """
+        self.__async_chunks = int_or_none(config.get('async_chunks')) or ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE

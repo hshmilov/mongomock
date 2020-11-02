@@ -1,26 +1,25 @@
 import asyncio
 import http.client
 import logging
-import time
-
 import math
 import threading
+import time
 from abc import ABC, abstractmethod
 from json.decoder import JSONDecodeError
 from typing import Tuple, Type
 
+import aiohttp
+import requests
+import uritools
 from urllib3.util.url import parse_url
 from requests_ntlm2 import HttpNtlmAdapter
-import requests
-import aiohttp
-import uritools
 
-from axonius.async.utils import async_request, async_http_request
+from axonius.async.utils import async_request, async_http_request, create_cookie_jar_from_existing_session
 from axonius.clients.rest import consts
+from axonius.clients.rest.consts import get_default_timeout
 from axonius.clients.rest.exception import RESTException, RESTAlreadyConnected, \
     RESTConnectionError, RESTNotConnected, RESTRequestException
 from axonius.logging.metric_helper import log_metric
-from axonius.clients.rest.consts import get_default_timeout
 from axonius.utils.json import from_json
 from axonius.utils.network.docker_network import has_addr_collision, COLLISION_MESSAGE
 from axonius.utils.ssl import check_associate_cert_with_private_key
@@ -366,9 +365,10 @@ class RESTConnection(ABC):
                    chunks=ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE,
                    max_retries=MAX_ASYNC_RETRIES,
                    retry_on_error=False,
-                   retry_sleep_time=ASYNC_ERROR_SLEEP_TIME):
+                   retry_sleep_time=ASYNC_ERROR_SLEEP_TIME,
+                   copy_cookies=False):
         return self._do_async_request('GET', list_of_requests, chunks,
-                                      max_retries, retry_on_error, retry_sleep_time)
+                                      max_retries, retry_on_error, retry_sleep_time, copy_cookies)
 
     def _async_get_only_good_response(self, list_of_requests,
                                       chunks=ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE):
@@ -386,9 +386,10 @@ class RESTConnection(ABC):
                     chunks=ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE,
                     max_retries=MAX_ASYNC_RETRIES,
                     retry_on_error=False,
-                    retry_sleep_time=ASYNC_ERROR_SLEEP_TIME):
+                    retry_sleep_time=ASYNC_ERROR_SLEEP_TIME,
+                    copy_cookies=False):
         return self._do_async_request('POST', list_of_requests, chunks,
-                                      max_retries, retry_on_error, retry_sleep_time)
+                                      max_retries, retry_on_error, retry_sleep_time, copy_cookies)
 
     def _delete(self, *args, **kwargs):
         return self._do_request('DELETE', *args, **kwargs)
@@ -654,10 +655,12 @@ class RESTConnection(ABC):
             await asyncio.sleep(DEFAULT_429_SLEEP_TIME)
 
     # pylint: disable=R0915
+
     def _do_async_request(self, method, list_of_requests, chunks,
                           max_retries=MAX_ASYNC_RETRIES,
                           retry_on_error=False,
-                          retry_sleep_time=ASYNC_ERROR_SLEEP_TIME):
+                          retry_sleep_time=ASYNC_ERROR_SLEEP_TIME,
+                          copy_cookies=False):
         """
         makes requests asynchronously. list_of_requests is a dict of parameters you would normally pass to _do_request.
         :param method:
@@ -675,9 +678,14 @@ class RESTConnection(ABC):
 
         # Transform regular to aio requests
         aio_requests = []
+        cookie_jar = None
 
         for req in list_of_requests:
             aio_requests.append(self.create_async_dict(req, method))
+
+        if copy_cookies:
+            cookie_jar = create_cookie_jar_from_existing_session(self._session)
+
         # Now that we have built the new requests, try to asynchronously get them.
         for chunk_id in range(int(math.ceil(len(aio_requests) / chunks))):
             logger.debug(f'Async requests: sending {chunk_id * chunks} out of {len(aio_requests)}')
@@ -685,7 +693,8 @@ class RESTConnection(ABC):
                                         self.handle_429, cert=self._session.cert,
                                         max_retries=max_retries,
                                         retry_on_error=retry_on_error,
-                                        retry_sleep_time=retry_sleep_time)
+                                        retry_sleep_time=retry_sleep_time,
+                                        cookies=cookie_jar)
 
             # We got the requests, time to check if they are valid and transform them to what the user wanted.
             for i, raw_answer in enumerate(all_answers):

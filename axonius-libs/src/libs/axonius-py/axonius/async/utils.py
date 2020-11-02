@@ -2,14 +2,15 @@
 Async io utilities.
 """
 import asyncio
+import logging
 import ssl
 import typing
-import logging
+from http.cookies import Morsel
 from inspect import isawaitable
 
 import certifi
 from aiohttp import ClientSession, ClientTimeout, ClientResponse, BasicAuth, TCPConnector, ClientConnectorError, \
-    ClientResponseError
+    ClientResponseError, CookieJar
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -114,7 +115,8 @@ async def async_http_request(session: ClientSession, should_run_event=None, hand
 
 async def run(reqs, handle_429_function, max_retries=MAX_RETRIES,
               retry_on_error=False,
-              retry_sleep_time=ERROR_SLEEP_TIME,  **kwargs):
+              retry_sleep_time=ERROR_SLEEP_TIME,
+              cookies=None, **kwargs):
     tasks = []
     # Fetch all responses within one Client session,
     # keep connection alive for all requests.A
@@ -128,7 +130,7 @@ async def run(reqs, handle_429_function, max_retries=MAX_RETRIES,
     connector = TCPConnector(limit=None, ssl_context=ssl_ctx)
     should_run_event = asyncio.Event()
     should_run_event.set()
-    async with ClientSession(connector=connector) as session:
+    async with ClientSession(connector=connector, cookie_jar=cookies) as session:
         for req in reqs:
             task = asyncio.ensure_future(async_http_request(session, should_run_event,
                                                             handle_429=handle_429_function,
@@ -149,7 +151,8 @@ async def run(reqs, handle_429_function, max_retries=MAX_RETRIES,
 def async_request(req_list: list, handle_429_function=sleep_for_429,
                   max_retries=MAX_RETRIES,
                   retry_on_error=False,
-                  retry_sleep_time=ERROR_SLEEP_TIME, **kwargs) -> typing.List[ClientResponse]:
+                  retry_sleep_time=ERROR_SLEEP_TIME,
+                  cookies=None, **kwargs) -> typing.List[ClientResponse]:
     """
     Makes requests
     :param max_retries: max retries number
@@ -167,9 +170,29 @@ def async_request(req_list: list, handle_429_function=sleep_for_429,
         asyncio.set_event_loop(loop)
     future = asyncio.ensure_future(run(req_list, handle_429_function, max_retries=max_retries,
                                        retry_on_error=retry_on_error,
-                                       retry_sleep_time=retry_sleep_time, **kwargs))
+                                       retry_sleep_time=retry_sleep_time,
+                                       cookies=cookies, **kwargs))
     result = loop.run_until_complete(future)
     # Wait 250 ms for the underlying SSL connections to close
     # https://aiohttp.readthedocs.io/en/stable/client_advanced.html
     loop.run_until_complete(asyncio.sleep(0.250))
     return result
+
+
+def create_cookie_jar_from_existing_session(session):
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    cookie_jar = CookieJar(loop=loop)
+    cookies = session.cookies.get_dict()
+    morsel_cookies = {}
+    for name, cookie in cookies.items():
+        morsel_cookie = Morsel()
+        morsel_cookie.key = name
+        morsel_cookie.value = cookie
+        morsel_cookies[name] = morsel_cookie
+
+    cookie_jar.update_cookies(cookies=morsel_cookies)
+
+    return cookie_jar
