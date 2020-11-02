@@ -1083,9 +1083,9 @@
     "description": "RedSeal’s network modeling and risk scoring platform models customers' entire hybrid data center of public cloud, private cloud and physical network."
   },
   "google_mdm_adapter": {
-    "title": "G Suite by Google",
+    "title": "Google Workspace (G Suite)",
     "link": "https://docs.axonius.com/docs/g-suite-by-google",
-    "description": "G Suite is a set of cloud computing, productivity, collaboration, device, user, and data management tools developed by Google."
+    "description": "Google Workspace (formerly G Suite) is a collection of cloud computing, productivity, collaboration, device, user, and data management tools developed by Google."
   },
   "tenable_security_center_adapter": {
     "title": "Tenable.sc (SecurityCenter)",

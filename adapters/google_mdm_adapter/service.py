@@ -375,7 +375,7 @@ class GoogleMdmAdapter(AdapterBase, Configurable):
             'required': [
                 'fetch_devices'
             ],
-            'pretty_name': 'G Suite Configuration',
+            'pretty_name': 'Google Workspace Configuration',
             'type': 'array'
         }
 
