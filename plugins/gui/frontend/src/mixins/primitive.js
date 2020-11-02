@@ -62,7 +62,7 @@ export default {
       if (!silent && !this.valid) {
         // Error is added if the data is invalid, unless silent is set to true.
         // added check if schema has custom error message
-        this.error = this.schema.errorMsg || `'${this.schema.title}' has an illegal value`;
+        this.error = this.getErrorMessage();
       }
       this.emitValidity(silent);
     },
@@ -84,6 +84,9 @@ export default {
     },
     checkData() {
       return true;
+    },
+    getErrorMessage() {
+      return this.schema.errorMsg || `'${this.schema.title}' has an illegal value`;
     },
     isEmpty() {
       return !this.data;

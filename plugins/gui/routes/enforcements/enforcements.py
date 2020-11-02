@@ -6,8 +6,8 @@ from bson import ObjectId
 from flask import (jsonify,
                    request, Response)
 
-from axonius.consts.gui_consts import (LAST_UPDATED_FIELD, UPDATED_BY_FIELD)
-from axonius.consts.plugin_consts import (REPORTS_PLUGIN_NAME, DEVICE_CONTROL_PLUGIN_NAME)
+from axonius.consts.gui_consts import LAST_UPDATED_FIELD, UPDATED_BY_FIELD
+from axonius.consts.plugin_consts import REPORTS_PLUGIN_NAME
 from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_FIELD,
                                           ACTION_TYPE_FIELD,
                                           ACTIONS_MAIN_FIELD,
@@ -20,6 +20,7 @@ from axonius.consts.report_consts import (ACTIONS_FAILURE_FIELD, ACTIONS_FIELD,
                                           ACTION_TYPE_DB_FIELD, ACTION_NAME_FIELD)
 
 from axonius.plugin_base import EntityType, return_error
+from axonius.plugin_exceptions import InvalidRequestException
 from axonius.utils.gui_helpers import (get_connected_user_id, paginated,
                                        filtered, sorted_endpoint,
                                        search_filter, metadata)
@@ -31,6 +32,7 @@ from gui.logic.ec_helpers import extract_actions_from_ec
 from gui.logic.login_helper import clear_passwords_fields, \
     refill_passwords_fields
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
+from gui.logic.upload_helper import upload_file
 from gui.routes.enforcements.tasks.tasks import Tasks
 
 # pylint: disable=no-member
@@ -456,11 +458,20 @@ class Enforcements(Tasks):
         ))
 
     @gui_route_logged_in('actions/upload_file', methods=['POST'], skip_activity=True)
+    # pylint: disable=no-self-use
     def actions_upload_file(self):
         """
         path: /api/enforcements/actions/upload_file
         """
-        return self._upload_file(DEVICE_CONTROL_PLUGIN_NAME)
+        logger.info(f'Uploading file for enforcement')
+        try:
+            return jsonify(upload_file(request.form.get('field_name'), request.files.get('userfile')))
+        except InvalidRequestException as ire:
+            logger.exception(ire)
+            return return_error(str(ire), 401)
+        except Exception as e:
+            logger.exception(e)
+            return return_error('Error uploading file for an enforcement', 500)
 
     def _get_action_type(self, action_name):
         action = self.enforcements_saved_actions_collection.find_one({

@@ -36,9 +36,9 @@ DOCKER_LOGIN_PATH = Path('../testing/test_credentials/docker_login.sh').absolute
 def main(command):
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
 {name} [-h] {system,adapter,service} [<args>]
-       {name} system [-h] {up,down,build,register} [--all] [--prod] [--restart] [--rebuild] [--hard] [--pull-base-image] [--skip]
+       {name} system [-h] {up,down,build,register,run} [--all] [--prod] [--restart] [--rebuild] [--hard] [--pull-base-image] [--skip]
                                 [--services [N [N ...]]] [--adapters [N [N ...]]] [--exclude [N [N ...]]]
-       {name} {adapter,service} [-h] name {up,down,build,quick_register} [--prod] [--restart] [--rebuild] [--hard] [--rebuild-libs]
+       {name} {adapter,service} [-h] name {up,down,build,quick_register,run} [--prod] [--restart] [--rebuild] [--hard] [--rebuild-libs]
        {name} ls
 """[1:].replace('{name}', os.path.basename(__file__)))
     parser.add_argument('target', choices=['system', 'adapter', 'service', 'standalone', 'ls'])
@@ -88,10 +88,10 @@ def stop_watchdogs():
 
 def system_entry_point(args):
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
-{name} system [-h] {up,down,build} [--all] [--prod] [--restart] [--rebuild] [--hard] [--skip]
+{name} system [-h] {up,down,build,run} [--all] [--prod] [--restart] [--rebuild] [--hard] [--skip]
                                 [--services [N [N ...]]] [--adapters [N [N ...]]] [--exclude [N [N ...]]]"""[1:].
                                      replace('{name}', os.path.basename(__file__)))
-    parser.add_argument('mode', choices=['up', 'down', 'build', 'register', 'weave_recover'])
+    parser.add_argument('mode', choices=['up', 'down', 'build', 'register', 'weave_recover', 'run'])
     parser.add_argument('--all', action='store_true', default=False, help='All adapters and services')
     parser.add_argument('--prod', action='store_true', default=False, help='Prod Mode')
     parser.add_argument('--image-tag', type=str, default='', help='Image Tag, will be used as Dockerfile image tag')
@@ -285,7 +285,6 @@ def system_entry_point(args):
             internal_services
         adapters = [name for name, variable in axonius_system.get_all_adapters()]
         axonius_system.recover_weave_network(adapters, services, standalone_services)
-
     else:
         assert not args.restart and not args.skip
         print(f'Building system and {args.adapters + args.services}')
@@ -313,10 +312,10 @@ def is_demo_instance():
 
 def service_entry_point(target, args):
     parser = argparse.ArgumentParser(description='Axonius system startup', usage="""
-{name} {target} [-h] name {up,down,build} [--prod] [--restart] [--rebuild] [--hard] [--rebuild-libs]
+{name} {target} [-h] name {up,down,build,run} [--prod] [--restart] [--rebuild] [--hard] [--rebuild-libs]
 """[1:-1].replace('{name}', os.path.basename(__file__)).replace('{target}', target))
     parser.add_argument('name')
-    parser.add_argument('mode', choices=['up', 'down', 'build', 'register', 'quick_register'])
+    parser.add_argument('mode', choices=['up', 'down', 'build', 'register', 'quick_register', 'run'])
     parser.add_argument('--prod', action='store_true', default=False, help='Prod Mode')
     parser.add_argument('--restart', action='store_true', default=False, help='Restart container')
     parser.add_argument('--rebuild', action='store_true', default=False, help='Rebuild Image')
@@ -390,6 +389,16 @@ def service_entry_point(target, args):
     elif args.mode == 'register':
         print(f'Registering {args.name}')
         axonius_system.register_unique_dns(adapters, services, standalone_services, system_config=system_config)
+    elif args.mode == 'run':
+        print(f'Starting building')
+        axonius_system.build(True, [], [], services, 'prod' if args.prod else '', args.rebuild)
+        print('finished building')
+
+        print(f'running {services[0]} service')
+        axonius_system.run_service(service_name=services[0],
+                                   env_vars=args.env,
+                                   system_config=system_config)
+        print(f'finished running {services[0]} service')
     else:
         assert not args.restart
         print(f'Building {args.name}')

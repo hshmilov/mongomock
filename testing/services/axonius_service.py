@@ -48,6 +48,7 @@ from services.plugins.static_correlator_service import StaticCorrelatorService
 from services.plugins.static_users_correlator_service import StaticUsersCorrelatorService
 from services.plugins.system_scheduler_service import SystemSchedulerService
 from services.plugins.master_proxy_service import MasterProxyService
+from services.standalone_services.imagemagick_service import ImagemagickService
 from services.standalone_services.remote_mongo_proxy_service import RemoteMongoProxyService
 from services.standalone_services.tunneler_service import TunnelerService
 from services.standalone_services.redis_service import RedisService
@@ -87,6 +88,7 @@ class AxoniusService:
         self.instance_mode = get_instance_mode()
         self.remote_mongo = RemoteMongoProxyService() if \
             self.instance_mode == InstancesModes.remote_mongo.value else None
+        self.imagemagick = ImagemagickService()
 
         self.axonius_services = [self.db,
                                  self.redis,
@@ -554,6 +556,18 @@ class AxoniusService:
             service.take_process_ownership()
             if service.get_is_container_up() and service.should_register_unique_dns:
                 service.register_unique_dns()
+
+    def run_service(self, service_name,
+                    show_print=True,
+                    env_vars=None,
+                    system_config=None,
+                    ):
+        service = self.get_standalone_service(service_name)
+        service.remove_container()
+
+        service.set_system_config(system_config)
+        service.take_process_ownership()
+        service.start('run', show_print=show_print, docker_internal_env_vars=env_vars)
 
     def start_plugins(
             self,

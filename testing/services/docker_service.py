@@ -18,7 +18,9 @@ from axonius.consts.plugin_consts import (AXONIUS_SETTINGS_DIR_NAME,
                                           DB_KEY_ENV_VAR_NAME,
                                           REDIS_PASSWORD_VAR_NAME)
 from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
-                                          WEAVE_NETWORK, DB_KEY_PATH, REDIS_PASSWORD_KEY)
+                                          WEAVE_NETWORK, DB_KEY_PATH, STANDALONE_NETWORK,
+                                          REDIS_PASSWORD_KEY)
+from axonius.utils.files import DEFAULT_SERVICE_DIR
 from axonius.utils.debug import COLOR, magentaprint
 from conf_tools import get_tunneled_dockers, get_customer_conf_json
 from services.axon_service import AxonService, TimeoutException
@@ -39,23 +41,27 @@ def retry_if_timeout(exception):
 class DockerService(AxonService):
     def __init__(self, container_name: str, service_dir: str):
         super().__init__()
-        env_service_dir = os.environ.get('SERVICE_DIR', '/home/ubuntu/cortex')
+        env_service_dir = os.environ.get('SERVICE_DIR', DEFAULT_SERVICE_DIR)
         self._system_config = dict()
         self.container_name = container_name
         self.cortex_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-        self.cortex_root_dir = self.cortex_root_dir.replace('/home/ubuntu/cortex', env_service_dir)
+        self.cortex_root_dir = self.cortex_root_dir.replace(DEFAULT_SERVICE_DIR, env_service_dir)
         self.libs_dir = os.path.join(self.cortex_root_dir, 'axonius-libs', 'src')
         self.log_dir = os.path.join(env_service_dir, 'logs', self.container_name)
         self.uploaded_files_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'uploaded_files'))
         os.makedirs(self.uploaded_files_dir, exist_ok=True)
         self.shared_readonly_dir = os.path.abspath(os.path.join(self.cortex_root_dir, 'shared_readonly_files'))
         self.service_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', service_dir))
-        self.service_dir = self.service_dir.replace('/home/ubuntu/cortex', env_service_dir)
+        self.service_dir = self.service_dir.replace(DEFAULT_SERVICE_DIR, env_service_dir)
         self.package_name = os.path.basename(self.service_dir)
         self._process_owner = False
         self.service_class_name = container_name.replace('-', ' ').title().replace(' ', '')
         self.override_exposed_port = False
         self._id = None
+
+    @staticmethod
+    def _dependent_services():
+        return []
 
     def take_process_ownership(self):
         self._process_owner = True
@@ -229,6 +235,8 @@ class DockerService(AxonService):
             docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}', '--detach']
         elif self.docker_network == WEAVE_NETWORK:
             docker_up = ['docker', 'run', '--name', self.container_name, '--detach']
+        elif self.docker_network == STANDALONE_NETWORK:
+            docker_up = ['docker', 'run']
         else:
             docker_up = ['docker', 'run', '--name', self.container_name, f'--network={self.docker_network}',
                          '--network-alias', self.fqdn, '--detach', '--hostname', self.container_name]
@@ -278,6 +286,14 @@ class DockerService(AxonService):
             all_volumes.extend(['--volume', volume])
 
         return all_volumes
+
+    @staticmethod
+    def _remove_container_when_exit():
+        return False
+
+    @staticmethod
+    def _exec_command():
+        return False
 
     @staticmethod
     def _get_sysctl_value(key, default=None):
@@ -340,7 +356,6 @@ class DockerService(AxonService):
                 subprocess.check_call(shlex.split(f'sudo mkdir -p {self.log_dir}'))
 
     # pylint: disable=arguments-differ
-
     def start(self,
               mode='',
               allow_restart=False,
@@ -351,7 +366,7 @@ class DockerService(AxonService):
               extra_flags=None,
               docker_internal_env_vars=None,
               run_env=None):
-        assert mode in ('prod', '')
+        assert mode in ('prod', '', 'run')
         assert self._process_owner, 'Only process owner should be able to stop or start the fixture!'
 
         print(f'{COLOR.get("light_green", "<")}'
@@ -366,27 +381,9 @@ class DockerService(AxonService):
 
         docker_up = self._get_basic_docker_run_command_with_network()
 
-        docker_up.extend(self._get_allowed_memory())
+        docker_up = self.add_parameters(docker_internal_env_vars, docker_up, expose_port, extra_flags, mode)
 
-        docker_up.extend(self._get_allowed_cpu())
-
-        docker_up.extend(self._get_exposed_ports(mode, expose_port))
-
-        docker_up.extend(['--sysctl', 'net.core.somaxconn=20000'])
-
-        docker_up.extend(['--restart', 'always'])
-
-        docker_up.extend(self._get_volumes())
-
-        docker_up.extend(self._get_env_varaibles(docker_internal_env_vars, mode))
-
-        docker_up.extend(extra_flags or [])
-
-        docker_up.append(self.image)
-
-        docker_up += self._additional_parameters
-
-        if self.get_is_container_up(True):
+        if mode != 'run' and self.get_is_container_up(True):
             if allow_restart:
                 self.remove_container()
             else:
@@ -407,6 +404,13 @@ class DockerService(AxonService):
         normalized_command = re.sub(rf'(--env ({DB_KEY_ENV_VAR_NAME}|{REDIS_PASSWORD_VAR_NAME})=\S*)', '', cmd)
         print(f'{normalized_command}')
 
+        if mode == 'run':
+            result = subprocess.call(docker_up, cwd=self.service_dir, env=run_env)
+            if result != 0:
+                print(docker_up)
+                raise Exception(f'Failed to run container {self.container_name}')
+            return
+
         docker_run_process = subprocess.Popen(docker_up, cwd=self.service_dir, env=run_env, stdout=subprocess.PIPE,
                                               stderr=subprocess.PIPE)
         all_output = docker_run_process.communicate(timeout=self.run_timeout)
@@ -423,7 +427,30 @@ class DockerService(AxonService):
         else:  # good stuff
             os.system(f'docker logs -f {self.container_name} >> {logsfile} 2>&1 &')
 
+    def add_parameters(self, docker_internal_env_vars, docker_up, expose_port, extra_flags, mode):
+        if self._remove_container_when_exit():
+            docker_up.extend(['--rm'])
+        if self._exec_command():
+            docker_up.extend(['-it'])
+        docker_up.extend(self._get_allowed_memory())
+        docker_up.extend(self._get_allowed_cpu())
+        docker_up.extend(self._get_exposed_ports(mode, expose_port))
+        if mode != 'run':
+            docker_up.extend(['--sysctl', 'net.core.somaxconn=20000'])
+
+            docker_up.extend(['--restart', 'always'])
+        docker_up.extend(self._get_volumes())
+        docker_up.extend(self._get_env_varaibles(docker_internal_env_vars, mode))
+        docker_up.extend(extra_flags or [])
+        docker_up.append(self.image)
+        docker_up += self._additional_parameters
+        return docker_up
+
     def build(self, mode='', runner=None, docker_internal_env_vars=None, **kwargs):
+        if self._dependent_services():
+            for dependent_service in self._dependent_services():
+                dependent_service.build(mode, runner, docker_internal_env_vars, **kwargs)
+
         docker_build = ['docker', 'build', '.']
 
         # If Dockerfile exists, use it, else use the provided Dockerfile from self.get_dockerfile

@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import shlex
 import socket
 import struct
 import time
@@ -109,7 +110,7 @@ class InstanceControlService(Triggerable, PluginBase):
     """
 
     # List of service plugins supported by instance control
-    SUPPORTED_SERVICE_PLUGINS = ['heavy_lifting', 'bandicoot', 'postgres']
+    SUPPORTED_SERVICE_PLUGINS = ['heavy_lifting', 'bandicoot', 'postgres', 'imagemagick']
 
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
@@ -159,6 +160,7 @@ class InstanceControlService(Triggerable, PluginBase):
             raise RuntimeError(f'Malformed post_json dict')
         return self.__exec_command_verbose(post_json['cmd'], environment=post_json.get('environment'))
 
+    # pylint: disable=too-many-return-statements
     def _triggered(self, job_name: str, post_json: dict, run_identifier: RunIdentifier, *args):
         """
         start:<plugin_name> or stop:<plugin_name>
@@ -175,7 +177,7 @@ class InstanceControlService(Triggerable, PluginBase):
         if len(parsed_path) != 2:
             raise RuntimeError('Wrong job_name')
         operation_type, plugin_name = parsed_path
-        if operation_type not in ['start', 'stop']:
+        if operation_type not in ['start', 'stop', 'run']:
             raise RuntimeError('Wrong job_name')
         del parsed_path
 
@@ -185,6 +187,8 @@ class InstanceControlService(Triggerable, PluginBase):
                 # quick hack
                 if operation_type == 'start':
                     return self.start_service(plugin_name)
+                if operation_type == 'run':
+                    return self.run_service(plugin_name, post_json)
                 # else - stop
                 return self.stop_service(plugin_name)
             sh_plugin_name = self.__adapters.get(plugin_name)
@@ -390,14 +394,15 @@ class InstanceControlService(Triggerable, PluginBase):
             logger.exception('fatal error during node metrics calculation')
             return {'last_updated': datetime.datetime.now()}
 
-    def __exec_system_command(self, cmd: str) -> paramiko.ChannelFile:
+    def __exec_system_command(self, cmd: str, environment: dict = None) -> paramiko.ChannelFile:
         """
         Executes an axonius_system.py command
         PWD is the cortex directory
         :param cmd: command to execute
+        :param environment: the environment variables
         :return: stdout
         """
-        return self.__exec_command(f'cd {self.__cortex_path}; ./pyrun.sh devops/axonius_system.py {cmd}')
+        return self.__exec_command(f'cd {self.__cortex_path}; ./pyrun.sh devops/axonius_system.py {cmd}', environment)
 
     @retry(wait_fixed=10000,
            stop_max_delay=120000,
@@ -464,6 +469,19 @@ class InstanceControlService(Triggerable, PluginBase):
         :return: the output of the command
         """
         return log_file_and_return(self.__exec_system_command(f'service {service_name} up --restart --prod'))
+
+    def run_service(self, service_name: str, parameters: dict = None):
+        """
+        Runs a service
+        :param service_name: the service name to run
+        :param parameters: the params for the run
+        :return: the output of the command
+        """
+        parameters_string = ' '.join([f'{shlex.quote(key)}={shlex.quote(parameters[key])}'
+                                      for key in parameters.keys()])
+        command = f'service {service_name} run --env {parameters_string}'
+        logger.info(f'Running {command}')
+        return log_file_and_return(self.__exec_system_command(command))
 
     def stop_service(self, service_name: str):
         """

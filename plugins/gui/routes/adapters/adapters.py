@@ -15,9 +15,10 @@ from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           STATIC_CORRELATOR_PLUGIN_NAME,
                                           STATIC_USERS_CORRELATOR_PLUGIN_NAME, CONNECT_VIA_TUNNEL,
                                           DISCOVERY_CONFIG_NAME, CONNECTION_DISCOVERY_SCHEMA_NAME,
-                                          SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME)
+                                          SYSTEM_SCHEDULER_PLUGIN_NAME, AGGREGATOR_PLUGIN_NAME,)
 from axonius.logging.audit_helper import AuditCategory
 from axonius.plugin_base import return_error
+from axonius.plugin_exceptions import InvalidRequestException
 from axonius.utils.gui_helpers import return_api_format, get_adapters_metadata
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
 from axonius.modules.plugin_settings import Consts
@@ -26,6 +27,7 @@ from axonius.utils.threading import run_and_forget
 from gui.logic.db_helpers import beautify_db_entry
 from gui.logic.login_helper import clear_passwords_fields
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
+from gui.logic.upload_helper import upload_file
 from gui.routes.adapters.connections import Connections
 
 # pylint: disable=no-member,cell-var-from-loop
@@ -436,20 +438,15 @@ class Adapters(Connections):
         """
         adapter_unique_name = self.request_remote_plugin(
             f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}').json().get('plugin_unique_name')
-
-        return self._upload_file(adapter_unique_name)
-
-    def _upload_file(self, plugin_unique_name):
-        field_name = request.form.get('field_name')
-        if not field_name:
-            return return_error('Field name must be specified', 401)
-        file = request.files.get('userfile')
-        if not file or file.filename == '':
-            return return_error('File must exist', 401)
-        filename = file.filename
-
-        written_file = self.db_files.upload_file(file, filename=filename)
-        return jsonify({'uuid': str(written_file)})
+        logger.info(f'Uploading file for adapter {adapter_unique_name}')
+        try:
+            return jsonify(upload_file(request.form.get('field_name'), request.files.get('userfile')))
+        except InvalidRequestException as ire:
+            logger.exception(ire)
+            return return_error(str(ire), 401)
+        except Exception as e:
+            logger.exception(e)
+            return return_error(f'Error uploading file the adapter {adapter_unique_name}', 500)
 
     def __extract_configs_and_schemas(self, plugin_unique_name):
         """

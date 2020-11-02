@@ -26,3 +26,10 @@ class SessionInvalid(Exception):
     To be used anytime a session is expected to have a user logged in, but it is
     """
     pass
+
+
+class InvalidRequestException(Exception):
+    """
+    To be used anytime a an invalid request is sent
+    """
+    pass

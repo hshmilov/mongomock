@@ -37,10 +37,10 @@ a {
     display: block;
     width: 100%;
     text-align: right;
+    height: 53px;
 }
 
 .header .logo {
-    width: 180px;
     text-align: center;
     display: inline-block;
     margin: 8px 24px;
@@ -56,10 +56,15 @@ a {
     left: 0;
     width: 100%;
     text-align: left;
+    height: 53px;
 }
 
 .footer .logo {
-    margin: 24px;
+    margin: 8px 24px;
+}
+
+.logo img {
+    height: 36px;
 }
 
 

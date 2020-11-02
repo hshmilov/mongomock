@@ -97,6 +97,8 @@ HISTORY_REPEAT_TIME = 'historical_schedule_time'
 
 # SETTINGS #
 SYSTEM_SETTINGS = 'system_settings'
+LOGOS_SETTINGS = 'logos_settings'
+CUSTOM_LOGO = 'custom_logo'
 PROXY_SETTINGS = 'proxy_settings'
 PROXY_ADDR = 'proxy_addr'
 PROXY_PORT = 'proxy_port'

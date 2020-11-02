@@ -18,6 +18,7 @@
         ref="file"
         type="file"
         :disabled="readOnly"
+        :accept="acceptFileTypes"
         @change="uploadFile"
         @focusout="onFocusout"
       >
@@ -46,10 +47,14 @@
 </template>
 
 <script>
+import primitiveMixin from '@mixins/primitive';
 import axiosClient from '@api/axios';
+import { mapMutations } from 'vuex';
+import { SHOW_TOASTER_MESSAGE } from '@store/mutations';
 
 export default {
   name: 'XFileEdit',
+  mixins: [primitiveMixin],
   props: {
     schema: {
       type: Object,
@@ -65,29 +70,39 @@ export default {
     },
     readOnly: {
       type: Boolean,
-      default: false
+      default: false,
     },
   },
   computed: {
     fileName() {
       return this.value && this.value.filename ? this.value.filename : 'No file chosen';
     },
+    acceptFileTypes() {
+      return this.schema && this.schema.format === 'image' ? 'image/*' : '*';
+    },
   },
   data() {
     return {
-      valid: !!this.value,
-      error: '',
       uploading: false,
       filename: '',
+      filesize: 0,
+      localError: '',
     };
   },
   methods: {
+    ...mapMutations({
+      showToasterMessage: SHOW_TOASTER_MESSAGE,
+    }),
     selectFile(e) {
       e.preventDefault();
       this.$refs.file.click();
     },
     uploadFile(uploadEvent) {
       const files = uploadEvent.target.files || uploadEvent.dataTransfer.files;
+      let fileEndpoint = 'upload_file';
+      if (this.schema.format === 'image') {
+        fileEndpoint = 'upload_image_file';
+      }
       if (!files.length) {
         this.valid = false;
         this.validate(false);
@@ -97,30 +112,60 @@ export default {
       const formData = new FormData();
       formData.append('field_name', this.schema.name);
       formData.append('userfile', file);
-
-      this.uploading = true;
-      const uploadUrl = `${this.apiUpload}/upload_file`;
-      axiosClient.post(uploadUrl, formData).then((response) => {
-        this.uploading = false;
-        this.filename = file.name;
-        this.valid = true;
-        this.validate(true);
-        this.$emit('input', { uuid: response.data.uuid, filename: file.name });
-      });
+      this.filename = file.name;
+      this.filesize = file.size;
+      this.valid = true;
+      this.validate(false);
+      if (this.valid) {
+        this.uploading = true;
+        const uploadUrl = `${this.apiUpload}/${fileEndpoint}`;
+        axiosClient.post(uploadUrl, formData).then((response) => {
+          this.uploading = false;
+          this.valid = true;
+          this.validate(true);
+          this.$emit('input', { uuid: response.data.uuid, filename: file.name });
+        }).catch((response) => {
+          this.uploading = false;
+          this.valid = true;
+          this.error = response.response.data.message;
+          this.showToasterMessage({ message: this.error });
+        });
+      } else {
+        this.showToasterMessage({ message: this.localError });
+      }
     },
     removeFile() {
       this.$emit('input', null);
     },
-    validate(silent) {
-      if (!this.schema.required) return;
-
-      this.error = '';
-      if (!silent && !this.valid) {
-        this.error = `${this.schema.name} File is required`;
+    checkData() {
+      if (this.schema.required && this.isEmpty()) {
+        this.localError = `${this.schema.name} File is required`;
+        return false;
       }
-      this.$emit('validate', {
-        name: this.schema.name, valid: this.valid, error: this.error,
-      });
+      if (this.schema.format === 'image' && this.filename) {
+        if (this.filesize / 1000000 > 5) {
+          this.localError = 'Image upload failed : file size exceeded maximum size';
+          this.filename = '';
+          this.filesize = 0;
+          return false;
+        }
+        const fileParts = this.filename.split('.');
+        const fileType = fileParts[fileParts.length - 1].toLowerCase();
+        if (!['jpg', 'jpeg', 'png'].includes(fileType)) {
+          this.localError = 'Image upload failed : unsupported file type';
+          this.filename = '';
+          this.filesize = 0;
+          return false;
+        }
+      }
+      this.localError = '';
+      return true;
+    },
+    isEmpty() {
+      return !(this.filename || (this.data && this.data.filename));
+    },
+    getErrorMessage() {
+      return this.localError;
     },
     onFocusout() {
       this.validate(false);

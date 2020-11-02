@@ -11,8 +11,10 @@ from weasyprint.fonts import FontConfiguration
 
 from axonius.consts.gui_consts import (ChartViews, PREDEFINED_FIELD,
                                        FILE_NAME_TIMESTAMP_FORMAT)
+from axonius.consts.plugin_consts import LOGOS_SETTINGS, CUSTOM_LOGO
 from axonius.entities import EntityType
 from axonius.modules.common import AxoniusCommon
+from axonius.plugin_base import PluginBase
 from axonius.utils.gui_helpers import get_sort, entity_fields
 from axonius.utils.db_querying_helper import get_entities
 from gui.logic.filter_utils import filter_archived, filter_by_ids
@@ -161,9 +163,15 @@ class ReportGenerator:
 
         toc_lines_html = '\n'.join([self.templates['toc_line'].render({'title': line}) for line in toc_lines])
         sections.insert(0, self.templates['toc'].render({'content': toc_lines_html}))
+        custom_logo = self.get_custom_logo()
         # Join all sections as the content of the report
         html_data = self.templates['report'].render(
-            {'cover': report_cover, 'date': current_time.strftime('%d/%m/%Y'), 'content': '\n'.join(sections)})
+            {
+                'logo': custom_logo,
+                'cover': report_cover,
+                'date': current_time.strftime('%d/%m/%Y'),
+                'content': '\n'.join(sections)
+            })
         timestamp = current_time.strftime(FILE_NAME_TIMESTAMP_FORMAT)
         temp_html_filename = f'{self.output_path}axonius-report_{timestamp}.html'
         with open(temp_html_filename, 'wb') as file:
@@ -173,6 +181,20 @@ class ReportGenerator:
         css = CSS(filename=f'{self.template_path}styles/styles.css', font_config=font_config)
         return HTML(string=html_data, base_url=self.template_path).render(stylesheets=[css], font_config=font_config), \
             self.attachments
+
+    def get_custom_logo(self):
+        custom_logo = 'icons/logo-and-text.png'
+        # pylint: disable=no-member,protected-access
+        system_settings = PluginBase.Instance._system_settings
+        if system_settings.get(LOGOS_SETTINGS) and system_settings.get(LOGOS_SETTINGS).get(CUSTOM_LOGO):
+            custom_logo = f'{self.output_path}{uuid.uuid4().hex}.png'
+            custom_logo_file = system_settings.get(LOGOS_SETTINGS).get(CUSTOM_LOGO)
+            # pylint: disable=no-member,protected-access
+            image_content = PluginBase.Instance._grab_file_contents(custom_logo_file)
+            with open(custom_logo, 'w+b') as f:
+                f.write(bytearray(image_content))
+            logo_text = ''
+        return custom_logo
 
     def _get_template(self, template_name):
         """

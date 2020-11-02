@@ -3,8 +3,10 @@ import tempfile
 import time
 
 CONFIG_FILE_NAME = 'config.ini'
+DEFAULT_SERVICE_DIR = '/home/ubuntu/cortex'
 UPLOADED_FILES_DIR = '/home/axonius/uploaded_files'
 SHARED_READONLY_DIR = '/home/axonius/shared_readonly_files'
+UPLOADED_HOST_FILES_DIR = os.path.join(DEFAULT_SERVICE_DIR, 'uploaded_files')
 
 
 def get_local_config_file(current_import_file):

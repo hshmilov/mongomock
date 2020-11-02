@@ -68,7 +68,7 @@ from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           PASSWORD_BRUTE_FORCE_PROTECTION, PASSWORD_PROTECTION_ALLOWED_RETRIES,
                                           PASSWORD_PROTECTION_LOCKOUT_MIN, PASSWORD_PROTECTION_BY_IP,
                                           RESET_PASSWORD_SETTINGS, RESET_PASSWORD_LINK_EXPIRATION,
-                                          AXONIUS_SETTINGS_PATH)
+                                          AXONIUS_SETTINGS_PATH, LOGOS_SETTINGS, CUSTOM_LOGO)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.logging.metric_helper import log_metric
@@ -925,6 +925,17 @@ class GuiService(Triggerable,
                             'enum': ['YYYY-MM-DD', 'DD-MM-YYYY', 'MM-DD-YYYY']
                         },
                         {
+                            'items': [{
+                                'name': CUSTOM_LOGO,
+                                'title': 'Custom logo for reports',
+                                'description': 'Custom logo for reports',
+                                'type': 'file',
+                                'format': 'image'
+                            }],
+                            'name': LOGOS_SETTINGS,
+                            'type': 'array'
+                        },
+                        {
                             'name': 'timeout_settings',
                             'title': 'Timeout Settings',
                             'items': [
@@ -1001,7 +1012,7 @@ class GuiService(Triggerable,
                     'hidden': True,
                     'title': 'Mutual TLS Settings',
                     'type': 'array'
-                },
+                }
             ],
             'type': 'array',
             'pretty_name': 'GUI Settings'

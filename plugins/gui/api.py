@@ -16,6 +16,7 @@ from axonius.consts.plugin_consts import (DEVICE_CONTROL_PLUGIN_NAME, NODE_ID,
 from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import EntityType, PluginBase, return_error
+from axonius.plugin_exceptions import InvalidRequestException
 from axonius.utils.db_querying_helper import get_entities
 from axonius.utils.gui_helpers import accounts as accounts_filter
 from axonius.utils.gui_helpers import (add_rule_custom_authentication,
@@ -37,6 +38,7 @@ from gui.logic.entity_data import entity_tasks, get_entity_data
 from gui.logic.filter_utils import filter_archived
 from gui.logic.historical_dates import all_historical_dates
 from gui.logic.routing_helper import check_permissions
+from gui.logic.upload_helper import upload_file
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -1442,7 +1444,15 @@ class APIMixin:
         """
 
         if action_type == 'upload_file':
-            return self._upload_file(DEVICE_CONTROL_PLUGIN_NAME)
+            logger.info(f'Uploading file for run action {DEVICE_CONTROL_PLUGIN_NAME}')
+            try:
+                return jsonify(upload_file(request.form.get('field_name'), request.files.get('userfile')))
+            except InvalidRequestException as ire:
+                logger.exception(ire)
+                return return_error(str(ire), 401)
+            except Exception as e:
+                logger.exception(e)
+                return return_error('Error uploading file for run actions', 500)
 
         action_data = self.get_request_data_as_object()
         action_data['action_type'] = action_type
@@ -1516,8 +1526,15 @@ class APIMixin:
             f'find_plugin_unique_name/nodes/{node_id}/plugins/{adapter_name}'
         )
         adapter_unique_name = adapter_unique_name.json().get('plugin_unique_name')
-        ret = self._upload_file(adapter_unique_name)
-        return ret
+        logger.info(f'Uploading file for adapter {adapter_unique_name}')
+        try:
+            return jsonify(upload_file(request.form.get('field_name'), request.files.get('userfile')))
+        except InvalidRequestException as ire:
+            logger.exception(ire)
+            return return_error(str(ire), 401)
+        except Exception as e:
+            logger.exception(e)
+            return return_error(f'Error uploading file the adapter {adapter_unique_name}', 500)
 
     @api_add_rule('adapters', methods=['GET'], required_permission=PermissionValue.get(
         None, PermissionCategory.Adapters))

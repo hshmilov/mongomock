@@ -51,6 +51,7 @@ from axonius.saved_queries.saved_queries_migration import handle_existing_saved_
 from gui.logic.filter_utils import filter_archived
 from gui.logic.saved_queries import update_direct_references, generate_indirect_references
 from services.plugin_service import PluginService
+from services.standalone_services.imagemagick_service import ImagemagickService
 from services.system_service import SystemService
 from services.updatable_service import UpdatablePluginMixin
 
@@ -66,6 +67,10 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         local_npm = os.path.join(self.service_dir, 'frontend', 'node_modules')
         local_dist = os.path.join(self.service_dir, 'frontend', 'dist')
         self.is_dev = os.path.isdir(local_npm) and os.path.isdir(local_dist)
+
+    @staticmethod
+    def _dependent_services():
+        return [ImagemagickService()]
 
     # pylint: disable=too-many-branches,too-many-lines,too-many-locals
     def _migrate_db(self):

@@ -91,7 +91,7 @@ class JsonFileAdapter(AdapterBase):
                 }
             ],
             "required": [
-                FILE_NAME, DEVICES_DATA, USERS_DATA
+                FILE_NAME
             ],
             "type": "array"
         }

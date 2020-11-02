@@ -10,5 +10,5 @@ if [ ! -f /.dockerenv ]; then
   docker exec $DOCKER_NAME ./axonius.sh $@
   unset_docker_if_needed
 else
-  run_in_axonius_manager $@
+  run_in_axonius_manager "$@"
 fi

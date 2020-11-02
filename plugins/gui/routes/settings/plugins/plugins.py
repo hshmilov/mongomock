@@ -37,6 +37,7 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
 from axonius.email_server import EmailServer
 from axonius.logging.metric_helper import log_metric
 from axonius.plugin_base import return_error
+from axonius.plugin_exceptions import InvalidRequestException
 from axonius.types.ssl_state import (SSLState)
 from axonius.utils.backup import verify_preshared_key, get_filename_from_format
 from axonius.utils.build_modes import is_fed_build_mode
@@ -47,7 +48,8 @@ from gui.feature_flags import FeatureFlags
 from gui.logic.login_helper import clear_passwords_fields, refill_passwords_fields
 from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
 
-# pylint: disable=too-many-statements,too-many-return-statements,fixme,no-member,too-many-locals,too-many-branches
+# pylint: disable=too-many-statements,too-many-return-statements,fixme,no-member,too-many-locals,too-many-branches,no-self-use
+from gui.logic.upload_helper import upload_file, upload_image_file
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -642,7 +644,30 @@ class Plugins:
         """
         path: /api/settings/plugins/<plugin_name>/upload_file
         """
-        return self._upload_file(plugin_name)
+        logger.info(f'Uploading file for plugin {plugin_name}')
+        try:
+            return jsonify(upload_file(request.form.get('field_name'), request.files.get('userfile')))
+        except InvalidRequestException as ire:
+            logger.exception(ire)
+            return return_error(str(ire), 401)
+        except Exception as e:
+            logger.exception(e)
+            return return_error(f'Error uploading file for plugin {plugin_name}', 500)
+
+    @gui_route_logged_in('<plugin_name>/upload_image_file', methods=['POST'], skip_activity=True)
+    def plugins_upload_image_file(self, plugin_name):
+        """
+        path: /api/settings/plugins/<plugin_name>/upload_image_file
+        """
+        logger.info(f'Uploading image file for plugin {plugin_name}')
+        try:
+            return jsonify(upload_image_file(request.form.get('field_name'), request.files.get('userfile')))
+        except InvalidRequestException as ire:
+            logger.exception(ire)
+            return return_error(str(ire), 401)
+        except Exception as e:
+            logger.exception(e)
+            return return_error(f'Error uploading the image file for plugin {plugin_name}', 500)
 
     def _clean_connection_discovery_from_adapter_clients(self, adapter_unique_name: str):
         """
