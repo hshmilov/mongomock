@@ -131,14 +131,11 @@ class GitLabUserInstance(UserAdapter):
     note = Field(str, 'Note')
     is_private = Field(bool, 'Private')
     current_ip = Field(str, 'Current Sign In IP', converter=format_ip, json_format=JsonStringFormat.ip)
-    current_ip_raw = Field(str,
-                           description='Number representation of the Public IP, useful for filtering by range',
-                           converter=format_ip_raw,
-                           hidden=True)
+    current_ip_raw = ListField(str, converter=format_ip_raw, hidden=True)
     last_ip = Field(str, 'Last Sign In IP', converter=format_ip, json_format=JsonStringFormat.ip)
-    last_ip_raw = Field(str,
-                        description='Number representation of the Public IP, useful for filtering by range',
-                        converter=format_ip_raw,
-                        hidden=True)
+    last_ip_raw = ListField(str,
+                            description='Number representation of the Public IP, useful for filtering by range',
+                            converter=format_ip_raw,
+                            hidden=True)
     projects = ListField(Project, 'Projects')
     user_groups = ListField(Group, 'User Groups')

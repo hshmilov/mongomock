@@ -2,7 +2,7 @@ import logging
 import datetime
 
 from axonius.fields import JsonStringFormat
-from axonius.utils.parsing import format_ip
+from axonius.utils.parsing import format_ip, format_ip_raw
 from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTException
@@ -49,6 +49,7 @@ class CiscoIseAdapter(AdapterBase, Configurable):
 
         nas_id = Field(str, 'Nas Identifier')
         nas_ip = Field(str, 'Nas IP Address', converter=format_ip, json_format=JsonStringFormat.ip)
+        nas_ip_raw = ListField(str, converter=format_ip_raw, hidden=True)
         service_type = Field(str, 'ServiceType')
         ssid = Field(str, 'SSID')
         state = Field(str, 'State')
@@ -312,7 +313,15 @@ class CiscoIseAdapter(AdapterBase, Configurable):
             device.mdm_jail_broken = device_raw.get('mdmJailBroken')
             device.mdm_registered = device_raw.get('mdmRegistered')
             device.nas_id = device_raw.get('nasIdentifier')
-            device.nas_ip = device_raw.get('nasIpAddress')
+
+            ip = device_raw.get('nasIpAddress')
+            try:
+                device.nas_ip = ip
+                if ip is not None and isinstance(ip, str):
+                    device.nas_ip_raw = [ip]
+            except Exception:
+                pass
+
             device.service_type = device_raw.get('serviceType')
             device.ssid = device_raw.get('ssid')
             device.state = device_raw.get('state')

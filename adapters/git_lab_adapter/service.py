@@ -334,11 +334,20 @@ class GitLabAdapter(AdapterBase, Configurable):
             user.twitter = user_raw.get('twitter')
             user.note = user_raw.get('note')
             user.is_private = self._parse_bool(user_raw.get('private_profile'))
-            user.current_ip = user_raw.get('current_sign_in_ip')
-            user.current_ip_raw = user_raw.get('current_sign_in_ip')
-            user.last_ip = user_raw.get('last_sign_in_ip')
-            user.last_ip_raw = user_raw.get('last_sign_in_ip')
-
+            try:
+                ip = user_raw.get('current_sign_in_ip')
+                user.current_ip = ip
+                if ip is not None and isinstance(ip, str):
+                    user.current_ip_raw = [ip]
+            except Exception:
+                pass
+            try:
+                last_ip = user_raw.get('last_sign_in_ip')
+                user.last_ip = last_ip
+                if last_ip is not None and isinstance(last_ip, str):
+                    user.last_ip_raw = [last_ip]
+            except Exception:
+                pass
             if isinstance(user_raw.get(EXTRA_PROJECTS), list):
                 projects = []
                 for project_id, name in user_raw.get(EXTRA_PROJECTS):
