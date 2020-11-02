@@ -1412,6 +1412,11 @@
     "link": "https://docs.axonius.com/docs/tanium-discover",
     "description": "Tanium Discover scans for unmanaged assets with almost no impact on the network."
   },
+  "kubernetes_adapter": {
+    "title": "Kubernetes",
+    "link": "https://docs.axonius.com/docs/kubernetes",
+    "description": "Kubernetes (K8s) is an open-source system for automating deployment, scaling, and management of containerized applications."
+  },
   "aruba_adapter": {
     "title": "Aruba",
     "link": "https://docs.axonius.com/docs/aruba",
