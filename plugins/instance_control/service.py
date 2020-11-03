@@ -27,11 +27,12 @@ from axonius.consts.instance_control_consts import (InstanceControlConsts,
 from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME,
                                           PLUGIN_NAME,
                                           NODE_ID, GUI_PLUGIN_NAME, CORE_UNIQUE_NAME,
-                                          BOOT_CONFIGURATION_SCRIPT_FILENAME, AXONIUS_MANAGER_PLUGIN_NAME)
+                                          BOOT_CONFIGURATION_SCRIPT_FILENAME, AXONIUS_MANAGER_PLUGIN_NAME,
+                                          NODE_HOSTNAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.mixins.triggerable import RunIdentifier, Triggerable
-from axonius.plugin_base import PluginBase, add_rule, return_error
+from axonius.plugin_base import PluginBase, add_rule, return_error, is_db_restore_on_new_node
 from axonius.utils.files import get_local_config_file
 from axonius.utils.threading import LazyMultiLocker
 from instance_control.snapshots_stats import calculate_snapshot
@@ -127,6 +128,9 @@ class InstanceControlService(Triggerable, PluginBase):
         logger.debug(self.__adapters)
 
         self.__lazy_locker = LazyMultiLocker()
+
+        # RESTORE ON NEW NODE
+        self.update_hostname_after_restore_on_new_node()
 
         # Create plugin cleaner thread
         executors = {'default': ThreadPoolExecutor(1)}
@@ -265,31 +269,30 @@ class InstanceControlService(Triggerable, PluginBase):
         }
         return jsonify(result)
 
+    def _update_hostname(self, hostname):
+        hostname_change_file = '/home/ubuntu/cortex/uploaded_files/hostname_change'
+        current_hostname = instance_control_consts.HOSTNAME_FILE_PATH.read_text().strip()
+        logger.info(f'Start updating axonius node hostname, current:{current_hostname} new:{hostname} . . . ')
+        cmd = f'/bin/sh -c "echo {hostname} > {hostname_change_file}"'
+        self.__exec_command_verbose(cmd)
+        # Theoretically that best way to do the validation is map the /etc/hostname file from
+        # the host to the container, but because every change in hostname causing the file to re-create
+        # and therefore change the inode originally mapped to the docker container, so we just check that
+        # the task deleted the original hostname_change file in order to make sure it worked
+        # We decided that mapping the whole /etc folder in order to solve this it too dangerous
+        if Path(hostname_change_file).exists():
+            time.sleep(3)
+        instance_control_consts.HOSTNAME_FILE_PATH.write_text(f'{hostname}\n')
+        logger.debug(f'Hostname {hostname} updated successfully')
+
     @add_rule('instances/host/<hostname>', methods=['PUT'], should_authenticate=False)
     def update_hostname(self, hostname):
         """
         update instance hostname by calling hostnamectl set-hostname.
         """
         try:
-            hostname_change_file = '/home/ubuntu/cortex/uploaded_files/hostname_change'
-            current_hostname = instance_control_consts.HOSTNAME_FILE_PATH.read_text().strip()
-            logger.info(f'Start updating axonius node hostname, current:{current_hostname} new:{hostname} . . . ')
-            cmd = f'/bin/sh -c "echo {hostname} > {hostname_change_file}"'
-            self.__exec_command_verbose(cmd)
-
-            for file_sync_retry in range(5):
-                # Theoretically that best way to do the validation is map the /etc/hostname file from
-                # the host to the container, but because every change in hostname causing the file to re-create
-                # and therefore change the inode originally mapped to the docker container, so we just check that
-                # the task deleted the original hostname_change file in order to make sure it worked
-                # We decided that mapping the whole /etc folder in order to solve this it too dangerous
-                if Path(hostname_change_file).exists():
-                    time.sleep(3)
-                instance_control_consts.HOSTNAME_FILE_PATH.write_text(f'{hostname}\n')
-                logger.debug(f'Hostname {hostname} updated successfully')
-                return 'Success'
-            logger.error(f'Hostname {hostname} failed name changed verification')
-            return return_error(f'verify etc/hostname is updated failed  ', 500)
+            self._update_hostname(hostname)
+            return 'Success'
         except Exception:
             logger.exception('fatal error during hostname update ')
             return return_error(f'fatal error during hostname update   ', 500)
@@ -497,3 +500,21 @@ class InstanceControlService(Triggerable, PluginBase):
 
     def _is_running_on_master(self) -> bool:
         return self.node_id == self.core_configs_collection.find_one({'plugin_name': CORE_UNIQUE_NAME})['node_id']
+
+    def update_hostname_after_restore_on_new_node(self):
+        if is_db_restore_on_new_node() and self._is_running_on_master():
+            # reloading after db restore on new node
+            # update hostname with backup node hostname
+            hostname_from_backup = self.nodes_metadata_collection.find_one(
+                {NODE_ID: self.node_id}, {'_id': 0, NODE_HOSTNAME: 1})
+
+            try:
+                if hostname_from_backup:
+                    self._update_hostname(hostname_from_backup.get(NODE_HOSTNAME))
+                    logger.info(f'DB restored on new node hostname set to {hostname_from_backup.get(NODE_HOSTNAME)}')
+                else:
+                    logger.error(f'skipping hostname update after restore because missing hostname missing on metadata')
+
+            except Exception:
+                logger.error(f'Failure updating hostname {hostname_from_backup} '
+                             f'after DB restore with node id {self.node_id}')

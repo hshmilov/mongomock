@@ -21,6 +21,7 @@
               :read-only="!canUpdateSettings"
               api-upload="settings/plugins/system_scheduler"
               @validate="updateSchedulerValidity"
+              :error="backupConfigError"
             />
 
             <div class="place-left">
@@ -226,10 +227,15 @@ export default {
       identityProvidersComplete: true,
       schedulerComplete: true,
       message: '',
+      backupConfigError: '',
     };
   },
   computed: {
     ...mapState({
+      featureFlagsFromState(state) {
+        if (!state.settings.configurable.gui);
+        return state.settings.configurable.gui.FeatureFlags;
+      },
       schedulerSettingsFromState(state) {
         if (!state.settings.configurable.system_scheduler) return undefined;
         return state.settings.configurable.system_scheduler.SystemSchedulerService;
@@ -241,10 +247,6 @@ export default {
       guiSettingsFromState(state) {
         if (!state.settings.configurable.gui) return undefined;
         return state.settings.configurable.gui.GuiService;
-      },
-      featureFlagsFromState(state) {
-        if (!state.settings.configurable.gui) return undefined;
-        return state.settings.configurable.gui.FeatureFlags;
       },
       identityProvidersFromState(state) {
         if (!state.settings.configurable.gui) return undefined;
@@ -419,7 +421,32 @@ export default {
       });
     },
     updateSchedulerValidity(valid) {
-      this.schedulerComplete = valid;
+      let backupValid = true;
+      this.backupConfigError = '';
+      const backupSettings = _get(this.schedulerSettings, 'config.backup_settings');
+      if (!valid) {
+        this.schedulerComplete = false;
+        return;
+      }
+      if (backupSettings.enabled) {
+        if (backupSettings.backup_encryption_key != undefined
+                && backupSettings.backup_encryption_key != 'unchanged'
+                && backupSettings.backup_encryption_key.length != 0
+                && backupSettings.backup_encryption_key.length
+                < this.getBackupSettingsEncryptionKeyMinSize()) {
+          this.backupConfigError = 'invalid backup encryption key size ';
+          backupValid = false;
+        }
+        if (backupSettings.include_history && !backupSettings.include_devices_users_data) {
+          this.backupConfigError = 'missing include devices users data  when history included ';
+          backupValid = false;
+        }
+        if (!this.isAnyBackupSettingsRepositorySelected()) {
+          this.backupConfigError = 'no backup repository selected';
+          backupValid = false;
+        }
+      }
+      this.schedulerComplete = valid && backupValid;
     },
     updateCoreValidity(valid) {
       this.coreComplete = valid;
@@ -501,6 +528,13 @@ export default {
         schema: this.featureFlags.schema,
       }).then((response) => {
         this.createToast(response);
+        // require to refresh backup setting between settings tab
+        this.loadPluginConfig({
+          pluginId: 'system_scheduler',
+          configName: 'SystemSchedulerService',
+        }).then(() => {
+          this.schedulerSettings = _cloneDeep(this.schedulerSettingsFromState);
+        });
       }).catch((error) => {
         if (error.response.status === 400) {
           this.message = error.response.data.message;
@@ -527,6 +561,17 @@ export default {
       } else {
         this.message = `Error: ${response.data.message}`;
       }
+    },
+    getBackupSettingsEncryptionKeyMinSize() {
+      // check backup schema for min encryption key size
+      return this.schedulerSettings.schema.items.find((item) => item.name === 'backup_settings')
+        .items.find((item) => item.name === 'backup_encryption_key').minLength;
+    },
+    isAnyBackupSettingsRepositorySelected() {
+      // find all repos names from schema then check from config if any is enabled
+      return this.schedulerSettings.schema.items.find((item) => item.name === 'backup_settings')
+        .items.filter((item) => item.name.startsWith('backup_to'))
+        .some((item) => this.schedulerSettings.config.backup_settings[item.name].enabled === true);
     },
   },
   watch: {

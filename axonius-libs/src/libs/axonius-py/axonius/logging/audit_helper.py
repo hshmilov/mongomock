@@ -20,6 +20,7 @@ class AuditCategory(Enum):
     Instances = 'instances'
     Charts = 'dashboard.charts'
     Compliance = 'compliance'
+    Backup = 'backup'
 
 
 class AuditAction(Enum):

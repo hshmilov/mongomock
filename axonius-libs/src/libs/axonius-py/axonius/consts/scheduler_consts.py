@@ -48,3 +48,41 @@ CUSTOM_DISCOVERY_THRESHOLD = 3 * 60  # seconds
 
 RUN_ENFORCEMENT_CHECK_INTERVAL = 90  # seconds
 RUN_ENFORCEMENT_CHECK_THRESHOLD = 180  # seconds
+
+BACKUP_SETTINGS = 'backup_settings'
+
+
+class BackupSettings:
+    enabled = 'enabled'
+    encryption_key = 'backup_encryption_key'
+    include_history = 'include_history'
+    include_devices_users_data = 'include_devices_users_data'
+    override_previous_backups = 'override_previous_backups'
+    min_days_between_cycles = 'min_days_between_cycles'
+    backup_to_aws_s3 = 'backup_to_aws_s3'
+    backup_to_smb = 'backup_to_smb'
+    backup_to_azure = 'backup_to_azure'
+
+
+class BackupRepoAzure:
+    enabled = 'enabled'
+    container_name = 'storage_container_name'
+    connection_string = 'connection_string'
+
+
+class BackupRepoAws:
+    enabled = 'enabled'
+    bucket_name = 'aws_bucket_name'
+    access_key_id = 'aws_access_key_id'
+    secret_access_key = 'aws_secret_access_key'
+
+
+class BackupRepoSmb:
+    enabled = 'enabled'
+    ip = 'ip'
+    port = 'port'
+    path = 'smb_path'
+    user = 'smb_user'
+    password = 'smb_password'
+    use_nbns = 'use_nbns'
+    hostname = 'hostname'

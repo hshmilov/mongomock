@@ -2,8 +2,8 @@ import logging
 from datetime import datetime, timedelta
 
 from axonius.consts.gui_consts import (FeatureFlagsNames, RootMasterNames, CloudComplianceNames, ParallelSearch,
-                                       DashboardControlNames, AdvancedGUINames, LOGGED_IN_MARKER_PATH,
-                                       USERS_COLLECTION)
+                                       DashboardControlNames, AdvancedGUINames, LOGGED_IN_MARKER_PATH, USERS_COLLECTION,
+                                       BackupSettingsNames)
 from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME, AXONIUS_USER_NAME
 from axonius.mixins.configurable import Configurable
 from axonius.modules.common import AxoniusCommon
@@ -278,6 +278,25 @@ class FeatureFlags(Configurable):
                     ]
                 },
                 {
+                    'name': FeatureFlagsNames.BackupSettings,
+                    'title': 'System Backup',
+                    'type': 'array',
+                    'items': [
+                        {
+                            'name': BackupSettingsNames.Visible,
+                            'title': 'Enable system backup',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': BackupSettingsNames.IncludeHistoryVisibility,
+                            'title': 'Include option to backup history',
+                            'type': 'bool',
+                        },
+                    ],
+                    'required': [BackupSettingsNames.Visible,
+                                 BackupSettingsNames.IncludeHistoryVisibility],
+                },
+                {
                     'name': AdvancedGUINames.root_key,
                     'title': 'Advanced GUI Settings',
                     'type': 'array',
@@ -292,8 +311,9 @@ class FeatureFlags(Configurable):
                     'required': []
                 }
             ],
-            'required': ['is_trial', FeatureFlagsNames.ExperimentalAPI,  FeatureFlagsNames.LockOnExpiry,
-                         FeatureFlagsNames.QueryTimelineRange, FeatureFlagsNames.EnforcementCenter],
+            'required': ['is_trial', FeatureFlagsNames.ExperimentalAPI, FeatureFlagsNames.LockOnExpiry,
+                         FeatureFlagsNames.QueryTimelineRange, FeatureFlagsNames.EnforcementCenter,
+                         FeatureFlagsNames.BackupSettings],
             'name': 'feature_flags',
             'title': 'Feature Flags',
             'type': 'array'
@@ -336,6 +356,10 @@ class FeatureFlags(Configurable):
             DashboardControlNames.root_key: {
                 DashboardControlNames.present_call_limit: 10,
                 DashboardControlNames.historical_call_limit: 5
+            },
+            FeatureFlagsNames.BackupSettings: {
+                BackupSettingsNames.Visible: False,
+                BackupSettingsNames.IncludeHistoryVisibility: False,
             },
             AdvancedGUINames.root_key: {
                 AdvancedGUINames.additional_nginx_flags_for_external_gui: ''

@@ -144,7 +144,7 @@ class SMBClient:
                 logger.exception(f'Unable to delete {directory_path}{file} from'
                                  f' {self._share_name}')
 
-    def download_files_from_smb(self, files: list, directory_path: str = None):
+    def download_files_from_smb(self, files: list, directory_path: str = None, download_directory: str = None):
         """
         Download files from the remote share. The caller can send a
         directory_path that is different from the original client.
@@ -153,6 +153,7 @@ class SMBClient:
         must be in the same *directory_path.
         :param str directory_path: The pathname/directory/folder that
         contains the list *files.
+        :param str download_directory: the destination dir filed will created
         """
         if not directory_path:
             directory_path = self._directory_path
@@ -160,9 +161,13 @@ class SMBClient:
         if not directory_path.endswith('/'):
             directory_path = f'{directory_path}/'
 
+        if download_directory and not download_directory.endswith('/'):
+            download_directory = f'{download_directory}/'
+
         for file in files:
             try:
-                with open(file, 'wb') as file_obj:
+                dst_file = f'{download_directory}{file}' if download_directory else file
+                with open(dst_file, 'wb') as file_obj:
                     path_with_file = f'{directory_path}{file}'
                     self._server.retrieveFile(service_name=self._share_name,
                                               path=path_with_file,
@@ -171,9 +176,11 @@ class SMBClient:
             except smb_structs.OperationFailure:
                 logger.warning(f'Download failed. File '
                                f'{self._share_name}{directory_path}{file} not found.')
+                raise
             except Exception:
                 logger.exception(f'Unable to download {directory_path}{file} from'
                                  f' {self._share_name}')
+                raise
 
     def list_files_on_smb(self, directory_path: str = None) -> list:
         """
@@ -279,11 +286,12 @@ class SMBClient:
                                  path_file_pattern=path_file_pattern)
         logger.info(f'Deleted {path_file_pattern} from {self._share_name}')
 
-    def upload_files_to_smb(self, files: list, directory_path: str = None):
+    def upload_files_to_smb(self, files: list, source_files_path: str = None, directory_path: str = None):
         """
         Upload files to the SMB share. The caller can send a
         directory_path that is different from the original client.
 
+        :param source_files_path: file(s) path source.
         :param list files: A list of filenames to upload. They must be
         in the same *directory_path.
         :param str directory_path: The pathname/directory/folder that we'd
@@ -295,14 +303,28 @@ class SMBClient:
         if not directory_path.endswith('/'):
             directory_path = f'{directory_path}/'
 
+        if source_files_path and not source_files_path.endswith('/'):
+            source_files_path = f'{source_files_path}/'
+
         for file in files:
             try:
                 path_with_file = f'{directory_path}{file}'
-                self._upload_file_unsafe(file, path_with_file)
+                src_file = f'{source_files_path}{file}' if source_files_path else file
+                self._upload_file_unsafe(src_file, path_with_file)
+
             except FileNotFoundError:
                 logger.error(f'Upload failed. File '
                              f'{self._share_name}{directory_path}{file} not '
                              f'writable.')
+                raise
             except Exception:
                 logger.exception(f'Unable to upload {directory_path}{file} to'
                                  f' {self._share_name}')
+                raise
+
+    def get_smb_file_attributes(self, path: str):
+        """
+        :param path:(string/unicode) – Path of the file on the remote server.
+        :return: smbSharedFile
+        """
+        return self._server.getAttributes(service_name=self._share_name, path=path)

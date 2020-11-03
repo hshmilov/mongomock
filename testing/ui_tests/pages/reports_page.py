@@ -90,6 +90,7 @@ class ReportsPage(EntitiesPage):
     SELECT_DAY_CSS = '.send-day .x-select'
     RESTRICTED_REPORT_CONFIRM_TITLE = 'This report cannot be viewed.'
     SPACE_SELECT_ID = '#spaces_config_select'
+    INCLUDE_1ST_QUERY_NAME_CSS = '.x-select.query-name'
 
     @property
     def url(self):
@@ -481,6 +482,22 @@ class ReportsPage(EntitiesPage):
 
     def click_restricted_report_modal_confirm(self):
         self.click_ant_button('OK')
+
+    def is_include_saved_queries(self):
+        return self.find_element_parent_by_text(self.INCLUDE_QUERIES_CHECKBOX).is_enabled()
+
+    def verify_report(self, report_config: ReportConfig):
+        self.switch_to_page()
+        self.open_report(report_config.report_name)
+        assert self.is_include_dashboard() == report_config.add_dashboard
+        self.is_include_saved_queries_checkbox_disabled()
+        assert self.is_include_saved_queries() == bool(report_config.queries)
+        self.verify_dropdown_select_item_by_css(self.INCLUDE_1ST_QUERY_NAME_CSS, report_config.queries[0]['name'])
+        assert self.is_add_scheduling_selected() == report_config.add_scheduling
+        self.verify_textbox_by_id(self.EMAIL_SUBJECT_ID, report_config.email_subject)
+        self.is_frequency_set(report_config.period)
+        assert self.is_report_download_shown()
+        assert self.is_send_email_button_exists()
 
     def report_is_selectable(self, report):
         return 'disabled' not in self.find_element_by_xpath(self.REPORT_SELECT_CHECKBOX_XPATH.format(

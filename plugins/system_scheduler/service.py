@@ -23,7 +23,7 @@ from flask import jsonify, request
 from axonius.adapter_base import AdapterBase
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts.adapter_consts import LAST_FETCH_TIME, ADAPTER_PLUGIN_TYPE, CLIENT_ID
-from axonius.consts.gui_consts import RootMasterNames
+from axonius.consts.gui_consts import RootMasterNames, FeatureFlagsNames, BackupSettingsNames
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME,
                                           PLUGIN_NAME, PLUGIN_UNIQUE_NAME,
@@ -45,13 +45,16 @@ from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import (SchedulerState, Phases, ResearchPhases,
                                              CHECK_ADAPTER_CLIENTS_STATUS_INTERVAL, TUNNEL_STATUS_CHECK_INTERVAL,
                                              RESEARCH_THREAD_ID, CORRELATION_SCHEDULER_THREAD_ID,
-                                             SCHEDULER_CONFIG_NAME, SCHEDULER_SAVE_HISTORY_CONFIG_NAME)
+                                             SCHEDULER_CONFIG_NAME, SCHEDULER_SAVE_HISTORY_CONFIG_NAME,
+                                             BACKUP_SETTINGS, BackupSettings, BackupRepoAzure, BackupRepoAws,
+                                             BackupRepoSmb)
 from axonius.consts.report_consts import TRIGGERS_FIELD
 from axonius.entities import EntityType
 from axonius.logging.audit_helper import (AuditCategory, AuditAction)
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import StoredJobStateCompletion, Triggerable, RunIdentifier
+from axonius.modules.common import AxoniusCommon
 from axonius.plugin_base import PluginBase, add_rule, return_error
 from axonius.plugin_exceptions import PhaseExecutionException
 from axonius.saas.input_params import read_saas_input_params
@@ -61,6 +64,7 @@ from axonius.utils.files import get_local_config_file
 from axonius.utils.root_master.root_master import root_master_restore_from_s3, \
     root_master_restore_from_smb, root_master_restore_from_azure, DISK_SPACE_FREE_GB_MANDATORY, get_central_core_module
 from axonius.utils.host_utils import get_free_disk_space, check_installer_locks
+from system_scheduler.backup_flow import BackupManager
 from system_scheduler.custom_schedulers.adapter_connections_scheduler import CustomConnectionsScheduler
 from system_scheduler.custom_schedulers.adapter_scheduler import CustomAdapterScheduler
 from system_scheduler.custom_schedulers.discovery_scheduler import CustomScheduler
@@ -157,6 +161,9 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         self.custom_enforcements_scheduler = None
         self.custom_history_scheduler = None
         self.init_custom_schedulers()
+
+        # make sure no backup working dir leftover in case of service crash
+        BackupManager.clean_backup_folder()
 
     def init_custom_schedulers(self):
         try:
@@ -348,6 +355,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         logger.info(f'Setting research recurrence to: {self.__system_research_date_recurrence}')
 
         scheduler = getattr(self, '_research_phase_scheduler', None)
+        self._backup_settings = config.get(BACKUP_SETTINGS, {BackupSettings.enabled: False})
         self.__save_history = bool(config['history_settings'][SCHEDULER_SAVE_HISTORY_CONFIG_NAME])
 
         # first config load, no reschedule
@@ -565,6 +573,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                     ],
                     'required': ['enabled', 'max_days_to_save']
                 },
+
                 {
                     'name': 'history_data_settings',
                     'title': 'Historical Snapshot Data Settings',
@@ -577,7 +586,152 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                         },
                     ],
                     'required': ['save_raw_data']
-                }
+                },
+                {
+                    'name': BACKUP_SETTINGS,
+                    'title': 'Backup Settings',
+                    'type': 'array',
+                    'hidden': cls.is_backup_feature_flag_visible(),
+                    'items': [
+                        {
+                            'name': BackupSettings.enabled,
+                            'title': 'Enable backup',
+                            'type': 'bool'
+                        },
+                        {
+                            'name': BackupSettings.encryption_key,
+                            'title': 'Backup encryption passphrase (minimum 16 characters)',
+                            'type': 'string',
+                            'format': 'password',
+                            'minLength': 16
+                        },
+                        {
+                            'name': BackupSettings.include_history,
+                            'title': 'Include historical snapshots',
+                            'type': 'bool',
+                            'hidden': cls.is_backup_feature_flag_include_history(),
+                        },
+                        {
+                            'name': BackupSettings.include_devices_users_data,
+                            'title': 'Include devices/users data',
+                            'type': 'bool',
+                        },
+                        {
+                            'name': BackupSettings.override_previous_backups,
+                            'title': 'Override previous backups',
+                            'type': 'bool',
+                        },
+                        {
+                            'name': BackupSettings.min_days_between_cycles,
+                            'title': 'Minimum days between backups (runs on every cycle)',
+                            'type': 'integer',
+                            'default': 1
+                        },
+                        {
+                            'name': BackupSettings.backup_to_aws_s3,
+                            'type': 'array',
+                            'items': [
+                                {
+                                    'name': BackupRepoAws.enabled,
+                                    'title': 'Backup to Amazon S3 bucket',
+                                    'type': 'bool',
+                                },
+                                {
+                                    'name': BackupRepoAws.bucket_name,
+                                    'title': 'Amazon S3 bucket name',
+                                    'type': 'string',
+                                },
+                                {
+                                    'name': BackupRepoAws.access_key_id,
+                                    'title': 'AWS Access Key ID',
+                                    'type': 'string',
+                                },
+                                {
+                                    'name': BackupRepoAws.secret_access_key,
+                                    'title': 'AWS Secret Access Key ',
+                                    'type': 'string',
+                                    'format': 'password'
+                                },
+
+                            ],
+                            'required': [BackupRepoAws.enabled, BackupRepoAws.bucket_name]
+                        },
+                        {
+                            'name': BackupSettings.backup_to_smb,
+                            'type': 'array',
+                            'items': [
+                                {
+                                    'name': BackupRepoSmb.enabled,
+                                    'title': 'Backup to SMB',
+                                    'type': 'bool',
+                                },
+                                {
+                                    'name': BackupRepoSmb.ip,
+                                    'title': 'SMB host IP',
+                                    'type': 'string',
+                                },
+                                {
+                                    'name': BackupRepoSmb.port,
+                                    'title': 'SMB port',
+                                    'type': 'string',
+                                },
+                                {
+                                    'name': BackupRepoSmb.path,
+                                    'title': 'Share path',
+                                    'type': 'string',
+                                },
+                                {
+                                    'name': BackupRepoSmb.user,
+                                    'title': 'User name',
+                                    'type': 'string',
+                                },
+                                {
+                                    'name': BackupRepoSmb.password,
+                                    'title': 'Share password',
+                                    'type': 'string',
+                                    'format': 'password'
+                                },
+                                {
+                                    'name': BackupRepoSmb.use_nbns,
+                                    'title': 'Use "NetBIOS over TCP" (NBT)',
+                                    'type': 'bool',
+                                },
+                                {
+                                    'name': BackupRepoSmb.hostname,
+                                    'title': 'NetBIOS host name',
+                                    'type': 'string',
+                                },
+                            ],
+                            'required': [BackupRepoSmb.enabled, BackupRepoSmb.path],
+                        },
+                        {
+                            'name': BackupSettings.backup_to_azure,
+                            'type': 'array',
+                            'items': [
+                                {
+                                    'name': BackupRepoAzure.enabled,
+                                    'title': 'Backup to Azure Storage',
+                                    'type': 'bool',
+                                },
+                                {
+                                    'name': BackupRepoAzure.container_name,
+                                    'title': 'Storage Container Name',
+                                    'type': 'string',
+                                },
+                                {
+                                    'name': BackupRepoAzure.connection_string,
+                                    'title': 'Connection String',
+                                    'type': 'string',
+                                },
+                            ],
+                            'required': [BackupRepoAzure.enabled, BackupRepoAzure.container_name,
+                                         BackupRepoAzure.connection_string],
+                        },
+                    ],
+                    'required': [BackupSettings.enabled, BackupSettings.encryption_key, BackupSettings.include_history,
+                                 BackupSettings.include_devices_users_data, BackupSettings.override_previous_backups,
+                                 BackupSettings.min_days_between_cycles]
+                },
             ],
             'type': 'array',
             'pretty_name': 'Lifecycle Settings'
@@ -615,6 +769,35 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             'history_retention_settings': {
                 'enabled': True,
                 'max_days_to_save': 180
+            },
+            BACKUP_SETTINGS: {
+                BackupSettings.enabled: False,
+                BackupSettings.encryption_key: None,
+                BackupSettings.include_history: False,
+                BackupSettings.include_devices_users_data: True,
+                BackupSettings.override_previous_backups: False,
+                BackupSettings.min_days_between_cycles: 1,
+                BackupSettings.backup_to_smb: {
+                    BackupRepoSmb.enabled: False,
+                    BackupRepoSmb.ip: None,
+                    BackupRepoSmb.port: None,
+                    BackupRepoSmb.path: None,
+                    BackupRepoSmb.user: None,
+                    BackupRepoSmb.password: None,
+                    BackupRepoSmb.use_nbns: False,
+                    BackupRepoSmb.hostname: None
+                },
+                BackupSettings.backup_to_aws_s3: {
+                    BackupRepoAws.enabled: False,
+                    BackupRepoAws.bucket_name: None,
+                    BackupRepoAws.access_key_id: None,
+                    BackupRepoAws.secret_access_key: None,
+                },
+                BackupSettings.backup_to_azure:  {
+                    BackupRepoAzure.enabled: False,
+                    BackupRepoAzure.container_name: None,
+                    BackupRepoAzure.connection_string: None,
+                },
             },
             'history_data_settings': {
                 'save_raw_data': False
@@ -680,7 +863,7 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
                    metric_name=SystemMetric.CONTRACT_EXPIRED_STATE,
                    metric_value=self.contract_expired())
 
-        if job_name != 'execute':
+        if job_name not in ['execute', 'backup']:
             logger.error(f'Got bad trigger request for non-existent job: {job_name}')
             return return_error('Got bad trigger request for non-existent job', 400)
 
@@ -691,6 +874,10 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         if self.contract_expired():
             logger.error('Job not ran - system contract has expired')
             return return_error('Job not ran - system contract has expired', 400)
+
+        if job_name == 'backup':
+            logger.info(f'Started system backup flow  . . . ')
+            return BackupManager(self._backup_settings).start()
 
         logger.info(f'Started system scheduler')
         try:
@@ -935,6 +1122,13 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             logger.info(f'Finished {Phases.Research.name} Phase Successfully.')
             _complete_subphase()
             _log_activity_research(AuditAction.Complete)
+
+            try:
+                if self._backup_settings.get(BackupSettings.enabled):
+                    self.trigger_backup()
+
+            except Exception:
+                logger.error(f'Failed submitting backup job', exc_info=True)
 
             try:
                 if (self.feature_flags_config().get(RootMasterNames.root_key) or {}).get(RootMasterNames.enabled):
@@ -1476,6 +1670,15 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
 
         logger.info('Finished stopping all plugins.')
 
+    def trigger_backup(self):
+        """
+         backup process is a none blocking
+        """
+        if check_installer_locks(unlink=False):
+            logger.info('Installer is in progress, do not trigger backup')
+        else:
+            self._trigger('backup', blocking=False, reschedulable=True)
+
     @add_rule('update_custom_adapter_scheduler', methods=['POST'])
     def update_custom_adapter_scheduler(self):
         data = request.get_json(silent=True)
@@ -1539,6 +1742,23 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
             logger.exception(f'Error while updating {enforcement_name} enforcement scheduler {e}')
             return return_error(str(e), non_prod_error=True, http_status=500)
         return 'OK', 200
+
+    @classmethod
+    def _get_backup_setting_feature_flag(cls, flag: BackupSettingsNames) -> bool:
+        try:
+            # reverse flag is false equal hidden is true
+            return not AxoniusCommon().feature_flags().get(FeatureFlagsNames.BackupSettings, {}).get(flag, False)
+        except Exception:
+            logger.exception('Backup Setting us missing on feature flag')
+        return False
+
+    @classmethod
+    def is_backup_feature_flag_visible(cls):
+        return cls._get_backup_setting_feature_flag(BackupSettingsNames.Visible)
+
+    @classmethod
+    def is_backup_feature_flag_include_history(cls):
+        return cls._get_backup_setting_feature_flag(BackupSettingsNames.IncludeHistoryVisibility)
 
     @add_rule('update_custom_scheduler_history_job', methods=['POST'])
     def update_custom_scheduler_history(self):

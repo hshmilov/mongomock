@@ -1549,6 +1549,21 @@ class Page:
         if repeat:
             self.fill_text_field_by_element_id(scheduling_repeat_selector, 1)
 
+    def verify_checkbox_state_by_label(self, label: str, toggle_state: bool):
+        assert self.is_toggle_selected(self.find_checkbox_by_label(label)) == toggle_state
+
+    def verify_switch_state_by_label(self, label: str, toggle_state: bool):
+        assert self.is_toggle_selected(self.find_toggle_with_label_by_label(label)) == toggle_state
+
+    def verify_textbox_by_id(self, element_id, text):
+        assert self.driver.find_element_by_id(element_id).get_attribute('value') == text
+
+    def verify_textbox_by_css(self, css, input_text):
+        assert self.driver.find_element_by_css_selector(css).get_attribute('value') == input_text
+
+    def verify_dropdown_select_item_by_css(self, css, text):
+        assert self.driver.find_element_by_css_selector(css).text == text
+
     @staticmethod
     def set_discovery_time(minutes):
         current_utc = datetime.utcnow()

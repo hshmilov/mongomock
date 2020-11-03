@@ -263,6 +263,7 @@ class FeatureFlagsNames:
     PopulateMajorMinorVersionFields = 'populate_major_minor_version_fields'
     QueryTimelineRange = 'query_timeline_range'
     EnforcementCenter = 'enforcement_center'
+    BackupSettings = 'backup_settings'
     EnablePBKDF2FedOnly = 'enable_pbkdf2_for_local_users_password'
 
 
@@ -313,6 +314,11 @@ class GuiCache:
     root_key = 'cache_settings'
     enabled = 'enabled'
     ttl = 'ttl'
+
+
+class BackupSettingsNames:
+    Visible = 'visible'
+    IncludeHistoryVisibility = 'include_history_visibility'
 
 
 # DO NOT MOVE THESE CREDS FROM THIS FILE. we need the in test AND prod AND inside the docker!

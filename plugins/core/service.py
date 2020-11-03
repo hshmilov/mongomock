@@ -26,7 +26,7 @@ from axonius.consts.core_consts import DEACTIVATED_NODE_STATUS
 from axonius.consts.gui_consts import FeatureFlagsNames
 from axonius.consts.metric_consts import InstancesMetrics, SystemMetric
 from axonius.consts.plugin_subtype import PluginSubtype
-from axonius.db.db_client import DB_USER, DB_PASSWORD, DB_HOST
+from axonius.db.db_client import DB_USER, DB_PASSWORD, DB_URL
 from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.logging.metric_helper import log_metric
 from axonius.utils.json import from_json, to_json
@@ -58,7 +58,7 @@ from axonius.consts.plugin_consts import (NODE_ID,
                                           CUSTOMER_CONF_NAME, INSTANCE_CONTROL_PLUGIN_NAME, NODE_METRICS)
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import (VOLATILE_CONFIG_PATH, PluginBase, add_rule,
-                                 return_error)
+                                 return_error, is_db_restore_on_new_node)
 from axonius.utils.files import get_local_config_file
 from axonius.utils.mongo_administration import set_mongo_parameter
 from core.exceptions import PluginNotFoundError
@@ -87,7 +87,10 @@ class CoreService(Triggerable, PluginBase, Configurable):
         temp_config.read(VOLATILE_CONFIG_PATH)
         try:
             api_key = temp_config['registration']['api_key']
-            node_id = temp_config['registration'][NODE_ID] or os.environ.get(NODE_ID_ENV_VAR_NAME, None)
+            node_id = temp_config['registration'][NODE_ID]
+            if is_db_restore_on_new_node() or not node_id:
+                # Take node_id from the source host instead of plugin_volatile_config
+                node_id = os.environ.get(NODE_ID_ENV_VAR_NAME)
         except KeyError:
             # We should generate a new api_key and save it
             api_key = uuid.uuid4().hex
@@ -207,12 +210,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
         # we want slightly more time for transactions
         set_mongo_parameter(connection, 'maxTransactionLockRequestTimeoutMillis', 20)
 
-        # Deleting by name "Master", would delete the first "Master" appearance including if the real master name
-        # was changed and a node was named "Master". The reason for this is because of a node_id and master
-        # registration on export and deletion of volume on first boot.
-        self._delete_node_name(MASTER_NODE_NAME)
-        self._set_node_name(self.node_id, MASTER_NODE_NAME)
-
+        self._set_default_node_name(self.node_id, MASTER_NODE_NAME)
         self.__lazy_locker = LazyMultiLocker()
 
     def check_instances_status(self):
@@ -468,6 +466,15 @@ class CoreService(Triggerable, PluginBase, Configurable):
 
     def _set_node_name(self, node_id, node_name):
         self._set_node_metadata(node_id, NODE_NAME, node_name)
+
+    def _set_default_node_name(self, node_id, default_name):
+        """
+        on first master node initialization set "Master" as node_name
+        """
+        # we might have race condition with node metrics
+        if (self._get_collection('nodes_metadata').find_one({NODE_ID: node_id}) is None or
+                not self._get_collection('nodes_metadata').find_one({NODE_ID: node_id}, {'_id': 0, NODE_NAME: 1})):
+            self._set_node_metadata(node_id, NODE_NAME, default_name)
 
     def _get_config_by_plugin_unique_name(self, plugin_unique_name: str) -> dict:
         """
@@ -907,7 +914,7 @@ class CoreService(Triggerable, PluginBase, Configurable):
                     'plugin_subtype': plugin_subtype,
                     'supported_features': supported_features,
                     'api_key': uuid.uuid4().hex,
-                    'db_addr': DB_HOST,
+                    'db_addr': DB_URL,
                     'db_user': plugin_user,
                     'db_password': plugin_password,
                     'last_seen': datetime.utcnow(),

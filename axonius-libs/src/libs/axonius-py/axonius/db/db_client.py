@@ -6,9 +6,10 @@ import os
 
 from pymongo import MongoClient, monitoring
 
-DB_HOST = 'mongodb://mongo.axonius.local:27017'
+DB_HOST = 'mongo.axonius.local'
 DB_USER = 'ax_user'
 DB_PASSWORD = 'ax_pass'
+DB_URL = f'mongodb://{DB_HOST}:27017'
 
 
 class CommandLogger(monitoring.CommandListener):
@@ -41,13 +42,13 @@ def get_db_client(get_unique=False) -> MongoClient:
         max_pool_size = int(os.getenv('MONGO_MAXPOOLSIZE'))
     if os.getenv('MONGO_DEBUG') == '1':
         client = MongoClient(
-            DB_HOST, replicaSet='axon-cluster', retryWrites=True,
+            DB_URL, replicaSet='axon-cluster', retryWrites=True,
             username=DB_USER, password=DB_PASSWORD,
             localthresholdms=1000, connect=False, maxPoolSize=max_pool_size,
             event_listeners=[CommandLogger()])
     else:
         client = MongoClient(
-            DB_HOST, replicaSet='axon-cluster', retryWrites=True,
+            DB_URL, replicaSet='axon-cluster', retryWrites=True,
             username=DB_USER, password=DB_PASSWORD, maxPoolSize=max_pool_size,
             localthresholdms=1000, connect=False
         )

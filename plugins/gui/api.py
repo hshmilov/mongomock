@@ -38,6 +38,7 @@ from gui.logic.entity_data import entity_tasks, get_entity_data
 from gui.logic.filter_utils import filter_archived
 from gui.logic.historical_dates import all_historical_dates
 from gui.logic.routing_helper import check_permissions
+from gui.routes.labels.labels_catalog import LABELS_CATALOG
 from gui.logic.upload_helper import upload_file
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -748,7 +749,7 @@ class APIMixin:
 
         :return: dict
         """
-        return jsonify(self._get_labels())
+        return jsonify(LABELS_CATALOG)
 
     @api_add_rule(
         rule='system/roles',

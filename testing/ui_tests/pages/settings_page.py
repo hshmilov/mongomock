@@ -11,7 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from axonius.adapter_base import WEEKDAYS
-from axonius.consts.gui_consts import PROXY_ERROR_MESSAGE, ENABLE_PBKDF2_FED_BUILD_ONLY_ERROR
+from axonius.consts.gui_consts import PROXY_ERROR_MESSAGE, ENABLE_PBKDF2_FED_BUILD_ONLY_ERROR, UNCHANGED_MAGIC_FOR_GUI
 from axonius.consts.plugin_consts import CORRELATION_SCHEDULE_HOURS_INTERVAL, AWS_SM_ACCESS_KEY_ID, \
     AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION
 from axonius.consts.gui_consts import FeatureFlagsNames
@@ -21,6 +21,23 @@ from test_helpers.utils import get_datetime_format_by_gui_date
 from ui_tests.pages.page import PAGE_BODY, TAB_BODY, Page
 
 # pylint: disable=too-many-lines,no-member
+
+
+class BackupSettingsLabels:
+    enable = 'Enable backup'
+    settings = 'Backup Settings'
+    passphrase = 'Backup encryption passphrase (minimum 16 characters)'
+    include_history = 'Include historical snapshots'
+    include_devices_users_data = 'Include devices/users data'
+    override_previous_backups = 'Override previous backups'
+    min_days_to_backup = 'Minimum days between backups (runs on every cycle)'
+
+    class AwsRepo:
+        enable = 'Backup to Amazone S3 bucket'
+        bukcet_name = 'Amazon S3 bucket name'
+
+    class SmbRepo:
+        enable = 'Backup to SMB'
 
 
 class SettingsPage(Page):
@@ -295,6 +312,10 @@ class SettingsPage(Page):
     LOCKED_ACTIONS_SELECT_ID = '#locked_actions_select'
     LIFECYCLE_WEEKDAYS_SELECT_ID = '#repeat_on_select'
 
+    USER_FORM_FIRST_NAME_CSS = '.first-name__input'
+    USER_FORM_LAST_NAME_CSS = '.last-name__input'
+    USER_FORM_USER_PASSWORD_CSS = '.password__input'
+
     GUI_SETTINGS_DEFAULT_TIME_FORMAT = 'YYYY-MM-DD'
     GUI_SETTINGS_US_TIME_FORMAT = 'MM-DD-YYYY'
 
@@ -307,6 +328,9 @@ class SettingsPage(Page):
     FEATURE_FLAG_BCRYPT_TO_PBKDF2_LABEL = ('Change local user password storage scheme from bcrypt to pbkdf2'
                                            ' ( federal mode only )')
     QUERIES_CACHE_TTL_CSS = '#ttl'
+
+    BACKUP_VISIBLE_FEATURE_FLAG_LABEL = 'Enable system backup'
+    BACKUP_HISTORY_VISIBLE_FEATURE_FLAG_LABEL = 'Include option to backup history'
 
     @property
     def url(self):
@@ -1826,6 +1850,67 @@ class SettingsPage(Page):
         self.wait_for_element_present_by_css('.ant-modal-close-x').click()
         self.wait_for_modal_close()
 
+    def toggle_backup_checkbox(self, label: BackupSettingsLabels, value: bool, scroll_to_toggle=False):
+        self.wait_for_element_present_by_text(label)
+        if (label in (BackupSettingsLabels.enable,
+                      BackupSettingsLabels.SmbRepo.enable,
+                      BackupSettingsLabels.AwsRepo.enable,
+                      BackupSettingsLabels.AwsRepo.enable)):
+            toggle = self.find_toggle_with_label_by_label(label)
+        else:
+            toggle = self.find_checkbox_by_label(label)
+        self.click_toggle_button(toggle, make_yes=value, scroll_to_toggle=scroll_to_toggle)
+
+    def toggle_backup_enable(self, toggle_value: bool):
+        self.toggle_backup_checkbox(BackupSettingsLabels.enable, toggle_value)
+
+    def toggle_backup_include_history(self, toggle_value: bool):
+        self.toggle_backup_checkbox(BackupSettingsLabels.include_history, toggle_value)
+
+    def toggle_backup_include_users_and_devices(self, toggle_value: bool):
+        self.toggle_backup_checkbox(BackupSettingsLabels.include_devices_users_data, toggle_value)
+
+    def toggle_backup_overwrite_previous_backups(self, toggle_value: bool):
+        self.toggle_backup_checkbox(BackupSettingsLabels.override_previous_backups, toggle_value)
+
+    def toggle_backup_smb_setting(self, toggle_value: bool):
+        self.toggle_backup_checkbox(BackupSettingsLabels.SmbRepo.enable, toggle_value, scroll_to_toggle=True)
+
+    def fill_backup_encryption_key(self, key):
+        self.fill_text_field_by_element_id(element_id='backup_encryption_key', value=key)
+
+    def fill_backup_smb_ip(self, ip):
+        self.fill_text_field_by_element_id(element_id='ip', value=ip)
+
+    def fill_backup_smb_path(self, path):
+        self.fill_text_field_by_element_id(element_id='smb_path', value=path)
+
+    def find_backup_no_repo_selected_error(self):
+        return self.find_element_by_text('no backup repository selected')
+
+    def find_backup_invalid_encryption_key(self):
+        return self.find_element_by_text('invalid backup encryption key size')
+
+    def find_backup_missing_devices_and_user(self):
+        return self.find_element_by_text('missing include devices users data  when history included')
+
+    def verify_email_server_details(self, state: bool, host: str, port: str):
+        self.switch_to_page()
+        self.click_global_settings()
+        self.verify_switch_state_by_label(label=self.SEND_EMAILS_LABEL, toggle_state=state)
+        self.verify_textbox_by_id(element_id=self.EMAIL_HOST_ID, text=host)
+        self.verify_textbox_by_id(element_id=self.EMAIL_PORT_ID, text=port)
+
+    def verify_user_account(self, username, first_name, last_name, role):
+        self.switch_to_page()
+        self.click_manage_users_settings()
+        self.wait_for_table_to_be_responsive()
+        self.click_edit_user(username)
+        self.verify_textbox_by_css(self.USER_FORM_FIRST_NAME_CSS, first_name)
+        self.verify_textbox_by_css(self.USER_FORM_LAST_NAME_CSS, last_name)
+        self.verify_textbox_by_css(self.USER_FORM_USER_PASSWORD_CSS, UNCHANGED_MAGIC_FOR_GUI[0])
+        self.verify_dropdown_select_item_by_css(self.SELECT_ROLE_CSS, role)
+
     def clear_trial_datepicker(self):
         element = self.find_elements_by_css(self.TRIAL_DATE_PICKER_CSS)[0]
         try:
@@ -1899,3 +1984,13 @@ class SettingsPage(Page):
         if ttl:
             self.fill_text_field_by_css_selector(self.QUERIES_CACHE_TTL_CSS, ttl)
         self.save_and_wait_for_toaster()
+
+    def toggle_backup_visible_feature_flag(self, toggle_value: bool):
+        self.wait_for_element_present_by_text(self.BACKUP_VISIBLE_FEATURE_FLAG_LABEL)
+        toggle = self.find_checkbox_by_label(self.BACKUP_VISIBLE_FEATURE_FLAG_LABEL)
+        self.click_toggle_button(toggle, make_yes=toggle_value)
+
+    def toggle_backup_history_feature_flag(self, toggle_value: bool):
+        self.wait_for_element_present_by_text(self.BACKUP_HISTORY_VISIBLE_FEATURE_FLAG_LABEL)
+        toggle = self.find_checkbox_by_label(self.BACKUP_HISTORY_VISIBLE_FEATURE_FLAG_LABEL)
+        self.click_toggle_button(toggle, make_yes=toggle_value)

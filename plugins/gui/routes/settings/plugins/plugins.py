@@ -15,14 +15,14 @@ from flask import (jsonify, request)
 
 from axonius.clients.aws.utils import aws_list_s3_objects
 from axonius.clients.azure.utils import AzureBlobStorageClient, CONTAINER_NAME_PATTERN
-from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
+from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME, BackupSettings, BACKUP_SETTINGS
 from axonius.consts.adapter_consts import LAST_FETCH_TIME, AVAILABLE_CSV_LOCATION_FIELDS
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (PROXY_ERROR_MESSAGE,
                                        GETTING_STARTED_CHECKLIST_SETTING,
                                        RootMasterNames, DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES,
                                        IDENTITY_PROVIDERS_CONFIG, GUI_CONFIG_NAME, FeatureFlagsNames,
-                                       ENABLE_PBKDF2_FED_BUILD_ONLY_ERROR)
+                                       ENABLE_PBKDF2_FED_BUILD_ONLY_ERROR, BackupSettingsNames)
 from axonius.consts.metric_consts import GettingStartedMetric
 from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           GUI_PLUGIN_NAME,
@@ -33,9 +33,11 @@ from axonius.consts.plugin_consts import (AGGREGATOR_PLUGIN_NAME,
                                           DEVICE_LOCATION_MAPPING, CSV_IP_LOCATION_FILE, DISCOVERY_CONFIG_NAME,
                                           DISCOVERY_RESEARCH_DATE_TIME, CONNECTION_DISCOVERY, ENABLE_CUSTOM_DISCOVERY,
                                           CLIENTS_COLLECTION, ADAPTER_DISCOVERY, DISCOVERY_REPEAT_TYPE,
-                                          DISCOVERY_REPEAT_RATE, CORE_UNIQUE_NAME)
+                                          DISCOVERY_REPEAT_RATE, CORE_UNIQUE_NAME, PLUGIN_NAME)
 from axonius.email_server import EmailServer
 from axonius.logging.metric_helper import log_metric
+from axonius.modules.common import AxoniusCommon
+from axonius.modules.plugin_settings import Consts
 from axonius.plugin_base import return_error
 from axonius.plugin_exceptions import InvalidRequestException
 from axonius.types.ssl_state import (SSLState)
@@ -490,6 +492,7 @@ class Plugins:
         if config_to_set is None:
             return return_error('Invalid config', 400)
 
+        self._update_system_backup(config_to_set)
         # respond error if PBKDF2 HMAC enable on regular build
         if config_to_set.get(FeatureFlagsNames.EnablePBKDF2FedOnly, False) and not is_fed_build_mode():
             return return_error(ENABLE_PBKDF2_FED_BUILD_ONLY_ERROR, 400)
@@ -689,3 +692,69 @@ class Plugins:
                     }
                 }
             })
+
+    def _update_system_backup(self, config: dict):
+        """
+        once backup disable on feature flag force backup feature to be disable on schedule config
+        this need to be done before the call to plugins  update_config to make sure all are in sync.
+        """
+        try:
+
+            config_backup_settings = config.get(FeatureFlagsNames.BackupSettings, {})
+            # default to true because schema hidden prop is the reverse
+            backup_visible_feature_flag = config_backup_settings.get(BackupSettingsNames.Visible, True)
+            include_history_feature_flag = config_backup_settings.get(
+                BackupSettingsNames.IncludeHistoryVisibility, True)
+
+            # Update Scheduler Schema : backup_settings hidden field ( temp on future release will be removed)
+            AxoniusCommon().db[CORE_UNIQUE_NAME][Consts.AllConfigurableConfigsSchemas].update_one(
+                {
+                    PLUGIN_NAME: SYSTEM_SCHEDULER_PLUGIN_NAME,
+                    Consts.ConfigName: SCHEDULER_CONFIG_NAME,
+                    f'{Consts.SchemaItems}':
+                        {
+                            '$elemMatch':
+                                {
+                                    'name': BACKUP_SETTINGS
+                                }
+                        }
+                },
+                {
+                    '$set': {
+                        f'{Consts.SchemaItems}.$.hidden': not backup_visible_feature_flag
+                    }
+                }
+            )
+
+            # Update backup_settings schema include history hidden field
+            AxoniusCommon().db[CORE_UNIQUE_NAME][Consts.AllConfigurableConfigsSchemas].update_one(
+                filter={
+                    PLUGIN_NAME: SYSTEM_SCHEDULER_PLUGIN_NAME,
+                    Consts.ConfigName: SCHEDULER_CONFIG_NAME,
+                },
+                update={
+                    '$set': {
+                        f'{Consts.SchemaItems}.$[i].{Consts.Items}.$[y].hidden': not include_history_feature_flag
+                    }
+                },
+                array_filters=[{'i.name': BACKUP_SETTINGS}, {'y.name': BackupSettings.include_history}]
+            )
+
+            # if backup move to disable then update scheduler backup configuration
+            if (self.feature_flags_config().get(FeatureFlagsNames.BackupSettings, {}).get(
+                    BackupSettingsNames.Visible, False) and
+                    not backup_visible_feature_flag):
+                AxoniusCommon().db[CORE_UNIQUE_NAME][Consts.AllConfigurableConfigs].update_one(
+                    {
+                        PLUGIN_NAME: SYSTEM_SCHEDULER_PLUGIN_NAME,
+                        Consts.ConfigName: SCHEDULER_CONFIG_NAME
+                    },
+                    {
+                        '$set': {
+                            f'{Consts.Config}.{BACKUP_SETTINGS}.{BackupSettings.enabled}': False
+                        }
+                    }
+                )
+
+        except Exception:
+            logger.error('error updating backup setting on feature flag config change !')

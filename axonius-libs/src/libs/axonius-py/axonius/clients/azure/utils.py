@@ -1,6 +1,7 @@
 import datetime
 import logging
 import re
+from pathlib import Path
 
 # pylint: disable=no-name-in-module,import-error
 from azure.core.exceptions import ResourceNotFoundError, ResourceExistsError
@@ -505,7 +506,7 @@ class AzureBlobStorageClient:
         except Exception:
             logger.exception(f'Unable to list blobs in {container_name}')
 
-    def block_upload_blob(self, container_name: str, blob_name: str) -> bool:
+    def block_upload_blob(self, container_name: str, blob_name: str, blob_path: str = None) -> bool:
         """
         Upload a blob to the passed container.
 
@@ -528,7 +529,8 @@ class AzureBlobStorageClient:
                 blob_client = self.container_client.get_blob_client(blob_name)
                 if isinstance(blob_client, BlobClient):
                     try:
-                        with open(blob_name, 'rb') as data:
+                        blob_file = Path(blob_path) if blob_path else blob_name
+                        with open(blob_file, 'rb') as data:
                             blob_client.upload_blob(data, blob_type='BlockBlob')
 
                         # rebuild the blob listing

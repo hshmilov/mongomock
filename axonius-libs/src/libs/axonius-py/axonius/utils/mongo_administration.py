@@ -1,5 +1,8 @@
+from pymongo.database import Database
 from pymongo.collection import Collection
 from pymongo.errors import CollectionInvalid, OperationFailure
+
+BYTES_TO_GB = 1024 ** 3
 
 
 def get_collection_stats(col: Collection):
@@ -80,3 +83,13 @@ def truncate_capped_collection(col: Collection):
 
     for index in index_information.values():
         col.create_index(index['key'])
+
+
+def get_database_data_size(db: Database):
+    """
+    The total size of the uncompressed data held in this database
+    dbstat - > dataSize
+    :param db Database instance:
+    :return: size in GB
+    """
+    return db.command('dbstats', scale=BYTES_TO_GB)['dataSize']

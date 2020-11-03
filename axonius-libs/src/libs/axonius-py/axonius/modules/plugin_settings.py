@@ -17,7 +17,9 @@ class Consts:
     ConfigName = 'config_name'
     Config = 'config'
     Schema = 'schema'
+    Items = 'items'
     AllPluginSettingsKeyVal = 'all_plugin_settings_keyval'
+    SchemaItems = f'{Schema}.{Items}'
 
 
 class PluginSettingsNamespace:

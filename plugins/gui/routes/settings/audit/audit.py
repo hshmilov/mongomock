@@ -14,8 +14,8 @@ from axonius.utils.serial_csv.constants import DTFMT
 from gui.logic.db_helpers import translate_user_id_to_details
 from gui.logic.filter_utils import filter_by_date_range
 from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
-
-# pylint: disable=no-member,inconsistent-return-statements
+from gui.routes.labels.labels_catalog import LABELS_CATALOG
+# pylint: disable=no-self-use,no-member,inconsistent-return-statements
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -41,13 +41,13 @@ class Audit:
         audit_filter = {}
         if from_date and to_date:
             audit_filter = filter_by_date_range(from_date, to_date)
-        return self._audit_collection.find(filter=audit_filter).sort([('timestamp', pymongo.DESCENDING)])
+        return self.common.audit_collection.find(filter=audit_filter).sort([('timestamp', pymongo.DESCENDING)])
 
     def _count_audit(self, from_date: datetime, to_date: datetime):
         audit_filter = {}
         if from_date and to_date:
             audit_filter = filter_by_date_range(from_date, to_date)
-        return self._audit_collection.count_documents(audit_filter)
+        return self.common.audit_collection.count_documents(audit_filter)
 
     def _format_activity(self, activity: dict, format_date=False) -> dict:
         """
@@ -76,7 +76,7 @@ class Audit:
             return f'{activity["category"]}.{activity["action"]}'
 
         def _get_label(code: str):
-            return self._get_labels().get(f'audit.{code}', code)
+            return LABELS_CATALOG.get(f'audit.{code}', code)
 
         def _get_message_from_activity(activity):
             try:

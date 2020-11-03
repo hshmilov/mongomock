@@ -1,21 +1,23 @@
 from pathlib import Path
 
 # PATHS #
-
-VOLATILE_CONFIG_PATH = '/home/axonius/plugin_volatile_config.ini'
-UWSGI_RECOVER_SCRIPT_PATH = '/home/axonius/hacks/recover_uwsgi.py'
+AXONIUS_HOME_DIR_NAME = '/home/axonius'
+VOLATILE_CONFIG_PATH = Path(AXONIUS_HOME_DIR_NAME) / 'plugin_volatile_config.ini'
+UWSGI_RECOVER_SCRIPT_PATH = Path(AXONIUS_HOME_DIR_NAME) / 'hacks/recover_uwsgi.py'
 SHARED_READONLY_DIR_NAME = 'shared_readonly_files'
-SHARED_READONLY_FULL_PATH = Path('/home/axonius') / SHARED_READONLY_DIR_NAME
+SHARED_READONLY_FULL_PATH = Path(AXONIUS_HOME_DIR_NAME) / SHARED_READONLY_DIR_NAME
 AXONIUS_SETTINGS_DIR_NAME = '.axonius_settings'
-AXONIUS_SETTINGS_PATH = Path('/home/axonius/') / AXONIUS_SETTINGS_DIR_NAME
+AXONIUS_SETTINGS_PATH = Path(AXONIUS_HOME_DIR_NAME) / AXONIUS_SETTINGS_DIR_NAME
+AXONIUS_MANAGER_SETTINGS_PATH = Path('/home/ubuntu/cortex') / AXONIUS_SETTINGS_DIR_NAME
 AXONIUS_LOGS_PATH = Path('/home/axonius/logs')
 NODE_ID_FILENAME = '.node_id'
 NODE_ID_PATH = AXONIUS_SETTINGS_PATH / NODE_ID_FILENAME
 METADATA_PATH = SHARED_READONLY_FULL_PATH / '__build_metadata'
-LIBS_PATH = Path('/home/axonius/libs')
+LIBS_PATH = Path(f'{AXONIUS_HOME_DIR_NAME}/libs')
 DB_KEY_FILENAME = '.db_key'
 DB_KEY_PATH = AXONIUS_SETTINGS_PATH / DB_KEY_FILENAME
 CUSTOMER_CONF_NAME = 'customer_conf.json'
+AXONIUS_BACKUP_PATH = Path(AXONIUS_HOME_DIR_NAME) / 'backup'
 JWT_CONF_NAME = 'jwt_conf.json'
 UPLOADED_FILES_DIR_NAME = 'uploaded_files'
 BOOT_CONFIGURATION_SCRIPT_FILENAME = 'boot_configuration_script.tar'
@@ -146,6 +148,7 @@ REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME = 'remove_domain_from_preferred_hostname'
 UPDATE_CLIENTS_STATUS = 'update_clients_status'
 DEVICE_LOCATION_MAPPING = 'device_location_mapping'
 CSV_IP_LOCATION_FILE = 'csv_ip_location_file'
+TRIGGERABLE_HISTORY = 'triggerable_history'
 
 # PASSWORD SETTINGS #
 PASSWORD_SETTINGS = 'password_policy_settings'
@@ -230,6 +233,13 @@ CYBERARK_DOMAIN = 'domain'
 CYBERARK_PORT = 'port'
 CYBERARK_APP_ID = 'application_id'
 CYBERARK_CERT_KEY = 'certificate_key'
+
+# BACKUP
+POST_DB_RESTORE_ENV_VAR_NAME = 'DB_RESTORE_NEW_NODE'
+JOB_FINISHED_AT = 'finished_at'
+
+BYTES_TO_GB = 1024 ** 3
+BYTES_TO_MB = 1024 ** 2
 
 AWS_SM_ACCESS_KEY_ID = 'access_key_id'
 AWS_SM_SECRET_ACCESS_KEY = 'secret_access_key'

@@ -196,6 +196,11 @@ class InstancesPage(EntitiesPage):
                                              is_displayed=True)
         self.driver.find_element_by_id(self.INSTANCE_INDICATION_CHECKBOX_ID).click()
 
+    def verify_instance_name(self, name):
+        self.switch_to_page()
+        self.click_query_row_by_name(name)
+        assert self.find_instance_name_textbox().get_attribute('value') == name
+
     def wait_for_instance_panel_absent(self):
         self.wait_for_element_absent_by_css(self.INSTANCE_PANEL_ABSENT_CSS)
         # Waiting for close animation

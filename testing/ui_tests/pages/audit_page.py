@@ -1,4 +1,14 @@
 from ui_tests.pages.entities_page import EntitiesPage
+from gui.routes.labels.labels_catalog import LABELS_CATALOG
+
+AUDIT_TABLE_COLUMNS = {
+    'col_type': 'Type',
+    'date': 'Date',
+    'user': 'User',
+    'action': 'Action',
+    'category': 'Category',
+    'message': 'Message'
+}
 
 
 class AuditPage(EntitiesPage):
@@ -17,6 +27,14 @@ class AuditPage(EntitiesPage):
         if len(rows):
             return rows[0].find_elements_by_tag_name('td')[3].text
         return ''
+
+    def verify_template_by_label_search(self, label: str, **kwargs):
+        action = LABELS_CATALOG.get(label)
+        msg = LABELS_CATALOG.get(f'{label}.template')
+        self.fill_enter_table_search(action)
+        audit = self.get_table_data(self.TABLE_CONTAINER_CSS, AUDIT_TABLE_COLUMNS.values())
+        assert (audit[0][AUDIT_TABLE_COLUMNS['action']] == action and
+                audit[0][AUDIT_TABLE_COLUMNS['message']] == msg.format(**kwargs))
 
     def get_last_activity_logs_messages(self, num_of_logs=20):
         self.switch_to_page()

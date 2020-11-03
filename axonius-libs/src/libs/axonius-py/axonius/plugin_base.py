@@ -78,7 +78,7 @@ from axonius.consts.instance_control_consts import MetricsFields
 from axonius.consts.plugin_consts import (
     ADAPTERS_ERRORS_MAIL_ADDRESS, ADAPTERS_ERRORS_WEBHOOK_ADDRESS,
     ADAPTERS_LIST_LENGTH, AGGREGATION_SETTINGS, AGGREGATOR_PLUGIN_NAME, IPS_CORRELATION_ON_PUBLIC_ONLY,
-    ALLOW_SERVICE_NOW_BY_NAME_ONLY, AXONIUS_DNS_SUFFIX, AUDIT_COLLECTION,
+    ALLOW_SERVICE_NOW_BY_NAME_ONLY, AXONIUS_DNS_SUFFIX,
     CORE_UNIQUE_NAME, CORRELATE_AD_DISPLAY_NAME, CORRELATE_AD_SCCM, CORRELATE_AWS_USERNAME,
     CORRELATE_BY_AZURE_AD_NAME_ONLY, CORRELATE_BY_EMAIL_PREFIX,
     CORRELATE_BY_SNOW_MAC, CORRELATE_SNOW_NO_DASH, CORRELATE_BY_USERNAME_DOMAIN_ONLY,
@@ -112,7 +112,7 @@ from axonius.consts.plugin_consts import (
     DEVICE_ADAPTERS_HISTORICAL_RAW_DB, DEVICES_FIELDS, USERS_FIELDS, USER_ADAPTERS_RAW_DB,
     DEVICE_ADAPTERS_RAW_DB, REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME, PASSWORD_EXPIRATION_DAYS, CLIENTS_COLLECTION,
     PASSWORD_MANGER_AWS_SM_VAULT, AWS_SM_ACCESS_KEY_ID, AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION, CLIENT_ACTIVE,
-    CALCULATE_PREFERRED_FIELDS_INTERVAL)
+    CALCULATE_PREFERRED_FIELDS_INTERVAL, POST_DB_RESTORE_ENV_VAR_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE, DEFAULT_SSL_CIPHERS, NO_RSA_SSL_CIPHERS, \
     SSL_CIPHERS_HIGHER_SECURITY
@@ -390,6 +390,10 @@ def is_plugin_on_demand(plugin_unique_name: str) -> bool:
     return 'adapter' in plugin_unique_name
 
 
+def is_db_restore_on_new_node() -> bool:
+    return os.environ.get(POST_DB_RESTORE_ENV_VAR_NAME) == 'TRUE'
+
+
 # pylint: disable=too-many-instance-attributes
 class PluginBase(Configurable, Feature, ABC):
     """ This is an abstract class containing the implementation
@@ -454,6 +458,7 @@ class PluginBase(Configurable, Feature, ABC):
         self.plugin_unique_name = None
         self.api_key = None
         self.node_id = os.environ.get(NODE_ID_ENV_VAR_NAME, None)
+        self._is_db_restore_on_new_node = is_db_restore_on_new_node()
         self.core_configs_collection = self._get_db_connection()[CORE_UNIQUE_NAME]['configs']
         self.nodes_metadata_collection = self._get_db_connection()[CORE_UNIQUE_NAME]['nodes_metadata']
         self.supported_api_versions = supported_api_versions
@@ -490,9 +495,17 @@ class PluginBase(Configurable, Feature, ABC):
                 self.core_address = 'https://core.axonius.local/api'
 
         try:
-            self.plugin_unique_name = self.temp_config['registration'][PLUGIN_UNIQUE_NAME]
-            self.api_key = self.temp_config['registration']['api_key']
-            self.node_id = self.temp_config['registration'][NODE_ID]
+            if self._is_db_restore_on_new_node:
+                # overwrite plugin_volatile_config.ini data with core data after restore
+                plugin_volatile_config_node_id = self.temp_config['registration'][NODE_ID]
+                print('#####  RELOADING AFTER DB RESTORE ON NEW HOST  ######\n'
+                      f'NODE_ID from ENV - >  {self.node_id} \n'
+                      f'NODE_ID from plugin_volatile_config.ini -> {plugin_volatile_config_node_id}')
+                self.temp_config['registration'] = {}
+            else:
+                self.plugin_unique_name = self.temp_config['registration'][PLUGIN_UNIQUE_NAME]
+                self.api_key = self.temp_config['registration']['api_key']
+                self.node_id = self.temp_config['registration'][NODE_ID]
         except KeyError:
             # We might have api_key but not have a unique plugin name.
             pass
@@ -512,6 +525,8 @@ class PluginBase(Configurable, Feature, ABC):
                 self.temp_config['registration'][PLUGIN_UNIQUE_NAME] = self.plugin_unique_name
                 self.temp_config['registration']['api_key'] = self.api_key
                 self.temp_config['registration'][NODE_ID] = self.node_id
+            elif self._is_db_restore_on_new_node:
+                raise ValueError(f'Reload after restore on new node failed - node id {self.node_id} not registered ')
 
         if requested_unique_plugin_name is not None:
             if self.plugin_unique_name != requested_unique_plugin_name:
@@ -554,7 +569,8 @@ class PluginBase(Configurable, Feature, ABC):
         if 'registration' not in self.temp_config:
             self.temp_config['registration'] = {}
 
-        if core_data[PLUGIN_UNIQUE_NAME] != self.plugin_unique_name or core_data['api_key'] != self.api_key:
+        if (core_data[PLUGIN_UNIQUE_NAME] != self.plugin_unique_name or core_data['api_key'] != self.api_key) and \
+                not self._is_db_restore_on_new_node:
             self.plugin_unique_name = core_data[PLUGIN_UNIQUE_NAME]
             self.api_key = core_data['api_key']
             self.node_id = core_data[NODE_ID]
@@ -737,8 +753,12 @@ class PluginBase(Configurable, Feature, ABC):
         self._update_config_inner()
         self.__save_hyperlinks_to_db()
 
-        self.multiprocessing_manager = multiprocessing.Manager()
-        self.multiprocessing_shared_dict = self.multiprocessing_manager.dict()
+        # workaround for pycharm docker debug issue
+        # where unable to resume break point (stuck)
+        # this is true for all container not just gui
+        if not os.environ.get('HOT') == 'true':
+            self.multiprocessing_manager = multiprocessing.Manager()
+            self.multiprocessing_shared_dict = self.multiprocessing_manager.dict()
 
         # Used by revving_cache
         self.cached_operation_scheduler = LoggedBackgroundScheduler(executors={
@@ -4830,18 +4850,13 @@ class PluginBase(Configurable, Feature, ABC):
         :param activity_type: Indicating the source of the activity
         :param user_id: The user performing the activity - leave empty for system activity
         """
-        new_activity_log = dict(category=category,
-                                action=action,
-                                params=params,
-                                timestamp=datetime.now(),
-                                user=user_id,
-                                type=activity_type.value)
         try:
-            self.send_external_info_log(message=str(new_activity_log))
+            self.send_external_info_log(message=str({'category': category,
+                                                     'action': action,
+                                                     'params': params,
+                                                     'user': user_id,
+                                                     'type': activity_type.value}))
         except Exception:
             logger.exception(f'Problem sending external log')
-        self._audit_collection.insert_one(new_activity_log)
 
-    @property
-    def _audit_collection(self):
-        return self._get_collection(AUDIT_COLLECTION, CORE_UNIQUE_NAME)
+        self.common.add_activity_msg(category, action, params, activity_type, user_id)
