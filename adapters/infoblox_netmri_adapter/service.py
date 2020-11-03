@@ -19,7 +19,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class InfobloxNetmriAdapter(ScannerAdapterBase, Configurable):
-    # pylint: disable=too-many-instance-attributes
+    # pylint: disable=too-many-instance-attributes,too-many-branches
     class MyDeviceAdapter(InfobloxNetmriDeviceInstance):
         pass
 
