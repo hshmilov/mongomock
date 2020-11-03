@@ -882,7 +882,7 @@ class SettingsPage(Page):
                                           text)
 
     def find_should_history_be_gathered_toggle(self):
-        return self.find_checkbox_by_label(self.HISTORY_GATHERED)
+        return self.find_toggle_with_label_by_label(self.HISTORY_GATHERED)
 
     def set_send_emails_toggle(self):
         toggle = self.find_send_emails_toggle()

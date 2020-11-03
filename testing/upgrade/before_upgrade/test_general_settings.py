@@ -29,7 +29,7 @@ class TestPrepareGlobalSettings(UpgradeTestBase):
         self.settings_page.toggle_advanced_settings()
 
         toggle = self.settings_page.find_remote_support_toggle()
-        assert self.settings_page.is_toggle_selected(toggle)
+        assert self.settings_page.is_checkbox_selected(toggle)
 
         self.settings_page.set_remote_support_toggle(make_yes=False)
 
@@ -39,7 +39,7 @@ class TestPrepareGlobalSettings(UpgradeTestBase):
         self.settings_page.toggle_advanced_settings()
 
         toggle = self.settings_page.find_remote_support_toggle()
-        assert not self.settings_page.is_toggle_selected(toggle)
+        assert not self.settings_page.is_checkbox_selected(toggle)
 
     def test_syslog_settings(self):
         self.settings_page.switch_to_page()
