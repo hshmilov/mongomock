@@ -963,6 +963,7 @@ def hostname_not_problematic(adapter_device):
              and 'work' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'fullservice' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'harmony' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
+             and 'blackberry classic' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'cs' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'timeclock' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
              and 'ops' != get_normalized_hostname_str(adapter_device).split('.')[0].strip().lower()
@@ -1349,7 +1350,7 @@ def is_start_with_valid_ip(value):
 
 
 BAD_ASSETS = ['dev', 'localhost', 'delete', 'deleted', 'na', 'macbook-air', 'macbook-pro', 'ge', '10', '3', 'n/a',
-              'unknown', 'test1', 'test2', 'stage', 'ipad', 'iphone', 'qa']
+              'unknown', 'test1', 'test2', 'stage', 'ipad', 'iphone', 'qa', 'blackberry classic']
 
 
 def is_asset_before_host_device(adapter_device):
@@ -1360,6 +1361,7 @@ def is_asset_before_host_device(adapter_device):
 
 
 def get_asset_snow_or_host(adapter_device):
+    device_manufacturer = get_manufacturer(adapter_device)
     if is_asset_before_host_device(adapter_device):
         asset = get_asset_name(adapter_device)
     else:
@@ -1367,7 +1369,7 @@ def get_asset_snow_or_host(adapter_device):
     if asset:
         if asset.split('.')[0].lower().strip() in BAD_ASSETS:
             return None
-        if is_start_with_valid_ip(asset) or ' ' in asset:
+        if is_start_with_valid_ip(asset) or ' ' in asset or (device_manufacturer and ('cisco' in device_manufacturer)):
             return asset
         return asset.split('.')[0].lower().strip()
     return None
@@ -1381,8 +1383,16 @@ def compare_snow_asset_hosts(adapter_device1, adapter_device2):
     return False
 
 
+def get_manufacturer(adapter_device):
+    manufacturer = adapter_device['data'].get('device_manufacturer')
+    if manufacturer:
+        return manufacturer.lower()
+    return None
+
+
 def get_asset_or_host(adapter_device):
     asset = get_asset_name(adapter_device) or get_hostname(adapter_device)
+    device_manufacturer = get_manufacturer(adapter_device)
     if asset:
         if asset.split('.')[0].lower().strip() in BAD_ASSETS:
             return None
@@ -1392,7 +1402,7 @@ def get_asset_or_host(adapter_device):
         if asset.startswith('MACMBP-') or asset.startswith('MACMBP_'):
             asset = 'MACMBP' + asset[7:]
 
-        if is_start_with_valid_ip(asset) or ' ' in asset:
+        if is_start_with_valid_ip(asset) or ' ' in asset or (device_manufacturer and ('cisco' in device_manufacturer)):
             return asset
         return asset.split('.')[0].lower().strip()
     return None

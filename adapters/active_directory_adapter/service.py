@@ -901,7 +901,7 @@ class ActiveDirectoryAdapter(Userdisabelable, Devicedisabelable, ActiveDirectory
                     user.cost_center_description = user_raw.get('costCenterDescription')
                     user.division = user_raw.get('division') or user_raw.get('amdocs-division')
                     user.division_code = user_raw.get('divisionCode') \
-                        or user_raw.get('amdocs-division-code') or user_raw.get('abbDivShortName ')
+                        or user_raw.get('amdocs-division-code') or user_raw.get('abbDivShortName')
                     user.businiss_unit_code = user_raw.get('abbBuShortName')
                     user.business_area_code = user_raw.get('abbBaShortName')
                     user.se_business_role = user_raw.get('sEbusinessRole')
