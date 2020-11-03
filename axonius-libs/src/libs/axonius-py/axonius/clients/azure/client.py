@@ -8,6 +8,7 @@ from urllib.parse import quote, unquote
 import adal
 from requests import HTTPError
 
+from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.azure.ad import AzureADConnection
 from axonius.clients.azure.app_service import AzureAppServiceConnection
 from axonius.clients.azure.automation import AzureAutomationConnection
@@ -90,7 +91,11 @@ class AzureCloudConnection(RESTConnection):
             **kwargs
     ):
         self._app_client_id = app_client_id
-        self._app_client_secret = app_client_secret
+        if isinstance(app_client_secret, str):
+            self._app_client_secret = app_client_secret
+        else:
+            logger.error(f'_app_client_secret must be string, instead its {app_client_secret}')
+            raise ClientConnectionException(f'Connection error, app client secret must be string')
         self.tenant_id = tenant_id
         self._azure_stack_hub_proxy_settings = azure_stack_hub_proxy_settings
         self.is_azure_ad_b2c = is_azure_ad_b2c
