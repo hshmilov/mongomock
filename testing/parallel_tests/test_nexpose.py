@@ -41,3 +41,7 @@ class TestNexposeAdapter(AdapterTestBase):
         nexpose_device = list(filter(lambda device: device.get('hostname', '').upper() == FETCHED_DEVICE_EXAMPLE['hostname'].upper(),
                                      devices_list))
         assert nexpose_device[0]['raw']['mac'] == FETCHED_DEVICE_EXAMPLE['raw']['mac']
+
+    @pytest.mark.skip("ESX Down")
+    def test_check_reachability(self):
+        pass

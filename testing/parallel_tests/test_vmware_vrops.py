@@ -1,4 +1,6 @@
 # pylint: disable=unused-import
+import pytest
+
 from services.adapters.vmware_vrops_service import VmwareVropsService, vmware_vrops_fixture
 from test_helpers.adapter_test_base import AdapterTestBase
 from test_credentials.test_vmware_vrops_credentials import CLIENT_DETAILS, SOME_DEVICE_ID
@@ -29,3 +31,11 @@ class TestVmwareVropsAdapter(AdapterTestBase):
     @property
     def some_user_id(self):
         raise NotImplementedError()
+
+    @pytest.mark.skip('ESX Down')
+    def test_fetch_devices(self):
+        pass
+
+    @pytest.mark.skip('ESX Down')
+    def test_check_reachability(self):
+        pass
