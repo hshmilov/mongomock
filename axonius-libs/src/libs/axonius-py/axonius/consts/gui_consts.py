@@ -510,6 +510,6 @@ USERS_INDIRECT_REFERENCES_COLLECTION = 'user_views_indirect'
 # pylint: disable=anomalous-backslash-in-string
 SAVED_QUERY_PLACEHOLDER_REGEX = '{{QueryID=(\w+)}}'
 PREDEFINED_SAVED_QUERY_REF_REGEX = '{{QueryID=<QUERY_NAME=([a-zA-Z0-9_\-\s]+)>}}'
-OS_DISTRIBUTION_GT_LT_QUERY_REGEX = r'os\.distribution\"\s([<>])\s"(.+?)"'
+OS_DISTRIBUTION_GT_LT_QUERY_REGEX = r'os\.distribution(_preferred)?\"\s([<>])\s"(.+?)"'
 
 IMAGE_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png']

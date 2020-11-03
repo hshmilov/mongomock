@@ -25,7 +25,7 @@ from axonius.consts.adapter_consts import PREFERRED_FIELDS_PREFIX
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFAULT_TIME_FORMAT, MAX_SORTED_FIELDS, \
     MIN_SORTED_FIELDS, ADAPTER_CONNECTIONS_FIELD, DISTINCT_ADAPTERS_COUNT_FIELD, CORRELATION_REASONS_FIELD, \
     CORRELATION_REASONS, HAS_NOTES, HAS_NOTES_TITLE, SortType, SortOrder, PREFERRED_FIELDS
-
+from axonius.devices.msft_versions import ENUM_WINDOWS_VERSIONS
 from axonius.entities import EntitiesNamespace
 from axonius.consts.plugin_consts import (ADAPTERS_LIST_LENGTH, PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME, GUI_PLUGIN_NAME)
@@ -1335,7 +1335,9 @@ def entity_fields(entity_type: EntityType):
         {
             'name': 'specific_data.data.os.distribution_preferred',
             'title': 'Preferred OS Distribution',
-            'type': 'string'
+            'type': 'string',
+            'format': 'os-distribution',
+            'enum': ENUM_WINDOWS_VERSIONS
         },
         {
             'name': 'specific_data.data.os.os_str_preferred',

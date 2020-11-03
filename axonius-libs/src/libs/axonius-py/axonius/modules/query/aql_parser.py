@@ -10,6 +10,7 @@ from pymongo import MongoClient
 
 from axonius.modules.data.axonius_data import get_axonius_data_singleton
 from axonius.modules.query.consts import (OS_DISTRIBUTION_GT_SUFFIX, OS_DISTRIBUTION_LT_SUFFIX, PREFERRED_SUFFIX,
+                                          OS_DISTRIBUTION_PREFERRED_GT_SUFFIX, OS_DISTRIBUTION_PREFERRED_LT_SUFFIX,
                                           NOW_PLACEHOLDER,
                                           INCLUDE_OUTDATED_TEMPLATE, EXISTS_IN_TEMPLATE)
 from axonius.consts.adapter_consts import CONNECTION_LABEL, PREFERRED_FIELDS_PREFIX
@@ -46,7 +47,9 @@ class AQLParser:
         if not aql_filter:
             return {}
         aql_filter = self.parse_saved_queries_ids(aql_filter, entity_type)
-        if aql_filter and (OS_DISTRIBUTION_LT_SUFFIX in aql_filter or OS_DISTRIBUTION_GT_SUFFIX in aql_filter):
+        if aql_filter and (OS_DISTRIBUTION_LT_SUFFIX in aql_filter or OS_DISTRIBUTION_GT_SUFFIX in aql_filter
+                           or OS_DISTRIBUTION_PREFERRED_LT_SUFFIX in aql_filter
+                           or OS_DISTRIBUTION_PREFERRED_GT_SUFFIX in aql_filter):
             aql_filter = self.parse_os_distribution_order(aql_filter)
         if aql_filter and CONNECTION_LABEL in aql_filter:
             aql_filter = self.parse_connection_labels(aql_filter)
@@ -94,14 +97,16 @@ class AQLParser:
         """
         matcher = re.search(OS_DISTRIBUTION_GT_LT_QUERY_REGEX, aql_filter)
         while matcher:
-            os_distribution = matcher.group(2)
-            comp_operator = matcher.group(1)
+            os_distribution = matcher.group(3)
+            comp_operator = matcher.group(2)
+            is_preferred = matcher.group(1)
             distribution_enum_index = ENUM_WINDOWS_VERSIONS.index(os_distribution)
             if comp_operator == '<':
                 relevant_os_distributions = ENUM_WINDOWS_VERSIONS[distribution_enum_index + 1:]
             else:
                 relevant_os_distributions = ENUM_WINDOWS_VERSIONS[:distribution_enum_index]
-            translated_filter = 'os.distribution" in [' \
+            os_distribution_field = 'os.distribution_preferred"' if is_preferred else 'os.distribution"'
+            translated_filter = f'{os_distribution_field} in [' \
                                 + ','.join('"{0}"'.format(version) for version in relevant_os_distributions) + ']'
             aql_filter = aql_filter.replace(matcher.group(0), translated_filter)
             matcher = re.search(OS_DISTRIBUTION_GT_LT_QUERY_REGEX, aql_filter)
