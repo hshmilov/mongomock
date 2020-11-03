@@ -856,13 +856,15 @@ class QualysScansConnection(RESTConnection):
             logger.debug(f'Failed with {e}')
             return False, ''
 
-    def _pagination_body_generator(self, filter_criteria_list: Optional[Iterable[dict]] = None):
+    def _pagination_body_generator(self, filter_criteria_list: Optional[Iterable[dict]] = None,
+                                   bypass_date_filter: bool = False):
         # ignore initial empty response
         record_count = 0
         has_more = True
         while has_more:
             last_response = (yield self._prepare_service_request(filter_criteria_list=filter_criteria_list,
-                                                                 start_offset=record_count))
+                                                                 start_offset=record_count,
+                                                                 bypass_date_filter=bypass_date_filter))
             record_count += last_response.get('count', 0)
             has_more = (last_response.get('count') and last_response.get('hasMoreRecords', '') == 'true')
 
@@ -872,7 +874,7 @@ class QualysScansConnection(RESTConnection):
         try:
             resp = None
             query_params_str = f'?fields={",".join(fields)}' if fields else ''
-            body_params_gen = self._pagination_body_generator()
+            body_params_gen = self._pagination_body_generator(bypass_date_filter=True)
             # Note: This loop ends with StopIteration exception
             while True:
                 body_params = body_params_gen.send(resp)
@@ -902,7 +904,7 @@ class QualysScansConnection(RESTConnection):
 
         try:
             logger.info(f'searching hosts by the following criterias: {filter_criteria_list}')
-
+            body_params = None
             resp = None
             query_params_str = f'?fields={",".join(fields)}' if fields else ''
             body_params_gen = self._pagination_body_generator(filter_criteria_list=filter_criteria_list)
@@ -1036,7 +1038,9 @@ class QualysScansConnection(RESTConnection):
             additional_fields_dict = {'parentTagId': parent_tag_id}
 
         body_params = self._prepare_service_request(
-            {'data': {'Tag': {'name': tag_name, **additional_fields_dict}}})
+            {'data': {'Tag': {'name': tag_name, **additional_fields_dict}}},
+            bypass_date_filter=True
+        )
 
         try:
             resp = self._post(f'qps/rest/2.0/create/am/tag',
@@ -1060,7 +1064,9 @@ class QualysScansConnection(RESTConnection):
         logger.info(f'Deleting tags {tag_id_list}')
 
         body_params = self._prepare_service_request(
-            filter_criteria_list=[self._generate_filter_criteria('id', 'IN', ','.join(tag_id_list))])
+            filter_criteria_list=[self._generate_filter_criteria('id', 'IN', ','.join(tag_id_list))],
+            bypass_date_filter=True
+        )
 
         try:
             resp = self._post(f'qps/rest/2.0/delete/am/tag',
@@ -1096,7 +1102,8 @@ class QualysScansConnection(RESTConnection):
     def _prepare_service_request(self,
                                  request_body: Optional[dict] = None,
                                  filter_criteria_list: Optional[Iterable[dict]] = None,
-                                 start_offset: Optional[int] = None) -> dict:
+                                 start_offset: Optional[int] = None,
+                                 bypass_date_filter: bool = False) -> dict:
 
         params_dict = {}
         service_request = params_dict.setdefault('ServiceRequest', request_body or {})
@@ -1112,7 +1119,7 @@ class QualysScansConnection(RESTConnection):
         if filter_criteria_list:
             criteria_list.extend(filter_criteria_list)
 
-        if self._date_filter:
+        if self._date_filter and not bypass_date_filter:
             # filter by 'last_seen' greater than
             criteria_list.append({
                 'field': 'lastVulnScan',
@@ -1133,7 +1140,7 @@ class QualysScansConnection(RESTConnection):
         return self._generate_filter_criteria('id', 'IN', ','.join(host_id_list))
 
     @staticmethod
-    def _handle_qualys_response(response: bytes):
+    def _handle_qualys_response(response: dict):
         service_response = response.get('ServiceResponse')
         response_code = (service_response or {}).get('responseCode')
         if not (service_response and response_code):
