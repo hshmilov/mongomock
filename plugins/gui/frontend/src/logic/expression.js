@@ -31,7 +31,8 @@ const filterExpressionChildren = (children) => {
   return children.filter((item) => item.condition);
 };
 
-const calcBracketsWeight = (total, childExpression) => {
+const calcBracketsWeight = (childExpression) => {
+  let total = 0;
   if (childExpression.expression.leftBracket) {
     // eslint-disable-next-line no-param-reassign
     total -= 1;
@@ -66,7 +67,7 @@ const Expression = function (expression, condition, isFirst) {
 
   const calcChildExpressionBracketsWeight = () => {
     const childExpressionsToCheck = filterExpressionChildren(expression.children);
-    return childExpressionsToCheck.reduce(calcBracketsWeight, 0);
+    return childExpressionsToCheck.map(calcBracketsWeight);
   };
 
   const checkErrors = () => {
@@ -75,7 +76,7 @@ const Expression = function (expression, condition, isFirst) {
     } if (expression.context && !expression.field) {
       return 'Select an object to add nested conditions';
     }
-    return validateBrackets([calcChildExpressionBracketsWeight()]);
+    return validateBrackets(calcChildExpressionBracketsWeight());
   };
 
   const compileExpression = () => {
