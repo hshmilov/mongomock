@@ -31,6 +31,9 @@ def generic_service_now_query_devices_by_client(client_data):
         logger.info(f'Done retrieving subtables. took {subtables_time.seconds}')
 
         for device_type, device_raw in connection.get_device_list(**get_entities_kwargs):
+            if not isinstance(device_raw, dict):
+                logger.debug(f'skipping false device_raw {device_raw}')
+                continue
             device_raw[InjectedRawFields.ax_device_type.value] = device_type
             inject_subtables_fields_to_device(device_subtables, device_raw,
                                               use_dotwalking=get_entities_kwargs.get('use_dotwalking'))
@@ -50,6 +53,9 @@ def generic_service_now_query_users_by_client(client_data):
         logger.info(f'Done retrieving subtables. took {subtables_time.seconds}')
 
         for user_raw in connection.get_user_list(**get_entities_kwargs):
+            if not isinstance(user_raw, dict):
+                logger.debug(f'skipping false user_raw {user_raw}')
+                continue
             inject_subtables_fields_to_user(user_subtables, user_raw,
                                             use_dotwalking=get_entities_kwargs.get('use_dotwalking'))
             yield user_raw

@@ -285,6 +285,9 @@ class ServiceNowConnectionMixin(ABC):
 
         # dotwalked tables
         if not use_dotwalking:
+
+            sub_tables_to_request_by_key.update(consts.ADDITIONAL_SUBTABLES_WHEN_NO_DOTWALKS)
+
             if fetch_cmdb_model:
                 sub_tables_to_request_by_key[consts.MODEL_TABLE] = consts.MODEL_TABLE
 

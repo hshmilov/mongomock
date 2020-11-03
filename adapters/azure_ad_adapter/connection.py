@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List
 
 import adal
+from funcy import chunks
 
 from axonius.clients.rest.connection import (ASYNC_ERROR_SLEEP_TIME,
                                              ASYNC_REQUESTS_DEFAULT_CHUNK_SIZE,
@@ -198,13 +199,15 @@ class AzureAdClient(RESTConnection):
         return super()._get(*args, **kwargs)
 
     # pylint: disable=arguments-differ
-    def _async_get(self, *args, **kwargs):
-        self._renew_token_if_needed()
-        return super()._async_get(*args,
-                                  chunks=self._parallel_count,
-                                  max_retries=self._async_retry_max,
-                                  retry_sleep_time=self._async_retry_time,
-                                  **kwargs)
+    def _async_get(self, list_of_requests, *args, **kwargs):
+        for higher_level_chunk in chunks(100, list_of_requests):
+            self._renew_token_if_needed()
+            return super()._async_get(higher_level_chunk,
+                                      *args,
+                                      chunks=self._parallel_count,
+                                      max_retries=self._async_retry_max,
+                                      retry_sleep_time=self._async_retry_time,
+                                      **kwargs)
 
     def _paged_get(self, resource, no_retry=False):
         # Take care of paging generically: https://developer.microsoft.com/en-us/graph/docs/concepts/paging

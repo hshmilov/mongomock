@@ -276,8 +276,9 @@ class ServiceNowAdapterBase(AdapterBase):
                     'use_cached_users': self._use_cached_users,
                     'plugin_name': self.plugin_name,
                 },
-                self._get_config_enum_from_file(client_config.get('verification_install_status_file')),
-                self._get_config_enum_from_file(client_config.get('verification_operational_status_file')))
+                None, None)
+        # self._get_config_enum_from_file(client_config.get('verification_install_status_file')),
+        # self._get_config_enum_from_file(client_config.get('verification_operational_status_file')))
 
     # pylint: disable=R0912,R0915,R0914
     def create_snow_device(self,
@@ -541,13 +542,13 @@ class ServiceNowAdapterBase(AdapterBase):
             device.snow_department = device_raw.pop(InjectedRawFields.snow_department.value, None)
             device.physical_location = device_raw.pop(InjectedRawFields.physical_location.value, None)
 
-            install_status = None
             try:
-                install_status_raw = device_raw.pop(InjectedRawFields.asset_install_status.value, None)
+                install_status = device_raw.pop(InjectedRawFields.asset_install_status.value, None)
                 try:
-                    install_status = install_status_dict.get(install_status_raw)
+                    if install_status and not isinstance(install_status, str):
+                        install_status = install_status_dict.get(install_status)
                 except Exception:
-                    logger.warning(f'Problem getting install status for {install_status_raw}', exc_info=True)
+                    logger.warning(f'Problem getting install status for {install_status}', exc_info=True)
                 device.u_loaner = device_raw.pop(InjectedRawFields.asset_u_loaner.value, None)
                 device.u_shared = device_raw.pop(InjectedRawFields.asset_u_shared.value, None)
                 try:
@@ -631,7 +632,9 @@ class ServiceNowAdapterBase(AdapterBase):
                         logger.exception(f'Problem with snow ips {snow_ip}')
 
             if not install_status or self.__use_ci_table_for_install_status:
-                install_status = install_status_dict.get(device_raw.get('install_status'))
+                install_status = device_raw.get('install_status')
+                if install_status and not isinstance(install_status, str):
+                    install_status = install_status_dict.get(install_status)
             if self.__exclude_disposed_devices and install_status \
                     and install_status in ['Disposed', 'Decommissioned']:
                 return None
@@ -822,7 +825,9 @@ class ServiceNowAdapterBase(AdapterBase):
             device.firmware_version = device_raw.get('u_firmware_version')
             device.model_version_number = device_raw.get('u_model_version_number')
             if self.__fetch_operational_status:
-                operational_status = operational_status_dict.get(device_raw.get('operational_status'))
+                operational_status = device_raw.get('operational_status')
+                if operational_status and not isinstance(operational_status, str):
+                    operational_status = operational_status_dict.get(operational_status)
                 if operational_status_dict is consts.INSTALL_STATUS_DICT:
                     # if no explicit operational_status_dict given, try to use a display value if exists
                     operational_status = device_raw.get('dv_operational_status') or operational_status
@@ -848,14 +853,18 @@ class ServiceNowAdapterBase(AdapterBase):
             device.u_network_zone = device_raw.get('u_network_zone')
 
             try:
-                verification_install_status = device_raw.pop(InjectedRawFields.verification_status.value, None)
-                if verification_install_status_dict:
+                verification_install_status = device_raw.get(InjectedRawFields.verification_status.value, None)
+                if (verification_install_status and
+                        not isinstance(verification_install_status, str) and
+                        verification_install_status_dict):
                     verification_install_status = verification_install_status_dict.get(verification_install_status)
                 device.verification_install_status = verification_install_status
 
-                verification_operational_status = device_raw.pop(
+                verification_operational_status = device_raw.get(
                     InjectedRawFields.verification_operational_status.value, None)
-                if verification_operational_status_dict:
+                if (verification_operational_status and
+                        not isinstance(verification_operational_status, str) and
+                        verification_operational_status_dict):
                     verification_operational_status = verification_operational_status_dict.get(
                         verification_operational_status)
                 device.verification_operational_status = verification_operational_status

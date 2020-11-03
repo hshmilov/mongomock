@@ -103,7 +103,7 @@ class QualysScansConnection(RESTConnection):
 
         # if no endpoint, take default
         if 'qualysapi.qualys' in api_url:
-            gateway_replacement = 'gateway.qg1'
+            gateway_replacement = 'gateway.qg1.apps'
 
         # The rest public ones starts with qualysapi.qg#
         elif 'qualysapi.qg' in api_url:

@@ -48,23 +48,29 @@ def _parse_optional_reference(device_raw: dict, field_name: str, reference_table
 def _parse_optional_reference_value(device_raw: dict, field_name: str,
                                     reference_table: dict, reference_table_field: str):
 
+    # if 'name' reference field was asked, it might be available in the form of display_value
+    use_display_value = (reference_table_field == 'name')
+
     # In ServiceNow DataWarehouse adapter we currently don't handle raw references.
     # But, we do support references with adjacent display value "dv_*" additional fields which exist
     #     in device_raw to replace only as an alternative for reference.get('name').
     # So, If reference value asked is name, try to locate it from the raw display value beforehand.
     # See: https://jasondove.wordpress.com/2012/06/16/a-few-random-tips-for-servicenow-reporting/
-    if reference_table_field == 'name':
+    if use_display_value:
         raw_value = device_raw.get(f'dv_{field_name}')
         if isinstance(raw_value, str) and raw_value:
             return raw_value
 
     raw_value = _parse_optional_reference(device_raw, field_name, reference_table,
-                                          # If 'name' reference_table_field table field was requested,
-                                          #     we allow the usage of display_value
-                                          use_display_value=(reference_table_field == 'name'))
-    if not isinstance(raw_value, dict):
-        return None
-    return raw_value.get(reference_table_field)
+                                          use_display_value=use_display_value)
+    if isinstance(raw_value, dict):
+        return raw_value.get(reference_table_field)
+
+    # not dict? if display value was used and not empty, then this is our result
+    if use_display_value and raw_value:
+        return raw_value
+
+    return None
 
 
 def _inject_relations(device_raw,
@@ -79,14 +85,14 @@ def _inject_relations(device_raw,
             return
 
         downstream_relatives = curr_relations.get(consts.RELATIONS_TABLE_CHILD_KEY)
-        if isinstance(downstream_relatives, list):
+        if isinstance(downstream_relatives, set):
             node_raw[consts.RELATIONS_TABLE_CHILD_KEY] = [
                 _recur_join_relations(sys_id, curr_depth - 1)
                 for sys_id in downstream_relatives
             ]
 
         upstream_relatives = curr_relations.get(consts.RELATIONS_TABLE_PARENT_KEY)
-        if isinstance(upstream_relatives, list):
+        if isinstance(upstream_relatives, set):
             node_raw[consts.RELATIONS_TABLE_PARENT_KEY] = [
                 _recur_join_relations(sys_id, curr_depth - 1)
                 for sys_id in upstream_relatives
@@ -112,8 +118,9 @@ def _inject_relations(device_raw,
         return curr_relations_info
 
     try:
+        device_relations_raw = device_raw.setdefault(InjectedRawFields.relations.value, dict())
         _recur_inject_relatives(relations_table_dict.get(initial_sys_id),
-                                device_raw,
+                                device_relations_raw,
                                 consts.MAX_RELATIONS_DEPTH)
     except Exception:
         logger.debug(f'Failed setting relations data', exc_info=True)
@@ -126,8 +133,8 @@ def _inject_extra_fields(device_raw, extra_fields_definition: dict):
     for field_enum, raw_options in extra_fields_definition.items():
         value = None
         if isinstance(raw_options, str):
-            value = device_raw.get(raw_options)
-        elif isinstance(raw_options, list):
+            raw_options = [raw_options]
+        if isinstance(raw_options, list):
             for raw_option in raw_options:
                 raw_option = device_raw.get(raw_option)
                 if isinstance(raw_option, dict):
