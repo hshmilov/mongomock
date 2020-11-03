@@ -80,7 +80,7 @@ class KubernetesAdapter(AdapterBase):
                 {
                     'name': 'port',
                     'title': 'Port',
-                    'type': 'Integer',
+                    'type': 'integer',
                     'format': 'port',
                     'default': DEFAULT_PORT
                 },
