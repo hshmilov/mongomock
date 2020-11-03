@@ -50,7 +50,7 @@ class TestAdaptersParallelFetch(TestBase):
         self.wait_for_adapter_down(CISCO_PLUGIN_NAME)
         self._toggle_parallel_fetch(False)
 
-    @pytest.mark.skip("ESX Down")
+    @pytest.mark.skip('ESX Down')
     def test_esx_parallel_fetch(self):
         self.settings_page.switch_to_page()
         self._toggle_parallel_fetch(True)

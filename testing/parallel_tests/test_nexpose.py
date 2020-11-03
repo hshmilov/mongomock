@@ -42,6 +42,6 @@ class TestNexposeAdapter(AdapterTestBase):
                                      devices_list))
         assert nexpose_device[0]['raw']['mac'] == FETCHED_DEVICE_EXAMPLE['raw']['mac']
 
-    @pytest.mark.skip("ESX Down")
+    @pytest.mark.skip('ESX Down')
     def test_check_reachability(self):
         pass
