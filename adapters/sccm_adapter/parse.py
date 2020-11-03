@@ -93,11 +93,11 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
             if not device_id:
                 for file_data in client_data.query(consts.FILE_PRODUCT_QUERY):
                     product_id = file_data.get('ProductId')
-                    if not product_id:
+                    resource_id = file_data.get('ResourceID')
+                    if not product_id or not resource_id:
                         continue
-                    if product_id not in product_files_dict:
-                        product_files_dict[product_id] = []
-                    product_files_dict[product_id].append(file_data)
+                    dict_id = product_id + resource_id
+                    product_files_dict[dict_id] = file_data
         except Exception:
             logger.warning(f'Problem with product file dict', exc_info=True)
 
@@ -565,14 +565,11 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
                 if isinstance(new_sw_data, list):
                     for new_asset_data in new_sw_data:
                         try:
+                            resource_id = device_raw.get('ResourceID')
                             product_id = new_asset_data.get('ProductId')
-                            if not product_id or not product_files_dict.get(product_id):
+                            if not product_id or not product_files_dict.get(product_id + resource_id):
                                 continue
-                            product_list = product_files_dict.get(product_id)
-                            for product_data_raw in product_list:
-                                if product_data_raw.get('ResourceID') != device_raw.get('ResourceID'):
-                                    continue
-                                new_asset_data['file_data'] = product_data_raw
+                            new_asset_data['file_data'] = product_files_dict.get(product_id + resource_id)
                         except Exception:
                             logger.exception(f'Problem adding new sw asset {new_asset_data}')
             except Exception:

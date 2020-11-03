@@ -1,3 +1,4 @@
+import time
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
@@ -15,15 +16,18 @@ class BmcAtriumConnection(RESTConnection):
                          headers={},
                          **kwargs)
 
-    def _connect(self):
-        if not (self._username and self._password):
-            raise RESTException('No username or password')
+    def _refresh_token(self):
         response = self._post('jwt/login', url_params={'username': self._username, 'password': self._password},
                               extra_headers={'Content-Type': 'application/x-www-form-urlencoded'},
                               use_json_in_body=False,
                               use_json_in_response=False)
         token = response.decode('utf-8')
         self._session_headers['Authorization'] = f'AR-JWT {token}'
+
+    def _connect(self):
+        if not (self._username and self._password):
+            raise RESTException('No username or password')
+        self._refresh_token()
         self._get('arsys/v1.0/entry/AST:ComputerSystem',
                   url_params={'offset': 0,
                               'limit': DEVICE_PER_PAGE,
@@ -32,6 +36,7 @@ class BmcAtriumConnection(RESTConnection):
 
     def get_device_list(self):
         offset = 0
+        last_exception = False
         while offset < MAX_NUMBER_OF_DEVICES:
             try:
                 response = self._get('arsys/v1.0/entry/AST:ComputerSystem',
@@ -39,6 +44,7 @@ class BmcAtriumConnection(RESTConnection):
                                                  'limit': DEVICE_PER_PAGE,
                                                  'q': QUERY,
                                                  'fields': FIELDS})
+                last_exception = False
                 if not isinstance(response, dict) or not response.get('entries'):
                     break
                 for data_raw in response['entries']:
@@ -46,4 +52,9 @@ class BmcAtriumConnection(RESTConnection):
                 offset += DEVICE_PER_PAGE
             except Exception:
                 logger.exception(f'problem with offset {offset}')
-                break
+                if last_exception:
+                    break
+                last_exception = True
+                time.sleep(60)
+                self._session_headers['Authorization'] = None
+                self._refresh_token()
