@@ -24,9 +24,9 @@ class ScepAdapter(AdapterBase, Configurable):
         malware_engine_version = Field(str, 'Malware Protection Engine Version')
         malware_version = Field(str, 'Malware Protection Version')
         malware_product_status = Field(str, 'Malware Protection Product Status')
-        malware_last_full_scan = Field(datetime.datetime, 'Malware Protecion Last Full Scan')
-        malware_last_quick_scan = Field(datetime.datetime, 'Malware Protecion Last Quick Scan')
-        malware_enabled = Field(str, 'Malware Protecion Enabled Status')
+        malware_last_full_scan = Field(datetime.datetime, 'Malware Protection Last Full Scan')
+        malware_last_quick_scan = Field(datetime.datetime, 'Malware Protection Last Quick Scan')
+        malware_enabled = Field(str, 'Malware Protection Enabled Status')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
