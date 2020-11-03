@@ -462,6 +462,8 @@ class DeviceAdapterSoftwareCVE(SmartJsonClass):
     cve_severity = Field(str, "CVE Severity", enum=["NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"])
     cve_description = Field(str, "CVE Description")
     cve_synopsis = Field(str, "CVE Synopsis")
+    is_exloit = Field(bool, 'Is Exploit')
+    cve_type = Field(str, 'CVE Type')
     version_raw = Field(str)
 
 

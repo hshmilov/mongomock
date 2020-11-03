@@ -106,11 +106,27 @@ class NmapAdapter(ScannerAdapterBase):
                                                 and 'cpe' in inner_script_xml.attrib.get('key'):
                                             for inner_inner_script_xml in inner_script_xml:
                                                 if inner_inner_script_xml.tag == 'table':
+                                                    cve_id = None
+                                                    cvss = None
+                                                    is_exploit = None
+                                                    cve_type = None
                                                     for elem_cve in inner_inner_script_xml:
-                                                        if elem_cve.tag == 'elem' \
-                                                                and elem_cve.attrib.get('key') == 'id' \
-                                                                and 'CVE' in elem_cve.text:
-                                                            device.add_vulnerable_software(cve_id=elem_cve.text)
+                                                        if elem_cve.tag == 'elem':
+                                                            if elem_cve.attrib.get('key') == 'id' \
+                                                                    and 'CVE' in elem_cve.text:
+                                                                cve_id = elem_cve.text
+                                                            elif elem_cve.attrib.get('key') == 'cvss':
+                                                                cvss = elem_cve.text
+                                                            elif elem_cve.attrib.get('key') == 'is_exploit' \
+                                                                    and elem_cve.text in ['false', 'true']:
+                                                                cvss = elem_cve.text == 'true'
+                                                            elif elem_cve.attrib.get('key') == 'type':
+                                                                cve_type = elem_cve.text
+                                                    if cve_id:
+                                                        device.add_vulnerable_software(cve_id=cve_id,
+                                                                                       cvss=cvss,
+                                                                                       cve_type=cve_type,
+                                                                                       is_exploit=is_exploit)
                                 except Exception:
                                     logger.exception(f'Problem getting CVE data')
                     except Exception:
