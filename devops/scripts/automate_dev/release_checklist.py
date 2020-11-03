@@ -14,7 +14,7 @@ AXONIUS_SAAS_ACCOUNT_ID = '604119231150'
 AWS_KEY_VAR = 'AWS_ACCESS_KEY_ID'
 AWS_SECRET_VAR = 'AWS_SECRET_ACCESS_KEY'
 REGION = 'us-east-2'
-SAAS_REGION = 'us-east-1'
+SAAS_REGIONS = ['us-east-1', 'ca-central-1']
 
 
 def flush():
@@ -120,11 +120,11 @@ def copy_to_protected_link(aws_key, aws_secret, gen_new_pass, **_):
 
 
 def share_with_saas_acount(aws_key, aws_secret, unencrypted_ami_id, **_):
-    ami_share = AmiShare(aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
-    image_id_new_region = ami_share.copy_to_region(unencrypted_ami_id, SAAS_REGION, is_release=True)
-
-    ami_share.modify_permissions(image_id_new_region, dst_account=AXONIUS_SAAS_ACCOUNT_ID, region=SAAS_REGION)
-    log(f'Shared AMI with saas account, AMI: {image_id_new_region}')
+    for dst_region in SAAS_REGIONS:
+        ami_share = AmiShare(aws_access_key_id=aws_key, aws_secret_access_key=aws_secret)
+        image_id_new_region = ami_share.copy_to_region(unencrypted_ami_id, dst_region, is_release=True)
+        ami_share.modify_permissions(image_id_new_region, dst_account=AXONIUS_SAAS_ACCOUNT_ID, region=dst_region)
+        log(f'Shared AMI with saas account, AMI: {image_id_new_region} region={dst_region}')
 
 
 def print_epilog(version_name, ami_id, commit_hash, unencrypted_ami_id, **_):
