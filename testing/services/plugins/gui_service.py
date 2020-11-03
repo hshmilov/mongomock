@@ -67,6 +67,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
         local_npm = os.path.join(self.service_dir, 'frontend', 'node_modules')
         local_dist = os.path.join(self.service_dir, 'frontend', 'dist')
         self.is_dev = os.path.isdir(local_npm) and os.path.isdir(local_dist)
+        self.access_token = None
 
     @staticmethod
     def _dependent_services():
@@ -1559,6 +1560,15 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
             }
         })
 
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_49(self):
+        print('Upgrade to schema 49')
+        roles_collection = self.db.get_collection(GUI_PLUGIN_NAME, ROLES_COLLECTION)
+        roles_collection.update_many(filter_archived({}), {'$set': {LAST_UPDATED_FIELD: datetime.utcnow()}})
+        users_collection = self.db.get_collection(GUI_PLUGIN_NAME, USERS_COLLECTION)
+        users_collection.update_many(filter_archived({LAST_UPDATED_FIELD: {'$exists': False}}),
+                                     {'$set': {LAST_UPDATED_FIELD: datetime.utcnow()}})
+
     def _update_default_locked_actions_legacy(self, new_actions):
         """
         Update the config record that holds the FeatureFlags setting, adding received new_actions to it's list of
@@ -1758,11 +1768,19 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
     def get_queries(self):
         self.get('trigger_watches', api_key=self.api_key, session=self._session)
 
-    def login_user(self, credentials):
-        return self.post('login', data=json.dumps(credentials), session=self._session)
+    def login_user(self, credentials, *vargs, **kwargs):
+        login_result = self.post('login', data=json.dumps(credentials), session=self._session, *vargs, **kwargs)
+        if login_result.status_code == 200:
+            self.access_token = login_result.json().get('access_token')
+        return login_result
 
-    def logout_user(self):
-        return self.get('logout', session=self._session)
+    def get_user_data(self,  *vargs, **kwargs):
+        return self.get('login', session=self._session, *vargs, **kwargs)
+
+    def logout_user(self, *vargs, **kwargs):
+        logout_result = self.get('logout', session=self._session, *vargs, **kwargs)
+        self.access_token = None
+        return logout_result
 
     def analytics(self):
         return self.get('analytics').content
@@ -1857,6 +1875,48 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
     def get_chart_csv(self, chart_id, *vargs, **kwargs):
         return self.get(f'dashboard/charts/{chart_id}/csv', session=self._session, *vargs, **kwargs)
 
+    def get_entity_view_csv(self, entity_type, fields: list, filters=None, excluded_adapters: list = None,
+                            field_filters: list = None, delimiter: str = None, max_rows: int = None,
+                            timeout: int = None):
+        logger.info('posting for csv')
+        result = self.post(f'{entity_type}/csv',
+                           session=self._session,
+                           data=json.dumps({'fields': fields,
+                                            'filter': filters,
+                                            'excluded_adapters': excluded_adapters,
+                                            'field_filters': field_filters,
+                                            'delimiter': delimiter,
+                                            'max_rows': max_rows}),
+                           timeout=timeout
+                           )
+        content = result.content
+        logger.info('got content for csv')
+        return content
+
+    def get_entity_csv_field(self, entity_type: str, entity_id: str, field_name: str, sort: str = None,
+                             desc: bool = False, search_text: str = '', timeout: int = None):
+        logger.info('posting for csv')
+        result = self.post(f'{entity_type}/{entity_id}/{field_name}/csv',
+                           session=self._session,
+                           data=json.dumps({'sort': sort, 'desc': ('1' if desc else '0'), 'search': search_text}),
+                           timeout=timeout
+                           )
+        content = result.content
+        logger.info('got content for csv')
+        return content
+
+    def get_current_schedule_settings(self, timeout):
+        current_settings = self.get('settings/plugins/system_scheduler/SystemSchedulerService',
+                                    session=self._session,
+                                    timeout=timeout)
+        return current_settings.json().get('config', None)
+
+    def save_system_interval_schedule_settings(self, settings, timeout):
+        return self.post('settings/plugins/system_scheduler/SystemSchedulerService',
+                         session=self._session,
+                         data=settings,
+                         timeout=timeout)
+
     def get_saved_views(self):
         saved_views_filter = filter_archived({
             'query_type': 'saved',
@@ -1883,6 +1943,23 @@ RUN cd /home/axonius && mkdir axonius-libs && mkdir axonius-libs/src && cd axoni
                     })
 
         return views_data
+
+    def get_certificate_csr_file(self):
+        return self.get('certificate/csr',
+                        session=self._session,
+                        verify=False)
+
+    def update_certificate_settings(self, settings):
+        return self.post('certificate/certificate_settings',
+                         session=self._session,
+                         verify=False,
+                         data=settings)
+
+    def update_core_settings(self, settings):
+        return self.post('settings/plugins/core/CoreService',
+                         session=self._session,
+                         data=settings,
+                         verify=False)
 
     def _upsert_report_config(self, name, report):
         new_report = {**report}

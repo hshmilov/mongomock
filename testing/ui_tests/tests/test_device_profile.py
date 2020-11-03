@@ -2,6 +2,7 @@ from json_file_adapter.service import FILE_NAME
 from services.adapters.csv_service import CsvService
 from test_credentials.test_aws_credentials_mock import aws_json_file_mock_devices
 from test_credentials.test_csv_credentials import CSV_FIELDS
+from test_credentials.test_gui_credentials import DEFAULT_USER
 from test_helpers.file_mock_credentials import FileForCredentialsMock
 from ui_tests.tests.ui_consts import LABEL_CLIENT_WITH_SAME_ID, CSV_PLUGIN_NAME, CSV_NAME
 from ui_tests.tests.ui_test_base import TestBase
@@ -47,8 +48,8 @@ class TestDeviceProfile(TestBase):
             tooltip_table = self.devices_page.get_entity_adapter_tooltip_table()
             self._assert_adapter_logos_device2(parent=tooltip_table)
             self.devices_page.unhover_entity_adapter_icon()
-
-            self.devices_page.assert_csv_field_match_ui_data(self.devices_page.generate_csv_field(
+            self.axonius_system.gui.login_user(DEFAULT_USER)
+            self.devices_page.assert_csv_field_match_ui_data(self.axonius_system.gui.get_entity_csv_field(
                 'devices',
                 self.driver.current_url.split('/')[-1],
                 self.devices_page.FIELD_NETWORK_INTERFACES_NAME

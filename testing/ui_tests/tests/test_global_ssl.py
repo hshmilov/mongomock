@@ -1,6 +1,4 @@
-import json
 import os
-import re
 import time
 
 import pytest
@@ -192,20 +190,9 @@ class TestGlobalSSL(TestBase):
         if initial:
             assert self.settings_page.get_modal_approve_button_status()
 
-    @staticmethod
-    def _get_csr_file():
-        resp = requests.post('https://gui.axonius.local/api/login',
-                             data=json.dumps({
-                                 'user_name': DEFAULT_USER['user_name'],
-                                 'password': DEFAULT_USER['password'],
-                                 'remember_me': False
-                             }),
-                             verify=False)
-        session = re.findall('session=(.*?);', resp.headers['Set-Cookie'])[0]
-        resp.close()
-        resp = requests.get('https://gui.axonius.local/api/certificate/csr',
-                            headers={'Cookie': 'session=' + session}, verify=False)
-        return resp.content
+    def _get_csr_file(self):
+        self.axonius_system.gui.login_user(DEFAULT_USER)
+        return self.axonius_system.gui.get_certificate_csr_file().content
 
     # pylint: disable=too-many-statements
     def test_csr(self):

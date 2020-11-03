@@ -4,14 +4,17 @@ import re
 import time
 from typing import List
 
-from flask import (request, session)
+from bson import ObjectId
+from flask import (request)
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+from flask_jwt_extended.exceptions import NoAuthorizationError
 
 from axonius.plugin_base import limiter, ratelimiting_settings
-from axonius.consts.gui_consts import (DASHBOARD_LIFECYCLE_ENDPOINT, CSRF_TOKEN_LENGTH, EXCLUDED_CSRF_ENDPOINTS,
-                                       SKIP_ACTIVITY_ARG, ACTIVITY_PARAMS_ARG, USERS_COLLECTION, ROLES_COLLECTION)
+from axonius.consts.gui_consts import (DASHBOARD_LIFECYCLE_ENDPOINT, SKIP_ACTIVITY_ARG, ACTIVITY_PARAMS_ARG,
+                                       USERS_COLLECTION, ROLES_COLLECTION, LAST_UPDATED_FIELD)
 from axonius.consts.metric_consts import ApiMetric, SystemMetric
 from axonius.logging.metric_helper import log_metric
-from axonius.plugin_base import PluginBase, return_error, random_string
+from axonius.plugin_base import PluginBase, return_error
 from axonius.utils.gui_helpers import (add_rule_custom_authentication, log_activity_rule)
 from axonius.utils.metric import remove_ids
 from axonius.utils.permissions_helper import (PermissionCategory,
@@ -19,8 +22,9 @@ from axonius.utils.permissions_helper import (PermissionCategory,
                                               PermissionValue,
                                               is_axonius_role)
 from gui.logic.filter_utils import filter_archived
+from gui.logic.db_helpers import translate_role_id_to_role, decode_datetime, \
+    translate_user_to_details
 from gui.logic.login_helper import get_user_for_session
-from gui.okta_login import OidcData
 
 # pylint: disable=keyword-arg-before-vararg,invalid-name,redefined-builtin,too-many-instance-attributes, no-member, protected-access
 
@@ -36,10 +40,6 @@ def session_connection(func,
                        support_internal_api_key=False):
     """
     Decorator stating that the view requires the user to be connected
-    And also to validate the csrf token and generate
-    new one before the actual desired action of the request happens
-    The CSRF token is being validated only to POST, PUT, DELETE, PATCH requests and only.
-    Any other GET request, failed CSRF Validation or success CSRF validation will cause new token generation.
 
     :param func: the method to decorate
     :param required_permission: The Permission required for this api call or none
@@ -60,12 +60,24 @@ def session_connection(func,
         if enforce_session and not is_api_key_internal:
             user = None
             if request.headers.get('api-key') and request.headers.get('api-secret'):
-                user = check_auth_api_key(request.headers['api-key'], request.headers['api-secret'])
-                if user:
-                    PluginBase.Instance.set_session_user(user)
+                current_user = check_auth_api_key(request.headers['api-key'], request.headers['api-secret'])
+                if current_user:
+                    PluginBase.Instance.set_current_user(current_user)
                     is_api_user = True
-            elif session and session.get('user'):
-                user = session['user']
+                    user = PluginBase.Instance.get_user
+            else:
+                try:
+                    verify_jwt_in_request()
+                except NoAuthorizationError:
+                    return return_error('Not logged in', 401)
+                jwt_user = get_jwt_identity()
+                user_info = translate_user_to_details(jwt_user.get('user_name'), jwt_user.get('source'))
+                role = translate_role_id_to_role(ObjectId(user_info.role_id))
+                user_last_updated = max([user_info.last_updated, role.last_updated])
+                if user_last_updated > decode_datetime(jwt_user.get(LAST_UPDATED_FIELD)):
+                    return return_error('Your user was updated and your token is invalid', 401)
+                PluginBase.Instance.set_current_user(jwt_user)
+                user = PluginBase.Instance.get_user
 
             if user is None:
                 return return_error('Not logged in', 401)
@@ -79,37 +91,6 @@ def session_connection(func,
                 # If continue on error is set, we return a new argument indicating whether or not we have access
                 if proceed_and_set_access:
                     kwargs['no_access'] = is_not_permitted
-                oidc_data: OidcData = session.get('oidc_data')
-                if oidc_data:
-                    try:
-                        oidc_data.beautify()
-                    except Exception:
-                        # TBD: Which exception exactly are raised
-                        session['user'] = None
-                        return return_error('Your OIDC sessions has expired', 401)
-
-        # We handle only submitted forms with session, therefore only POST, PUT, DELETE, PATCH are in our interest
-        # Dont check CSRF during frontend debug
-        if not (request.method in ('GET', 'HEAD', 'OPTIONS', 'TRACE')
-                or not (session and session.get('user')))\
-                and not is_api_user:
-            try:
-                csrf_token_header = request.headers.get('X-CSRF-TOKEN', None)
-                if 'csrf-token' in session:
-                    csrf_token = session['csrf-token']
-                    if csrf_token is not None and request.path.strip('/') not in EXCLUDED_CSRF_ENDPOINTS and \
-                            csrf_token != csrf_token_header:
-                        return return_error('Bad CSRF-Token', 403)
-                    # Success token comparison or first session after login, no token twice
-                    if session['user'] is not None and request.path.strip('/') not in EXCLUDED_CSRF_ENDPOINTS:
-                        session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
-                # This should never happen to authenticated user with active session...
-                else:
-                    return return_error('No CSRF-Token in session', 403)
-            except Exception as e:
-                logger.error(e)
-                session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
-                return return_error(str(e), non_prod_error=True, http_status=403)
 
         log_request(is_api_user)
         now = time.time()

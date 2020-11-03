@@ -92,9 +92,9 @@ export default {
   methods: {
     formatUsername(value) {
       if (value.source) {
-        return `${value.source}/${value.username}`;
+        return `${value.source}/${value.user_name}`;
       }
-      return value.username;
+      return value.user_name;
     },
     formatDetails(value, schema, title, dateFormat) {
       if (title != null) {

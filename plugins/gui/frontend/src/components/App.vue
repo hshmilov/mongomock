@@ -11,7 +11,7 @@
     <XMessageModal />
     <XTunnelConnectionModal />
     <!--Link for downloading files-->
-    <a id="file-auto-download-link"></a>
+    <a id="file-auto-download-link" />
     <!-- Nested navigation linking to routes defined in router/index.js -->
     <template v-if="userName && isSessionCookieValid()">
       <XSideBar
@@ -58,6 +58,8 @@ import {
 import _get from 'lodash/get';
 import CheckVersion from '@helpers/check_version';
 import { FETCH_FETURE_FLAGS } from '@store/modules/settings';
+import {GET_USER, LOGIN, REFRESH_ACCESS_TOKEN, REFRESH_TOKEN} from '@store/modules/auth';
+import {ACCESS_TOKEN, CURRENT_PATH, DEFAULT_TOKEN_REFRESH_TIMEOUT, SAML_TOKEN} from '@constants/session_utils';
 import { SHOW_TOASTER_MESSAGE } from '../store/mutations';
 import XTopBar from './networks/navigation/TopBar.vue';
 import XBottomBar from './networks/navigation/BottomBar.vue';
@@ -69,8 +71,6 @@ import XToast from './axons/popover/Toast.vue';
 import Icon from './axons/icons/Icon';
 import sessionTimeoutMixin from '../mixins/session_timeout';
 
-
-import { GET_USER } from '../store/modules/auth';
 import { IS_EXPIRED } from '../store/getters';
 
 import {
@@ -154,6 +154,7 @@ export default {
         return state.toast;
       },
       gettingStartedEnabled: (state) => _get(state, 'configuration.data.global.gettingStartedEnabled', false),
+      tokenRefreshTimeout: (state) => _get(state, 'constants.constants.access_expires', DEFAULT_TOKEN_REFRESH_TIMEOUT) * 1000,
     }),
     ...mapGetters({
       isExpired: IS_EXPIRED,
@@ -190,6 +191,19 @@ export default {
       },
     );
     this.handleExpiration();
+    if (!localStorage.getItem(ACCESS_TOKEN)) {
+      const queryString = window.location.search;
+      const urlParams = new URLSearchParams(queryString);
+      if (urlParams.has(SAML_TOKEN)) {
+        const targetPath = localStorage.getItem(CURRENT_PATH);
+        const samlToken = urlParams.get(SAML_TOKEN);
+        await this.login({ saml_token: samlToken });
+        const query = { ...this.$route.query };
+        delete query.saml_token;
+        localStorage.removeItem(CURRENT_PATH);
+        this.$router.replace({ path: targetPath });
+      }
+    }
     this.getUser();
   },
   methods: {
@@ -199,12 +213,14 @@ export default {
     ...mapActions({
       fetchGettingStartedData: GET_GETTING_STARTED_DATA,
       getUser: GET_USER,
+      login: LOGIN,
       fetchConfig: FETCH_SYSTEM_CONFIG,
       fetchExpired: FETCH_SYSTEM_EXPIRED,
       fetchConstants: FETCH_CONSTANTS,
       fetchFirstHistoricalDate: FETCH_FIRST_HISTORICAL_DATE,
       fetchAllowedDates: FETCH_ALLOWED_DATES,
       featchFeatureFlags: FETCH_FETURE_FLAGS,
+      refreshAccessToken: REFRESH_ACCESS_TOKEN,
     }),
     changeChecklistOpenState() {
       this.open = !this.open;
@@ -224,6 +240,7 @@ export default {
           });
         }
       }
+      this.refreshTokenRecursive();
     },
     notifyAccess(name) {
       this.blockedComponent = name;
@@ -236,6 +253,13 @@ export default {
       if (res.data && window.location.pathname !== '/administration') {
         this.$router.push('/');
       }
+    },
+    refreshTokenRecursive() {
+      this.refreshAccessToken().then(() => {
+        setTimeout(() => {
+          this.refreshTokenRecursive();
+        }, this.tokenRefreshTimeout);
+      });
     },
   },
 };

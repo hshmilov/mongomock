@@ -15,6 +15,7 @@ from axonius.utils.gui_helpers import get_connected_user_id
 from axonius.utils.mongo_administration import (get_collection_capped_size,
                                                 get_collection_stats)
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue
+from gui.logic.db_helpers import clean_user_cache
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.routes.account.account import Account
 from gui.routes.settings.audit.audit import Audit
@@ -320,6 +321,7 @@ class Settings(Audit, Plugins, GettingStarted, Users, Roles, Configuration, User
                 }
             }
         )
+        clean_user_cache()
         return self._jsonify_api_data(new_api_key, new_token)
 
     @gui_route_logged_in('system_default_columns', methods=['POST'],

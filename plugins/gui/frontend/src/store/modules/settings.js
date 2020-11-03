@@ -1,7 +1,7 @@
 /* eslint-disable no-param-reassign */
 import _get from 'lodash/get';
 import dayjs from 'dayjs';
-import { REQUEST_API } from '../actions';
+import { downloadFile, REQUEST_API } from '../actions';
 
 export const IN_TRIAL = 'IN_TRIAL';
 export const SHOULD_SHOW_CLOUD_COMPLIANCE = 'SHOULD_SHOW_CLOUD_COMPLIANCE';
@@ -23,6 +23,7 @@ export const SET_GLOBAL_SSL_SETTINGS = 'SET_GLOBAL_SSL_SETTINGS';
 export const SET_CERTIFICATE_SETTINGS = 'SET_CERTIFICATE_SETTINGS';
 export const CREATE_CSR = 'CREATE_CSR';
 export const DELETE_CSR = 'DELETE_CSR';
+export const DOWNLOAD_CSR = 'DOWNLOAD_CSR';
 export const IMPORT_SIGNED_CERTIFICATE = 'IMPORT_SIGNED_CERTIFICATE';
 export const RESET_CERTIFICATE_SETTINGS = 'RESET_CERTIFICATE_SETTINGS';
 
@@ -254,6 +255,14 @@ export const settings = {
       return dispatch(REQUEST_API, {
         rule: `certificate/reset_to_defaults`,
         method: 'POST',
+      });
+    },
+    [DOWNLOAD_CSR]({ dispatch }) {
+      return dispatch(REQUEST_API, {
+        rule: 'certificate/csr',
+        binary: true,
+      }).then((response) => {
+        downloadFile('csr', response, 'cert');
       });
     },
   },

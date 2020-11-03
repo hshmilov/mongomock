@@ -1,13 +1,14 @@
 import logging
 import json
+from datetime import datetime
 from flask import (jsonify)
 from bson import ObjectId
 
 from axonius.plugin_base import return_error
-from axonius.consts.gui_consts import PREDEFINED_FIELD, IS_AXONIUS_ROLE, ROLE_ID
+from axonius.consts.gui_consts import PREDEFINED_FIELD, IS_AXONIUS_ROLE, ROLE_ID, LAST_UPDATED_FIELD
 from axonius.utils.permissions_helper import PermissionCategory, PermissionAction, PermissionValue, \
     get_permissions_structure, serialize_db_permissions
-from gui.logic.db_helpers import beautify_db_entry
+from gui.logic.db_helpers import beautify_db_entry, clean_user_cache
 from gui.logic.filter_utils import filter_archived
 from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
 # pylint: disable=no-member,no-else-return
@@ -80,7 +81,7 @@ class Roles:
             return return_error('Name is required for saving a new role', 400)
 
         match_role = {
-            'name': role_data['name']
+            'name': role_data['name'],
         }
 
         existing_role = self._roles_collection.find_one(filter_archived(match_role))
@@ -89,7 +90,7 @@ class Roles:
             return return_error(f'Role by the name {role_data["name"]} already exists', 400)
         self.fill_all_permission_actions(role_data.get('permissions'),
                                          serialize_db_permissions(get_permissions_structure(False)))
-
+        role_data[LAST_UPDATED_FIELD] = datetime.now()
         result = self._roles_collection.replace_one(match_role, role_data, upsert=True)
         new_role_match = {
             '_id': ObjectId(result.upserted_id)
@@ -97,7 +98,7 @@ class Roles:
         if not result.upserted_id:
             new_role_match = match_role
         new_role = self._roles_collection.find_one(filter_archived(new_role_match))
-
+        clean_user_cache()
         return jsonify(beautify_db_entry(new_role))
 
     @staticmethod
@@ -145,10 +146,11 @@ class Roles:
             return return_error(f'Cannot edit {role_data["name"]} role', 400)
         self.fill_all_permission_actions(role_data.get('permissions'),
                                          serialize_db_permissions(get_permissions_structure(False)))
+        role_data[LAST_UPDATED_FIELD] = datetime.now()
         self._roles_collection.replace_one({'_id': ObjectId(role_id)}, role_data, upsert=True)
-        self._invalidate_sessions_for_role(role_id)
         role_data['_id'] = ObjectId(role_id)
         del role_data['uuid']
+        clean_user_cache()
         return jsonify(beautify_db_entry(role_data))
 
     @gui_route_logged_in('<role_id>', methods=['DELETE'])
@@ -178,9 +180,11 @@ class Roles:
 
         self._roles_collection.update_one(match_role, {
             '$set': {
-                'archived': True
+                'archived': True,
+                LAST_UPDATED_FIELD: datetime.utcnow()
             }
         })
+        clean_user_cache()
         return json.dumps({
             'name': existing_role.get('name', '')
         })

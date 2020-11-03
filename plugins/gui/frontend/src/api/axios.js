@@ -1,4 +1,5 @@
 import axios from 'axios';
+import {ACCESS_TOKEN, REFRESH_TOKEN} from "@constants/session_utils";
 
 /*
   A main axios client instance initialization for use in all of the Vue code
@@ -7,7 +8,6 @@ import axios from 'axios';
 */
 
 let host = '';
-const excludedUrls = ['login', 'signup', 'login/ldap', 'login/saml', 'settings/users/tokens/reset', 'users', 'devices'];
 if (process.env.NODE_ENV === 'development') {
   // as defined in ports.py for gui service
   host = 'https://127.0.0.1:4433';
@@ -26,12 +26,13 @@ export default axiosClient;
 export let serverTime = 0;
 
 axiosClient.interceptors.request.use((config) => {
-  if (['post', 'put', 'delete', 'patch'].includes(config.method) && !excludedUrls.includes(config.url)) {
-    return axiosClient.get('csrf').then((response) => {
-      // eslint-disable-next-line no-param-reassign
-      config.headers['X-CSRF-Token'] = response.data;
-      return config;
-    });
+  let token = localStorage.getItem(ACCESS_TOKEN);
+  if (config.url === 'token/refresh') {
+    token = localStorage.getItem(REFRESH_TOKEN);
+  }
+  if (token) {
+    // eslint-disable-next-line no-param-reassign
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 }, (error) => Promise.reject(error));

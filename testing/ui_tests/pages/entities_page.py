@@ -5,13 +5,11 @@ import time
 import typing
 from datetime import datetime
 
-import requests
 from retrying import retry
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.remote.webelement import WebElement
 
-from axonius.consts.plugin_consts import GUI_PLUGIN_NAME, AXONIUS_DNS_SUFFIX
 from axonius.utils.datetime import parse_date
 from axonius.utils.parsing import normalize_timezone_date
 from axonius.utils.wait import wait_until
@@ -1382,56 +1380,6 @@ class EntitiesPage(Page):
         self.click_export_csv(False)
         self.wait_for_export_csv_button_visible()
 
-    def get_csrf_token(self) -> str:
-        session = requests.Session()
-        cookies = self.driver.get_cookies()
-        for cookie in cookies:
-            session.cookies.set(cookie['name'], cookie['value'])
-        resp = session.get(f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/csrf')
-        csrf_token = resp.text
-        resp.close()
-        return csrf_token
-
-    def generate_csv(self, entity_type, fields: list, filters=None, excluded_adapters: list = None,
-                     field_filters: list = None, delimiter: str = None, max_rows: int = None):
-        session = requests.Session()
-        cookies = self.driver.get_cookies()
-        for cookie in cookies:
-            session.cookies.set(cookie['name'], cookie['value'])
-        session.headers['X-CSRF-Token'] = self.get_csrf_token()
-        logger.info('posting for csv')
-        result = session.post(f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/{entity_type}/csv',
-                              json={'fields': fields,
-                                    'filter': filters,
-                                    'excluded_adapters': excluded_adapters,
-                                    'field_filters': field_filters,
-                                    'delimiter': delimiter,
-                                    'max_rows': max_rows},
-                              timeout=CSV_TIMEOUT
-                              )
-        content = result.content
-        logger.info('got content for csv')
-        session.close()
-        return content
-
-    def generate_csv_field(self, entity_type: str, entity_id: str, field_name: str, sort: str = None,
-                           desc: bool = False, search_text: str = ''):
-        session = requests.Session()
-        cookies = self.driver.get_cookies()
-        for cookie in cookies:
-            session.cookies.set(cookie['name'], cookie['value'])
-        session.headers['X-CSRF-Token'] = self.get_csrf_token()
-        logger.info('posting for csv')
-        result = session.post(
-            f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/{entity_type}/{entity_id}/{field_name}/csv',
-            json={'sort': sort, 'desc': ('1' if desc else '0'), 'search': search_text},
-            timeout=CSV_TIMEOUT
-        )
-        content = result.content
-        logger.info('got content for csv')
-        session.close()
-        return content
-
     def assert_csv_match_ui_data(self, result, ui_data=None, ui_headers=None, sort_columns=True, max_rows=MAX_ROWS_LEN):
         self.assert_csv_match_ui_data_with_content(result, max_rows, ui_data, ui_headers, sort_columns)
 
@@ -1848,6 +1796,7 @@ class EntitiesPage(Page):
     def open_tag_dialog(self):
         self.open_actions_menu()
         self.click_actions_tag_button()
+        self.wait_for_element_present_by_css(self.TAG_MODAL_CSS)
 
     def add_new_tags(self, tags, number=1):
         self.open_tag_dialog()
@@ -1915,9 +1864,10 @@ class EntitiesPage(Page):
 
     def remove_tag(self, text):
         self.open_tag_dialog()
-        self.find_element_by_text(text).click()
+        self.wait_for_element_present_by_css(self.TAG_CHECKBOX_CSS).click()
         self.click_tag_save_button()
         self.wait_for_success_tagging_message()
+        self.wait_for_table_to_load()
 
     def get_first_tag_text(self):
         return self.get_first_row_tags().splitlines()[0]

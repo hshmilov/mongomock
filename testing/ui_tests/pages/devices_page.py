@@ -6,8 +6,9 @@ from selenium.common.exceptions import NoSuchElementException
 
 from axonius.consts.gui_consts import ADAPTER_CONNECTIONS_FIELD, ActionCategory, Action
 from axonius.utils.wait import wait_until
+from test_credentials.test_gui_credentials import DEFAULT_USER
 
-from ui_tests.pages.entities_page import EntitiesPage
+from ui_tests.pages.entities_page import EntitiesPage, CSV_TIMEOUT
 from ui_tests.tests.ui_consts import (CSV_ADAPTER_FILTER, AWS_ADAPTER_FILTER, COMP_DAYS, COMP_NEXT_DAYS, LOGIC_AND,
                                       COMP_EQUALS, COMP_IN)
 
@@ -295,12 +296,14 @@ class DevicesPage(EntitiesPage):
 
     def assert_csv_field_with_search(self, search_text):
         self.fill_enter_table_search(search_text)
-        self.assert_csv_field_match_ui_data(self.generate_csv_field(
+        self.test_base.axonius_system.gui.login_user(DEFAULT_USER)
+        self.assert_csv_field_match_ui_data(self.test_base.axonius_system.gui.get_entity_csv_field(
             'devices',
             self.driver.current_url.split('/')[-1],
             self.FIELD_NETWORK_INTERFACES_NAME,
             self.FIELD_MAC_NAME,
-            search_text=search_text
+            search_text=search_text,
+            timeout=CSV_TIMEOUT
         ))
 
     def check_search_text_result(self, text):

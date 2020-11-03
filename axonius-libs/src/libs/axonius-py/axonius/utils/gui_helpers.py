@@ -19,7 +19,7 @@ import pymongo
 from pymongo.errors import ExecutionTimeout
 
 from bson import ObjectId
-from flask import request, session, g, Response
+from flask import request, g, Response
 
 from axonius.consts.adapter_consts import PREFERRED_FIELDS_PREFIX
 from axonius.consts.gui_consts import SPECIFIC_DATA, ADAPTERS_DATA, JSONIFY_DEFAULT_TIME_FORMAT, MAX_SORTED_FIELDS, \
@@ -689,10 +689,11 @@ def get_connected_user_id() -> ObjectId:
     """
     if 'api_request_user' in g:
         return g.api_request_user['_id']
-    connected_user = session.get('user')
+    # pylint: disable=no-member
+    connected_user = PluginBase.Instance.get_user
     if not connected_user:
         raise SessionInvalid
-    return connected_user['_id']
+    return ObjectId(connected_user['_id'])
 
 
 def get_historized_filter(entities_filter, history_date: datetime):

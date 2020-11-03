@@ -11,6 +11,7 @@ from axonius.consts.system_consts import METADATA_PATH, NODE_ID_ABSOLUTE_PATH
 class TestAbout(TestBase):
 
     def _restart_gui(self):
+        self.login_page.logout()
         gui_service = self.axonius_system.gui
         gui_service.take_process_ownership()
         gui_service.stop(should_delete=False)

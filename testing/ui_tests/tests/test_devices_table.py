@@ -3,17 +3,18 @@ import re
 import pytest
 from selenium.common.exceptions import NoSuchElementException
 
-from services.adapters.aws_service import AwsService
 from services.adapters import stresstest_service
+from services.adapters.aws_service import AwsService
 from services.adapters.wmi_service import WmiService
+from test_credentials.test_aws_credentials import client_details
+from test_credentials.test_crowd_strike_mock_credentials import crowd_strike_json_file_mock_devices
+from test_credentials.test_gui_credentials import DEFAULT_USER
+from ui_tests.pages.entities_page import CSV_TIMEOUT
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from ui_tests.tests.ui_consts import (MANAGED_DEVICES_QUERY_NAME,
                                       STRESSTEST_ADAPTER,
                                       STRESSTEST_ADAPTER_NAME,
                                       AD_ADAPTER_NAME, AWS_ADAPTER_NAME, AWS_ADAPTER, COMP_EXISTS)
-
-from test_credentials.test_crowd_strike_mock_credentials import crowd_strike_json_file_mock_devices
-from test_credentials.test_aws_credentials import client_details
 
 
 class TestDevicesTable(TestEntitiesTable):
@@ -28,17 +29,19 @@ class TestDevicesTable(TestEntitiesTable):
 
         # filter the ui to fit the QUERY_FILTER_DEVICES of the csv
         self.devices_page.query_hostname_contains('w')
-
-        result = self.devices_page.generate_csv('devices',
-                                                self.QUERY_FIELDS,
-                                                self.QUERY_FILTER_DEVICES)
+        self.axonius_system.gui.login_user(DEFAULT_USER)
+        result = self.axonius_system.gui.get_entity_view_csv('devices',
+                                                             self.QUERY_FIELDS,
+                                                             self.QUERY_FILTER_DEVICES,
+                                                             timeout=CSV_TIMEOUT)
         self.devices_page.assert_csv_match_ui_data(result)
 
         # Do the same but this time with row limitation
-        result = self.devices_page.generate_csv('devices',
-                                                self.QUERY_FIELDS,
-                                                self.QUERY_FILTER_DEVICES,
-                                                max_rows=1)
+        result = self.axonius_system.gui.get_entity_view_csv('devices',
+                                                             self.QUERY_FIELDS,
+                                                             self.QUERY_FILTER_DEVICES,
+                                                             max_rows=1,
+                                                             timeout=CSV_TIMEOUT)
         self.devices_page.assert_csv_match_ui_data(result, max_rows=1)
 
     @pytest.mark.skip('AX-8062')
@@ -56,9 +59,10 @@ class TestDevicesTable(TestEntitiesTable):
             self.devices_page.click_row()
             self.devices_page.click_general_tab()
 
+            self.axonius_system.gui.login_user(DEFAULT_USER)
             # Test export csv of Network Interfaces
             self.devices_page.click_tab(self.devices_page.FIELD_NETWORK_INTERFACES)
-            self.devices_page.assert_csv_field_match_ui_data(self.devices_page.generate_csv_field(
+            self.devices_page.assert_csv_field_match_ui_data(self.axonius_system.gui.get_entity_csv_field(
                 'devices',
                 self.driver.current_url.split('/')[-1],
                 self.devices_page.FIELD_NETWORK_INTERFACES_NAME,
@@ -66,7 +70,7 @@ class TestDevicesTable(TestEntitiesTable):
             ))
             # Test with sort of 'array' field
             self.devices_page.click_sort_column(self.devices_page.FIELD_IPS)
-            self.devices_page.assert_csv_field_match_ui_data(self.devices_page.generate_csv_field(
+            self.devices_page.assert_csv_field_match_ui_data(self.axonius_system.gui.get_entity_csv_field(
                 'devices',
                 self.driver.current_url.split('/')[-1],
                 self.devices_page.FIELD_NETWORK_INTERFACES_NAME,
@@ -76,7 +80,7 @@ class TestDevicesTable(TestEntitiesTable):
 
             # Test export csv of Users
             self.devices_page.click_tab(self.devices_page.FIELD_USERS)
-            self.devices_page.assert_csv_field_match_ui_data(self.devices_page.generate_csv_field(
+            self.devices_page.assert_csv_field_match_ui_data(self.axonius_system.gui.get_entity_csv_field(
                 'devices',
                 self.driver.current_url.split('/')[-1],
                 self.devices_page.FIELD_USERS_NAME,
@@ -84,7 +88,7 @@ class TestDevicesTable(TestEntitiesTable):
             ))
             # Test with sort of 'datetime' field
             self.devices_page.click_sort_column(self.devices_page.FIELD_USERS_LAST_USE)
-            self.devices_page.assert_csv_field_match_ui_data(self.devices_page.generate_csv_field(
+            self.devices_page.assert_csv_field_match_ui_data(self.axonius_system.gui.get_entity_csv_field(
                 'devices',
                 self.driver.current_url.split('/')[-1],
                 self.devices_page.FIELD_USERS_NAME,
@@ -93,7 +97,7 @@ class TestDevicesTable(TestEntitiesTable):
             ))
             # Test with sort of 'bool' field
             self.devices_page.click_sort_column(self.devices_page.FIELD_USERS_LOCAL)
-            self.devices_page.assert_csv_field_match_ui_data(self.devices_page.generate_csv_field(
+            self.devices_page.assert_csv_field_match_ui_data(self.axonius_system.gui.get_entity_csv_field(
                 'devices',
                 self.driver.current_url.split('/')[-1],
                 self.devices_page.FIELD_USERS_NAME,

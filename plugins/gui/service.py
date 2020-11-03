@@ -1,4 +1,5 @@
 # pylint: disable=too-many-lines
+import configparser
 import json
 import logging
 import os
@@ -7,34 +8,37 @@ import secrets
 import subprocess
 import threading
 import time
-import configparser
-
 from datetime import datetime, timedelta
 from distutils.version import StrictVersion
 from multiprocessing.pool import ThreadPool
-from typing import (List, Dict)
 from pathlib import Path
-from bson import ObjectId
-from bson.json_util import dumps
+from typing import (Dict)
 import bcrypt
-import requests
 import cachetools
-
 import pymongo
+import requests
 from apscheduler.executors.pool import \
     ThreadPoolExecutor as ThreadPoolExecutorApscheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from bson import ObjectId
+from bson.json_util import dumps
 from flask import session, g
+try:
+    from flask import _app_ctx_stack as ctx_stack
+except ImportError:  # pragma: no cover
+    from flask import _request_ctx_stack as ctx_stack
 # pylint: disable=import-error,no-name-in-module
 
-from axonius.consts.core_consts import CORE_CONFIG_NAME
-from axonius.consts.system_consts import AXONIUS_SAAS_VAR_NAME
-from axonius.logging.audit_helper import AuditCategory, AuditAction, AuditType
+from flask_jwt_extended import JWTManager, get_raw_jwt
+
+from axonius.redis.redis_client import get_db_client
 from axonius.saas.input_params import read_saas_input_params
 from axonius.saas.saas_secrets_manager import SaasSecretsManager
 from axonius.utils.hash import user_password_to_pbkdf2_hmac, is_pbkdf2_enable_for_user_account
 from axonius.utils.revving_cache import rev_cached
 from axonius.background_scheduler import LoggedBackgroundScheduler
+from axonius.consts.core_consts import CORE_CONFIG_NAME
+from axonius.consts.system_consts import AXONIUS_SAAS_VAR_NAME
 from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        ROLES_COLLECTION,
                                        TEMP_MAINTENANCE_THREAD_ID,
@@ -54,8 +58,10 @@ from axonius.consts.gui_consts import (ENCRYPTION_KEY_PATH,
                                        LATEST_VERSION_URL, INSTALLED_VERISON_KEY, FeatureFlagsNames,
                                        IDENTITY_PROVIDERS_CONFIG, NO_ACCESS_ROLE,
                                        DEFAULT_ROLE_ID, ROLE_ASSIGNMENT_RULES, IS_API_USER, Signup,
-                                       PREDEFINED_SAVED_QUERY_REF_REGEX, UPDATED_BY_FIELD, AdvancedGUINames,
-                                       ADVANCED_GUI_ADDITIONAL_SETTINGS_FILE, FEATURE_FLAGS_CONFIG)
+                                       PREDEFINED_SAVED_QUERY_REF_REGEX, UPDATED_BY_FIELD,
+                                       FEATURE_FLAGS_CONFIG, JWT_SECRET_KEY, LAST_UPDATED_FIELD, ACCESS_EXPIRES,
+                                       REFRESH_EXPIRES, ENCRYPTED_SECRET_FILED, AdvancedGUINames,
+                                       ADVANCED_GUI_ADDITIONAL_SETTINGS_FILE)
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           ADMIN_USER_NAME,
@@ -68,9 +74,10 @@ from axonius.consts.plugin_consts import (AXONIUS_USER_NAME,
                                           PASSWORD_BRUTE_FORCE_PROTECTION, PASSWORD_PROTECTION_ALLOWED_RETRIES,
                                           PASSWORD_PROTECTION_LOCKOUT_MIN, PASSWORD_PROTECTION_BY_IP,
                                           RESET_PASSWORD_SETTINGS, RESET_PASSWORD_LINK_EXPIRATION,
-                                          AXONIUS_SETTINGS_PATH, LOGOS_SETTINGS, CUSTOM_LOGO)
+                                          AXONIUS_SETTINGS_PATH, LOGOS_SETTINGS, CUSTOM_LOGO, JWT_CONF_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.logging.audit_helper import AuditCategory, AuditAction, AuditType
 from axonius.logging.metric_helper import log_metric
 from axonius.mixins.configurable import Configurable
 from axonius.mixins.triggerable import (RunIdentifier,
@@ -83,7 +90,7 @@ from axonius.utils.gui_helpers import (get_entities_count, get_connected_user_id
 from axonius.utils.permissions_helper import (get_admin_permissions, get_viewer_permissions,
                                               is_role_admin, is_axonius_role,
                                               PermissionCategory, PermissionAction, get_permissions_structure,
-                                              serialize_db_permissions)
+                                              serialize_db_permissions, deserialize_db_permissions)
 from axonius.utils.proxy_utils import to_proxy_string
 from axonius.utils.ssl import MUTUAL_TLS_CA_PATH, \
     MUTUAL_TLS_CONFIG_FILE
@@ -93,6 +100,7 @@ from gui.cached_session import CachedSessionInterface
 from gui.feature_flags import FeatureFlags
 from gui.identity_providers import IdentityProviders
 from gui.logic.dashboard_data import (adapter_data)
+from gui.logic.db_helpers import translate_role_id_to_role, translate_user_to_details
 from gui.logic.login_helper import has_customer_login_happened
 from gui.logic.filter_utils import filter_archived
 from gui.routes.app_routes import AppRoutes
@@ -143,7 +151,8 @@ class GuiService(Triggerable,
                 'source': 'internal',
                 'api_key': secrets.token_urlsafe(),
                 'api_secret': secrets.token_urlsafe(),
-                'password_last_updated': datetime.utcnow()}
+                'password_last_updated': datetime.utcnow(),
+                LAST_UPDATED_FIELD: datetime.utcnow()}
 
     def __create_user_tokens_index(self):
         # add ttl index to user tokens collection if not exist, prior to our logic the ttl value
@@ -230,6 +239,31 @@ class GuiService(Triggerable,
                          **kwargs)
         self.__all_sessions = {}
         self.wsgi_app.config['SESSION_COOKIE_SECURE'] = True
+
+        # Configure application to store JWTs in cookies. Whenever you make
+        # a request to a protected endpoint, you will need to send in the
+        # access or refresh JWT via a cookie.
+        self.wsgi_app.config['JWT_TOKEN_LOCATION'] = ['headers']
+
+        self.wsgi_app.config['JWT_ACCESS_TOKEN_EXPIRES'] = ACCESS_EXPIRES
+        self.wsgi_app.config['JWT_REFRESH_TOKEN_EXPIRES'] = REFRESH_EXPIRES
+        self.wsgi_app.config['JWT_BLACKLIST_ENABLED'] = True
+        self.wsgi_app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = ['access', 'refresh']
+        self.jwt_store = get_db_client(db=1)
+        self.jwt_conf_path = AXONIUS_SETTINGS_PATH / JWT_CONF_NAME
+        self.jwt_secret_key = ''
+        if not self.system_collection.count_documents({'type': JWT_SECRET_KEY}):
+            self.jwt_secret_key = secrets.token_urlsafe()
+            encrypted_secret = self.db_encrypt(self.jwt_secret_key)
+            self.system_collection.insert_one({'type': JWT_SECRET_KEY, ENCRYPTED_SECRET_FILED: encrypted_secret})
+        else:
+            encrypted_secret = self.system_collection.find_one({'type': JWT_SECRET_KEY}).get(ENCRYPTED_SECRET_FILED)
+            self.jwt_secret_key = self.db_decrypt(encrypted_secret)
+        # Set the secret key to sign the JWTs with
+        self.wsgi_app.config['JWT_SECRET_KEY'] = self.jwt_secret_key
+        self.jwt = JWTManager(self.wsgi_app)
+        # self.jwt.user_claims_loader(lambda user: {'user_name': user.get('user_name'), 'source': user.get('source')})
+        self.jwt.token_in_blacklist_loader(self.check_if_token_is_revoked)
         self.wsgi_app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
         self.wsgi_app.session_interface = CachedSessionInterface(self.__all_sessions)
         self.wsgi_app.kvsession_store = self.__all_sessions
@@ -328,7 +362,8 @@ class GuiService(Triggerable,
                 'name': PREDEFINED_ROLE_OWNER,
                 PREDEFINED_FIELD: True,
                 'permissions': get_admin_permissions(),
-                IS_AXONIUS_ROLE: True
+                IS_AXONIUS_ROLE: True,
+                LAST_UPDATED_FIELD: datetime.utcnow()
             })
         if self._roles_collection.find_one({'name': PREDEFINED_ROLE_OWNER_RO}) is None:
             # Axonius Read Only role doesn't exists - let's create it
@@ -339,20 +374,25 @@ class GuiService(Triggerable,
                 'name': PREDEFINED_ROLE_OWNER_RO,
                 PREDEFINED_FIELD: True,
                 'permissions': axonius_ro_permissions,
-                IS_AXONIUS_ROLE: True
+                IS_AXONIUS_ROLE: True,
+                LAST_UPDATED_FIELD: datetime.utcnow()
             })
         if self._roles_collection.find_one({'name': PREDEFINED_ROLE_ADMIN}) is None:
             # Admin role doesn't exists - let's create it
             self._roles_collection.insert_one({
                 'name': PREDEFINED_ROLE_ADMIN,
                 PREDEFINED_FIELD: True,
-                'permissions': get_admin_permissions()
+                'permissions': get_admin_permissions(),
+                LAST_UPDATED_FIELD: datetime.utcnow()
 
             })
         if self._roles_collection.find_one({'name': PREDEFINED_ROLE_VIEWER}) is None:
             # Viewer role doesn't exists - let's create it
             self._roles_collection.insert_one({
-                'name': PREDEFINED_ROLE_VIEWER, PREDEFINED_FIELD: True, 'permissions': get_viewer_permissions()
+                'name': PREDEFINED_ROLE_VIEWER,
+                PREDEFINED_FIELD: True,
+                'permissions': get_viewer_permissions(),
+                LAST_UPDATED_FIELD: datetime.utcnow()
             })
         if self._roles_collection.find_one({'name': PREDEFINED_ROLE_RESTRICTED}) is None:
             # Restricted role doesn't exists - let's create it. Everything restricted except the Dashboard.
@@ -361,7 +401,8 @@ class GuiService(Triggerable,
             # No access role doesn't exists - let's create it. Everything restricted.
             self._roles_collection.insert_one({
                 'name': NO_ACCESS_ROLE, PREDEFINED_FIELD: True,
-                'permissions': serialize_db_permissions(get_permissions_structure(False))
+                'permissions': serialize_db_permissions(get_permissions_structure(False)),
+                LAST_UPDATED_FIELD: datetime.utcnow()
             })
 
     def _delayed_initialization(self):
@@ -1145,37 +1186,30 @@ class GuiService(Triggerable,
             return self.generate_new_reports_offline()
         raise RuntimeError(f'GUI was called with a wrong job name {job_name}')
 
-    def _invalidate_sessions(self, user_ids: List[str] = None):
+    def _invalidate_sessions(self):
         """
         Invalidate all sessions for this user except the current one
         """
-        user_ids_set = set(user_ids) if user_ids else {}
-        for k, v in self.__all_sessions.items():
-            # Pylint is angry because it thinks session is a dict, which is true for HOT=True
-            # pylint: disable=no-member
-            if k == session.sid:
-                continue
-            # pylint: enable=no-member
-            d = v.get('d')
-            if not d:
-                continue
-            user = d.get('user')
-            if user and (not user_ids or str(d['user'].get('_id')) in user_ids_set):
-                d['user'] = None
+        current_jti = get_raw_jwt()['jti']
+        all_jtis = self.jwt_store.keys('*')
+        for jti in all_jtis:
+            if jti != current_jti:
+                self.jwt_store.set(jti, 'true', ACCESS_EXPIRES * 1.2)
 
-    def _invalidate_sessions_for_role(self, role_id: str = None):
-        """
-        Invalidate all sessions for all the users with this role
-        """
-        users = self._users_collection.find({'role_id': ObjectId(role_id)})
-        user_ids = {user.get('_id') for user in users}
-        for k, v in self.__all_sessions.items():
-            d = v.get('d')
-            if not d:
-                continue
-            user = d.get('user')
-            if user and (not role_id or d['user'].get('_id') in user_ids):
-                d['user'] = None
+    @staticmethod
+    def set_current_user(identity):
+        current_user = None
+        if identity:
+            user = translate_user_to_details(identity.get('user_name'), identity.get('source'))
+            role = translate_role_id_to_role(ObjectId(user.role_id)) if user else None
+            if user and role:
+                current_user = json.loads(user.to_json())
+                current_user['permissions'] = deserialize_db_permissions(role.permissions)
+                current_user[IS_AXONIUS_ROLE] = role.is_axonius_role
+                current_user['role_name'] = role.name
+                current_user[PREDEFINED_FIELD] = role.predefined
+                current_user[LAST_UPDATED_FIELD] = max(user.last_updated, role.last_updated)
+        ctx_stack.top.axonius_current_user = current_user
 
     @staticmethod
     def set_session_user(user):
@@ -1183,25 +1217,25 @@ class GuiService(Triggerable,
 
     @property
     def get_user(self):
-        return session.get('user', {}) or {}
+        return getattr(ctx_stack.top, 'axonius_current_user', {})
 
     def is_admin_user(self):
-        return is_role_admin(self.get_user)
+        return self.get_user and is_role_admin(self.get_user)
 
     def is_api_user(self):
-        return self.get_user.get(IS_API_USER)
+        return self.get_user and self.get_user.get(IS_API_USER)
 
     def is_axonius_user(self):
-        return is_axonius_role(self.get_user)
+        return self.get_user and is_axonius_role(self.get_user)
 
     def get_user_permissions(self):
-        permissions = session.get('user', {}).get('permissions', {})
+        permissions = self.get_user.get('permissions', {})
         if not permissions and g.api_user_permissions:
             permissions = g.api_user_permissions
         return permissions
 
     def get_user_role_id(self) -> ObjectId:
-        return session.get('user', {}).get('role_id', '')
+        return self.get_user.get('role_id', '')
 
     @property
     def saml_settings_file_path(self):

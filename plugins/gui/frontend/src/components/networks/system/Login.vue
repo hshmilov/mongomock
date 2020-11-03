@@ -53,10 +53,12 @@
 import { mapState, mapActions } from 'vuex';
 import _get from 'lodash/get';
 import { GET_SIGNUP, GET_LOGIN_OPTIONS } from '@store/modules/auth';
+import { CURRENT_PATH } from '@constants/session_utils';
 import XSignupForm from './SignupForm.vue';
 import XLoginForm from './LoginForm.vue';
 import XLoginOptions from './LoginOptions.vue';
 import XResetPasswordForm from './ResetPasswordForm.vue';
+
 
 export default {
   name: 'XLogin',
@@ -130,7 +132,8 @@ export default {
       return this.userError.includes('permissions');
     },
     redirectToSamlLogin() {
-      window.location.href = `/api/login/saml?path=${this.$route.path}`;
+      localStorage.setItem(CURRENT_PATH, this.$route.path);
+      window.location.href = '/api/login/saml';
     },
   },
 };

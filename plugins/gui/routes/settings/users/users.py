@@ -10,7 +10,7 @@ from flask import jsonify
 from axonius.consts.gui_consts import (IS_AXONIUS_ROLE,
                                        PREDEFINED_ROLE_RESTRICTED,
                                        UNCHANGED_MAGIC_FOR_GUI, ROLE_ID, IGNORE_ROLE_ASSIGNMENT_RULES, PREDEFINED_FIELD,
-                                       DASHBOARD_SPACE_PERSONAL, DASHBOARD_SPACE_TYPE_PERSONAL)
+                                       DASHBOARD_SPACE_PERSONAL, DASHBOARD_SPACE_TYPE_PERSONAL, LAST_UPDATED_FIELD)
 from axonius.consts.plugin_consts import (ADMIN_USER_NAME,
                                           PASSWORD_LENGTH_SETTING,
                                           PASSWORD_MIN_LOWERCASE,
@@ -25,7 +25,7 @@ from axonius.utils.hash import user_password_handler
 from axonius.utils.permissions_helper import (PermissionAction,
                                               PermissionCategory,
                                               PermissionValue, get_restricted_permissions)
-from gui.logic.db_helpers import translate_user_id_to_details
+from gui.logic.db_helpers import clean_user_cache
 from gui.logic.filter_utils import filter_archived
 from gui.logic.routing_helper import gui_route_logged_in, gui_section_add_rules
 from gui.logic.users_helper import beautify_user_entry
@@ -143,12 +143,14 @@ class Users:
             salt=salt,
             role_id=ObjectId(role_id)
         )
+        clean_user_cache()
         return jsonify(beautify_user_entry(user))
 
     def _create_restricted_role(self):
         insert_result = self._roles_collection.insert_one({
             'name': PREDEFINED_ROLE_RESTRICTED, PREDEFINED_FIELD: True,
-            'permissions': get_restricted_permissions()
+            'permissions': get_restricted_permissions(),
+            LAST_UPDATED_FIELD: datetime.utcnow()
         })
         return insert_result.inserted_id
 
@@ -193,7 +195,7 @@ class Users:
                 'api_key': secrets.token_urlsafe(),
                 'api_secret': secrets.token_urlsafe(),
                 'email': email,
-                'last_updated': datetime.now(),
+                LAST_UPDATED_FIELD: datetime.utcnow(),
                 'password_last_updated': datetime.utcnow(),
                 IGNORE_ROLE_ASSIGNMENT_RULES: False,
             }
@@ -218,6 +220,7 @@ class Users:
                                               'add_external_user',
                                               {USER_NAME: username, 'source': source.upper()},
                                               AuditType.Info)
+                clean_user_cache()
             except pymongo.errors.DuplicateKeyError:
                 logger.warning(f'Duplicate key error on {username}:{source}', exc_info=True)
             user = self._users_collection.find_one(filter_archived(match_user))
@@ -227,7 +230,15 @@ class Users:
                 and change_role_on_every_login\
                 and assignment_rule_match_found:
             user[ROLE_ID] = ObjectId(role_id)
-            self._users_collection.update_one(match_user, {'$set': {ROLE_ID: user[ROLE_ID]}})
+            user[LAST_UPDATED_FIELD] = datetime.utcnow()
+            self._users_collection.update_one(match_user,
+                                              {
+                                                  '$set': {
+                                                      ROLE_ID: user[ROLE_ID],
+                                                      LAST_UPDATED_FIELD: user[LAST_UPDATED_FIELD]
+                                                  }
+                                              })
+            clean_user_cache()
         return user
 
     def _add_personal_space(self, user_id):
@@ -309,7 +320,7 @@ class Users:
 
         new_user_info = {
             ROLE_ID: ObjectId(role_id),
-            'last_updated': datetime.now()
+            LAST_UPDATED_FIELD: datetime.utcnow()
         }
 
         if source == 'internal':
@@ -340,13 +351,11 @@ class Users:
         }, return_document=pymongo.ReturnDocument.AFTER)
         if not updated_user:
             return '', 400
-        translate_user_id_to_details.clean_cache()
 
         self._audit_assign_user_role(user_name=user.get(USER_NAME, ''),
                                      current_role_id=user.get(ROLE_ID),
                                      update_role_id=updated_user.get(ROLE_ID))
-
-        self._invalidate_sessions([user_id])
+        clean_user_cache()
         return jsonify({'user': beautify_user_entry(updated_user), 'uuid': user_id}), 200
 
     @gui_route_logged_in('<user_id>', methods=['DELETE'], activity_params=[USER_NAME])
@@ -357,11 +366,12 @@ class Users:
             path: /api/settings/users/<user_id>
         """
         user = self._users_collection.find_one_and_update({'_id': ObjectId(user_id)},
-                                                          {'$set': {'archived': True}},
+                                                          {'$set': {
+                                                              'archived': True,
+                                                              LAST_UPDATED_FIELD: datetime.utcnow()
+                                                          }},
                                                           {USER_NAME: 1})
-        self._invalidate_sessions([user_id])
-
-        translate_user_id_to_details.clean_cache()
+        clean_user_cache()
         return jsonify({USER_NAME: user.get(USER_NAME, '')})
 
     def _audit_assign_user_role(self, user_name: str, current_role_id: ObjectId, update_role_id: ObjectId):

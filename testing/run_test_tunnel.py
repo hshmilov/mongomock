@@ -33,7 +33,7 @@ sudo systemctl start docker &&
 sudo systemctl enable docker
 '''
 
-TUNNEL_INSTALL_CMD = 'curl -b session={session} {url}/api/tunnel/download_agent | sudo /bin/bash'
+TUNNEL_INSTALL_CMD = 'curl -H ''Authorization: Bearer {access_token}'' {url}/api/tunnel/download_agent | sudo /bin/bash'
 MAX_503_RETRIES = 40
 TESTS_NAMES = [
     'tests.test_tunnel.TestTunnel.test_tunnel_connected',
@@ -229,17 +229,17 @@ def main(ami_id=None):
         TC.print('Getting session id from stack machine')
         resp = requests.post(f'{url}/api/login',
                              data='{"user_name":"admin2","password":"kjhsjdhbfnlkih43598sdfnsdfjkh","remember_me":false}')
-        session = re.findall('session=(.*?);', resp.headers['Set-Cookie'])[0]
+        access_token = resp.json().get('access_token')
         resp.close()
 
         # Connection will probably disconnect till it gets here
         instance.wait_for_ssh()
 
-        TC.print(f'Got session id: {session}')
+        TC.print(f'Got access_token id: {access_token}')
 
         # Download and install tunnel container
         instance_manager._InstanceManager__ssh_execute(instance, 'Download and install tunnel container',
-                                                       TUNNEL_INSTALL_CMD.format(session=session, url=url),
+                                                       TUNNEL_INSTALL_CMD.format(access_token=access_token, url=url),
                                                        append_ts=False)
         TC.print('Downloaded and installed tunnel container successfully on GCP machine')
 

@@ -3,13 +3,15 @@
 import logging
 from datetime import datetime
 
-from flask import jsonify, session
+from bson import ObjectId
+from flask import jsonify
 
 from axonius.consts.gui_consts import USERS_PREFERENCES_COLUMNS_FIELD
 from axonius.consts.plugin_consts import PASSWORD_NO_MEET_REQUIREMENTS_MSG
 from axonius.plugin_base import (EntityType, LIMITER_SCOPE, route_limiter_key_func, return_error)
 from axonius.utils.gui_helpers import get_connected_user_id
 from axonius.utils.hash import verify_user_password, user_password_handler
+from gui.logic.db_helpers import clean_user_cache
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -31,10 +33,13 @@ class Account:
         :return:
         """
         post_data = self.get_request_data_as_object()
-        user = session.get('user')
+        user = self.get_user
         if not user or not user.get('password'):
             return return_error('Not logged in', 401)
-        if not verify_user_password(post_data.get('old', ''), user['password'], user.get('salt')):
+        encrypted_password = user['password']
+        if isinstance(encrypted_password, list):
+            encrypted_password = ''.join([chr(c) for c in encrypted_password])
+        if not verify_user_password(post_data.get('old', ''), encrypted_password, user.get('salt')):
             return return_error('Given password is wrong', 400)
 
         if not self._check_password_validity(post_data['new']):
@@ -42,7 +47,7 @@ class Account:
 
         password, salt = user_password_handler(post_data['new'])
         self._users_collection.update_one(
-            {'_id': user['_id']},
+            {'_id': ObjectId(user['_id'])},
             {
                 '$set': {
                     'password': password,
@@ -50,7 +55,7 @@ class Account:
                     'password_last_updated': datetime.utcnow()
                 }
             })
-        self._invalidate_sessions([str(user['_id'])])
+        clean_user_cache()
         return '', 200
 
     @gui_route_logged_in('preferences', methods=['GET'], enforce_permissions=False)

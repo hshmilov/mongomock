@@ -1,3 +1,4 @@
+from datetime import timedelta
 from enum import Enum, auto
 
 from axonius.consts.plugin_consts import AXONIUS_SETTINGS_PATH, PLUGIN_UNIQUE_NAME
@@ -396,6 +397,12 @@ CORRELATION_REASONS_FIELD = 'specific_data.data.correlation_reasons'
 SPECIFIC_DATA_PREFIX_LENGTH = len('specific_data.data.')
 # sha256 of AxoniusForTheWin!!!
 HASH_SALT = '2098f251e4f9d93cd379de4184e7eef17817fbc504e03ded3d6f09364d7725a3'
+
+JWT_SECRET_KEY = 'jwt_secret_key'
+ENCRYPTED_SECRET_FILED = 'encrypted_secret'
+ACCESS_EXPIRES_KEY = 'access_expires'
+ACCESS_EXPIRES = timedelta(minutes=10)
+REFRESH_EXPIRES = timedelta(days=30)
 
 #########################
 # CSRF Values #

@@ -70,7 +70,7 @@ class Audit:
             user_info = translate_user_id_to_details(user_id)
             if not user_info:
                 return ''
-            return f'{user_info.source}/{user_info.username}'
+            return f'{user_info.source}/{user_info.user_name}'
 
         def _get_category_action(activity: dict):
             return f'{activity["category"]}.{activity["action"]}'

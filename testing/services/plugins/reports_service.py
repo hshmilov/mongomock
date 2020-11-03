@@ -9,6 +9,7 @@ from pymongo.database import Database
 from axonius.clients.wmi_query.consts import (COMMAND_NAME, EXTRA_FILES_NAME,
                                               PASSWORD, USERNAME)
 from axonius.consts import plugin_consts
+from axonius.consts.gui_consts import LAST_UPDATED_FIELD
 from axonius.consts.plugin_consts import (CORE_UNIQUE_NAME, GUI_PLUGIN_NAME,
                                           NODE_ID, NODE_NAME, PLUGIN_NAME,
                                           PLUGIN_UNIQUE_NAME,
@@ -378,7 +379,7 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
                 f'{TRIGGERS_FIELD}.period': {'$in': ['daily', 'weekly', 'monthly']}
             }, projection={
                 'name': 1,
-                'last_updated': 1,
+                LAST_UPDATED_FIELD: 1,
                 f'{TRIGGERS_FIELD}.name': 1,
                 f'{TRIGGERS_FIELD}.period': 1,
                 f'{TRIGGERS_FIELD}.{LAST_TRIGGERED_FIELD}': 1
@@ -390,7 +391,7 @@ class ReportsService(PluginService, SystemService, UpdatablePluginMixin):
                 trigger = triggers[0]
                 period = trigger['period']
 
-                last_updated = report['last_updated']
+                last_updated = report[LAST_UPDATED_FIELD]
                 last_triggered = trigger.get(LAST_TRIGGERED_FIELD, None)
 
                 if period == 'daily':

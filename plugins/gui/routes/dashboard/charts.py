@@ -366,7 +366,7 @@ class Charts:
         update_data = {
             **dashboard_data,
             'user_id': get_connected_user_id(),
-            'last_updated': datetime.now()
+            LAST_UPDATED_FIELD: datetime.now()
         }
         new_chart = self._dashboard_collection.find_one_and_update(
             filter={'_id': panel_id},

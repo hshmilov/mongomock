@@ -1,13 +1,11 @@
 import logging
 import requests
 
-from flask import (has_request_context, jsonify,
-                   request, session, Response)
+from flask import (has_request_context, jsonify, request)
 
-from axonius.plugin_base import random_string
 from axonius.consts import gui_consts
-from axonius.consts.gui_consts import (SIGNUP_TEST_COMPANY_NAME, CSRF_TOKEN_LENGTH,
-                                       SIGNUP_TEST_CREDS, FeatureFlagsNames)
+from axonius.consts.gui_consts import (SIGNUP_TEST_COMPANY_NAME,
+                                       SIGNUP_TEST_CREDS, FeatureFlagsNames, ACCESS_EXPIRES_KEY, ACCESS_EXPIRES)
 from axonius.types.enforcement_classes import TriggerPeriod
 from axonius.utils.gui_helpers import (add_rule_unauth)
 from axonius.utils.permissions_helper import is_axonius_role
@@ -68,6 +66,7 @@ class AppRoutes(Signup,
         order = [TriggerPeriod.all, TriggerPeriod.daily, TriggerPeriod.weekly, TriggerPeriod.monthly]
         constants['trigger_periods'] = [{x.name: x.value} for x in order]
         constants['csv_configs'] = {'max_rows': MAX_ROWS_LEN, 'cell_joiner': repr(CELL_JOIN_DEFAULT)}
+        constants[ACCESS_EXPIRES_KEY] = ACCESS_EXPIRES.total_seconds() - 60
         return jsonify(constants)
 
     @gui_route_logged_in('system/expired', enforce_session=False)
@@ -112,7 +111,7 @@ class AppRoutes(Signup,
                 return
 
             if has_request_context():
-                user = session.get('user')
+                user = self.get_user
                 if user is None:
                     return
                 user = dict(user)
@@ -156,19 +155,6 @@ class AppRoutes(Signup,
         """
         return jsonify(self._maintenance_config.get('troubleshooting', True) or
                        self._maintenance_config.get('timeout') is not None)
-
-    @gui_route_logged_in('csrf', methods=['GET'], enforce_permissions=False)
-    # pylint: disable=no-self-use
-    def csrf(self):
-        """
-        path: /api/csrf
-        """
-        if session and 'csrf-token' in session:
-            session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
-            resp = Response(session['csrf-token'])
-            resp.headers.add('X-CSRF-Token', session['csrf-token'])
-            return resp
-        return Response('')
 
     @add_rule_unauth('get_environment_name')
     def get_environment_name(self):

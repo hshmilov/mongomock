@@ -59,6 +59,7 @@ class TestEntitiesSavedQueriesReferences(TestBase):
 
         finally:
             self.devices_queries_page.switch_to_page()
+            self.devices_queries_page.wait_for_table_to_be_responsive()
             self.devices_queries_page.check_queries_by_name(queries_tree)
             self.devices_queries_page.remove_selected_queries(True)
             axonius_system.clear_direct_references_collection(EntityType.Devices)
@@ -148,6 +149,7 @@ class TestEntitiesSavedQueriesReferences(TestBase):
 
         finally:
             self.devices_queries_page.switch_to_page()
+            self.devices_queries_page.wait_for_table_to_be_responsive()
             self.devices_queries_page.check_queries_by_name(queries_tree)
             self.devices_queries_page.remove_selected_queries(True)
             axonius_system.clear_direct_references_collection(EntityType.Devices)
@@ -169,9 +171,11 @@ class TestEntitiesSavedQueriesReferences(TestBase):
             self.devices_page.create_saved_query_with_reference(queries_tree[0], [queries_tree[1]])  # TEST A -> TEST B
 
             self.devices_queries_page.switch_to_page()
+            self.devices_queries_page.wait_for_table_to_be_responsive()
             # B is referenced by A.
             self.devices_queries_page.check_queries_by_name([queries_tree[1]])
             self.devices_queries_page.remove_single_saved_query_with_safeguard()
+            self.devices_queries_page.wait_for_table_to_be_responsive()
             # D is referenced by B,C.
             self.devices_queries_page.check_queries_by_name([queries_tree[0], queries_tree[2], queries_tree[3]])
             self.devices_queries_page.remove_multiple_saved_query_with_safeguard()
@@ -195,6 +199,7 @@ class TestEntitiesSavedQueriesReferences(TestBase):
 
             # Remove TEST B.
             self.devices_queries_page.switch_to_page()
+            self.devices_queries_page.wait_for_table_to_be_responsive()
             # B is referenced by A.
             self.devices_queries_page.check_queries_by_name([queries_tree[1]])
             self.devices_queries_page.remove_single_saved_query_with_safeguard()
@@ -238,6 +243,7 @@ class TestEntitiesSavedQueriesReferences(TestBase):
 
         finally:
             self.devices_queries_page.switch_to_page()
+            self.devices_queries_page.wait_for_table_to_be_responsive()
             self.devices_queries_page.check_queries_by_name([queries_tree[0], queries_tree[2]])
             self.devices_queries_page.remove_selected_queries(True)
             axonius_system.clear_direct_references_collection(EntityType.Devices)

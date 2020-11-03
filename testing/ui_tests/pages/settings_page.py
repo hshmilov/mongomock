@@ -4,8 +4,6 @@ from uuid import uuid4
 from datetime import datetime, timedelta
 import dateutil
 
-import requests
-
 from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException, \
     ElementNotInteractableException
 from selenium.webdriver.common.by import By
@@ -15,9 +13,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from axonius.adapter_base import WEEKDAYS
 from axonius.consts.gui_consts import PROXY_ERROR_MESSAGE, ENABLE_PBKDF2_FED_BUILD_ONLY_ERROR
 from axonius.consts.plugin_consts import CORRELATION_SCHEDULE_HOURS_INTERVAL, AWS_SM_ACCESS_KEY_ID, \
-    AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION, GUI_PLUGIN_NAME, AXONIUS_DNS_SUFFIX
+    AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION
 from axonius.consts.gui_consts import FeatureFlagsNames
 from services.axon_service import TimeoutException
+from test_credentials.test_gui_credentials import DEFAULT_USER
 from test_helpers.utils import get_datetime_format_by_gui_date
 from ui_tests.pages.page import PAGE_BODY, TAB_BODY, Page
 
@@ -1550,25 +1549,14 @@ class SettingsPage(Page):
         self.wait_for_user_panel_absent()
 
     def save_system_interval_schedule_settings(self, interval_value):
-        session = requests.Session()
-        cookies = self.driver.get_cookies()
-
-        for cookie in cookies:
-            session.cookies.set(cookie['name'], cookie['value'])
-        resp = session.get(f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/csrf')
-        csrf_token = resp.text
-        resp.close()
-        session.headers['X-CSRF-Token'] = csrf_token
-
-        current_settings = self.get_current_schedule_settings(session)
+        self.test_base.axonius_system.gui.login_user(DEFAULT_USER)
+        current_settings = self.test_base.axonius_system.gui.get_current_schedule_settings(self.SETTINGS_SAVE_TIMEOUT)
         if current_settings is not None:
             current_settings['discovery_settings']['system_research_rate'] = interval_value
             current_settings['discovery_settings']['conditional'] = 'system_research_rate'
 
-        result = session.post(
-            f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/'
-            f'api/settings/plugins/system_scheduler/SystemSchedulerService',
-            json=current_settings,
+        result = self.test_base.axonius_system.gui.save_system_interval_schedule_settings(
+            current_settings,
             timeout=self.SETTINGS_SAVE_TIMEOUT)
         return result
 
@@ -1608,13 +1596,6 @@ class SettingsPage(Page):
 
     def wait_for_system_research_interval(self):
         self.wait_for_element_present_by_css(self.SCHEDULE_RATE_CSS)
-
-    def get_current_schedule_settings(self, session):
-        current_settings = session.get(
-            f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/settings/plugins/system_scheduler'
-            f'/SystemSchedulerService',
-            timeout=self.SETTINGS_SAVE_TIMEOUT)
-        return current_settings.json().get('config', None)
 
     def fill_thycotic_host(self, host):
         self.fill_text_field_by_element_id('host', host)

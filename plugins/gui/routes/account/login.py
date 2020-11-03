@@ -1,35 +1,35 @@
 import json
 import logging
-import os
 
 from datetime import datetime, timedelta
 from bson import ObjectId
 import ldap3
 from flask import (jsonify,
-                   make_response, redirect, request, session)
-from werkzeug.wrappers import Response
+                   make_response, redirect, request)
 from urllib3.util.url import parse_url
 from flask_limiter.util import get_remote_address
 # pylint: disable=import-error,no-name-in-module
+from flask_jwt_extended import jwt_refresh_token_required, get_jwt_identity, create_access_token, \
+    create_refresh_token, get_jti, get_raw_jwt
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
-
 
 from axonius.clients.ldap.exceptions import LdapException
 from axonius.clients.ldap.ldap_connection import LdapConnection
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.core_consts import CORE_CONFIG_NAME
-from axonius.consts.gui_consts import (CSRF_TOKEN_LENGTH, LOGGED_IN_MARKER_PATH,
+from axonius.consts.gui_consts import (LOGGED_IN_MARKER_PATH,
                                        PREDEFINED_ROLE_RESTRICTED, IDENTITY_PROVIDERS_CONFIG, EMAIL_ADDRESS,
                                        EMAIL_DOMAIN, LDAP_GROUP, ASSIGNMENT_RULE_TYPE, ASSIGNMENT_RULE_VALUE,
                                        ASSIGNMENT_RULE_ROLE_ID, ASSIGNMENT_RULE_KEY,
                                        EVALUATE_ROLE_ASSIGNMENT_ON, ROLE_ASSIGNMENT_RULES, ASSIGNMENT_RULE_ARRAY,
-                                       DEFAULT_ROLE_ID, NEW_AND_EXISTING_USERS)
+                                       DEFAULT_ROLE_ID, NEW_AND_EXISTING_USERS, ACCESS_EXPIRES, REFRESH_EXPIRES,
+                                       LAST_UPDATED_FIELD)
 from axonius.clients.rest.exception import RESTException
 from axonius.consts.metric_consts import SystemMetric
 from axonius.consts.plugin_consts import PASSWORD_EXPIRATION_DAYS, PASSWORD_EXPIRATION_SETTINGS
 from axonius.logging.audit_helper import AuditCategory, AuditAction
 from axonius.logging.metric_helper import log_metric
-from axonius.plugin_base import return_error, random_string, LIMITER_SCOPE
+from axonius.plugin_base import return_error, LIMITER_SCOPE
 from axonius.types.ssl_state import (SSLState)
 from axonius.utils.datetime import parse_date
 from axonius.utils.hash import verify_user_password
@@ -39,7 +39,6 @@ from gui.logic.filter_utils import filter_archived
 from gui.logic.login_helper import has_customer_login_happened, get_user_for_session
 from gui.logic.routing_helper import gui_category_add_rules, gui_route_logged_in
 from gui.logic.users_helper import beautify_user_entry
-from gui.okta_login import try_connecting_using_okta
 # pylint: disable=no-member,too-many-boolean-expressions,too-many-return-statements,no-self-use,no-else-return,too-many-branches,too-many-locals
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -47,6 +46,30 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 @gui_category_add_rules('')
 class Login:
+
+    def check_if_token_is_revoked(self, decrypted_token):
+        try:
+            jti = decrypted_token['jti']
+            entry = self.jwt_store.get(jti)
+            if entry is None:
+                return True
+            return entry == 'true'
+        except KeyError:
+            logger.exception('Invalid token')
+            # If token is invalid i'll return 'True' it means this toke is invalid (the same as revoked)
+            return True
+
+    @gui_route_logged_in('token/refresh', enforce_permissions=False, enforce_session=False)
+    @jwt_refresh_token_required
+    def refresh(self):
+        # Create the new access token
+        current_user = get_jwt_identity()
+        access_token = create_access_token(identity=current_user)
+
+        access_jti = get_jti(encoded_token=access_token)
+        self.jwt_store.set(access_jti, 'false', ACCESS_EXPIRES * 1.2)
+
+        return jsonify({'access_token': access_token}), 200
 
     @gui_route_logged_in('get_login_options', enforce_session=False)
     def get_login_options(self):
@@ -78,19 +101,22 @@ class Login:
 
         :return:
         """
-        user = session.get('user')
+        user = self.get_user
         if user is None:
             return return_error('Not logged in', 401)
+        user_from_db = self._users_collection.find_one(filter_archived({
+            '_id': ObjectId(user.get('_id'))
+        }))
+        if user_from_db is None:
+            return return_error('Not logged in', 401)
+        user = {**user_from_db, **user}
         if 'pic_name' not in user:
             user['pic_name'] = self.DEFAULT_AVATAR_PIC
-        user = dict(user)
         log_metric(logger, SystemMetric.LOGIN_MARKER, 0)
-        user_name = user.get('user_name')
-        source = user.get('source')
         if self._system_settings.get('timeout_settings') and self._system_settings.get('timeout_settings').get(
                 'enabled'):
             user['timeout'] = self._system_settings.get('timeout_settings').get('timeout') \
-                if not (os.environ.get('HOT') == 'true' or session.permanent) else 0
+                if not user.get('permanent') else 0
         return jsonify(beautify_user_entry(user)), 200
 
     @gui_route_logged_in('login', methods=['POST'], enforce_session=False,
@@ -104,9 +130,14 @@ class Login:
         :return:
         """
         log_in_data = self.get_request_data_as_object()
-        if log_in_data is None:
+        if not log_in_data:
             return return_error('No login data provided', 400)
-        session.regenerate()
+        if log_in_data.get('saml_token'):
+            tokens = json.loads(self.jwt_store.get(log_in_data.get('saml_token')))
+            response = jsonify(tokens)
+            self._add_expiration_timeout_cookie(response)
+            return response, 200
+
         user_name = log_in_data.get('user_name')
         password = log_in_data.get('password')
         remember_me = log_in_data.get('remember_me', False)
@@ -141,10 +172,22 @@ class Login:
                                                {'type': 'server', 'server_name': parse_url(request.referrer).host},
                                                upsert=True)
 
-        self.__perform_login_with_user(user_from_db, remember_me)
-        response = Response('')
+        user = self.__perform_login_with_user(user_from_db, remember_me)
+        response = jsonify(self.generate_tokens(user))
         self._add_expiration_timeout_cookie(response)
-        return response
+        return response, 200
+
+    def generate_tokens(self, user):
+        access_token = create_access_token(identity=user)
+        refresh_token = create_refresh_token(identity=user)
+        access_jti = get_jti(encoded_token=access_token)
+        refresh_jti = get_jti(encoded_token=refresh_token)
+        self.jwt_store.set(access_jti, 'false', ACCESS_EXPIRES * 1.2)
+        self.jwt_store.set(refresh_jti, 'false', REFRESH_EXPIRES * 1.2)
+        return {
+            'access_token': access_token,
+            'refresh_token': refresh_token
+        }
 
     def _password_expired(self, password_last_updated):
         config = self.plugins.core.configurable_configs[CORE_CONFIG_NAME]
@@ -222,12 +265,16 @@ class Login:
             LOGGED_IN_MARKER_PATH.touch()
         logger.info(f'permission: {role_from_db["name"]}')
         user = get_user_for_session(user, role_from_db)
-        self.set_session_user(user)
-        session['csrf-token'] = random_string(CSRF_TOKEN_LENGTH)
-        session.permanent = remember_me
+        self.set_current_user(user)
         self._update_user_last_login(user)
         if not is_axonius_role(role_from_db):
             self._log_activity_login()
+        return {
+            'user_name': user.get('user_name'),
+            'source': user.get('source'),
+            'permanent': remember_me,
+            LAST_UPDATED_FIELD: user.get(LAST_UPDATED_FIELD)
+        }
 
     def __exteranl_login_successful(self, source: str,
                                     username: str,
@@ -283,9 +330,9 @@ class Login:
             source=source,
             role_id=role_id,
             assignment_rule_match_found=assignment_rule_match_found,
-            change_role_on_every_login=evaluate_role_assignment_on == NEW_AND_EXISTING_USERS
+            change_role_on_every_login=evaluate_role_assignment_on == NEW_AND_EXISTING_USERS,
         )
-        self.__perform_login_with_user(user, remember_me)
+        return self.__perform_login_with_user(user, remember_me)
 
     @staticmethod
     def match_assignment_rules(source, identity_provider_rules, email, rules_data):
@@ -320,32 +367,6 @@ class Login:
                 elif rule_value == value_from_user:
                     role_id = rule_role_id
         return role_id
-
-    @gui_route_logged_in('okta-redirect', enforce_session=False)
-    def okta_redirect(self):
-        """
-        path: /api/okta-redirect
-        """
-        okta_settings = self._okta
-        if not okta_settings['enabled']:
-            return return_error('Okta login is disabled', 400)
-        oidc = try_connecting_using_okta(okta_settings)
-        if oidc is not None:
-            session['oidc_data'] = oidc
-            # Notice! If you change the first parameter, then our CURRENT customers will have their
-            # users re-created next time they log in. This is bad! If you change this, please change
-            # the upgrade script as well.
-            self.__exteranl_login_successful(
-                'okta',  # Look at the comment above
-                oidc.claims['email'],
-                oidc.claims.get('given_name', ''),
-                oidc.claims.get('family_name', ''),
-                oidc.claims['email']
-            )
-        session.regenerate()
-        redirect_response = redirect('/', code=302)
-        self._add_expiration_timeout_cookie(redirect_response)
-        return redirect_response
 
     @staticmethod
     def __get_dc(ldap_login):
@@ -451,18 +472,17 @@ class Login:
             # users re-created next time they log in. This is bad! If you change this, please change
             # the upgrade script as well.
             ldap_groups = groups_prefix if not use_group_dn else groups_dn
-            self.__exteranl_login_successful('ldap',  # look at the comment above
-                                             user.get('displayName') or user_name,
-                                             user.get('givenName') or '',
-                                             user.get('sn') or '',
-                                             user.get('mail'),
-                                             image or self.DEFAULT_AVATAR_PIC,
-                                             False,
-                                             rules_data=ldap_groups)
-            session.regenerate()
-            response = Response('')
+            user = self.__exteranl_login_successful('ldap',  # look at the comment above
+                                                    user.get('displayName') or user_name,
+                                                    user.get('givenName') or '',
+                                                    user.get('sn') or '',
+                                                    user.get('mail'),
+                                                    image or self.DEFAULT_AVATAR_PIC,
+                                                    False,
+                                                    rules_data=ldap_groups)
+            response = jsonify(self.generate_tokens(user))
             self._add_expiration_timeout_cookie(response)
-            return response
+            return response, 200
         except ldap3.core.exceptions.LDAPException:
             return return_error('LDAP verification has failed, please try again')
         except Exception:
@@ -581,10 +601,6 @@ class Login:
             return return_error('SAML-Based login is disabled', 400)
 
         auth = self.__get_saml_auth_object(request, saml_settings, True)
-        session.regenerate()
-        # set path to redirect to once user has successfully logged in
-        if not session.get('target_path'):
-            session['target_path'] = request.args.get('path', '/')
 
         if 'acs' in request.args:
             auth.process_response()
@@ -621,25 +637,27 @@ class Login:
                 # Notice! If you change the first parameter, then our CURRENT customers will have their
                 # users re-created next time they log in. This is bad! If you change this, please change
                 # the upgrade script as well.
-                self.__exteranl_login_successful('saml',  # look at the comment above
-                                                 name_id,
-                                                 given_name or name_id,
-                                                 surname or '',
-                                                 email,
-                                                 picture or self.DEFAULT_AVATAR_PIC,
-                                                 rules_data=attributes)
+                user = self.__exteranl_login_successful('saml',  # look at the comment above
+                                                        name_id,
+                                                        given_name or name_id,
+                                                        surname or '',
+                                                        email,
+                                                        picture or self.DEFAULT_AVATAR_PIC,
+                                                        rules_data=attributes)
 
                 logger.info(f'SAML Login success with name id {name_id}')
-                redirect_response = redirect(session['target_path'], code=302)
-                self._add_expiration_timeout_cookie(redirect_response)
-                return redirect_response
+                saml_token = create_access_token(identity=user, expires_delta=timedelta(minutes=2))
+                tokens = self.generate_tokens(user)
+                saml_jti = get_jti(encoded_token=saml_token)
+                self.jwt_store.set(saml_jti, json.dumps(tokens), timedelta(minutes=2))
+                response = redirect(f'/?saml_token={saml_jti}', code=302)
+                self._add_expiration_timeout_cookie(response)
+                return response
             else:
                 return return_error(', '.join(errors) + f' - Last error reason: {auth.get_last_error_reason()}')
 
         else:
-            redirect_response = redirect(auth.login())
-            self._add_expiration_timeout_cookie(redirect_response)
-            return redirect_response
+            return redirect(auth.login())
 
     @staticmethod
     def _add_expiration_timeout_cookie(response):
@@ -654,15 +672,15 @@ class Login:
 
         :return:
         """
-        user = session.get('user')
+        user = self.get_user
         if user:
             username = user.get('user_name')
             source = user.get('source')
             first_name = user.get('first_name')
             logger.info(f'User {username}, {source}, {first_name} has logged out')
             self.log_activity_user(AuditCategory.UserSession, AuditAction.Logout)
-        self.set_session_user(None)
-        session['csrf-token'] = None
-        session.clear()
-        session.destroy()
-        return redirect('/', code=302)
+        self.set_current_user(None)
+        resp = jsonify({'logout': True})
+        jti = get_raw_jwt()['jti']
+        self.jwt_store.set(jti, 'true', ACCESS_EXPIRES * 1.2)
+        return resp, 200

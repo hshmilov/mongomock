@@ -39,6 +39,10 @@ from apscheduler.triggers.interval import IntervalTrigger
 from bson import ObjectId, json_util
 from flask import (Flask, Response, has_request_context, jsonify, request,
                    session)
+try:
+    from flask import _app_ctx_stack as ctx_stack
+except ImportError:  # pragma: no cover
+    from flask import _request_ctx_stack as ctx_stack
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from funcy import chunks
@@ -219,7 +223,11 @@ def ratelimiting_settings():
 
 
 def get_username_from_session():
-    return session['user']['user_name'] if 'user' in session and session['user'] is not None else ''
+    if session and session.get('user'):
+        current_user = session.get('user')
+    else:
+        current_user = getattr(ctx_stack.top, 'axonius_current_user', {})
+    return current_user['user_name'] if current_user else ''
 
 
 def route_limiter_key_func():
@@ -1149,8 +1157,16 @@ class PluginBase(Configurable, Feature, ABC):
             del kwargs['headers']
 
         if has_request_context():
-            user = session.get('user', {}).get('user_name', '').encode('utf-8')
-            user_source = session.get('user', {}).get('source')
+            user = ''
+            user_source = None
+            if session and session.get('user'):
+                user = session.get('user', {}).get('user_name', '').encode('utf-8')
+                user_source = session.get('user', {}).get('source')
+            elif hasattr(self, 'get_user'):
+                # pylint: disable=no-member
+                current_user = self.get_user
+                user = current_user.get('user_name', '').encode('utf-8')
+                user_source = current_user.get('source')
             headers[X_UI_USER] = user
             headers[X_UI_USER_SOURCE] = user_source
 

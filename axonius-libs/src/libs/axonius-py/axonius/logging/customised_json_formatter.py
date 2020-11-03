@@ -4,7 +4,11 @@ import inspect
 import traceback
 from pathlib import Path
 import json
-from flask import has_request_context, session, request
+from flask import has_request_context, request, session
+try:
+    from flask import _app_ctx_stack as ctx_stack
+except ImportError:  # pragma: no cover
+    from flask import _request_ctx_stack as ctx_stack
 
 from axonius.consts import system_consts
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, X_UI_USER, X_UI_USER_SOURCE, METADATA_PATH
@@ -94,13 +98,18 @@ class CustomisedJSONFormatter(json_log_formatter.JSONFormatter):
                         break
 
                 if has_request_context():
-                    user = session.get('user', {}).get('user_name')
+                    current_user = {}
+                    if session and session.get('user'):
+                        current_user = session.get('user', {})
+                    else:
+                        current_user = getattr(ctx_stack.top, 'axonius_current_user', {})
+                    user = current_user.get('user_name', '')
                     if user:
                         extra['ui_user'] = user
                     elif request.headers.get(X_UI_USER):
                         extra['ui_user'] = request.headers.get(X_UI_USER)
 
-                    source = session.get('user', {}).get('source')
+                    source = current_user.get('source')
                     if source:
                         extra['ui_user_source'] = source
                     elif request.headers.get(X_UI_USER_SOURCE):

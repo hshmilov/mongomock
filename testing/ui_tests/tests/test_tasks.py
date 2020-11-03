@@ -182,7 +182,6 @@ class TestTasks(TestBase):
             gui_service.stop(should_delete=False)
             gui_service.start_and_wait()
             time.sleep(5)
-            self.login()
 
             self.devices_page.switch_to_page()
             self.devices_page.run_filter_and_save(ENFORCEMENT_QUERY, ENFORCEMENT_DEVICES_QUERY)

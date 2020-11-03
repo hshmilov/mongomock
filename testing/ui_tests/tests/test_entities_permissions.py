@@ -423,6 +423,7 @@ class TestEntitiesPermissions(EntitiesEnforcementTasksTestBase):
         entities_page.wait_for_table_to_load()
 
         queries_page.switch_to_page()
+        queries_page.wait_for_table_to_be_responsive()
         queries_page.click_query_row_by_name(query_name)
         queries_page.wait_for_side_panel()
         queries_page.get_enforce_panel_action().click()

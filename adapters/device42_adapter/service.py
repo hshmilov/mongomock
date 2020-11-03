@@ -5,6 +5,7 @@ from axonius.adapter_base import AdapterBase, AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
+from axonius.consts.gui_consts import LAST_UPDATED_FIELD
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.utils.datetime import parse_date
 from axonius.fields import Field, ListField
@@ -144,7 +145,7 @@ class Device42Adapter(AdapterBase):
             except Exception:
                 logger.exception(f'Problem getting groups for {device_raw}')
             try:
-                device.last_updated = parse_date(device_raw.get('last_updated'))
+                device.last_updated = parse_date(device_raw.get(LAST_UPDATED_FIELD))
             except Exception:
                 logger.exception(f'Problem gettins last updated {device_raw}')
             if isinstance(device_raw.get('in_service'), bool):

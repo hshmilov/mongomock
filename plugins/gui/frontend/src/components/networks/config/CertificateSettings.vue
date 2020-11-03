@@ -94,9 +94,14 @@
         style="margin-left: -1em;"
         @click="cancelCSR"
       >Cancel Pending Request</XButton>
-      <a href="api/certificate/csr"><XButton
-        type="primary"
-      >Download CSR</XButton></a>
+      <XButton
+          id="csr_download"
+          type="primary"
+          :loading="downloading"
+          @click="startDownload"
+      >
+        {{ downloading ? 'Downloading': 'Download CSR' }}
+      </XButton>
       <div>&nbsp;</div>
     </div>
     <div v-else>
@@ -143,19 +148,21 @@ import _get from 'lodash/get';
 import XToast from '@axons/popover/Toast.vue';
 import {
   LOAD_PLUGIN_CONFIG,
-  GET_CERTIFICATE_DETAILS, SET_CERTIFICATE_SETTINGS, DELETE_CSR, RESET_CERTIFICATE_SETTINGS,
+  GET_CERTIFICATE_DETAILS, SET_CERTIFICATE_SETTINGS, DELETE_CSR,
+  RESET_CERTIFICATE_SETTINGS, DOWNLOAD_CSR,
 } from '@store/modules/settings';
-import XModal from '../../axons/popover/Modal/index.vue';
-import XForm from '../../neurons/schema/Form.vue';
+import { DATE_FORMAT } from '@store/getters';
+import { formatDate } from '@constants/utils';
+import {
+  generateCSRAction, importCertAndKeyAction, importCSRAction, resetSystemDefaultsAction,
+} from '@constants/settings';
+import XModal from '@axons/popover/Modal/index.vue';
+import XForm from '@neurons/schema/Form.vue';
 import XInstallCSRModal from '../certificate/InstallCSRModal.vue';
 import XImportCertAndKeyModal from '../certificate/ImportCertAndKeyModal.vue';
 import XCreateCSRModal from '../certificate/CreateCSRModal.vue';
 import XCertificateActions from '../certificate/CertificateActions.vue';
-import { DATE_FORMAT } from '../../../store/getters';
-import { formatDate } from '../../../constants/utils';
-import {
-  generateCSRAction, importCertAndKeyAction, importCSRAction, resetSystemDefaultsAction,
-} from '../../../constants/settings';
+
 
 export default {
   name: 'XCertificateSettings',
@@ -199,6 +206,7 @@ export default {
           ca_certificate: '',
         },
       },
+      downloading: false,
     };
   },
   computed: {
@@ -308,6 +316,7 @@ export default {
       deleteCSR: DELETE_CSR,
       resetCertificateSettings: RESET_CERTIFICATE_SETTINGS,
       loadPluginConfig: LOAD_PLUGIN_CONFIG,
+      downloadCsr: DOWNLOAD_CSR,
     }),
     setSSLTrustSettings() {
       this.SSLTrust.ssl_trust_settings = this.sslTrustSettings;
@@ -384,6 +393,15 @@ export default {
           this.resetSystemDefaultsActive = !this.resetSystemDefaultsActive;
           break;
       }
+    },
+    startDownload() {
+      this.downloading = true;
+      this.downloadCsr().then(() => {
+        this.downloading = false;
+      }).catch((error) => {
+        this.downloading = false;
+        this.showToaster(error.response.data.message, this.toastTimeout);
+      });
     },
   },
 };

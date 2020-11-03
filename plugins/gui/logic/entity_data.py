@@ -7,8 +7,9 @@ from datetime import datetime
 from typing import Generator, List
 from uuid import uuid4
 
+from bson import ObjectId
 from pymongo import DESCENDING
-from flask import request, session, jsonify
+from flask import request, jsonify
 
 from axonius.consts.gui_consts import CORRELATION_REASONS, HAS_NOTES, HAS_NOTES_TITLE
 from axonius.consts.plugin_consts import NOTES_DATA_TAG, PLUGIN_UNIQUE_NAME
@@ -498,7 +499,8 @@ def _entity_notes_create(note_obj, notes_list, entity_obj: AxoniusEntity, entity
     :param entity_obj:  To add note to
     :return:            The note along with id of user that created it
     """
-    current_user = session['user']
+    # pylint: disable=no-member
+    current_user = PluginBase.Instance.get_user
     note_obj['user_id'] = current_user['_id']
     note_obj['user_name'] = f'{current_user["source"]}/{current_user["user_name"]}'
     note_obj['accurate_for_datetime'] = datetime.now()
@@ -526,11 +528,12 @@ def _entity_notes_delete(note_ids_list, notes_list, entity_obj: AxoniusEntity, e
     :param notes_list:      Current notes of the entity (expected to contain the given notes)
     :param entity_obj:      To remove note from
     """
-    current_user = session['user']
+    # pylint: disable=no-member
+    current_user = PluginBase.Instance.get_user
     if not is_role_admin(current_user):
         # Validate all notes requested to be removed belong to user
         for note in notes_list:
-            if note['uuid'] in note_ids_list and note['user_id'] != current_user['_id']:
+            if note['uuid'] in note_ids_list and str(note['user_id']) != str(current_user['_id']):
                 logger.error('Only Administrator can remove another user\'s Note')
                 return return_error('Only Administrator can remove another user\'s Note', 400)
     remaining_notes_list = []
@@ -573,12 +576,13 @@ def entity_notes_update(entity_type: EntityType, entity_id, note_id, note_obj):
         logger.error(f'Entity with internal_axon_id = {entity_id} has no note at index = {note_id}')
         return return_error('Selected Note cannot be found for the Entity', 400)
 
-    current_user = session['user']
-    if current_user['_id'] != note_doc['user_id'] and not is_role_admin(current_user):
+    # pylint: disable=no-member
+    current_user = PluginBase.Instance.get_user
+    if str(current_user['_id']) != str(note_doc['user_id']) and not is_role_admin(current_user):
         return return_error('Only Administrator can edit another user\'s Note', 400)
 
     note_doc['note'] = note_obj
-    note_doc['user_id'] = current_user['_id']
+    note_doc['user_id'] = ObjectId(current_user['_id'])
     note_doc['user_name'] = f'{current_user["source"]}/{current_user["user_name"]}'
     note_doc['accurate_for_datetime'] = datetime.now()
     entity_obj.add_data(NOTES_DATA_TAG, notes_list, action_if_exists='merge')

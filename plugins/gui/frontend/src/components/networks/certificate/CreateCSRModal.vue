@@ -25,7 +25,7 @@
 import { mapActions } from 'vuex';
 import XForm from '../../neurons/schema/Form.vue';
 import XModal from '../../axons/popover/Modal/index.vue';
-import { CREATE_CSR } from '../../../store/modules/settings';
+import {CREATE_CSR, DOWNLOAD_CSR} from '../../../store/modules/settings';
 
 export default {
   name: 'XCreateCSRModal',
@@ -102,12 +102,13 @@ export default {
   methods: {
     ...mapActions({
       createCSR: CREATE_CSR,
+      downloadCsr: DOWNLOAD_CSR,
     }),
     createCertificateRequest() {
       this.createCSR(this.CSRCreate).then(() => {
         this.$emit('toaster', 'CSR created successfully');
         this.$emit('refresh');
-        window.location.href = '/api/certificate/csr';
+        this.downloadCsr();
       }).catch((error) => {
         this.$emit('toaster', error.response.data.message);
       }).then(() => {

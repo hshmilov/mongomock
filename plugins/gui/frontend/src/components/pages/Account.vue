@@ -212,7 +212,7 @@ export default {
         this.passwordForm.confirmNewPassword = null;
         this.passwordForm = { ...this.passwordForm };
       }).catch((error) => {
-        if (error.response.status === 403) {
+        if (error.status === 403 || error.response.status === 403) {
           this.error = error.response.data.message;
         } else {
           this.message = JSON.parse(error.request.response).message;

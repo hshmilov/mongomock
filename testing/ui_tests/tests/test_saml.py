@@ -1,3 +1,4 @@
+import os
 import time
 import urllib
 import contextlib
@@ -7,10 +8,10 @@ from uuid import uuid4
 import docker
 import requests
 
+from axonius.utils.wait import wait_until
 from axonius.consts.gui_consts import PREDEFINED_ROLE_RESTRICTED, PREDEFINED_ROLE_VIEWER
 from ui_tests.tests.ui_test_base import _docker_host_address
 from ui_tests.tests.permissions_test_base import PermissionsTestBase
-
 
 # pylint: disable=inconsistent-mro
 
@@ -20,7 +21,8 @@ SamlServer = collections.namedtuple(
 
 TEST_GIVENNAME = 'test_givenname'
 TEST_SURNAME = 'test_surname'
-AUTHSOURCES_PATH = '/home/ubuntu/cortex/logs/ui_logger/authsources.php'
+ENV_SERVICE_DIR = os.environ.get('SERVICE_DIR', '/home/ubuntu/cortex')
+AUTHSOURCES_PATH = '{service_dir}/logs/ui_logger/authsources.php'
 
 
 @contextlib.contextmanager
@@ -49,11 +51,11 @@ $config = array(
     ),
 );
 '''
-
-    with open(AUTHSOURCES_PATH, 'w') as fh:
+    authsources_path = AUTHSOURCES_PATH.format(service_dir=ENV_SERVICE_DIR)
+    with open(authsources_path, 'w') as fh:
         fh.write(authsources_data)
 
-    volumes = {AUTHSOURCES_PATH: {'bind': '/var/www/simplesamlphp/config/authsources.php', 'mode': 'rw'}}
+    volumes = {authsources_path: {'bind': '/var/www/simplesamlphp/config/authsources.php', 'mode': 'rw'}}
 
     environment = {'SIMPLESAMLPHP_SP_ENTITY_ID': f'{base_url}/api/login/saml/metadata/',
                    'SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE': f'{base_url}/api/login/saml/?acs',
@@ -94,7 +96,7 @@ class TestSaml(PermissionsTestBase):
             self.login_page.login_with_saml_server(saml_server)
 
             # Make sure that after logging in, we are redirected to the devices page
-            assert self.driver.current_url == self.devices_page.url
+            wait_until(lambda: self.driver.current_url == self.devices_page.url)
             self.login_page.logout()
 
             self.login()

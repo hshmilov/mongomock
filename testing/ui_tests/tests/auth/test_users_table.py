@@ -1,15 +1,17 @@
 from datetime import datetime
-import pytz
-import pytest
-from selenium.common.exceptions import NoSuchElementException
-from dateutil.parser import parse as parse_date
 
-from ui_tests.tests.test_entities_table import TestEntitiesTable
-from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME, JSON_ADAPTER_FILTER
-from test_credentials.json_file_credentials import USER_NAME_UNICODE
+import pytest
+import pytz
+from dateutil.parser import parse as parse_date
+from selenium.common.exceptions import NoSuchElementException
 
 from axonius.utils.parsing import parse_date_with_timezone
 from services.plugins.static_analysis_service import StaticAnalysisService
+from test_credentials.json_file_credentials import USER_NAME_UNICODE
+from test_credentials.test_gui_credentials import DEFAULT_USER
+from ui_tests.pages.entities_page import CSV_TIMEOUT
+from ui_tests.tests.test_entities_table import TestEntitiesTable
+from ui_tests.tests.ui_consts import AD_ADAPTER_NAME, JSON_ADAPTER_NAME, JSON_ADAPTER_FILTER
 
 
 class TestUsersTable(TestEntitiesTable):
@@ -139,16 +141,19 @@ class TestUsersTable(TestEntitiesTable):
 
         # filter the ui to fit the QUERY_FILTER_USERNAME of the csv
         self.users_page.query_user_name_contains('m')
-        result = self.users_page.generate_csv('users',
-                                              self.QUERY_FIELDS,
-                                              self.QUERY_FILTER_USERNAME)
+        self.axonius_system.gui.login_user(DEFAULT_USER)
+        result = self.axonius_system.gui.get_entity_view_csv('users',
+                                                             self.QUERY_FIELDS,
+                                                             self.QUERY_FILTER_USERNAME,
+                                                             timeout=CSV_TIMEOUT)
         self.users_page.assert_csv_match_ui_data(result)
 
         # Do the same but this time with row limitation
-        result = self.devices_page.generate_csv('users',
-                                                self.QUERY_FIELDS,
-                                                self.QUERY_FILTER_USERNAME,
-                                                max_rows=1)
+        result = self.axonius_system.gui.get_entity_view_csv('users',
+                                                             self.QUERY_FIELDS,
+                                                             self.QUERY_FILTER_USERNAME,
+                                                             max_rows=1,
+                                                             timeout=CSV_TIMEOUT)
         self.devices_page.assert_csv_match_ui_data(result, max_rows=1)
 
     def _test_column_data_expanded_row(self, col_name):

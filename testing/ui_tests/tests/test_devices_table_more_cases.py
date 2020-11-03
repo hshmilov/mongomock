@@ -2,8 +2,10 @@ from axonius.utils.serial_csv.constants import MAX_ROWS_LEN
 from services.adapters.csv_service import CsvService
 from services.adapters.wmi_service import WmiService
 from test_credentials.test_csv_credentials import CSV_FIELDS
+from test_credentials.test_gui_credentials import DEFAULT_USER
 from test_credentials.test_cylance_credentials import cylance_json_file_mock_credentials
 from test_helpers.file_mock_credentials import FileForCredentialsMock
+from ui_tests.pages.entities_page import CSV_TIMEOUT
 from ui_tests.tests.test_entities_table import TestEntitiesTable
 from ui_tests.tests.ui_consts import (AD_MISSING_AGENTS_QUERY_NAME, CSV_NAME,
                                       CSV_PLUGIN_NAME,
@@ -23,10 +25,11 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
 
         # filter the ui to fit the QUERY_FILTER_DEVICES of the csv
         self.devices_page.add_query_last_seen_in_days(7)
-
-        result = self.devices_page.generate_csv('devices',
-                                                self.QUERY_FIELDS,
-                                                DEVICES_SEEN_IN_LAST_7_DAYS_QUERY)
+        self.axonius_system.gui.login_user(DEFAULT_USER)
+        result = self.axonius_system.gui.get_entity_view_csv('devices',
+                                                             self.QUERY_FIELDS,
+                                                             DEVICES_SEEN_IN_LAST_7_DAYS_QUERY,
+                                                             timeout=CSV_TIMEOUT)
         self.devices_page.assert_csv_match_ui_data(result)
 
     def test_export_csv_config(self):
@@ -126,8 +129,12 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
 
             fields = 'adapters,specific_data.data.name,specific_data.data.hostname,' \
                      'specific_data.data.hostname_preferred'
-            result = self.devices_page.generate_csv('devices', fields,
-                                                    excluded_adapters=excluded_adapters, field_filters=field_filters)
+            self.axonius_system.gui.login_user(DEFAULT_USER)
+            result = self.axonius_system.gui.get_entity_view_csv('devices',
+                                                                 fields,
+                                                                 excluded_adapters=excluded_adapters,
+                                                                 field_filters=field_filters,
+                                                                 timeout=CSV_TIMEOUT)
 
             self.devices_page.assert_csv_match_ui_data(result, max_rows=20)
 
@@ -257,7 +264,8 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
 
         fields = 'specific_data.data.agent_versions,specific_data.data.agent_versions.adapter_name'
         field_filters = {'specific_data.data.agent_versions.adapter_name': [{'include': True, 'term': 'aaaaaa'}]}
-        result = self.devices_page.generate_csv('devices', fields, field_filters=field_filters)
+        self.axonius_system.gui.login_user(DEFAULT_USER)
+        result = self.axonius_system.gui.get_entity_view_csv('devices', fields, field_filters=field_filters)
         assert result == b'\xef\xbb\xbf\xef\xbb\xbf"Aggregated: Agent Versions: Name",' \
                          b'"Aggregated: Agent Versions: Version","Aggregated: Agent Versions: Status",' \
                          b'"Aggregated: Agent Versions: Name"\r\n"Cylance Agent","2.0.1490","",""\r\n'

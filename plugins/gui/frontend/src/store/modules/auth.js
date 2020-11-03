@@ -11,6 +11,7 @@ import {
   RESET_TUNNEL_CONNECTION_CHECKING,
 } from '@store/modules/dashboard';
 import { getPermissionsStructure } from '@constants/permissions';
+import {ACCESS_TOKEN, REFRESH_TOKEN} from "@constants/session_utils";
 
 export const UPDATE_EXISTING_USER = 'UPDATE_EXISTING_USER';
 export const GET_SYSTEM_USERS_MAP = 'GET_SYSTEM_USERS_MAP';
@@ -55,6 +56,7 @@ export const IS_AXONIUS_USER = 'IS_AXONIUS_USER';
 export const GET_PERMISSION_STRUCTURE = 'GET_PERMISSION_STRUCTURE';
 
 export const NOT_LOGGED_IN = 'Not logged in';
+export const REFRESH_ACCESS_TOKEN = 'REFRESH_ACCESS_TOKEN';
 
 export const auth = {
   state: {
@@ -285,13 +287,23 @@ export const auth = {
         type: SET_LOGIN_OPTIONS,
       });
     },
+    [REFRESH_ACCESS_TOKEN]({ dispatch }) {
+      dispatch(REQUEST_API, {
+        rule: 'token/refresh',
+        method: 'GET',
+      }).then((response) => {
+        if (response.status === 200) {
+          localStorage.setItem(ACCESS_TOKEN, response.data.access_token);
+        }
+      });
+    },
     [LOGIN]({ dispatch, commit }, payload) {
       /*
         Request from server to login a user according to given credentials.
         A valid user name and its password is required.
        */
       return new Promise((resolve, reject) => {
-        if (!payload || !payload.user_name || !payload.password) {
+        if (!payload || ((!payload.user_name || !payload.password) && !payload.saml_token)) {
           reject(new Error('user_name & password are must'));
         }
 
@@ -303,6 +315,8 @@ export const auth = {
           if (!response || !response.status) {
             reject(commit(SET_USER, { error: 'Login failed.' }));
           } else if (response.status === 200) {
+            localStorage.setItem(ACCESS_TOKEN, response.data.access_token);
+            localStorage.setItem(REFRESH_TOKEN, response.data.refresh_token);
             commit(RESET_TUNNEL_CONNECTION_CHECKING);
             resolve(dispatch(GET_USER));
           } else {
@@ -330,6 +344,8 @@ export const auth = {
         if (!response || !response.status) {
           commit(SET_USER, { error: 'Login failed.' });
         } else if (response.status === 200) {
+          localStorage.setItem(ACCESS_TOKEN, response.data.access_token);
+          localStorage.setItem(REFRESH_TOKEN, response.data.refresh_token);
           dispatch(GET_USER);
         } else {
           commit(SET_USER, { error: response.data.message, fetching: false });
@@ -346,6 +362,8 @@ export const auth = {
       return dispatch(REQUEST_API, {
         rule: 'logout',
       }).then(() => {
+        localStorage.removeItem(ACCESS_TOKEN);
+        localStorage.removeItem(REFRESH_TOKEN);
         commit(RESET_DEVICES_STATE);
         commit(RESET_USERS_STATE);
         commit(RESET_REPORTS_STATE);

@@ -18,7 +18,7 @@ from flask import jsonify
 
 from axonius.background_scheduler import LoggedBackgroundScheduler
 from axonius.consts import instance_control_consts
-from axonius.consts.gui_consts import Signup
+from axonius.consts.gui_consts import Signup, LAST_UPDATED_FIELD
 from axonius.consts.instance_control_consts import (InstanceControlConsts,
                                                     UPLOAD_FILE_SCRIPTS_PATH, UPLOAD_FILE_SCRIPT_NAME,
                                                     METRICS_INTERVAL_MINUTES,
@@ -388,11 +388,11 @@ class InstanceControlService(Triggerable, PluginBase):
             if errors and len(errors) > 0:
                 logger.error(f'Metrics errors: {errors}')
 
-            metrics_result['metrics']['last_updated'] = datetime.datetime.now()
+            metrics_result['metrics'][LAST_UPDATED_FIELD] = datetime.datetime.now()
             return metrics_result['metrics']
         except Exception:
             logger.exception('fatal error during node metrics calculation')
-            return {'last_updated': datetime.datetime.now()}
+            return {LAST_UPDATED_FIELD: datetime.datetime.now()}
 
     def __exec_system_command(self, cmd: str, environment: dict = None) -> paramiko.ChannelFile:
         """

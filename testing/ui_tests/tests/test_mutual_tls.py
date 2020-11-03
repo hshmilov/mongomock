@@ -1,6 +1,4 @@
-import json
 import os
-import re
 import subprocess
 import time
 import urllib.parse
@@ -9,7 +7,6 @@ import OpenSSL
 import requests
 
 from axonius.consts.gui_consts import GUI_CONFIG_NAME
-from axonius.consts.plugin_consts import GUI_PLUGIN_NAME, AXONIUS_DNS_SUFFIX
 from services.plugins.gui_service import GuiService
 from test_credentials.test_gui_credentials import DEFAULT_USER
 from ui_tests.tests.test_global_ssl import CERT_SUCCESS_TOASTER_MSG
@@ -29,7 +26,6 @@ CURL_SET_ENFORCE_CMD = '''#!/bin/bash
 curl 'https://{gui_plugin}/api/certificate/certificate_settings' \\
   -H 'authority: {gui_plugin}' \\
   -H 'accept: application/json, text/plain, */*' \\
-  -H 'x-csrf-token: {csrf_token}' \\
   -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36'\\
   -H 'content-type: application/json;charset=UTF-8' \\
   -H 'origin: https://{gui_plugin}' \\
@@ -39,7 +35,7 @@ curl 'https://{gui_plugin}/api/certificate/certificate_settings' \\
   -H 'referer: https://{gui_plugin}/settings' \\
   -H 'accept-language: en-US,en;q=0.9,he;q=0.8' \\
   -H 'X-CLIENT-ESCAPED-CERT: {cert_file}' \\
-  -H 'cookie: session={session}' \\
+  -H 'Authorization: Bearer {access_token}' \\
   --data-binary '{{"ssl_trust":{{"ca_files":[],"enabled":false}},"mutual_tls":{{"ca_certificate":{{"uuid":"{uuid}","filename":"{filename}"}},"enabled":true,"mandatory":{status}}}}}' \\
   --compressed \\
   --insecure \\
@@ -87,29 +83,23 @@ class TestMutualTLS(TestBase):
         self.settings_page.set_enforce_mutual_tls()
         self.settings_page.save_and_wait_for_toaster(toaster_message=NO_MUTUAL_CERTIFICATE_PROVIDED_MSG)
 
-        session = requests.session()
-        session, session_id = self.do_login(session)
-        csrf_token = self.get_csrf_token(session)
+        resp = self.axonius_system.gui.login_user(DEFAULT_USER, verify=False)
+        access_token = resp.json().get('access_token')
         uuid = self.axonius_system.db.plugins.gui.configurable_configs.get_all().get(GUI_CONFIG_NAME, {}).\
             get('mutual_tls_settings', {}).get('ca_certificate', {}).get('uuid', '')
         MUTUAL_TLS_SETTING_WITH_ENFORCE['mutual_tls']['ca_certificate']['uuid'] = uuid
         MUTUAL_TLS_SETTING_WITH_ENFORCE['mutual_tls']['ca_certificate']['filename'] = fname
 
-        resp = session.post(f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/certificate/certificate_settings',
-                            verify=False,
-                            headers={'Content-Type': 'application/json;charset=UTF-8', 'X-CSRF-TOKEN': csrf_token},
-                            data=json.dumps(MUTUAL_TLS_SETTING_WITH_ENFORCE))
+        resp = self.axonius_system.gui.update_certificate_settings(MUTUAL_TLS_SETTING_WITH_ENFORCE)
         assert resp.json().get('message', '') == NO_CLIENT_CERTIFICATE_ERROR
 
         # Set enforcement to true
-        csrf_token = self.get_csrf_token(session)
         with open(CURL_SCRIPT_PATH, 'w') as fh:
             fh.write(
                 CURL_SET_ENFORCE_CMD.format(gui_plugin=f'{_docker_host_address()}:1337',
-                                            csrf_token=csrf_token,
                                             uuid=uuid,
                                             filename=fname,
-                                            session=session_id,
+                                            access_token=access_token,
                                             cert_file=urllib.parse.quote(cert_file), status='true').replace('\\\n', ''))
         os.chmod(CURL_SCRIPT_PATH, 0o777)
         output = b''
@@ -127,6 +117,7 @@ class TestMutualTLS(TestBase):
 
         # make sure certificate is required
         resp = requests.get(f'https://{_docker_host_address()}:1337/login', verify=False)
+        # resp = self.axonius_system.gui.login_user(credentials={}, verify=False)
         try:
             assert resp.status_code == 400
         except AssertionError:
@@ -156,17 +147,3 @@ class TestMutualTLS(TestBase):
         os.remove('test.key')
         os.remove('test.crt')
         os.remove(CURL_SCRIPT_PATH)
-
-    @staticmethod
-    def do_login(session):
-        resp = session.post(f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/login',
-                            data=json.dumps({'user_name': DEFAULT_USER['user_name'],
-                                             'password': DEFAULT_USER['password'], 'remember_me': False}),
-                            verify=False)
-        session_id = re.findall('session=(.*?);', resp.headers['Set-Cookie'])[0]
-        resp.close()
-        return session, session_id
-
-    @staticmethod
-    def get_csrf_token(session):
-        return session.get(f'https://{GUI_PLUGIN_NAME}.{AXONIUS_DNS_SUFFIX}/api/csrf', verify=False).text

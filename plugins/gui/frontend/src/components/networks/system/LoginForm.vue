@@ -20,7 +20,7 @@
 
 <script>
 import { mapState, mapActions } from 'vuex';
-import { Modal } from 'ant-design-vue'
+import { Modal } from 'ant-design-vue';
 import XForm from '../../neurons/schema/Form.vue';
 import { GettingStartedPubSub } from '../../App.vue';
 

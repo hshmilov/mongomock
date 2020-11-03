@@ -1,4 +1,4 @@
-from axonius.consts.gui_consts import UNCHANGED_MAGIC_FOR_GUI, PREDEFINED_FIELD, IS_AXONIUS_ROLE
+from axonius.consts.gui_consts import UNCHANGED_MAGIC_FOR_GUI, PREDEFINED_FIELD, IS_AXONIUS_ROLE, LAST_UPDATED_FIELD
 from axonius.utils.permissions_helper import serialize_db_permissions
 from gui.logic.db_helpers import beautify_db_entry
 
@@ -25,7 +25,7 @@ def beautify_user_entry(user):
                                                    'environment_name',
                                                    'email',
                                                    'last_login',
-                                                   'last_updated',
+                                                   LAST_UPDATED_FIELD,
                                                    'ignore_role_assignment_rules',
                                                    PREDEFINED_FIELD,
                                                    IS_AXONIUS_ROLE,

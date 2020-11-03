@@ -4,10 +4,11 @@ import json
 from datetime import datetime
 from bson import ObjectId
 
-from axonius.consts.gui_consts import USER_NAME, ROLE_ID
+from axonius.consts.gui_consts import USER_NAME, ROLE_ID, LAST_UPDATED_FIELD
 from axonius.consts.plugin_consts import (PREDEFINED_USER_NAMES)
 from axonius.plugin_base import return_error
 from axonius.utils.permissions_helper import PermissionCategory
+from gui.logic.db_helpers import clean_user_cache
 from gui.logic.filter_utils import filter_archived
 from gui.logic.routing_helper import gui_section_add_rules, gui_route_logged_in
 # pylint: disable=no-member
@@ -42,7 +43,7 @@ class UserBulk:
                 USER_NAME: {'$nin': PREDEFINED_USER_NAMES},
                 '_id': {'$nin': [ObjectId(user_id) for user_id in ids]}
             }), {
-                '$set': {'archived': True}
+                '$set': {'archived': True, LAST_UPDATED_FIELD: datetime.now()}
             })
 
             # handle response
@@ -54,10 +55,10 @@ class UserBulk:
             response_str = json.dumps({
                 'count': str(result.modified_count)
             })
+            clean_user_cache()
             if result.matched_count != result.modified_count:
                 logger.info(f'Deleted {result.modified_count} out of {result.matched_count} users')
                 return response_str, 202
-
             logger.info(f'Bulk deletion users succeeded')
             return response_str, 200
 
@@ -68,7 +69,10 @@ class UserBulk:
             existed_user = users_collection.find_one_and_update(filter_archived({
                 '_id': ObjectId(user_id)
             }), {
-                '$set': {'archived': True}
+                '$set': {
+                    'archived': True,
+                    LAST_UPDATED_FIELD: datetime.utcnow()
+                }
             }, projection={
                 USER_NAME: 1
             })
@@ -79,7 +83,6 @@ class UserBulk:
             else:
                 deletion_count += 1
             deletion_success = True
-            self._invalidate_sessions([user_id])
             name = existed_user[USER_NAME]
             logger.info(f'Users {name} with id {user_id} has been archive')
 
@@ -91,9 +94,11 @@ class UserBulk:
         response_str = json.dumps({
             'count': str(deletion_count)
         })
+        clean_user_cache()
         if deletion_success and partial_success:
             logger.info('Deletion partially succeeded')
             return response_str, 202
+
         logger.info(f'Bulk deletion users succeeded')
         return response_str, 200
 
@@ -138,18 +143,18 @@ class UserBulk:
             })
 
         result = users_collection.update_many(find_query, {
-            '$set': {ROLE_ID: ObjectId(role_id), 'last_updated': datetime.now()}
+            '$set': {ROLE_ID: ObjectId(role_id), LAST_UPDATED_FIELD: datetime.utcnow()}
         })
 
         if result.modified_count < 1:
             logger.info('operation failed, could not update users\' role')
             return return_error('operation failed, could not update users\' role', 400)
         user_ids = [str(user_id.get('_id')) for user_id in users_collection.find(find_query, {'_id': 1})]
-        self._invalidate_sessions(user_ids)
         response_str = json.dumps({
             'count': str(result.modified_count),
             'name': self._roles_collection.find_one({'_id': ObjectId(role_id)}, {'name': 1}).get('name', '')
         })
+        clean_user_cache()
         if result.matched_count != result.modified_count:
             logger.info(f'Bulk assign role modified {result.modified_count} out of {result.matched_count}')
             return response_str, 202

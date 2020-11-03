@@ -88,6 +88,7 @@ class TestEntitiesSavedQueriesMoreCases(TestBase):
 
         finally:
             self.devices_queries_page.switch_to_page()
+            self.devices_queries_page.wait_for_table_to_be_responsive()
             self.devices_queries_page.check_queries_by_name(queries_tree)
             self.devices_queries_page.remove_selected_queries(True)
             axonius_system.clear_direct_references_collection(EntityType.Devices)

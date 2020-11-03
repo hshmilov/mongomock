@@ -1,9 +1,7 @@
-import copy
-
 from axonius.consts.adapter_consts import VAULT_PROVIDER
 from axonius.consts.gui_consts import (LOGGED_IN_MARKER_PATH, UNCHANGED_MAGIC_FOR_GUI, PREDEFINED_FIELD,
-                                       IS_AXONIUS_ROLE, IS_API_USER)
-from axonius.utils.permissions_helper import deserialize_db_permissions
+                                       IS_AXONIUS_ROLE, IS_API_USER, LAST_UPDATED_FIELD)
+from gui.logic.db_helpers import encode_datetime
 
 
 def has_customer_login_happened():
@@ -90,10 +88,15 @@ def remove_password_fields(schema, data: dict):
 
 
 def get_user_for_session(user_from_db, role_from_db, is_api_user: bool = False):
-    user = copy.deepcopy(user_from_db)
-    user['permissions'] = deserialize_db_permissions(role_from_db['permissions'])
+    user = dict()
+    user['_id'] = str(user_from_db['_id'])
+    user['user_name'] = user_from_db['user_name']
+    user['source'] = user_from_db['source']
+    user['role_id'] = str(user_from_db['role_id'])
     user['role_name'] = role_from_db['name']
     user[PREDEFINED_FIELD] = role_from_db.get(PREDEFINED_FIELD)
     user[IS_AXONIUS_ROLE] = role_from_db.get(IS_AXONIUS_ROLE)
     user[IS_API_USER] = is_api_user
+    user[LAST_UPDATED_FIELD] = encode_datetime(max([user_from_db.get(LAST_UPDATED_FIELD),
+                                                    role_from_db.get(LAST_UPDATED_FIELD)]))
     return user

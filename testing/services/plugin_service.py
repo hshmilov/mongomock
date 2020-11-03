@@ -176,14 +176,9 @@ class PluginService(WeaveService):
 
         headers['x-unique-plugin-name'] = self.unique_name
         headers['x-plugin-name'] = self.plugin_name
-
-        try:
-            if method in ('post', 'put', 'delete') and session is not None and endpoint != 'login':
-                response = self.__perform_request('get', 'csrf', headers, session, *vargs, **kwargs)
-                session.headers['x-csrf-token'] = response.text
-                response.close()
-        except Exception:
-            raise
+        headers['content-type'] = 'application/json'
+        if hasattr(self, 'access_token') and self.access_token:
+            headers['Authorization'] = f'Bearer {self.access_token}'
 
         if 'data' in kwargs and isinstance(kwargs['data'], dict):
             kwargs['data'] = json.dumps(kwargs['data'])

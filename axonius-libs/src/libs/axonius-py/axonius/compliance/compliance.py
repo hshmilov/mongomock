@@ -14,6 +14,7 @@ from axonius.compliance.all_default_rules import ALL_DEFAULT_CIS_REPORTS
 from axonius.consts import adapter_consts
 from axonius.consts.compliance_consts import COMPLIANCE_RULES_COLLECTIONS, COMPLIANCE_MODULES, \
     COMPLIANCE_REPORTS_COLLECTIONS
+from axonius.consts.gui_consts import LAST_UPDATED_FIELD
 from axonius.consts.plugin_consts import COMPLIANCE_PLUGIN_NAME
 from axonius.plugin_base import PluginBase
 
@@ -239,7 +240,7 @@ def aggregate_reports(accounts_reports, compliance_name):
             report = report_doc['last']
             accounts_ids.add(_get_account_id(report['account_name']))
             accounts_names.add(report['account_name'])
-            last_updated.append(report['last_updated'])
+            last_updated.append(report[LAST_UPDATED_FIELD])
 
             report_rules = report['report'].get('rules')
             for rule in report_rules:
@@ -366,7 +367,7 @@ def _beautify_compliance(
         'remediation': compliance.get('remediation'),
         'rule': compliance.get('rule_name'),
         'entities_results_query': compliance.get('entities_results_query'),
-        'last_updated': last_updated or datetime.now(),
+        LAST_UPDATED_FIELD: last_updated or datetime.now(),
         'include_in_score': rules_map.get(compliance.get('rule_name')).get('include_in_score', True),
         'comments': filtered_comments,
         'comments_csv': get_comments_for_csv(filtered_comments)
@@ -463,7 +464,7 @@ def get_compliance_rules(compliance_name, accounts, rules, categories, failed_on
         for report_doc in reports:
             report = report_doc['last']
             yield from (_beautify_compliance(rule, report['account_id'], [report['account_name']],
-                                             report['last_updated'], rules_map)
+                                             report[LAST_UPDATED_FIELD], rules_map)
                         for rule in _filter_rules(report['report'].get('rules'), rules_score_flag_map, rules,
                                                   categories, failed_only) or [])
 

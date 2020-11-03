@@ -16,6 +16,7 @@ LIBS_PATH = Path('/home/axonius/libs')
 DB_KEY_FILENAME = '.db_key'
 DB_KEY_PATH = AXONIUS_SETTINGS_PATH / DB_KEY_FILENAME
 CUSTOMER_CONF_NAME = 'customer_conf.json'
+JWT_CONF_NAME = 'jwt_conf.json'
 UPLOADED_FILES_DIR_NAME = 'uploaded_files'
 BOOT_CONFIGURATION_SCRIPT_FILENAME = 'boot_configuration_script.tar'
 

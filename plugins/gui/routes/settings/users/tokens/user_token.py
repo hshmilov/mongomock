@@ -19,6 +19,7 @@ from axonius.logging.audit_helper import AuditAction, AuditCategory, AuditType
 from axonius.plugin_base import return_error
 from axonius.utils.hash import verify_user_password, user_password_handler
 from axonius.utils.permissions_helper import PermissionCategory
+from gui.logic.db_helpers import clean_user_cache
 from gui.logic.routing_helper import gui_route_logged_in, gui_section_add_rules
 
 # pylint: disable=no-member
@@ -142,9 +143,8 @@ class UserToken:
 
         if not user:
             return return_error(f'error updating password for user id {user_id}', 400)
-
+        clean_user_cache()
         self._users_tokens_collection.delete_one(match_token)
-        self._invalidate_sessions([user_id])
 
         user_name = f'\'{user.get(USER_NAME)}\'' if user.get(USER_NAME) else ''
         self.log_activity_default(AuditCategory.UserSession.value,

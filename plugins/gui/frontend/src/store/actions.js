@@ -151,7 +151,7 @@ export const fetchDataCount = async ({ state, dispatch, getters }, payload) => {
       payload,
     });
     if (!payload.isExperimentalAPI) {
-      await dispatch(REQUEST_API, {
+      dispatch(REQUEST_API, {
         rule: `${path}/count`,
         type: UPDATE_DATA_COUNT_QUICK,
         method: 'POST',

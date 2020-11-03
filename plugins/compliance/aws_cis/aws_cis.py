@@ -5,6 +5,7 @@ import time
 
 from typing import List
 
+from axonius.consts.gui_consts import LAST_UPDATED_FIELD
 from axonius.clients.aws.aws_clients import parse_aws_advanced_config
 from axonius.consts.plugin_consts import COMPLIANCE_PLUGIN_NAME
 from axonius.plugin_base import PluginBase
@@ -121,7 +122,7 @@ class AWSCISGenerator:
                                     'account_name': account_name,
                                     'report': report_json,
                                     'type': 'aws-cis',
-                                    'last_updated': datetime.datetime.now()
+                                    LAST_UPDATED_FIELD: datetime.datetime.now()
                                 }
                         )
 
