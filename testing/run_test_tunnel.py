@@ -33,7 +33,7 @@ sudo systemctl start docker &&
 sudo systemctl enable docker
 '''
 
-TUNNEL_INSTALL_CMD = 'curl -H ''Authorization: Bearer {access_token}'' {url}/api/tunnel/download_agent | sudo /bin/bash'
+TUNNEL_INSTALL_CMD = 'curl -H \'Authorization: Bearer {access_token}\' {url}/api/tunnel/download_agent | sudo /bin/bash'
 MAX_503_RETRIES = 40
 TESTS_NAMES = [
     'tests.test_tunnel.TestTunnel.test_tunnel_connected',
