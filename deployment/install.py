@@ -71,6 +71,10 @@ def check_lock_file(path):
     return True
 
 
+def is_inside_container():
+    return Path('/.dockerenv').exists()
+
+
 def main():
     metadata = ''
     with AutoOutputFlush():
@@ -92,7 +96,10 @@ def main():
 
         finally:
             status = 'success' if success else 'failure'
-            print(f'Upgrader completed - {status} {metadata}')
+            if is_inside_container():
+                print(f'Upgrader completed inside container - {status} {metadata}')
+            else:
+                print(f'Upgrader completed - {status} {metadata}')
 
             if PYTHON_INSTALLER_LOCK_FILE.is_file():
                 PYTHON_INSTALLER_LOCK_FILE.unlink()

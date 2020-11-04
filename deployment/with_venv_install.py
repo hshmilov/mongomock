@@ -16,7 +16,6 @@ from install import (TEMPORAL_PATH,
                      SYSTEM_BOOT_CRON_SCRIPT_PATH,
                      BOOTED_FOR_PRODUCTION_MARKER_PATH,
                      DEPLOYMENT_FOLDER_PATH,
-                     chown_folder,
                      set_special_permissions)
 from install_utils import CRON_D_PATH, create_cronjob, stop_old
 from lists import OLD_CRONJOBS
@@ -67,12 +66,9 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
         stop_old()
 
     if not first_time:
-        # chown_folder(TEMPORAL_PATH)
         os.makedirs(AXONIUS_SETTINGS_PATH, exist_ok=True)
         set_booted_for_production()
     set_special_permissions()
-    # chown before start Axonius which tends to be the failure point in bad updates.
-    # chown_folder(AXONIUS_DEPLOYMENT_PATH)
     # This parts tends to have problems. Minimize the code after it as much as possible.
     if not first_time:
         start_axonius()
@@ -81,7 +77,6 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
 
         # Chown again after the run, to make log file which are created afterwards be also part of it
         set_special_permissions()
-        chown_folder(AXONIUS_DEPLOYMENT_PATH)
 
         shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 
