@@ -59,8 +59,8 @@ ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_a
                       'airwatch_adapter', 'iboss_cloud_adapter']
 DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'counter_act_adapter',
                       'infoblox_adapter', 'azure_ad_adapter', 'tanium_discover_adapter',
-                      'solarwinds_orion_adapter', 'mssql_adapter']
-SEMI_DANGEROUS_ADAPTERS = ['symantec_adapter', 'tanium_asset_adapter', 'iboss_cloud_adapter']
+                      'solarwinds_orion_adapter', 'mssql_adapter', 'iboss_cloud_adapter']
+SEMI_DANGEROUS_ADAPTERS = ['symantec_adapter', 'tanium_asset_adapter']
 DOMAIN_TO_DNS_DICT = dict()
 DOES_AD_HAVE_ONE_CLIENT = False
 ALLOW_SERVICE_NOW_BY_NAME_ONLY = False
