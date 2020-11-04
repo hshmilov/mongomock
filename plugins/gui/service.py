@@ -652,8 +652,8 @@ class GuiService(Triggerable,
 
     def load_metadata(self):
         try:
-            config, schema = self._get_plugin_configs(FEATURE_FLAGS_CONFIG, GUI_PLUGIN_NAME)
             metadata_bytes = ''
+            config, schema = self._get_plugin_configs(FEATURE_FLAGS_CONFIG, GUI_PLUGIN_NAME)
             if os.path.exists(METADATA_PATH):
                 with open(METADATA_PATH, 'r', encoding='UTF-8') as metadata_file:
                     metadata_bytes = metadata_file.read().strip().replace('\\', '\\\\')
