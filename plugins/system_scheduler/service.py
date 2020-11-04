@@ -199,9 +199,9 @@ class SystemSchedulerService(Triggerable, PluginBase, Configurable):
         if self.__correlation_lock.acquire(False):
             try:
                 logger.info(f'Running correlation')
-                self.log_activity(AuditCategory.Correlation, AuditAction.Start)
+                self.log_activity(AuditCategory.CustomCorrelation, AuditAction.Start)
                 self._run_plugins(self._get_plugins(PluginSubtype.Correlator), 72 * 3600)
-                self.log_activity(AuditCategory.Correlation, AuditAction.End)
+                self.log_activity(AuditCategory.CustomCorrelation, AuditAction.End)
                 logger.info(f'Done running correlation')
                 return True
             finally:

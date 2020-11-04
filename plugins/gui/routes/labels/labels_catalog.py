@@ -177,6 +177,12 @@ LABELS_CATALOG = {
     'audit.custom_history.end': 'Save History Ended',
     'audit.custom_history.end.template': 'Saving historical snapshot ended',
 
+    'audit.custom_correlation': 'Correlation',
+    'audit.custom_correlation.start': 'Correlation Started',
+    'audit.custom_correlation.start.template': 'Correlation started',
+    'audit.custom_correlation.end': 'Correlation Ended',
+    'audit.custom_correlation.end.template': 'Correlation ended',
+
     'audit.getting_started': 'Getting Started',
     'audit.getting_started.complete_phase': 'Getting Started Phase Completed',
     'audit.getting_started.complete_phase.template': 'Getting Started phase \'{phase}\' completed',
