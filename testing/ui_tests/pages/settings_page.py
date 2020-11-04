@@ -1966,7 +1966,8 @@ class SettingsPage(Page):
     def verify_bcrypt_to_pbkdf2_status(self, status):
         self.switch_to_page()
         self.click_feature_flags()
-        assert self.is_toggle_selected(self.driver.find_element_by_id(FeatureFlagsNames.EnablePBKDF2FedOnly)) == status
+        assert self.is_checkbox_selected(self.driver.find_element_by_id(
+            FeatureFlagsNames.EnablePBKDF2FedOnly)) == status
 
     def approve_queries_cache_safeguard(self):
         safeguard_modal = self.driver.find_element_by_css_selector(self.DIALOG_OVERLAY_ACTIVE_CSS)
