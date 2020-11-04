@@ -92,7 +92,7 @@ export const auth = {
   getters: {
     [IS_USER_ADMIN](state) {
       const user = state.currentUser.data;
-      return (user.role_name === 'Admin' || user.role_name === 'Owner') && user.predefined;
+      return user && (user.role_name === 'Admin' || user.role_name === 'Owner') && user.predefined;
     },
     [IS_AXONIUS_USER](state) {
       const user = state.currentUser.data;

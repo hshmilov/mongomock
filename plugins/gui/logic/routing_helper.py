@@ -7,7 +7,6 @@ from typing import List
 from bson import ObjectId
 from flask import (request)
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
-from flask_jwt_extended.exceptions import NoAuthorizationError
 
 from axonius.plugin_base import limiter, ratelimiting_settings
 from axonius.consts.gui_consts import (DASHBOARD_LIFECYCLE_ENDPOINT, SKIP_ACTIVITY_ARG, ACTIVITY_PARAMS_ARG,
@@ -68,7 +67,8 @@ def session_connection(func,
             else:
                 try:
                     verify_jwt_in_request()
-                except NoAuthorizationError:
+                except Exception:
+                    logger.exception('Error while verifying JWT request')
                     return return_error('Not logged in', 401)
                 jwt_user = get_jwt_identity()
                 user_info = translate_user_to_details(jwt_user.get('user_name'), jwt_user.get('source'))

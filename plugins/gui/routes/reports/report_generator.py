@@ -257,11 +257,10 @@ class ReportGenerator:
             logger.info(
                 f'Report Generator, Summary Section: Added {len(self.report_data["covered_devices"])} Coverage Panels')
 
-        spaces_charts = {}
-
+        charts_by_id = {}
         if self.report_data.get('custom_charts'):
-            spaces_charts = self.render_custom_charts()
-        spaces_content = self.render_spaces(self.spaces, spaces_charts)
+            charts_by_id = self.render_custom_charts()
+        spaces_content = self.render_spaces(self.spaces, charts_by_id)
         if len(spaces_content) == 0:
             return None
         return self.templates['section'].render({
@@ -269,7 +268,7 @@ class ReportGenerator:
             'content': '\n'.join(spaces_content)})
 
     def render_custom_charts(self):
-        spaces_charts = {}
+        charts_by_id = {}
         for i, custom_chart in enumerate(self.report_data['custom_charts']):
             title = custom_chart.get('name', f'Custom Chart {i}')
             try:
@@ -288,29 +287,32 @@ class ReportGenerator:
                 content = self._render_chart_content(chart_data, custom_chart)
                 if not content:
                     continue
-                current_space = custom_chart['space']
-                if not spaces_charts.get(current_space):
-                    spaces_charts[current_space] = []
-                current_space_charts = spaces_charts[current_space]
                 if len(title) > 30:
                     title = f'{title[0:30]}...'
-                current_space_charts.append(self.templates['card'].render({'title': title,
-                                                                           'content': content}))
+                charts_by_id[custom_chart['uuid']] = self.templates['card'].render({
+                    'title': title, 'content': content
+                })
             except Exception:
                 logger.exception(f'Problem adding pie chart to reports with title: {title}')
         logger.info('Report Generator, Summary Section: Added Custom Panels')
-        return spaces_charts
+        return charts_by_id
 
-    def render_spaces(self, spaces, spaces_charts):
+    def render_spaces(self, spaces, charts_by_id):
         spaces_content = []
-        filtered_spaces = list(filter(lambda space: spaces_charts.get(str(space['_id'])), spaces))
-        for i, space in enumerate(filtered_spaces):
+        for space in spaces:
             space_id = str(space['_id'])
+            space_charts = space.get('panels_order', [])
             charts_content = []
-            for j, chart_content in enumerate(spaces_charts[space_id]):
+            for j, chart_id in enumerate(space_charts):
+                if not charts_by_id.get(chart_id):
+                    continue
                 if j > 0 and j % 4 == 0:
                     charts_content.append(self.templates['card_break'].render())
-                charts_content.append(chart_content)
+                charts_content.append(charts_by_id[chart_id])
+            if not charts_content:
+                continue
+            if spaces_content:
+                spaces_content.append('<div class="before-break"></div>')
             spaces_content.append(self.templates['report_charts'].render({
                 'title': space['name'],
                 'link_start': f'<a href="https://{self.host}/{space_id}" class="c-blue">',
@@ -318,8 +320,6 @@ class ReportGenerator:
                 'link_end': '</a>',
                 'content': '\n'.join(charts_content)
             }))
-            if i != len(filtered_spaces) - 1:
-                spaces_content.append('<div class="before-break"></div>')
         return spaces_content
 
     def _render_chart_content(self, chart_data, custom_chart):

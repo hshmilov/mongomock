@@ -351,11 +351,11 @@ class Reports:
             attachments = most_recent_report.get('attachments')
             if attachments is not None:
                 for attachment_uuid in attachments:
-                    logger.info(f'DELETE attachment: {attachment_uuid}')
+                    logger.info(f'Deleted report attachment: {attachment_uuid}')
                     self.db_files.delete_file(ObjectId(attachment_uuid))
             uuid = most_recent_report.get('uuid')
             if uuid is not None:
-                logger.info(f'DELETE: {uuid}')
+                logger.info(f'Deleted report: {uuid}')
                 self.db_files.delete_file(ObjectId(uuid))
 
     @gui_route_logged_in('<report_id>/pdf', skip_activity=True, proceed_and_set_access=True)
