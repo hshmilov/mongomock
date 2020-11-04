@@ -32,6 +32,7 @@ class AWSCISGenerator:
                 for aws_client in self.plugin_base._get_db_connection()[aws_plugin_unique_name]['clients'].find({}):
                     aws_client_config = aws_client['client_config'].copy()
                     self.plugin_base._decrypt_client_config(aws_client_config)
+                    aws_client_config = self.plugin_base._normalize_password_fields_guess_schema(aws_client_config)
                     aws_client_config['plugin_unique_name'] = aws_plugin_unique_name
                     self.all_aws_client_configs.append(aws_client_config)
             except Exception:

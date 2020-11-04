@@ -30,6 +30,7 @@ class AzureCISGenerator:
                 for azure_client in db_connection[azure_plugin_unique_name]['clients'].find({}):
                     azure_client_config = azure_client['client_config'].copy()
                     self.plugin_base._decrypt_client_config(azure_client_config)
+                    azure_client_config = self.plugin_base._normalize_password_fields_guess_schema(azure_client_config)
 
                     azure_client_config['plugin_unique_name'] = azure_plugin_unique_name
                     azure_client_config['azure_adapter_type'] = 'azure'
@@ -41,6 +42,13 @@ class AzureCISGenerator:
                     tenant_id = azure_client_config[AZURE_TENANT_ID]
                     if tenant_id not in self.all_azure_client_configs:
                         self.all_azure_client_configs[tenant_id] = azure_client_config
+                    else:
+                        # If more than one account has the same tenant id, then the account tag is not correct.
+                        # This happens because in the adapter itself multiple connections can have the same tenant
+                        # id with different subscriptions, but in the compliance, we only take the tenant id
+                        # and pull the subscriptions ourselves, thereby ignoring the subscription (and hence the
+                        # account tag)
+                        self.all_azure_client_configs[tenant_id].pop(AZURE_ACCOUNT_TAG, None)
             except Exception:
                 logger.exception(f'Could not add client config of {azure_plugin_unique_name}')
 

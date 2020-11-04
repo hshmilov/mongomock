@@ -31,7 +31,7 @@ def get_session_by_account_dict(account_dict: dict) -> AzureCloudConnection:
         'Azure China Cloud': AzureClouds.China,
         'Azure German Cloud': AzureClouds.Germany,
         'Azure US Gov Cloud': AzureClouds.Gov
-    }.get(cloud_key)
+    }.get(account_dict.get(cloud_key))
 
     management_url = None
     resource = None

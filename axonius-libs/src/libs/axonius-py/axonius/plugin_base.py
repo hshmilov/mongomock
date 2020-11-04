@@ -4,6 +4,7 @@ import base64
 import concurrent
 import concurrent.futures
 import configparser
+import copy
 import functools
 import gc
 import hashlib
@@ -67,7 +68,7 @@ from axonius.clients.opsgenie.connection import OpsgenieConnection
 from axonius.clients.opsgenie.consts import OPSGENIE_DEFAULT_DOMAIN
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.thycotic_vault.connection import ThycoticVaultConnection
-from axonius.consts.adapter_consts import IGNORE_DEVICE, CLIENT_ID
+from axonius.consts.adapter_consts import IGNORE_DEVICE, CLIENT_ID, VAULT_PROVIDER
 from axonius.consts.core_consts import ACTIVATED_NODE_STATUS, CORE_CONFIG_NAME
 from axonius.consts.gui_consts import (CORRELATION_REASONS,
                                        HAS_NOTES,
@@ -3265,6 +3266,25 @@ class PluginBase(Configurable, Feature, ABC):
     @property
     def vault_pwd_mgmt(self) -> AbstractVaultConnection:
         return self._vault_connection
+
+    def _normalize_password_fields_guess_schema(self, client_config):
+        """
+        If possible, use adapter_base.py::_normalize_password_fields
+        :return:
+        """
+        client_config_copy = copy.deepcopy(client_config)
+        # Get all the vault fields from the client_config
+        vault_connection_fields = [(field, client_config_copy[field])
+                                   for field
+                                   in client_config_copy.keys()
+                                   if isinstance(client_config_copy.get(field), dict) and
+                                   client_config_copy[field].get('type') == VAULT_PROVIDER]
+
+        for adapter_field_name, vault_data in vault_connection_fields:
+            client_config_copy[adapter_field_name] = self.vault_pwd_mgmt.query_password(adapter_field_name,
+                                                                                        vault_data.get('data'))
+
+        return client_config_copy
 
     def check_password_fetch(self, adapter_field_name: str, vault_data: dict) -> bool:
         """

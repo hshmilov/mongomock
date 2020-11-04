@@ -42,13 +42,14 @@ class CarbonblackResponseAdapter(AdapterBase, Configurable):
         return RESTConnection.test_reachability(client_config.get('domain'),
                                                 https_proxy=client_config.get('https_proxy'))
 
-    @staticmethod
-    def get_connection(client_config):
+    def get_connection(self, client_config):
+        logger.info(f'inactive_filter_days = {str(self.__inactive_filter_days)}')
         connection = CarbonblackResponseConnection(domain=client_config['domain'],
                                                    verify_ssl=client_config.get('verify_ssl', False),
                                                    username=client_config.get('username'),
                                                    password=client_config.get('password'),
                                                    apikey=client_config.get('apikey'),
+                                                   inactive_filter_days=self.__inactive_filter_days,
                                                    headers={'Content-Type': 'application/json',
                                                             'Accept': 'application/json'},
                                                    url_base_prefix='api/',
@@ -67,8 +68,7 @@ class CarbonblackResponseAdapter(AdapterBase, Configurable):
             logger.exception(message)
             raise ClientConnectionException(message)
 
-    @staticmethod
-    def _query_devices_by_client(client_name, client_data):
+    def _query_devices_by_client(self, client_name, client_data: CarbonblackResponseConnection):
         """
         Get all devices from a specific CarbonblackResponse domain
 
@@ -77,8 +77,9 @@ class CarbonblackResponseAdapter(AdapterBase, Configurable):
 
         :return: A json with all the attributes returned from the CarbonblackResponse Server
         """
+        logger.info(f'inactive_filter_days = {str(self.__inactive_filter_days)}')
         with client_data:
-            yield from client_data.get_device_list()
+            yield from client_data.get_device_list(inactive_filter_days=self.__inactive_filter_days)
 
     @staticmethod
     def _clients_schema():
@@ -264,6 +265,12 @@ class CarbonblackResponseAdapter(AdapterBase, Configurable):
                     'name': 'fetch_uninstall',
                     'title': 'Fetch uninstalled devices',
                     'type': 'bool'
+                },
+                {
+                    'name': 'inactive_filter_days',
+                    'title': 'Fetch inactive devices in the last X days',
+                    'description': 'Anything that has been inactive for more than this number will not be pulled',
+                    'type': 'number'
                 }
             ],
             'required': [
@@ -276,8 +283,10 @@ class CarbonblackResponseAdapter(AdapterBase, Configurable):
     @classmethod
     def _db_config_default(cls):
         return {
-            'fetch_uninstall': True
+            'fetch_uninstall': True,
+            'inactive_filter_days': None
         }
 
     def _on_config_update(self, config):
         self.__fetch_uninstall = config['fetch_uninstall']
+        self.__inactive_filter_days = config.get('inactive_filter_days')

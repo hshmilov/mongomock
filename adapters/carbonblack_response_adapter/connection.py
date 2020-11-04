@@ -9,6 +9,10 @@ logger = logging.getLogger(f'axonius.{__name__}')
 
 
 class CarbonblackResponseConnection(RESTConnection):
+    def __init__(self, *args, inactive_filter_days: int = 0, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__inactive_filter_days = inactive_filter_days
+
     def _connect(self):
         if self._username and self._password:
             self._get('auth', do_digest_auth=True)
@@ -16,10 +20,15 @@ class CarbonblackResponseConnection(RESTConnection):
             self._permanent_headers['X-Auth-Token'] = self._apikey
         else:
             raise RESTException('No user name or password')
-        self._get('v1/sensor')
 
-    def get_device_list(self):
-        yield from self._get('v1/sensor')
+        url_params = {'inactive_filter_days': self.__inactive_filter_days} if self.__inactive_filter_days else None
+        self._get('v1/sensor', url_params=url_params)
+
+    # pylint: disable=arguments-differ
+    def get_device_list(self, inactive_filter_days: int = 0):
+        self.__inactive_filter_days = inactive_filter_days
+        url_params = {'inactive_filter_days': self.__inactive_filter_days} if self.__inactive_filter_days else None
+        yield from self._get('v1/sensor', url_params=url_params)
 
     def update_isolate_status(self, device_id, do_isolate):
         device_json = self._get(f'v1/sensor/{device_id}')

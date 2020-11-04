@@ -515,7 +515,7 @@ class GceAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'parallel_count',
-                    'title': 'Number of accounts to fetch in parallel',
+                    'title': 'Number of parallel connections',
                     'type': 'integer'
                 },
             ],
