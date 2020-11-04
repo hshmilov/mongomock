@@ -157,11 +157,12 @@ class CiscoMerakiConnection(RESTConnection):
         return serial_statuses_dict
 
     # pylint: disable=arguments-differ
-    def get_device_list(self, fetch_history=False, sleep_between_requests_in_sec=0):
+    def get_device_list(self, fetch_history=False, sleep_between_requests_in_sec=0, fetch_sm=True):
         self.sleep_between_requests_in_sec = sleep_between_requests_in_sec
         organizations = [str(organization_raw['id']) for organization_raw in self._meraki_get('organizations')
                          if organization_raw.get('id')]
         serial_statuses_dict = self._get_device_statuses(organizations)
         networks_raw = list(self._get_networks(organizations))
         yield from self._get_devices_and_clients(networks_raw, serial_statuses_dict, fetch_history)
-        yield from self._get_mdm_devices(networks_raw)
+        if fetch_sm:
+            yield from self._get_mdm_devices(networks_raw)

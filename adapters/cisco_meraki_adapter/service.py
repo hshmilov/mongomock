@@ -126,6 +126,7 @@ class CiscoMerakiAdapter(AdapterBase, Configurable):
             if not isinstance(sleep_time, int):
                 sleep_time = 0
             for deivce_raw, device_type in connection.get_device_list(fetch_history=self.__fetch_history,
+                                                                      fetch_sm=self.__fetch_sm,
                                                                       sleep_between_requests_in_sec=sleep_time):
                 yield deivce_raw, device_type, vlan_exclude_list
 
@@ -481,9 +482,15 @@ class CiscoMerakiAdapter(AdapterBase, Configurable):
                     'type': 'integer',
                     'title': 'Time in seconds to sleep between each request'
                 },
+                {
+                    'name': 'fetch_sm',
+                    'type': 'bool',
+                    'title': 'Fetch MDM devices'
+                }
             ],
             'required': [
-                'fetch_history'
+                'fetch_history',
+                'fetch_sm'
             ],
             'pretty_name': 'Cisco Meraki Configuration',
             'type': 'array'
@@ -494,8 +501,10 @@ class CiscoMerakiAdapter(AdapterBase, Configurable):
         return {
             'fetch_history': False,
             'sleep_between_requests_in_sec': 0,
+            'fetch_sm': True
         }
 
     def _on_config_update(self, config):
         self.__fetch_history = config['fetch_history']
+        self.__fetch_sm = config['fetch_sm'] if 'fetch_sm' in config else True
         self.__sleep_between_requests_in_sec = config.get('sleep_between_requests_in_sec')
