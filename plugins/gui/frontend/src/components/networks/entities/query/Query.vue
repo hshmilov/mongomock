@@ -10,6 +10,7 @@
     />
     <div class="filter">
       <XQuerySearchInput
+        ref="searchInput"
         v-model="queryFilter"
         :module="module"
         :query-search.sync="query.search"
@@ -17,7 +18,6 @@
         :user-fields-groups="userFieldsGroups"
         @validate="onValid"
         @done="$emit('done')"
-        ref="searchInput"
       />
       <XButton
         type="link"
@@ -94,7 +94,7 @@ export default {
     ...mapGetters({
       autoQuery: AUTO_QUERY,
       getModuleSchemaWithConnectionLabel: GET_MODULE_SCHEMA_WITH_CONNECTION_LABEL,
-      getSavedQueryById: 'getSavedQueryById'
+      getSavedQueryById: 'getSavedQueryById',
     }),
     query: {
       get() {
@@ -182,7 +182,10 @@ export default {
         searchTemplate: undefined,
       };
 
-      const filterShouldRecompile = force || this.autoQuery;
+      // If we chose saved query, and we didn't save our original view yet, we need to recompile in
+      // order to get it - so we will know when it got changed.
+      const recompileForOriginalView = this.selectedView && !this.selectedView.recompiledFilter;
+      const filterShouldRecompile = force || this.autoQuery || recompileForOriginalView;
 
       let filter;
       let selectedView;
