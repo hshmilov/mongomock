@@ -703,6 +703,8 @@ def main():
                 'ui_test_instances_master_docker_restart',
                 'ui_test_instances_before_join',
                 'ui_test_tasks',
+                'ui_test_restore',
+                'ui_test_execution_settings',
                 'ui_test_user_permissions',
                 'ui_test_report',
                 'ui_test_cyberark_vault_integration',
