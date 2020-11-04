@@ -1,3 +1,4 @@
+import time
 import logging
 
 from axonius.clients.rest.connection import RESTConnection
@@ -35,6 +36,7 @@ class CycognitoConnection(RESTConnection):
                               body_params=[])
         yield from response
         offset += 1
+        got_exception = False
         while offset < MAX_NUMBER_OF_PAGES:
             try:
                 response = self._post(f'assets/ip',
@@ -45,7 +47,11 @@ class CycognitoConnection(RESTConnection):
                 if not response:
                     break
                 yield from response
+                got_exception = False
                 offset += 1
             except Exception:
                 logger.exception(f'Problem at offset {offset}')
-                break
+                if got_exception:
+                    break
+                time.sleep(60)
+                got_exception = True

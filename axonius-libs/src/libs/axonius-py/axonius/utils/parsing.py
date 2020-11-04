@@ -1323,7 +1323,8 @@ def get_serial(adapter_device):
     serial = (adapter_device['data'].get('device_serial') or '').strip()
     if serial \
             and serial.upper().strip().replace(' ', '') not in BAD_SERIALS \
-            and 'VMWARE' not in serial.upper().strip() and len(serial) > 4:
+            and ('VMWARE' not in serial.upper().strip() or adapter_device.get('plugin_name') == 'igar_adapter')\
+            and len(serial) > 4:
         return serial.upper()
     return None
 

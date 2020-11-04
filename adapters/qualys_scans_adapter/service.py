@@ -558,6 +558,8 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             got_hostname = False
             got_mac = False
             device.qualys_id = device_id
+            if device_raw.get('lastSystemBoot'):
+                device.set_boot_time(boot_time=parse_date(device_raw.get('lastSystemBoot')))
             hostname = (device_raw.get('netbiosName') or device_raw.get('dnsHostName')) or device_raw.get('name')
             if device_raw.get('netbiosName') and device_raw.get('dnsHostName') and \
                     device_raw.get('dnsHostName').split('.')[0].lower() == \

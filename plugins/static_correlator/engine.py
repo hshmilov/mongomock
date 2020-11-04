@@ -64,6 +64,7 @@ SEMI_DANGEROUS_ADAPTERS = ['symantec_adapter', 'tanium_asset_adapter', 'iboss_cl
 DOMAIN_TO_DNS_DICT = dict()
 DOES_AD_HAVE_ONE_CLIENT = False
 ALLOW_SERVICE_NOW_BY_NAME_ONLY = False
+DUPLICATES_SERIALS_IGAR = []
 
 
 def get_private_dns_name(adapter_device):
@@ -591,9 +592,10 @@ def is_a_record_device(adapter_device):
 
 
 def is_full_hostname_adapter(adapter_device):
-    return adapter_device.get('plugin_name') in ['active_directory_adapter', 'panorays_adapter', 'tanium_adapter',
+    return adapter_device.get('plugin_name') in ['active_directory_adapter', 'panorays_adapter',
                                                  'sccm_adapter', 'cisco_firepower_management_center_adapter'] \
-        or is_a_record_device(adapter_device)
+        or is_a_record_device(adapter_device) or (hostname_not_problematic(adapter_device)
+                                                  and adapter_device.get('plugin_name') in ['tanium_adapter'])
 
 
 # Solarwinds Node are bad for MAC correlation
@@ -724,6 +726,32 @@ def compare_asset_hosts_no_dash(adapter_device1, adapter_device2):
     return False
 
 
+def get_imei(adapter_device):
+    if adapter_device.get('plugin_name') not in ['mobileiron_adapter']:
+        return None
+    imei = adapter_device['data'].get('imei')
+    if not imei:
+        return None
+    return imei.lower().replace(' ', '')
+
+
+def get_imei_or_serial(adapter_device):
+    if get_imei(adapter_device):
+        return get_imei(adapter_device)
+    if adapter_device.get('plugin_name') not in ['service_now_adapter', 'service_now_sql_adapter',
+                                                 'service_now_akana_adapter']:
+        return None
+    return get_serial(adapter_device)
+
+
+def compare_imei_or_serial(adapter_device1, adapter_device2):
+    asset1 = get_imei_or_serial(adapter_device1)
+    asset2 = get_imei_or_serial(adapter_device2)
+    if asset1 and asset2 and asset1 == asset2:
+        return True
+    return False
+
+
 def get_host_or_asset_no_dash(adapter_device):
     asset = get_hostname(adapter_device) or get_asset_name(adapter_device)
     if asset:
@@ -817,9 +845,10 @@ def compare_v_dash_name(adapter_device1, adapter_device2):
 def igar_with_no_serial(adapter_device):
     if not adapter_device.get('plugin_name') in ['igar_adapter']:
         return True
-    if not get_serial(adapter_device):
+    if not get_hostname(adapter_device):
         return True
-    return False
+    hostname = get_hostname(adapter_device).split('.')[0].lower()
+    return hostname not in DUPLICATES_SERIALS_IGAR
 
 
 def remove_qualys_no_mac_with_cloud_id(adapter_device):
@@ -1155,6 +1184,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                                   inner_compare_funcs,
                                                   {'Reason': 'They have the same MAC'},
                                                   CorrelationReason.StaticAnalysis)
+
+    def _correlate_imei_serial(self, adapters_to_correlate):
+        logger.info('Starting to correlate imei serial')
+        filtered_adapters_list = filter(get_imei_or_serial, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_imei_or_serial],
+                                      [compare_imei_or_serial],
+                                      [get_imei],
+                                      [],
+                                      {'Reason': 'They have the same imei and serail'},
+                                      CorrelationReason.StaticAnalysis)
 
     def _correlate_snow_asset_host_snow_no_dash(self, adapters_to_correlate):
         logger.info('Starting to correlate asset host snow no dash')
@@ -1640,6 +1680,26 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                       {'Reason': 'They have the same Agent UUID'},
                                       CorrelationReason.StaticAnalysis)
 
+    @staticmethod
+    def _get_serial_dups_igar(adapters_to_correlate):
+        dups_list = set()
+        serial_dict = {}
+        for adapter_device in adapters_to_correlate:
+            if adapter_device.get('plugin_name') != 'igar_adapter':
+                continue
+            serial = get_serial(adapter_device)
+            hostname = get_hostname(adapter_device)
+            if not serial or not hostname:
+                continue
+            hostname = hostname.split('.')[0].lower()
+            serial = serial.upper()
+            if hostname not in serial_dict:
+                serial_dict[hostname] = serial
+            else:
+                if serial != serial_dict[hostname]:
+                    dups_list.add(hostname)
+        return list(dups_list)
+
     def _raw_correlate(self, entities):
         # WARNING WARNING WARNING
         # Adding or changing any type of correlation here might require changing the appropriate logic
@@ -1655,6 +1715,8 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         correlate_snow_serial_only = bool(self._correlation_config and
                                           self._correlation_config.get('correlate_snow_serial_only') is True)
         adapters_to_correlate = list(normalize_adapter_devices(entities, correlate_snow_serial_only))
+        global DUPLICATES_SERIALS_IGAR
+        DUPLICATES_SERIALS_IGAR = self._get_serial_dups_igar(adapters_to_correlate)
 
         correlate_by_snow_mac = bool(self._correlation_config and
                                      self._correlation_config.get('correlate_by_snow_mac') is True)
@@ -1699,7 +1761,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # so in order to solve the race condition we yield marker here and
         # wait for all correlation to end until the marker in _map_correlation
         yield CorrelationMarker()
-
+        yield from self._correlate_imei_serial(adapters_to_correlate)
         yield from self._correlate_with_twistlock(adapters_to_correlate)
 
         yield from self._correlate_with_digicert_pki(adapters_to_correlate)

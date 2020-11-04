@@ -691,7 +691,7 @@ class SccmAdapter(AdapterBase, Configurable):
                 device.current_logged_user = computer_data.get('UserName0') or device_raw.get('User_Name0')
                 device.time_zone = computer_data.get('CurrentTimeZone0')
                 if os_data.get('LastBootUpTime0'):
-                    device.set_boot_time(boot_time=os_data.get('LastBootUpTime0'))
+                    device.set_boot_time(boot_time=parse_date(os_data.get('LastBootUpTime0')))
 
                 try:
                     if isinstance(device_raw['new_sw_data'], list):
