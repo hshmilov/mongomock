@@ -8,6 +8,7 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.remote.webelement import WebElement
 
 from axonius.utils.wait import wait_until
+from services.axon_service import TimeoutException
 from test_credentials.json_file_credentials import (CLIENT_DETAILS_EXTRA,
                                                     FILE_NAME)
 from test_credentials.json_file_credentials import client_details as json_file_creds
@@ -377,7 +378,12 @@ class AdaptersPage(EntitiesPage):
             self.select_instance(instance)
         self.click_save_and_fetch()
         self.wait_for_table_to_be_responsive()
-        self.wait_for_data_collection_toaster_start()
+        try:
+            self.wait_for_data_collection_toaster_start()
+        except TimeoutException:
+            self.refresh()
+            self.wait_for_data_collection_toaster_start(retries=600)
+
         self.wait_for_data_collection_toaster_absent()
 
     def wait_for_adapter(self, adapter_name, retries=60 * 3, interval=2):

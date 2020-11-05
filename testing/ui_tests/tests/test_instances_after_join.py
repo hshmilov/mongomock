@@ -168,8 +168,6 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
         rc, output = self._instances[0].ssh('cat /etc/hostname')
         self.logger.debug(f'/etc/hostname return rc is {rc}')
         self.logger.debug(f'/etc/hostname return output is {output}')
-        self._instances[0].sshc.close()
-        self._instances[0].wait_for_ssh()
         return output
 
     def check_correct_hostname_is_shown_in_table(self):

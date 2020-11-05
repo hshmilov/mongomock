@@ -77,10 +77,8 @@ def setup_node(connection_string):
     restart_all_adapters(init_name)
 
 
-def logic_main():
+def logic_main(connection_string):
     if BOOTED_FOR_PRODUCTION_MARKER_PATH.exists():
-        res = input('Please enter connection string:')
-        connection_string = res.split()
         if len(connection_string) != 3:
             print('Bad connection string! Please do not use spaces in any of the parameters.')
             sys.exit(1)
@@ -91,7 +89,6 @@ def logic_main():
                 redprint(str(e))
                 time.sleep(15)
                 sys.exit(-1)
-            print('Node successfully joined Axonius cluster.')
             sys.exit(0)
     else:
         print('System is not stable yet (Probably recently booted) please wait a few minutes and try again.')

@@ -23,7 +23,7 @@ from axonius.consts.instance_control_consts import (InstanceControlConsts,
                                                     UPLOAD_FILE_SCRIPTS_PATH, UPLOAD_FILE_SCRIPT_NAME,
                                                     METRICS_INTERVAL_MINUTES,
                                                     MetricsFields, BOOT_CONFIG_FILE_PATH,
-                                                    METRICS_PATH, PASSWORD_GET_URL, UPGRADE_USER_NAME)
+                                                    METRICS_CONTAINER_PATH, PASSWORD_GET_URL, UPGRADE_USER_NAME)
 from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME,
                                           PLUGIN_NAME,
                                           NODE_ID, GUI_PLUGIN_NAME, CORE_UNIQUE_NAME,
@@ -361,7 +361,7 @@ class InstanceControlService(Triggerable, PluginBase):
         try:
             logger.info('Getting node metrics')
 
-            res = METRICS_PATH.read_text()
+            res = METRICS_CONTAINER_PATH.read_text()
 
             if res:
                 metrics_result = json.loads(res)

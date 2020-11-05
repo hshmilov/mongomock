@@ -2,7 +2,6 @@ import io
 import json
 import os
 import re
-import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -13,6 +12,7 @@ import pytest
 from retrying import retry
 
 from CI.exports.version_passwords import VersionPasswords
+from axonius.consts.instance_control_consts import METRICS_HOST_PATH
 from axonius.consts.system_consts import CUSTOMER_CONF_PATH, SYSTEM_CONF_PATH
 from axonius.utils.wait import wait_until
 from builds import Builds
@@ -209,12 +209,19 @@ class TestInstancesBase(TestBase):
     def connect_node_maker(instance, password=NODE_MAKER_PASSWORD, username=NODE_MAKER_USERNAME):
         return connect_to_linux_user(instance, password, username)
 
+    @staticmethod
+    def get_host_ip() -> str:
+        """
+        Gets the first ip from the metrics file (Probably the master)
+        :return: str with the IP
+        """
+        return json.loads(METRICS_HOST_PATH.read_text())['metrics']['ips'][0]
+
     def join_node(self):
-        ip_output = subprocess.check_output(['ip', 'a']).decode('utf-8')
-        master_ip_address = re.search(PRIVATE_IP_ADDRESS_REGEX, ip_output).group(1)
+        master_ip_address = TestInstancesBase.get_host_ip()
         node_join_token = self.instances_page.get_node_join_token()
         chan = TestInstancesBase.connect_node_maker(self._instances[0])
-        node_join_message = read_ssh_until(self.logger, chan, b'Please enter connection string:')
+        node_join_message = read_ssh_until(self.logger, chan, b'Please enter connection string:\n')
         self.logger.info(f'node_maker login message: {node_join_message.decode("utf-8")}')
         chan.sendall(f'{master_ip_address} {node_join_token} {NODE_NAME}\n')
         try:

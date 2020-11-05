@@ -34,13 +34,20 @@ class TestInstancesUpgrade(TestInstancesBase):
 
         self.logger.info(f'Upgrading to version: {export["version"]}')
 
+        # We added sleep of 10 minutes before we start downloading the upgrade file
+        # the sleep is because on the first 5 minutes after connecting a node to its master it transfer a lot of
+        # data back and forth and during this time the tinyproxy in master-proxy is under a lot of stress and sometime
+        # it breaks and send illegal TLS that cause the connection to break.
+        # These breaks can interrupt and even kill the updater image download process and as a result of that fail
+        # the upgrade test.
         upgrader = io.StringIO('#!/bin/bash\n'
                                'set -e\n'
                                'cd /home/ubuntu/\n'
                                # bypass internet disconnect using our own node-proxy!
-                               f'export https_proxy=https://localhost:{DOCKER_PORTS[MASTER_PROXY_PLUGIN_NAME]}\n'
-                               f'wget -O {upgrade_file_name} {export["installer_download_link"]}\n'
-                               f'echo {instance.ssh_pass} | sudo -S python3 axonius_latest.py\n')
+                               f'sleep 600\n'
+                               f'curl --retry 15 -x https://localhost:{DOCKER_PORTS[MASTER_PROXY_PLUGIN_NAME]} '
+                               f'-o {upgrade_file_name} {export["installer_download_link"]}\n'
+                               f'echo {instance.ssh_pass} | sudo -S /bin/sh {upgrade_file_name}\n')
 
         instance.put_file(file_object=upgrader,
                           remote_file_path=upgrade_script_path)
