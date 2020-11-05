@@ -63,7 +63,9 @@ class CISAzureCategory7:
     @staticmethod
     def is_disk_encrypted(disk: dict) -> bool:
         return str(((disk.get('properties') or {}).get('encryption') or {}).get('type')).lower() in [
-            'encryptionatrestwithplatformkey', 'encryptionatrestwithcustomerkey'
+            'encryptionatrestwithplatformkey',
+            'encryptionatrestwithcustomerkey',
+            'encryptionatrestwithplatformandcustomerkeys'
         ]
 
     # pylint: disable=too-many-locals, too-many-branches

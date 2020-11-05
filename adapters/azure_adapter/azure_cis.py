@@ -76,7 +76,9 @@ def is_disk_encrypted(disk: dict) -> bool:
         encryption_settings = enc.get('type')
         if encryption_settings:
             return str(encryption_settings).lower() in [
-                'encryptionatrestwithplatformkey', 'encryptionatrestwithcustomerkey'
+                'encryptionatrestwithplatformkey',
+                'encryptionatrestwithcustomerkey',
+                'encryptionatrestwithplatformandcustomerkeys'
             ]
         return None
     except Exception as e:
