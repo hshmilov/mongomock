@@ -304,7 +304,7 @@ class PluginService(WeaveService):
     @property
     def vol_conf(self):
         # Try to get the latest, but if the container is down, use the last data.
-        (out, _, _) = self.get_file_contents_from_container(VOLATILE_CONFIG_PATH)
+        (out, _, _) = self.get_file_contents_from_container(str(VOLATILE_CONFIG_PATH))
         self.last_vol_conf = PluginVolatileConfig(out.decode("utf-8"))
 
         return self.last_vol_conf

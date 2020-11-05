@@ -1,8 +1,8 @@
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 # PATHS #
 AXONIUS_HOME_DIR_NAME = '/home/axonius'
-VOLATILE_CONFIG_PATH = Path(AXONIUS_HOME_DIR_NAME) / 'plugin_volatile_config.ini'
+VOLATILE_CONFIG_PATH = PurePosixPath(AXONIUS_HOME_DIR_NAME) / 'plugin_volatile_config.ini'
 UWSGI_RECOVER_SCRIPT_PATH = Path(AXONIUS_HOME_DIR_NAME) / 'hacks/recover_uwsgi.py'
 SHARED_READONLY_DIR_NAME = 'shared_readonly_files'
 SHARED_READONLY_FULL_PATH = Path(AXONIUS_HOME_DIR_NAME) / SHARED_READONLY_DIR_NAME
