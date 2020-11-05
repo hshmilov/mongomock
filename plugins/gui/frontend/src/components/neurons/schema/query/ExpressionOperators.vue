@@ -120,7 +120,6 @@ export default {
 .x-expression-ops {
   display: grid;
   grid-gap: 8px;
-  margin-bottom: 16px;
   grid-template-columns: 60px 30px 30px auto 30px 66px;
   align-items: start;
   .checkbox-label {

@@ -117,7 +117,8 @@ export default {
       return calcMaxIndex(this.expressions);
     },
     expressionContainerCSSClass() {
-      return `expression__container${this.expressions.length > 1 ? '--draggable' : ''}`;
+      const baseClass = 'expression__container';
+      return this.expressions.length > 1 ? `${baseClass} ${baseClass}--draggable` : baseClass;
     },
   },
   methods: {
@@ -203,29 +204,32 @@ export default {
                 align-items: center;
             }
         }
-        .expression__container > .x-expression {
+        .expression__container {
+          margin-bottom: 16px;
+
+          > .x-expression {
             width: 100%;
-        }
-        .expression__container--draggable {
-          display: flex;
-
-          .draggable-expression-handle {
-            float: left;
-            cursor: move;
-            margin-right: 4px;
-            opacity: 0;
-            width: 5%;
-            margin-top: 15px;
-          }
-          .x-expression {
-            width: 95%;
           }
 
-          &:hover {
+          &--draggable {
+            display: flex;
+
             .draggable-expression-handle {
-              opacity: 1;
-              font-size: 15px;
-              color: $theme-orange;
+              cursor: move;
+              opacity: 0;
+              margin: auto;
+              width: 30px;
+            }
+            .x-expression {
+              width: 95%;
+            }
+
+            &:hover {
+              .draggable-expression-handle {
+                opacity: 1;
+                font-size: 15px;
+                color: $theme-orange;
+              }
             }
           }
         }

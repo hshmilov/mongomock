@@ -105,6 +105,7 @@ export default {
 
 <style lang="scss">
   .x-expression {
+
     select, input:not([type=checkbox]) {
       height: 32px;
       width: 100%;

@@ -189,9 +189,6 @@ export default {
       grid-template-columns: 240px auto;
       grid-gap: 8px 4px;
       position: relative;
-      .x-expression-ops {
-        margin-bottom: 0;
-      }
       .child-field {
         display: flex;
         &__type {
