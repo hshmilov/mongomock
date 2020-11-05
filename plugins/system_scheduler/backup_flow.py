@@ -31,8 +31,6 @@ from axonius.clients.aws.utils import upload_file_to_s3, delete_file_from_s3
 
 GPG_CIPHER = 'AES256'
 AVG_COMPRESSION_RATIO = 1
-# tar packing safety for free space ( 3 times the current alocated DB space )
-TAR_PACKAGER_SAFETY_GUARD = 3
 
 BACKUP_UPLOADS_STATUS = 'backup_uploads_status'
 BACKUP_FILE_NAME = 'backup_filename'
@@ -220,7 +218,7 @@ class BackupManager:
         backup_data_uncompress_in_gb = get_mongo_space_documents_size(self.include_history,
                                                                       self.include_devices_users_data)
 
-        if backup_data_uncompress_in_gb * AVG_COMPRESSION_RATIO * TAR_PACKAGER_SAFETY_GUARD < host_free_space_in_gb / 2:
+        if backup_data_uncompress_in_gb * AVG_COMPRESSION_RATIO < host_free_space_in_gb / 3:
             return True
 
         self._log_activity_backup_skip_no_free_space_left(self.include_history,
