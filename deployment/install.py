@@ -77,6 +77,9 @@ def is_inside_container():
 
 def main():
     metadata = ''
+    if os.geteuid() != 0:
+        print(f'Please run as root!')
+        return False
     with AutoOutputFlush():
         success = False
         try:
@@ -129,9 +132,6 @@ def start_install_flow():
     inside_container = args.inside_container
     if not do_not_verify_storage:
         verify_storage_requirements()
-    if os.geteuid() != 0:
-        print(f'Please run as root!')
-        return False
     install(args.first_time, no_research, master_only, inside_container)
     print_state(f'Done, took {int(time.time() - start)} seconds')
     return True
