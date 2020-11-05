@@ -372,6 +372,11 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 plugin_name = vuln_raw.get('plugin', {}).get('name')
                 plugin_id = vuln_raw.get('plugin', {}).get('id')
                 has_patch = vuln_raw.get('plugin', {}).get('has_patch')
+                vpr_score = None
+                try:
+                    vpr_score = float(vuln_raw['plugin']['vpr']['score'])
+                except Exception:
+                    pass
                 last_fixed = parse_date(vuln_raw.get('last_fixed'))
                 first_found = parse_date(vuln_raw.get('first_found'))
                 last_found = parse_date(vuln_raw.get('last_found'))
@@ -430,6 +435,7 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                     plugin_and_severity.append(f'{plugin_name}__{severity}')
                     device.add_tenable_vuln(plugin=plugin_name, severity=severity, cpe=cpe, cve=cve,
                                             output=plugin_output, plugin_id=plugin_id, has_patch=has_patch,
+                                            vpr_score=vpr_score,
                                             cvss_base_score=cvss_base_score, exploit_available=exploit_available,
                                             synopsis=synopsis, see_also=see_also, vuln_state=vuln_state,
                                             last_fixed=last_fixed, first_found=first_found, last_found=last_found)

@@ -630,7 +630,7 @@ class TenableVulnerability(SmartJsonClass):
     has_been_mitigated = Field(bool, 'Mitigated')
     xref = ListField(str, 'Cross References')
     port = Field(int, 'Port')
-    vpr_score = Field(str, 'VPR Score')
+    vpr_score = Field(float, 'VPR Score')
     protocol = Field(str, 'Protocol')
 
 

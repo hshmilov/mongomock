@@ -415,7 +415,11 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                 cpe = vulnerability.get('cpe') or None
                 cve = vulnerability.get('cve') or None
                 cvss_base_score = vulnerability.get('baseScore') or None
-                vpr_score = vulnerability.get('vprScore')
+                vpr_score = None
+                try:
+                    vpr_score = float(vulnerability.get('vprScore'))
+                except Exception:
+                    pass
                 exploit_value = (vulnerability.get('exploitAvailable') or '').lower()
                 exploit_available = None
                 if exploit_value:
