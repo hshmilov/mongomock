@@ -74,18 +74,17 @@ import _sortBy from 'lodash/sortBy';
 import _isPlainObject from 'lodash/isPlainObject';
 import _isArray from 'lodash/isArray';
 import entityCustomData from '@mixins/entity_custom_data';
-import XTabs from '../../../axons/tabs/Tabs.vue';
-import XTab from '../../../axons/tabs/Tab.vue';
-import XList from '../../../neurons/schema/List.vue';
-import XModal from '../../../axons/popover/Modal/index.vue';
+import { FETCH_DATA_FIELDS } from '@store/actions';
+import { pluginMeta } from '@constants/plugin_meta';
+import { guiPluginName, initCustomData, getEntityPermissionCategory } from '@constants/entities';
+import { GET_CONNECTION_LABEL } from '@store/getters';
+import { LAZY_FETCH_ADAPTERS_CLIENT_LABELS } from '@store/modules/adapters';
+import XTabs from '@axons/tabs/Tabs.vue';
+import XTab from '@axons/tabs/Tab.vue';
+import XList from '@neurons/schema/List.vue';
+import XModal from '@axons/popover/Modal/index.vue';
+import XToast from '@axons/popover/Toast.vue';
 import XCustomFields from './CustomFields.vue';
-import XToast from '../../../axons/popover/Toast.vue';
-
-import { FETCH_DATA_FIELDS } from '../../../../store/actions';
-
-import { pluginMeta } from '../../../../constants/plugin_meta';
-import { guiPluginName, initCustomData, getEntityPermissionCategory } from '../../../../constants/entities';
-import { GET_CONNECTION_LABEL } from '../../../../store/getters';
 
 
 export default {
@@ -204,9 +203,13 @@ export default {
       };
     },
   },
+  async created() {
+    await this.lazyFetchConnectionLabels();
+  },
   methods: {
     ...mapActions({
       fetchDataFields: FETCH_DATA_FIELDS,
+      lazyFetchConnectionLabels: LAZY_FETCH_ADAPTERS_CLIENT_LABELS,
     }),
     isGuiAdapterData(data) {
       return data.plugin_name === guiPluginName;
