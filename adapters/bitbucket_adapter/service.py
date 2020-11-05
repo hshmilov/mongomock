@@ -223,7 +223,7 @@ class BitbucketAdapter(AdapterBase, Configurable):
                 }
             ],
             'required': [],
-            'pretty_name': 'BitBucket Server Configuration',
+            'pretty_name': 'Bitbucket Server Configuration',
             'type': 'array',
         }
 
