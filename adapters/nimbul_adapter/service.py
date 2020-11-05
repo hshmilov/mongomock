@@ -161,7 +161,7 @@ class NimbulAdapter(AdapterBase):
         device.hostname = device_raw.get('hostname')
         vpc_name = device_raw.get('vpc_name')
         if vpc_name:
-            if vpc_name.startswith('GCP:'):
+            if vpc_name.startswith('GCP:') or vpc_name.startswith('Google '):
                 device.cloud_provider = 'GCP'
             device.vpc_name = vpc_name
         device.app_code = device_raw.get('app_code')
@@ -184,8 +184,6 @@ class NimbulAdapter(AdapterBase):
                 device.add_nic(None, private_ip, subnets=subnets)
 
             public_ip = device_raw.get('public_ip')
-            if public_ip and isinstance(public_ip, str):
-                public_ip = [public_ip]
             if public_ip:
                 device.add_public_ip(public_ip)
         except Exception:
@@ -215,8 +213,6 @@ class NimbulAdapter(AdapterBase):
                 device.add_nic(None, private_ip)
 
             public_ip = device_raw.get('public_ip_address')
-            if public_ip and isinstance(public_ip, str):
-                public_ip = [public_ip]
             if public_ip:
                 device.add_public_ip(public_ip)
         except Exception:

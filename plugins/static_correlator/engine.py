@@ -166,7 +166,7 @@ def is_only_host_adapter_not_localhost(adapter_device):
 
 def get_fqdn(adapter_device):
     # For now we support only Chef to avoid confusion of future adapters writers
-    if adapter_device.get('plugin_name') not in ['chef_adapter', 'infoblox_adapter']:
+    if adapter_device.get('plugin_name') not in ['chef_adapter']:
         return None
     return adapter_device['data'].get('fqdn')
 

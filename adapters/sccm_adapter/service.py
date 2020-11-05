@@ -126,6 +126,7 @@ class SccmAdapter(AdapterBase, Configurable):
         current_compliance_status = ListField(CurrentComplianceStatus, 'Current Compliance Status')
         primary_owner_name = Field(str, 'Primary Owner Name')
         primary_owner_contact = Field(str, 'Primary Owner Contact')
+        site_code = Field(str, 'Site Code')
 
         def add_sccm_vm(self, **kwargs):
             try:
@@ -218,6 +219,7 @@ class SccmAdapter(AdapterBase, Configurable):
                         continue
                 device = self._new_device_adapter()
                 device.sccm_server = device_raw['sccm_server']
+                device.site_code = device_raw.get('SiteCode0')
                 try:
                     device.ad_distinguished_name = device_raw.get('Distinguished_Name0')
                 except Exception:

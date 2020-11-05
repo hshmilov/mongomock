@@ -294,7 +294,11 @@ class NextThinkAdapter(AdapterBase):
                 return None
             user.id = str(user_id) + '_' + (user_raw.get('name') or '')
 
-            user.username = user_raw.get('name')
+            username = user_raw.get('name')
+            user.username = username
+            if '@' in username:
+                user.username = username.split('@')[0]
+                user.domain = username.split('@')[1]
             user.user_sid = user_raw.get('sid')
             user.user_title = user_raw.get('job_title')
             user.user_department = user_raw.get('department')
