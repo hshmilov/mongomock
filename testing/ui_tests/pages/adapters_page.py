@@ -8,7 +8,6 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.remote.webelement import WebElement
 
 from axonius.utils.wait import wait_until
-from services.axon_service import TimeoutException
 from test_credentials.json_file_credentials import (CLIENT_DETAILS_EXTRA,
                                                     FILE_NAME)
 from test_credentials.json_file_credentials import client_details as json_file_creds
