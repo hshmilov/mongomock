@@ -255,11 +255,11 @@ export default {
       }
     },
     refreshTokenRecursive() {
-      this.refreshAccessToken().then(() => {
-        setTimeout(() => {
+      setTimeout(() => {
+        this.refreshAccessToken().then(() => {
           this.refreshTokenRecursive();
-        }, this.tokenRefreshTimeout);
-      });
+        });
+      }, this.tokenRefreshTimeout);
     },
   },
 };
