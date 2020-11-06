@@ -60,15 +60,16 @@ CUSTOMER_CONF = json.dumps({
 
 
 @retry(stop_max_attempt_number=30, wait_fixed=1000 * 120)
-def wait_for_booted_for_production(instance: BuildsInstance):
-    print('Waiting for server to be booted for production...')
+def wait_for_booted_for_production(instance: BuildsInstance, to_exist=True):
+    print(f'Waiting for server {"NOT " if not to_exist else ""}to be booted for production...')
     test_ready_command = f'ls -al {BOOTED_FOR_PRODUCTION_MARKER_PATH.absolute().as_posix()}'
     state = instance.ssh(test_ready_command)
-    get_log_command = f'tail {RESTART_LOG_PATH.as_posix()} -n 100'
-    restart_log_tail = instance.ssh(get_log_command)
-    print(f'Log so far: {restart_log_tail}')
+    if to_exist:
+        get_log_command = f'tail {RESTART_LOG_PATH.as_posix()} -n 100'
+        restart_log_tail = instance.ssh(get_log_command)
+        print(f'Log so far: {restart_log_tail}')
     print(f'state0 = {state[0]} state1 = {state[1]}')
-    assert state[0] == 0  # ls success on files that exist
+    assert (state[0] == 0) == to_exist  # ls success on files that exist
 
 
 def bring_restart_on_reboot_node_log(instance: BuildsInstance, logger):

@@ -101,6 +101,11 @@ class TestInstancesAfterNodeJoin(TestInstancesBase):
 
         time.sleep(5)
         self._instances[0].wait_for_ssh()
+
+        # Waiting for server not to be booted for production and start it's system_boot.py run.
+        wait_for_booted_for_production(self._instances[0], to_exist=False)
+
+        # Waiting for server to finish it's system_boot.py run and be ready for production.
         wait_for_booted_for_production(self._instances[0])
         with pytest.raises(IOError):
             self._instances[0].get_file(tmp_file)
