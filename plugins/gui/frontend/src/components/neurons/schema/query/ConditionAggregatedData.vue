@@ -72,7 +72,8 @@ export default {
         if (!this.readOnly && uuid) {
           invalidReferences = _get(state, `${this.module}.view.validReferences.${uuid}`, []);
         }
-        return state[this.module].views.saved.content.data.filter((item) => !invalidReferences.includes(item.uuid));
+        return state[this.module].views.saved.content.data.filter((item) => (
+          item && !invalidReferences.includes(item.uuid)));
       },
     }),
     ...mapGetters({
