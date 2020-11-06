@@ -23,6 +23,7 @@ def decode_datetime(obj):
     return dateutil.parser.parse(obj)
 
 
+#pylint: disable=too-many-instance-attributes
 @dataclass(frozen=True)
 class UserInfo(DataClassJsonMixin):
     _id: str
@@ -34,6 +35,7 @@ class UserInfo(DataClassJsonMixin):
     last_name: str = ''
     last_updated: datetime = None
     pic_name: str = ''
+    salt: str = None
     deleted: bool = False
 
 
@@ -92,6 +94,7 @@ def get_user_info(user):
                     user.get('last_name', ''),
                     user.get(LAST_UPDATED_FIELD, None),
                     user.get('pic_name', ''),
+                    user.get('salt', None),
                     user.get('archived', False))
 
 
