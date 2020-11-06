@@ -629,7 +629,7 @@
     "description": "Trend Micro Apex One (formerly OfficeScan) is an endpoint security solution protecting against malware, scripts, injection, ransomware, memory and browser attacks, and exploits."
   },
   "datto_rmm_adapter": {
-    "title": "Datto RMM (Autotask Endpoint Management) - BETA",
+    "title": "Datto RMM (Autotask Endpoint Management)",
     "link": "https://docs.axonius.com/docs/datto-rmm",
     "description": "Datto RMM (formerly Autotask Endpoint Management) is a cloud-based Remote Monitoring and Management (RMM) platform that provides device auditing, real-time monitoring, and automatic patching."
   },

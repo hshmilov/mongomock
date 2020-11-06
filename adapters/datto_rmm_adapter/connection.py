@@ -41,7 +41,7 @@ class DattoRmmConnection(RESTConnection):
                                          'max': DEVICE_PER_PAGE})
         yield from response['devices']
         page += 1
-        while response.get('nextPageUrl') and page * DEVICE_PER_PAGE < MAX_NUMBER_OF_DEVICES:
+        while (response.get('pageDetails') or {}).get('nextPageUrl') and page * DEVICE_PER_PAGE < MAX_NUMBER_OF_DEVICES:
             try:
                 response = self._get('api/v2/account/devices',
                                      url_params={'page': page,

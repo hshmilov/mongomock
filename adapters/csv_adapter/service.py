@@ -258,7 +258,8 @@ class CsvAdapter(AdapterBase):
                     continue
 
                 device.id = file_name + '_' + device_id
-                device.device_serial = vals.get('serial')
+                if vals.get('serial'):
+                    device.device_serial = vals.get('serial').strip('\'')
                 device.name = vals.get('name')
                 device.cloud_id = vals.get('cloud_id')
                 device.cloud_provider = figure_out_cloud(vals.get('cloud_provider'))

@@ -234,7 +234,10 @@ class InfobloxAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem setting external attributes')
             try:
-                device.binding_state = device_raw.get('lease_state')
+                binding_state = device_raw.get('lease_state')
+                if binding_state in ['ABANDONED', 'FREE', 'BACKUP']:
+                    return None
+                device.binding_state = binding_state
                 address_types = device_raw.get('types')
                 if (isinstance(address_types, list) and
                         all(isinstance(addr_type, str) for addr_type in address_types)):

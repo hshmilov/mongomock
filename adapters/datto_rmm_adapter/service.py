@@ -150,7 +150,7 @@ class DattoRmmAdapter(AdapterBase):
             if patch_data and isinstance(patch_data, dict):
                 device.patch_status = patch_data.get('patchStatus')
             if device_raw.get('intIpAddress'):
-                device_raw.add_nic(ips=[device_raw.get('intIpAddress')])
+                device.add_nic(ips=[device_raw.get('intIpAddress')])
             if device_raw.get('extIpAddress'):
                 device.add_public_ip(device_raw.get('extIpAddress'))
             domain = device_raw.get('domain')

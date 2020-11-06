@@ -1599,6 +1599,11 @@ def hostnames_do_not_contradict(adapter_device1, adapter_device2):
     if not get_hostname(adapter_device1) or not get_hostname(adapter_device2) \
             or is_hostname_condradict_ok_adapter(adapter_device1) or is_hostname_condradict_ok_adapter(adapter_device2):
         return True
+    if get_hostname(adapter_device1) and get_hostname(adapter_device2):
+        asset_low_1 = get_hostname(adapter_device1).lower().replace('-', '_')
+        asset_low_2 = get_hostname(adapter_device2).lower().replace('-', '_')
+        if asset_low_1 == asset_low_2:
+            return True
     return compare_device_normalized_hostname(adapter_device1, adapter_device2)
 
 

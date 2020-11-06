@@ -57,8 +57,8 @@ ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_a
                       'nessus_csv_adapter', 'tenable_io_adapter', 'qualys_scans_adapter', 'airwave_adapter',
                       'counter_act_adapter', 'tanium_discover_adapter', 'infoblox_adapter', 'aws_adapter',
                       'airwatch_adapter', 'iboss_cloud_adapter']
-DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'counter_act_adapter',
-                      'infoblox_adapter', 'azure_ad_adapter', 'tanium_discover_adapter',
+DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'counter_act_adapter', 'nexpose_adapter',
+                      'infoblox_adapter', 'azure_ad_adapter', 'tanium_discover_adapter', 'qualys_scans_adapter',
                       'solarwinds_orion_adapter', 'mssql_adapter', 'iboss_cloud_adapter']
 SEMI_DANGEROUS_ADAPTERS = ['symantec_adapter', 'tanium_asset_adapter']
 DOMAIN_TO_DNS_DICT = dict()
@@ -78,6 +78,9 @@ def is_palolato_vpn(adapter_device):
 
 
 def is_only_host_adapter(adapter_device):
+    if adapter_device.get('plugin_name') == 'csv_adapter' \
+            and '/Microsoft.Compute/' in (adapter_device['data'].get('id') or ''):
+        return False
     if (adapter_device.get('plugin_name') in ['deep_security_adapter',
                                               'cisco_umbrella_adapter',
                                               'bitlocker_adapter',
@@ -595,7 +598,8 @@ def is_full_hostname_adapter(adapter_device):
     return adapter_device.get('plugin_name') in ['active_directory_adapter', 'panorays_adapter',
                                                  'sccm_adapter', 'cisco_firepower_management_center_adapter'] \
         or is_a_record_device(adapter_device) or (hostname_not_problematic(adapter_device)
-                                                  and adapter_device.get('plugin_name') in ['tanium_adapter'])
+                                                  and adapter_device.get('plugin_name') in ['tanium_adapter',
+                                                                                            'free_ipa_adapter'])
 
 
 # Solarwinds Node are bad for MAC correlation
@@ -847,6 +851,9 @@ def igar_with_no_serial(adapter_device):
         return True
     if not get_hostname(adapter_device):
         return True
+    comments = adapter_device['data'].get('comments')
+    if comments and '/virtualMachines/' in comments:
+        return False
     hostname = get_hostname(adapter_device).split('.')[0].lower()
     return hostname not in DUPLICATES_SERIALS_IGAR
 
