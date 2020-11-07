@@ -8,6 +8,7 @@ import argparse
 import datetime
 import glob
 import os
+import shlex
 import shutil
 import stat
 import subprocess
@@ -277,11 +278,13 @@ def install(first_time, no_research, master_only, inside_container=False):
     launch_axonius_manager()
     extra_args = f'{"--first-time" if first_time else ""} {"--no-research" if no_research else ""} ' \
                  f'{"--master-only" if master_only else ""}'
-    os.system(f'docker exec axonius-manager /bin/bash '
-              f'-c "python3 ./devops/create_pth.py; python3 ./deployment/install.py --inside-container {extra_args}"')
-
-    # Cleanup
-    os.remove(f'{AXONIUS_DEPLOYMENT_PATH}/images.tar')
+    try:
+        subprocess.check_output(shlex.split(f'docker exec axonius-manager /bin/bash -c '
+                                            f'"python3 ./devops/create_pth.py; '
+                                            f'python3 ./deployment/install.py --inside-container {extra_args}"'))
+    finally:
+        # Cleanup
+        os.remove(f'{AXONIUS_DEPLOYMENT_PATH}/images.tar')
 
     print('Restarting axonius-manager')
     # Cleaning all hanging exec process before
