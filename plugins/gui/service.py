@@ -1112,6 +1112,9 @@ class GuiService(Triggerable,
                 'refreshRate': 60,
                 'cell_joiner': None,
                 'defaultNumOfEntitiesPerPage': 20,
+                LOGOS_SETTINGS: {
+                    CUSTOM_LOGO: None
+                },
                 'timeout_settings': {
                     'disable_remember_me': False,
                     'enabled': False,
