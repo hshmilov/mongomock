@@ -828,7 +828,7 @@
     "description": "Venafi secures and protects cryptographic keys and digital certificates."
   },
   "riverbed_adapter": {
-    "title": "Riverbed SteelCentral Controller (SCC) - BETA",
+    "title": "Riverbed SteelCentral Controller (SCC)",
     "link": "https://docs.axonius.com/docs/riverbed-steelcentral-controller-scc",
     "description": "Riverbed SteelCentral Controller SCC facilitates administration tasks for groups of SteelHeads, Interceptors, Mobile Controller, Cores, and Edges."
   },

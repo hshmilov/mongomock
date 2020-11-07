@@ -18,6 +18,7 @@ class RiverbedAdapter(AdapterBase):
         health = Field(str, 'Health')
         address = Field(str, 'Address')
         device_version = Field(str, 'Device version')
+        build_number = Field(str, 'Build Number')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -117,11 +118,16 @@ class RiverbedAdapter(AdapterBase):
                 if not device_id:
                     logger.warning(f'Bad device with no id {device_raw}')
                     continue
-                device.id = device_id + '_' + (device_raw.get('uuid') or '') + '_' + (device_raw.get('serial') or '')
+                device.id = str(device_id) + '_' \
+                    + (device_raw.get('uuid') or '') + '_' + (device_raw.get('serial') or '')
                 device.uuid = device_raw.get('uuid')
                 device.device_serial = device_raw.get('serial')
                 device.device_model = device_raw.get('model')
-                device.device_version = device_raw.get('version')
+                device_version = device_raw.get('version')
+                if not isinstance(device_version, dict):
+                    device_version = {}
+                device.device_version = device_version.get('version_number')
+                device.build_number = device_version.get('build_number')
                 device.hostname = device_raw.get('hostname')
                 device.address = device_raw.get('address')
                 device.health = device_raw.get('health')

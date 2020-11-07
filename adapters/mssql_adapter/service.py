@@ -109,8 +109,9 @@ class MssqlAdapter(AdapterBase, Configurable, DynamicDeviceMixin):
         table = client_config['table']
         connection.set_devices_paging(self.__devices_fetched_at_a_time)
         with connection:
-            for device_raw in connection.query(f'Select * from {table}'):
-                yield device_raw, client_config, sql_type
+            devices_raw = list(connection.query(f'Select * from {table}'))
+        for device_raw in devices_raw:
+            yield device_raw, client_config, sql_type
 
     # pylint: disable=arguments-differ
     def _query_users_by_client(self, client_name, client_data):
