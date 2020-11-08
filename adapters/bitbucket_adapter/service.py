@@ -137,6 +137,7 @@ class BitbucketAdapter(AdapterBase, Configurable):
                 project.public = parse_bool_from_raw(device_raw.get('public'))
                 project.description = project_raw.get('description')
                 project.project_type = project_raw.get('type')
+                device.project = project
 
             commits_raw = device_raw.get('extra_commits')
             device.commits = []
