@@ -114,7 +114,7 @@ class NexposeV2Client(NexposeClient):
 
     @staticmethod
     def parse_raw_device(device_raw, device_class, drop_only_ip_devices=False, fetch_vulnerabilities=False,
-                         site_name_exclude_list=None):
+                         site_name_exclude_list=None, fetch_users=True):
         # We do not use data with no timestamp.
         last_seen = device_raw.get('last_scan_date')
         last_seen = super(NexposeV2Client, NexposeV2Client).parse_raw_device_last_seen(last_seen)

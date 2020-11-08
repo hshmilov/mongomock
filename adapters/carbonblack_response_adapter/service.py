@@ -26,6 +26,7 @@ class CarbonblackResponseAdapter(AdapterBase, Configurable):
         network_isolation_enabled = Field(bool, 'Network Isolation Enabled')
         sensor_id = Field(str, 'Sensor Id')
         uninstall = Field(bool, 'Uninstall Status')
+        computer_sid = Field(str, 'Computer Sid')
 
     def __init__(self):
         super().__init__(get_local_config_file(__file__))
@@ -79,7 +80,8 @@ class CarbonblackResponseAdapter(AdapterBase, Configurable):
         """
         logger.info(f'inactive_filter_days = {str(self.__inactive_filter_days)}')
         with client_data:
-            yield from client_data.get_device_list(inactive_filter_days=self.__inactive_filter_days)
+            yield from client_data.get_device_list(inactive_filter_days=self.__inactive_filter_days,
+                                                   fetch_recent_sid=self.__fetch_recent_sid)
 
     @staticmethod
     def _clients_schema():
@@ -140,6 +142,7 @@ class CarbonblackResponseAdapter(AdapterBase, Configurable):
                 return None
             device.id = str(device_id) + '_' + (device_raw.get('computer_name') or '')
             device.sensor_id = device_id
+            device.computer_sid = device_raw.get('computer_sid')
             device.sensor_health_message = device_raw.get('sensor_health_message')
             device.add_agent_version(agent=AGENT_NAMES.carbonblack_response,
                                      version=device_raw.get('build_version_string'),
@@ -271,10 +274,16 @@ class CarbonblackResponseAdapter(AdapterBase, Configurable):
                     'title': 'Fetch inactive devices in the last X days',
                     'description': 'Anything that has been inactive for more than this number will not be pulled',
                     'type': 'number'
+                },
+                {
+                    'name': 'fetch_recent_sid',
+                    'type': 'bool',
+                    'title': 'Fetch only the most recent device per computer sid'
                 }
             ],
             'required': [
-                'fetch_uninstall'
+                'fetch_uninstall',
+                'fetch_recent_sid'
             ],
             'pretty_name': 'Carbon Black EDR Configuration',
             'type': 'array'
@@ -284,9 +293,11 @@ class CarbonblackResponseAdapter(AdapterBase, Configurable):
     def _db_config_default(cls):
         return {
             'fetch_uninstall': True,
-            'inactive_filter_days': None
+            'inactive_filter_days': None,
+            'fetch_recent_sid': False
         }
 
     def _on_config_update(self, config):
         self.__fetch_uninstall = config['fetch_uninstall']
         self.__inactive_filter_days = config.get('inactive_filter_days')
+        self.__fetch_recent_sid = config.get('fetch_recent_sid') or False

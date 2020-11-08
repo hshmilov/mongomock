@@ -5,6 +5,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 from axonius.fields import Field, ListField
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.devices.device_adapter import DeviceAdapter
+from axonius.mixins.configurable import Configurable
 from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.adapter_base import AdapterProperty
 from axonius.utils.files import get_local_config_file
@@ -20,7 +21,7 @@ NEXPOSE_PORT = 'port'
 VERIFY_SSL = 'verify_ssl'
 
 
-class NexposeAdapter(ScannerAdapterBase):
+class NexposeAdapter(ScannerAdapterBase, Configurable):
     """ Adapter for Rapid7's nexpose """
     DEFAULT_LAST_SEEN_THRESHOLD_HOURS = 24 * 365 * 2
 
@@ -212,7 +213,8 @@ class NexposeAdapter(ScannerAdapterBase):
                 device = api_client_class.parse_raw_device(device_raw, self._new_device_adapter,
                                                            drop_only_ip_devices=drop_only_ip_devices,
                                                            fetch_vulnerabilities=fetch_vulnerabilities,
-                                                           site_name_exclude_list=site_name_exclude_list)
+                                                           site_name_exclude_list=site_name_exclude_list,
+                                                           fetch_users=self.__fetch_users)
                 if device:
                     device.nexpose_hostname = nexpose_hostname
                     yield device
@@ -272,3 +274,29 @@ class NexposeAdapter(ScannerAdapterBase):
     @classmethod
     def adapter_properties(cls):
         return [AdapterProperty.Network, AdapterProperty.Vulnerability_Assessment]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'fetch_users',
+                    'title': 'Fetch users information for devices',
+                    'type': 'bool'
+                }
+            ],
+            'required': [
+                'fetch_users'
+            ],
+            'pretty_name': 'Rapid7 Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'fetch_users': True
+        }
+
+    def _on_config_update(self, config):
+        self.__fetch_users = config['fetch_users'] if 'fetch_users' in config else True

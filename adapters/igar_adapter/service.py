@@ -550,6 +550,10 @@ class IgarAdapter(AdapterBase):
                 device.is_abb = self._parse_bool(device_raw.get('ABB'))
                 device.device_type = 'Server'
                 device.set_raw(device_raw)
+                try:
+                    device.hostname = device.hostname.strip()
+                except Exception:
+                    pass
                 yield device
             except Exception:
                 logger.exception(f'Problem adding device: {str(device_raw)}')

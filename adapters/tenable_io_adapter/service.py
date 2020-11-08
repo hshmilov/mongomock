@@ -48,6 +48,12 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         scans_data = ListField(ScanData, 'Scans Data')
         aws_account_id = Field(str, 'AWS Account ID')
         aws_instance_id = Field(str, 'AWS Instance ID')
+        total_vulns = Field(int, 'Total Vulnerabilities')
+        severity_info = Field(int, 'Info Vulnerabilities Count')
+        severity_low = Field(int, 'Low Vulnerabilities Count')
+        severity_medium = Field(int, 'Medium Vulnerabilities Count')
+        severity_high = Field(int, 'High Vulnerabilities Count')
+        severity_critical = Field(int, 'Critical Vulnerabilities Count')
 
         def add_tenable_vuln(self, **kwargs):
             self.plugin_and_severities.append(TenableVulnerability(**kwargs))
@@ -356,6 +362,12 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
         vulns_info = device_raw.get('vulns_info', [])
         device.software_cves = []
         found_scan_id = True
+        total_vulns = 0
+        severity_info = 0
+        severity_low = 0
+        severity_medium = 0
+        severity_high = 0
+        severity_critical = 0
         if self.__scan_id_white_list:
             found_scan_id = False
         for vuln_raw in vulns_info:
@@ -368,7 +380,18 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                                              protocol=port_data.get('protocol'))
                 except Exception:
                     logger.exception(f'Problem adding port for {vuln_raw}')
-                severity = vuln_raw.get('severity', '')
+                severity = vuln_raw.get('severity', '').lower()
+                total_vulns += 1
+                if severity == 'info':
+                    severity_info += 1
+                elif severity == 'low':
+                    severity_low += 1
+                elif severity == 'medium':
+                    severity_medium += 1
+                elif severity == 'high':
+                    severity_high += 1
+                elif severity == 'critical':
+                    severity_critical += 1
                 plugin_name = vuln_raw.get('plugin', {}).get('name')
                 plugin_id = vuln_raw.get('plugin', {}).get('id')
                 has_patch = vuln_raw.get('plugin', {}).get('has_patch')
@@ -444,6 +467,12 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
                 logger.exception(f'Problem getting vuln raw {vuln_raw}')
         if not found_scan_id:
             return None
+        device.total_vulns = total_vulns
+        device.severity_info = severity_info
+        device.severity_low = severity_low
+        device.severity_medium = severity_medium
+        device.severity_high = severity_high
+        device.severity_critical = severity_critical
         tenble_sources = device_raw.get('sources')
         if not isinstance(tenble_sources, list):
             tenble_sources = []

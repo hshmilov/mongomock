@@ -463,7 +463,7 @@ class NexposeV3Client(NexposeClient):
     # pylint: disable=arguments-differ, too-many-locals, too-many-branches, too-many-statements
     @staticmethod
     def parse_raw_device(device_raw, device_class, drop_only_ip_devices=False, fetch_vulnerabilities=False,
-                         site_name_exclude_list=None):
+                         site_name_exclude_list=None, fetch_users=True):
         last_seen = device_raw.get('history', [])[-1].get('date') if device_raw.get('history', []) else None
 
         last_seen = super(NexposeV3Client, NexposeV3Client).parse_raw_device_last_seen(last_seen)
@@ -507,10 +507,12 @@ class NexposeV3Client(NexposeClient):
             if isinstance(device_raw.get('assessedForPolicies'), bool) else None
         device.assessed_for_vulnerabilities = device_raw.get('assessedForVulnerabilities') \
             if isinstance(device_raw.get('assessedForVulnerabilities'), bool) else None
-        if isinstance(device_raw.get('users'), list):
+        if isinstance(device_raw.get('users'), list) and fetch_users:
             for user_raw in device_raw.get('users'):
                 if isinstance(user_raw, dict) and user_raw.get('name'):
                     device.last_used_users.append(user_raw.get('name'))
+        elif not fetch_users:
+            device.last_used_users = []
 
         risk_score = device_raw.get('riskScore')
         if risk_score is not None:

@@ -346,9 +346,14 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         try:
             repository_name = (raw_device_data.get('repository') or {}).get('name')
             device.repository_name = repository_name
-            if repository_name and self.__repository_name_exclude_list and \
-                    repository_name in self.__repository_name_exclude_list:
-                return None
+            if repository_name and self.__repository_name_exclude_list:
+                if not self.__repository_exclude_contains:
+                    if repository_name in self.__repository_name_exclude_list:
+                        return None
+                else:
+                    for excluded_repository in self.__repository_name_exclude_list:
+                        if excluded_repository.lower() in repository_name.lower():
+                            return None
         except Exception:
             logger.exception('Problem getting repository')
         device.score = raw_device_data.get('score')
@@ -602,6 +607,11 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                     'type': 'string'
                 },
                 {
+                    'name': 'repository_exclude_contains',
+                    'type': 'bool',
+                    'title': 'Repository name exclude list - use contains and not equals'
+                },
+                {
                     'name': 'fetch_asset_groups',
                     'title': 'Fetch asset groups',
                     'type': 'bool'
@@ -619,7 +629,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
                 'drop_only_unauth_scans',
                 'fetch_scap',
                 'fetch_asset_groups',
-                'async_chunks'
+                'async_chunks',
+                'repository_exclude_contains'
             ],
             'pretty_name': 'Tenable.sc Configuration',
             'type': 'array'
@@ -637,7 +648,8 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
             'repository_name_exclude_list': None,
             'fetch_scap': False,
             'fetch_asset_groups': False,
-            'async_chunks': 50
+            'async_chunks': 50,
+            'repository_exclude_contains': False
         }
 
     @staticmethod
@@ -658,6 +670,7 @@ class TenableSecurityCenterAdapter(ScannerAdapterBase, Configurable):
         self.__drop_only_unauth_scans = config['drop_only_unauth_scans']
         self.__repository_name_exclude_list = config['repository_name_exclude_list'].split(',') \
             if config.get('repository_name_exclude_list') else None
+        self.__repository_exclude_contains = config.get('repository_exclude_contains') or False
         self.__info_vulns_plugin_ids = self._parse_info_vulns_plugin_ids_config(config.get('info_vulns_plugin_ids'))
         self.__fetch_scap = parse_bool_from_raw(config.get('fetch_scap')) or False
         self.__fetch_asset_groups = config.get('fetch_asset_groups') or False

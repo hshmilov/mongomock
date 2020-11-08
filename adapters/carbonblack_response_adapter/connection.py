@@ -3,6 +3,7 @@ from time import sleep
 
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
+from axonius.utils.datetime import parse_date
 from carbonblack_response_adapter import consts
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -25,9 +26,32 @@ class CarbonblackResponseConnection(RESTConnection):
         self._get('v1/sensor', url_params=url_params)
 
     # pylint: disable=arguments-differ
-    def get_device_list(self, inactive_filter_days: int = 0):
+    def get_device_list(self, inactive_filter_days: int = 0, fetch_recent_sid: bool = False):
         self.__inactive_filter_days = inactive_filter_days
         url_params = {'inactive_filter_days': self.__inactive_filter_days} if self.__inactive_filter_days else None
+        if fetch_recent_sid:
+            sensor_ids_computer_sids = dict()
+            for device_raw in self._get('v1/sensor', url_params=url_params):
+                computer_sid = device_raw.get('computer_sid')
+                last_seen = parse_date(device_raw.get('last_checkin_time'))
+                device_id = device_raw.get('id')
+                if not device_id or not computer_sid:
+                    continue
+                if computer_sid not in sensor_ids_computer_sids:
+                    sensor_ids_computer_sids[computer_sid] = [device_id, last_seen]
+                _, last_seen_max = sensor_ids_computer_sids[computer_sid]
+                if not last_seen_max or (last_seen and last_seen > last_seen_max):
+                    sensor_ids_computer_sids[computer_sid] = [device_id, last_seen]
+            for device_raw in self._get('v1/sensor', url_params=url_params):
+                computer_sid = device_raw.get('computer_sid')
+                device_id = device_raw.get('id')
+                if not sensor_ids_computer_sids.get(computer_sid):
+                    yield device_raw
+                    continue
+                if sensor_ids_computer_sids[computer_sid][0] != device_id:
+                    continue
+                yield device_raw
+            return
         yield from self._get('v1/sensor', url_params=url_params)
 
     def update_isolate_status(self, device_id, do_isolate):
