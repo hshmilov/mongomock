@@ -132,6 +132,14 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
         table_keys = []
         chunk_requests = []
         for table_key, total_count in table_total_counts_by_key.items():
+
+            # Samples are being prepare for a single 1 device request
+            if table_key in consts.SAMPLE_TABLES:
+                table_keys.append(table_key)
+                chunk_requests.append(self._get_table_async_request_params(
+                    table_key, 0, 1, additional_url_params=additional_params_by_table_key.get(table_key)),)
+                continue
+
             # compute page count
             number_of_offsets = min(ceil(total_count / float(self.__offset_size)),
                                     self.__number_of_offsets)

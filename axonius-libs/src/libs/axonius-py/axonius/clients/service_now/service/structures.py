@@ -244,6 +244,7 @@ class SnowDeviceAdapter(DeviceAdapter):
     verification_operational_status = Field(str, 'Verification Operational Status')
     compliance_exceptions = ListField(SnowComplianceException, 'Compliance Exceptions')
     contracts = ListField(SnowDeviceContract, 'Contracts')
+    diversiture_contracts = ListField(SnowDeviceContract, 'Diversiture Contracts')
     # you should keep these last
     upstream = ListField(RelativeInformationNode1, 'Upstream')
     downstream = ListField(RelativeInformationNode1, 'Downstream')

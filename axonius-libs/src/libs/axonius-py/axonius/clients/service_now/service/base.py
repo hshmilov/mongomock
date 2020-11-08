@@ -15,7 +15,7 @@ from axonius.clients.service_now.service.structures import RelativeInformationNo
     MaintenanceSchedule, CiIpData, SnowComplianceException, SnowDeviceContract
 from axonius.multiprocess.multiprocess import concurrent_multiprocess_yield
 from axonius.utils.datetime import parse_date
-from axonius.utils.parsing import make_dict_from_csv, float_or_none, parse_bool_from_raw, int_or_none
+from axonius.utils.parsing import make_dict_from_csv, float_or_none, parse_bool_from_raw, int_or_none, is_valid_ip
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -176,6 +176,12 @@ class ServiceNowAdapterBase(AdapterBase):
                      ' for the following parent contract numbers',
         },
         {
+            'name': 'diversiture_contract_parent_numbers',
+            'type': 'string',
+            'title': 'Fetch Device diversiture contract information from \'ast_contract\''
+                     ' for the following parent contract numbers',
+        },
+        {
             'name': 'snow_last_updated',
             'title': 'Fetch devices updated in ServiceNow in the last X hours (0: All)',
             'type': 'number',
@@ -241,6 +247,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'fetch_business_unit_table': False,
         'fetch_installed_software': False,
         'contract_parent_numbers': None,
+        'diversiture_contract_parent_numbers': None,
         'snow_last_updated': 0,
         'use_dotwalking': False,
         'dotwalking_per_request_limit': consts.DEFAULT_DOTWALKING_PER_REQUEST,
@@ -254,13 +261,21 @@ class ServiceNowAdapterBase(AdapterBase):
     def get_connection_external(self) -> Callable:
         pass
 
+    def _prepare_contract_parent_numbers(self):
+        contract_parent_numbers = ''
+        if self._contract_parent_numbers:
+            contract_parent_numbers += self._contract_parent_numbers
+        if self._diversiture_contract_parent_numbers:
+            if contract_parent_numbers:
+                contract_parent_numbers += ','
+            contract_parent_numbers += self._diversiture_contract_parent_numbers
+        return contract_parent_numbers
+
     def _connect_client(self, client_config):
         # get_connection will throw in case of any error in the connection
         self.get_connection(client_config)
         return (client_config,
                 self.get_connection_external(),
-                self._get_config_enum_from_file(client_config.get('install_status_file')),
-                self._get_config_enum_from_file(client_config.get('operational_status_file')),
                 {
                     'fetch_users_info_for_devices': self.__fetch_users_info_for_devices,
                     'fetch_ci_relations': self.__fetch_ci_relations,
@@ -269,16 +284,56 @@ class ServiceNowAdapterBase(AdapterBase):
                     'fetch_cmdb_model': self._fetch_cmdb_model,
                     'fetch_installed_software': self._fetch_installed_software,
                     'last_seen_timedelta': self._snow_last_updated_threashold,
-                    'contract_parent_numbers': self._contract_parent_numbers,
+                    'contract_parent_numbers': self._prepare_contract_parent_numbers(),
                     'parallel_requests': self.__parallel_requests,
                     'use_dotwalking': self._use_dotwalking,
                     'dotwalking_per_request_limit': self._dotwalking_per_request_limit,
                     'use_cached_users': self._use_cached_users,
                     'plugin_name': self.plugin_name,
-                },
-                None, None)
-        # self._get_config_enum_from_file(client_config.get('verification_install_status_file')),
-        # self._get_config_enum_from_file(client_config.get('verification_operational_status_file')))
+                })
+
+    # pylint: disable=too-many-branches
+    @staticmethod
+    def _parse_raw_snow_ip(ip_address_raw):
+        ip_addresses = None
+
+        if isinstance(ip_address_raw, str):
+            if '/' in ip_address_raw:
+                ip_addresses = ip_address_raw.split('/')
+            elif ',' in ip_address_raw:
+                ip_addresses = ip_address_raw.split(',')
+            elif ';' in ip_address_raw:
+                ip_addresses = ip_address_raw.split(';')
+            elif '&' in ip_address_raw:
+                ip_addresses = ip_address_raw.split('&')
+            elif 'and' in ip_address_raw:
+                ip_addresses = ip_address_raw.split('and')
+            elif r'\\\\' in ip_address_raw:
+                # Example: 1.1.1.1\\\\1.1.1.1
+                ip_addresses = ip_address_raw.split(r'\\\\')
+            elif re.search(consts.RE_SQUARED_BRACKET_WRAPPED, ip_address_raw):
+                # Example: [1.1.1.1] or [1.1.1.1][255.255.255.192]
+                # Note: all of the use cases ive seen had only one ip (and at most an additional subnet),
+                #       This implementation considers both as IPs in case this will actually be the case,
+                #       at most the subnet will be ignored as invalid ip
+                ip_addresses = re.findall(consts.RE_SQUARED_BRACKET_WRAPPED, ip_address_raw)
+            elif ':' in ip_address_raw:
+                # Example: 1.1.1.1:8000
+                ip_addresses = [ip_address_raw.split(':')[0]]
+            elif '(ilo' in ip_address_raw.lower():
+                # Example: 1.1.1.1 (iLo 1.1.1.1) or 1.1.1.1 (iLo)
+                ip_addresses = [ip_address_raw.split('(i', 1)[0]]
+            elif '-' in ip_address_raw:
+                # Example: 1.1.1.1 - VLAN2
+                ip_addresses = [ip_address_raw.split('-')[0]]
+            else:
+                ip_addresses = [ip_address_raw]
+
+        if isinstance(ip_addresses, list):
+            ip_addresses = [ip.strip() for ip in ip_addresses
+                            if isinstance(ip, str) and is_valid_ip(ip.strip())]
+
+        return ip_addresses
 
     # pylint: disable=R0912,R0915,R0914
     def create_snow_device(self,
@@ -336,50 +391,25 @@ class ServiceNowAdapterBase(AdapterBase):
             if self.__exclude_vm_tables is True and class_name and 'cmdb_ci_vm' in class_name:
                 return None
             device.class_name = class_name
+
+            subnets = []
+            connected_subnet = device_raw.pop(InjectedRawFields.connected_subnet.value, None)
+            if isinstance(connected_subnet, str) and '/' in connected_subnet:
+                subnets.append(connected_subnet)
+
             try:
-                ip_addresses = device_raw.get('ip_address')
-                if fetch_ips and ip_addresses and not any(elem in ip_addresses for elem in ['DHCP',
-                                                                                            '*',
-                                                                                            'Stack',
-                                                                                            'x',
-                                                                                            'X']):
-                    if '/' in ip_addresses:
-                        ip_addresses = ip_addresses.split('/')
-                    elif ',' in ip_addresses:
-                        ip_addresses = ip_addresses.split(',')
-                    elif ';' in ip_addresses:
-                        ip_addresses = ip_addresses.split(';')
-                    elif '&' in ip_addresses:
-                        ip_addresses = ip_addresses.split('&')
-                    elif 'and' in ip_addresses:
-                        ip_addresses = ip_addresses.split('and')
-                    elif r'\\\\' in ip_addresses:
-                        # Example: 1.1.1.1\\\\1.1.1.1
-                        ip_addresses = ip_addresses.split(r'\\\\')
-                    elif re.search(consts.RE_SQUARED_BRACKET_WRAPPED, ip_addresses):
-                        # Example: [1.1.1.1] or [1.1.1.1][255.255.255.192]
-                        # Note: all of the use cases ive seen had only one ip (and at most an additional subnet),
-                        #       This implementation considers both as IPs in case this will actually be the case,
-                        #       at most the subnet will be ignored as invalid ip
-                        ip_addresses = re.findall(consts.RE_SQUARED_BRACKET_WRAPPED, ip_addresses)
-                    elif ':' in ip_addresses:
-                        # Example: 1.1.1.1:8000
-                        ip_addresses = [ip_addresses.split(':')[0]]
-                    elif '(ilo' in ip_addresses.lower():
-                        # Example: 1.1.1.1 (iLo 1.1.1.1) or 1.1.1.1 (iLo)
-                        ip_addresses = [ip_addresses.split('(i', 1)[0]]
-                    elif '-' in ip_addresses:
-                        # Example: 1.1.1.1 - VLAN2
-                        ip_addresses = [ip_addresses.split('-')[0]]
-                    else:
-                        ip_addresses = [ip_addresses]
-                    ip_addresses = [ip.strip() for ip in ip_addresses]
-                else:
-                    ip_addresses = None
+                ip_addresses = None
+                ip_address = device_raw.get('ip_address')
+                if fetch_ips and ip_address and not any(elem in ip_address for elem in ['DHCP',
+                                                                                        '*',
+                                                                                        'Stack',
+                                                                                        'x',
+                                                                                        'X']):
+                    ip_addresses = self._parse_raw_snow_ip(ip_address)
                 mac_address = device_raw.get('mac_address')
                 if mac_address or ip_addresses:
                     got_nic = True
-                    device.add_nic(mac_address, ip_addresses)
+                    device.add_nic(mac_address, ip_addresses, subnets=subnets)
             except Exception:
                 logger.warning(f'Problem getting NIC at {device_raw}', exc_info=True)
             try:
@@ -542,8 +572,8 @@ class ServiceNowAdapterBase(AdapterBase):
             device.snow_department = device_raw.pop(InjectedRawFields.snow_department.value, None)
             device.physical_location = device_raw.pop(InjectedRawFields.physical_location.value, None)
 
+            install_status = device_raw.pop(InjectedRawFields.asset_install_status.value, None)
             try:
-                install_status = device_raw.pop(InjectedRawFields.asset_install_status.value, None)
                 try:
                     if install_status and not isinstance(install_status, str):
                         install_status = install_status_dict.get(install_status)
@@ -588,9 +618,14 @@ class ServiceNowAdapterBase(AdapterBase):
                     ci_ip_data = []
                 for snow_nic in snow_nics:
                     try:
-                        device.add_nic(mac=snow_nic.get('mac_address'), ips=[snow_nic.get('ip_address')])
-                        try:
+                        mac_address = snow_nic.get('mac_address')
+                        ip_addresses = None
+                        if snow_nic.get('ip_address'):
+                            ip_addresses = self._parse_raw_snow_ip(snow_nic.get('ip_address'))
+                        if mac_address or ip_addresses:
+                            device.add_nic(mac=mac_address, ips=ip_addresses, subnets=subnets)
 
+                        try:
                             for ci_ip in ci_ip_data:
                                 u_authorative_dns_name = ci_ip.get('u_authorative_dns_name')
                                 u_ip_version = ci_ip.get('u_ip_version')
@@ -627,7 +662,7 @@ class ServiceNowAdapterBase(AdapterBase):
             if isinstance(snow_ips, list):
                 for snow_ip in snow_ips:
                     try:
-                        device.add_nic(ips=[snow_ip.get('u_address').split(',')[0]])
+                        device.add_nic(ips=[snow_ip.get('u_address').split(',')[0]], subnets=subnets)
                     except Exception:
                         logger.exception(f'Problem with snow ips {snow_ip}')
 
@@ -922,19 +957,33 @@ class ServiceNowAdapterBase(AdapterBase):
                     except Exception:
                         pass
 
-            device_contracts = device_raw.pop(InjectedRawFields.contracts.value, None)
-            if isinstance(device_contracts, list):
-                for contract_dict in device_contracts:
-                    if not isinstance(contract_dict, dict):
+            device_contracts_raw = device_raw.pop(InjectedRawFields.contracts.value, None)
+            if isinstance(device_contracts_raw, list):
+                for contract_dict in device_contracts_raw:
+                    if not (isinstance(contract_dict, dict) and contract_dict.get('contract.parent.number')):
                         continue
                     try:
-                        device.contracts.append(SnowDeviceContract(
+                        parent_number = contract_dict.get('contract.parent.number')
+                        contract = SnowDeviceContract(
                             number=contract_dict.get('contract.number'),
                             short_desc=contract_dict.get('contract.short_description'),
-                            parent_number=contract_dict.get('contract.parent.number'),
-                        ))
+                            parent_number=parent_number,
+                        )
+
+                        if (isinstance(self._contract_parent_numbers, str) and
+                                isinstance(parent_number, str) and
+                                parent_number.lower() in self._contract_parent_numbers.lower().split(',')):
+
+                            device.contracts.append(contract)
+
+                        elif (isinstance(self._diversiture_contract_parent_numbers, str) and
+                              isinstance(parent_number, str) and
+                              parent_number.lower() in self._diversiture_contract_parent_numbers.lower().split(',')):
+
+                            device.diversiture_contracts.append(contract)
                     except Exception:
                         logger.debug(f'failed appending contract: {contract_dict}', exc_info=True)
+
             device.set_raw(device_raw)
             if not got_serial and not got_nic and self.__exclude_no_strong_identifier:
                 return None
@@ -1162,14 +1211,9 @@ class ServiceNowAdapterBase(AdapterBase):
             logger.warning(f'Problem adding maintenance schedule to {maintenance_schedule_dict}', exc_info=True)
 
     def _parse_raw_data(self, devices_raw_data):
-        for (device_raw, install_status_dict, operational_status_dict,
-             verification_install_status_dict, verification_operational_status_dict) in devices_raw_data:
+        for device_raw in devices_raw_data:
             device = self.create_snow_device(device_raw=device_raw,
-                                             fetch_ips=self.__fetch_ips,
-                                             install_status_dict=install_status_dict,
-                                             operational_status_dict=operational_status_dict,
-                                             verification_install_status_dict=verification_install_status_dict,
-                                             verification_operational_status_dict=verification_operational_status_dict)
+                                             fetch_ips=self.__fetch_ips)
             if device:
                 yield device
 
@@ -1210,7 +1254,8 @@ class ServiceNowAdapterBase(AdapterBase):
         self._fetch_cmdb_model = config.get('fetch_cmdb_model') or False
         self._fetch_business_unit_dict = config.get('fetch_business_unit_dict') or False
         self._fetch_installed_software = config.get('fetch_installed_software') or False
-        self._contract_parent_numbers = config.get('contract_parent_numbers')
+        self._contract_parent_numbers: Optional[str] = config.get('contract_parent_numbers')
+        self._diversiture_contract_parent_numbers: Optional[str] = config.get('diversiture_contract_parent_numbers')
         self._use_dotwalking = bool(config.get('use_dotwalking'))
         self._dotwalking_per_request_limit = config.get('dotwalking_per_request_limit') or \
             consts.DEFAULT_DOTWALKING_PER_REQUEST

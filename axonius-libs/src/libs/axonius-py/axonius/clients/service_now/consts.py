@@ -17,6 +17,8 @@ TABLE_NAME_BY_DEVICE_TYPE = {
     'Cluster VIP': 'cmdb_ci_cluster_vip',
     'Facility Hardware': 'cmdb_ci_facility_hardware',
     'Multi Storage Device': 'cmdb_ci_msd',
+    'VPN': 'cmdb_ci_vpn',
+
 }
 
 NUMBER_OF_OFFSETS = 100000
@@ -195,7 +197,7 @@ DEFAULT_EXTRA_FIELDS_REQUIRED_LIST = ['sys_id']
 GENERIC_PARSED_SUBTABLE_KEYS = [
     LOCATION_TABLE_KEY, USER_GROUPS_TABLE_KEY, DEPARTMENT_TABLE_KEY, ALM_ASSET_TABLE,
     COMPANY_TABLE, U_SUPPLIER_TABLE, MAINTENANCE_SCHED_TABLE, SOFTWARE_PRODUCT_TABLE, MODEL_TABLE,
-    COMPLIANCE_EXCEPTION_DATA_TABLE, U_DIVISION_TABLE, BUSINESS_UNIT_TABLE,
+    COMPLIANCE_EXCEPTION_DATA_TABLE, U_DIVISION_TABLE, BUSINESS_UNIT_TABLE
 ]
 
 TABLE_NAME_TO_FIELDS: Dict[str, List[str]] = {
@@ -207,6 +209,10 @@ TABLE_NAME_TO_FIELDS: Dict[str, List[str]] = {
     CONTRACT_TO_ASSET_TABLE: CONTRACT_TO_ASSET_TABLE_FIELDS,
     VERIFICATION_TABLE: VERIFICATION_TABLE_FIELDS,
 }
+
+SAMPLE_TABLES = [
+
+]
 
 
 class InjectedRawFields(Enum):
@@ -290,6 +296,7 @@ class InjectedRawFields(Enum):
     contracts = 'z_contracts'
     verification_status = 'z_verification_status'
     verification_operational_status = 'z_verification_operational_status'
+    connected_subnet = 'z_connected_subnet'
 
     # user fields
     u_company = 'z_u_company'

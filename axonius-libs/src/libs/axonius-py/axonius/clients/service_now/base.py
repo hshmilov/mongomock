@@ -211,6 +211,10 @@ class ServiceNowConnectionMixin(ABC):
                 return
             curr_table.setdefault(ci_item_id, table_result)
 
+        elif table_key in consts.SAMPLE_TABLES:
+            logger.debug(f'SAMPLE {table_key}: {table_result}')
+            return
+
         else:
             logger.error(f'Invalid table_key encountered {table_key}: {table_result}')
             return
@@ -296,6 +300,11 @@ class ServiceNowConnectionMixin(ABC):
 
             if fetch_business_unit_dict:
                 sub_tables_to_request_by_key[consts.BUSINESS_UNIT_TABLE] = consts.BUSINESS_UNIT_TABLE
+
+        # SAMPLE TABLES - only works with no dotwalks
+        # Note - only a single result will be returned
+        sub_tables_to_request_by_key = {**{table_name: table_name for table_name in consts.SAMPLE_TABLES},
+                                        **sub_tables_to_request_by_key}
 
         subtables_by_key = self._get_subtables_by_key(sub_tables_to_request_by_key,
                                                       additional_params_by_table_key=additional_params_by_table_key,

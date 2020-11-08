@@ -8,6 +8,29 @@ from axonius.clients.service_now.consts import InjectedRawFields
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
+def get_reference_sys_id(raw_reference: Optional[dict]):
+    if not isinstance(raw_reference, dict):
+        return None
+
+    # look for sys_id in 'value'
+    sys_id = raw_reference.get('value')
+
+    # no display_value? look for sys_id at the end of the link
+    if not sys_id:
+        link = raw_reference.get('link')
+        if link and isinstance(link, str):
+            # example link: 'https://REDACTED.service-now.com/api/now/table/alm_asset/622REDACTED4bcb8
+            *_, sys_id = link.rstrip('/').rsplit('/', 1)
+
+    return sys_id
+
+
+def get_reference_display_value(raw_reference: Optional[dict]):
+    if not isinstance(raw_reference, dict):
+        return None
+    return raw_reference.get('display_value')
+
+
 def _get_optional_raw_reference(device_raw: dict, field_name: str):
     if not (isinstance(device_raw, dict) and isinstance(field_name, str)):
         return None
@@ -23,24 +46,15 @@ def _parse_optional_reference(device_raw: dict, field_name: str, reference_table
     if not isinstance(raw_reference, dict):
         return raw_reference
 
-    # look for sys_id in 'value'
-    value = raw_reference.get('value')
-    if value:
-        return reference_table.get(value)
-
-    # no value? if permitted, try display_value
+    # if permitted, return the display_value
     if use_display_value:
-        display_value = raw_reference.get('display_value')
+        display_value = get_reference_display_value(raw_reference)
         if display_value:
             return display_value
 
-    # no display_value? look for sys_id at the end of the link
-    link = raw_reference.get('link')
-    if link and isinstance(link, str):
-        # example link: 'https://REDACTED.service-now.com/api/now/table/alm_asset/622REDACTED4bcb8
-        *_, sys_id = link.rstrip('/').rsplit('/', 1)
-        if sys_id:
-            return reference_table.get(sys_id)
+    sys_id = get_reference_sys_id(raw_reference)
+    if sys_id:
+        return reference_table.get(sys_id)
 
     return None
 
@@ -545,6 +559,12 @@ def inject_subtables_fields_to_device(device_subtables_data: Dict[str, dict],
                                                               companies_table_dict, 'name'))
     except Exception:
         logger.debug(f'failed parsing it_owner_org / managed_by_vendor', exc_info=True)
+
+    try:
+        device_raw[InjectedRawFields.connected_subnet.value] = \
+            get_reference_display_value(device_raw.get('u_connected_subnet'))
+    except Exception:
+        logger.debug(f'failed parsing router networks', exc_info=True)
 
     _inject_relations(device_raw, device_raw.get('sys_id'), relations_table_dict, relations_info_dict)
 

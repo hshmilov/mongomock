@@ -103,7 +103,7 @@ async def async_http_request(session: ClientSession, should_run_event=None, hand
             if not retry_on_error:
                 raise e
             logger.warning(f'Got error on http request, retry: {retries} - ({str(e)})', exc_info=True)
-            if retries == MAX_RETRIES:
+            if retries == MAX_RETRIES - 1:
                 logger.error('Max retries exceeded for async request')
                 raise e
             if should_run_event is not None and should_run_event.is_set():

@@ -19,8 +19,7 @@ def generic_service_now_query_devices_by_client(client_data):
     """
     External process version of get_device_list
     """
-    config, get_connection_func, install_status_dict, operational_status_dict, get_entities_kwargs, \
-        verification_install_status_dict, verification_operational_status_dict = client_data
+    config, get_connection_func, get_entities_kwargs = client_data
     connection: ServiceNowConnectionMixin = get_connection_func(config)
     with connection:
 
@@ -37,12 +36,11 @@ def generic_service_now_query_devices_by_client(client_data):
             device_raw[InjectedRawFields.ax_device_type.value] = device_type
             inject_subtables_fields_to_device(device_subtables, device_raw,
                                               use_dotwalking=get_entities_kwargs.get('use_dotwalking'))
-            yield device_raw, install_status_dict, operational_status_dict, \
-                verification_install_status_dict, verification_operational_status_dict
+            yield device_raw
 
 
 def generic_service_now_query_users_by_client(client_data):
-    config, get_connection_func, _, _, get_entities_kwargs, *_ = client_data
+    config, get_connection_func, get_entities_kwargs = client_data
     connection: ServiceNowConnectionMixin = get_connection_func(config)
     with connection:
 
