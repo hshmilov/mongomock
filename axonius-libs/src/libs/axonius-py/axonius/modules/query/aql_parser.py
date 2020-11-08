@@ -541,7 +541,7 @@ class AQLParser:
                 if adapters_query_count is not None:
                     elem_match.get('$or')[0] = {
                         'adapters': adapters_query,
-                        '$where': adapters_query_count,
+                        '$expr': adapters_query_count,
                     }
                 mongo_query.update(elem_match)
 
@@ -554,25 +554,48 @@ class AQLParser:
 
     @staticmethod
     def _adapter_data_count_function(adapter_name, condition):
-        if isinstance(condition, int):
-            condition = f'count == {condition}'
-        elif condition.get('$gt', None) is not None:
-            condition = f'count > {condition.get("$gt")}'
-        elif condition.get('$lt', None) is not None:
-            condition = f'count < {condition.get("$lt")}'
-        elif condition.get('$exists', None) is not None:
-            condition = f'count > 0'
-        elif condition.get('$in', None) is not None:
-            condition = f'{str(condition.get("$in"))}.includes(count)'
+        # The reduce query, is used to calculate the number of occurrences of a specific adapter in the
+        # adapters array. And then, we can compare it to the original condition.
+        match_query = {
+            '$reduce': {
+                'input': '$adapters',
+                'initialValue': 0,
+                'in': {
+                    '$cond': {
+                        'if': {
+                            '$eq': ['$$this.plugin_name', adapter_name]
+                        },
+                        'then': {
+                            '$add': ['$$value', 1]
+                        },
+                        'else': '$$value'
+                    }
+                }
+            }
+        }
 
-        return f'''
-                function() {{
-                    count = 0;
-                    this.adapters.forEach(adapter => {{
-                        if (adapter.plugin_name == '{adapter_name}') count++;
-                    }});
-                    return {condition};
-                }}'''
+        if isinstance(condition, int):
+            return {
+                '$eq': [match_query, condition]
+            }
+        if condition.get('$gt') is not None:
+            return {
+                '$gt': [match_query, condition['$gt']]
+            }
+        if condition.get('$lt') is not None:
+            return {
+                '$lt': [match_query, condition['$lt']]
+            }
+        if condition.get('$exists') is not None:
+            return {
+                '$gt': [match_query, 0]
+            }
+        if condition.get('$in') is not None:
+            return {
+                '$in': [match_query, condition['$in']]
+            }
+
+        return {}
 
     @staticmethod
     def _adapter_data_to_elematch(adapter_data_queries, adapter_name, include_outdated: bool):
