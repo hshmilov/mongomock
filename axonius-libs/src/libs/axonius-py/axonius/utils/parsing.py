@@ -1315,6 +1315,8 @@ def get_asset_name(adapter_device):
             and not is_g_naapi_adapter(adapter_device):
         asset = adapter_device['data'].get('name').upper().strip()
         if asset not in ['UNKNOWN']:
+            if asset and asset.split('.')[0].lower().strip() in BAD_ASSETS:
+                return None
             return asset
     return None
 
@@ -1354,7 +1356,8 @@ def is_start_with_valid_ip(value):
     return is_valid_ip(value)
 
 
-BAD_ASSETS = ['dev', 'localhost', 'delete', 'deleted', 'na', 'macbook-air', 'macbook-pro', 'ge', '10', '3', 'n/a',
+BAD_ASSETS = ['dev', 'localhost', 'delete', 'deleted', 'na', 'macbook-air', 'macbook-pro',
+              'macbook air', 'macbook pro', 'mac mini', 'mac-mini', 'ge', '10', '3', 'n/a',
               'unknown', 'test1', 'test2', 'stage', 'ipad', 'iphone', 'qa', 'blackberry classic']
 
 

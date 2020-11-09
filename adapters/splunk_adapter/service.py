@@ -118,7 +118,8 @@ class SplunkAdapter(AdapterBase, Configurable):
                 {
                     "name": "token",
                     "title": "API Token",
-                    "type": "string"
+                    "type": "string",
+                    "format": "password"
                 }
             ],
             "required": [
