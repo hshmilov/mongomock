@@ -119,7 +119,7 @@ class EntitiesCache(RedisCache):
             {'$match': {'_id': {'$in': ids}}},
             {'$addFields': {'__order': {'$indexOfArray': [ids, '$_id']}}},
             {'$sort': {'__order': 1}}
-        ])
+        ], allowDiskUse=True)
         return result
 
     def _insert_parser(self, entities_collection, entity_type, mongo_filter,
