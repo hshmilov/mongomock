@@ -42,6 +42,8 @@ from axonius.clients.aws.consts import GOV_REGION_NAMES, CHINA_REGION_NAMES, \
 from axonius.clients.aws.utils import get_aws_config
 from axonius.clients.rest.connection import RESTConnection
 from axonius.consts.adapter_consts import DEFAULT_PARALLEL_COUNT
+from axonius.utils.parsing import normalize_var_name
+from axonius.fields import Field
 from axonius.multiprocess.multiprocess import concurrent_multiprocess_yield
 from axonius.utils.files import get_local_config_file
 from axonius.mixins.configurable import Configurable
@@ -820,6 +822,25 @@ class AwsAdapter(AdapterBase, Configurable):
                     append_firebom(device, firebom_data)
             except Exception:
                 pass
+            try:
+                tags_dict = dict()
+                try:
+                    for tag_raw in device.tags:
+                        tags_dict[tag_raw.tag_key] = tag_raw.tag_value
+                except Exception:
+                    pass
+                if self.__tags_to_parse_as_fields:
+                    for key, value in tags_dict.items():
+                        key = key.lower()
+                        if self.__tags_to_parse_as_fields and key.strip() in self.__tags_to_parse_as_fields:
+                            normalized_key_name = 'tag_aws_' + normalize_var_name(key.strip())
+                            if not device.does_field_exist(normalized_key_name):
+                                cn_capitalized = ' '.join([word.capitalize() for word in key.strip().split(' ')])
+                                device.declare_new_field(normalized_key_name, Field(str, f'AWS Tag {cn_capitalized}'))
+
+                            device[normalized_key_name] = str(value)
+            except Exception:
+                logger.exception(f'Problem adding key values to aws device')
             yield device
 
     def _parse_users_raw_data(self, *args, **kwargs):
@@ -928,6 +949,9 @@ class AwsAdapter(AdapterBase, Configurable):
         self.__parse_elb_ips = config.get('parse_elb_ips') or False
         self.__verbose_auth_notifications = config.get('verbose_auth_notifications') or False
         self.__shodan_key = config.get('shodan_key')
+        self.__tags_to_parse_as_fields = [
+            x.strip().lower() for x in config.get('list_of_tags_to_parse_as_fields').split(',')
+        ] if isinstance(config.get('list_of_tags_to_parse_as_fields'), str) else None
         self.__verify_all_roles = config.get('verify_all_roles') or False
         self.__verify_primary_account = config.get('verify_primary_account') or False
         self.__drop_turned_off_machines = config.get('drop_turned_off_machines') or False
@@ -1079,6 +1103,11 @@ class AwsAdapter(AdapterBase, Configurable):
                     'title': 'Number of accounts to fetch in parallel',
                     'type': 'integer'
                 },
+                {
+                    'name': 'list_of_tags_to_parse_as_fields',
+                    'title': 'List of tags to parse as fields',
+                    'type': 'string'
+                }
             ],
             'required': [
                 'correlate_ecs_ec2',
@@ -1143,6 +1172,7 @@ class AwsAdapter(AdapterBase, Configurable):
             'verify_all_roles': True,
             'verify_primary_account': True,
             'drop_turned_off_machines': False,
+            'list_of_tags_to_parse_as_fields': None,
             'parallel_count': DEFAULT_PARALLEL_COUNT,
         }
 
