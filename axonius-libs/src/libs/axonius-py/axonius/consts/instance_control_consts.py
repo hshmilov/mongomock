@@ -49,5 +49,4 @@ METRICS_CONTAINER_PATH = Path(f'/home/axonius/app/metrics/{METRICS_FILENAME}')
 METRICS_SCRIPT_PATH = '/home/ubuntu/cortex/plugins/instance_control/get_instance_metrics.py'
 METRICS_ENV_FILE_PATH = '/home/ubuntu/cortex/prepare_python_env.sh'
 
-PASSWORD_GET_URL = 'https://core.axonius.local/api/node/'
-UPGRADE_USER_NAME = 'axonius_upgrade'
+HOST_UPGRADE_MAGIC_FILEPATH = '/home/ubuntu/cortex/uploaded_files/update_now'

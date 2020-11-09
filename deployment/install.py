@@ -8,7 +8,6 @@ import argparse
 import datetime
 import glob
 import os
-import shlex
 import shutil
 import stat
 import subprocess
@@ -49,6 +48,7 @@ INSTANCE_CONNECT_USER_PASSWORD = 'M@ke1tRain'
 PYTHON_INSTALLER_LOCK_DIR = Path('/tmp/ax-locks/')
 PYTHON_INSTALLER_LOCK_FILE = PYTHON_INSTALLER_LOCK_DIR / 'python_installer.lock'
 PYTHON_INSTALLED_HTTPD_PATH = Path(AXONIUS_DEPLOYMENT_PATH) / 'testing/services/plugins/httpd_service/httpd/upgrade.py'
+INTERNAL_INSTALLER_FAILURE_MARKER_FILE_PATH = Path('/home/ubuntu/cortex/internal_upgrade_failed')
 
 CHMOD_FILES = [
     INSTANCES_SETUP_SCRIPT_PATH,
@@ -76,6 +76,7 @@ def is_inside_container():
     return Path('/.dockerenv').exists()
 
 
+# pylint: disable=too-many-branches
 def main():
     metadata = ''
     if os.geteuid() != 0:
@@ -102,6 +103,12 @@ def main():
             status = 'success' if success else 'failure'
             if is_inside_container():
                 print(f'Upgrader completed inside container - {status} {metadata}')
+                if not success:
+                    INTERNAL_INSTALLER_FAILURE_MARKER_FILE_PATH.touch()
+            elif INTERNAL_INSTALLER_FAILURE_MARKER_FILE_PATH.exists():
+                print(f'Upgrader completed with failure in internal installer {metadata}')
+                INTERNAL_INSTALLER_FAILURE_MARKER_FILE_PATH.unlink()
+                success = False
             else:
                 print(f'Upgrader completed - {status} {metadata}')
 
@@ -254,6 +261,8 @@ def install(first_time, no_research, master_only, inside_container=False):
         return
     if not first_time:
         validate_old_state()
+        # Stop old host tasks
+        os.system(f'/bin/sh -c "cd {AXONIUS_DEPLOYMENT_PATH}/devops/scripts/watchdog; ./restart_host_tasks.sh stop"')
         os.rename(AXONIUS_DEPLOYMENT_PATH, TEMPORAL_PATH)
 
     load_new_source()
@@ -264,12 +273,14 @@ def install(first_time, no_research, master_only, inside_container=False):
         copy_installer_to_httpd()
 
     try:
-        from deployment.install_utils import setup_host, load_images, launch_axonius_manager, set_logrotate
+        from deployment.install_utils import setup_host, load_images, launch_axonius_manager, set_logrotate, \
+            restart_host_tasks
     except ModuleNotFoundError:
         # Hack to reload the pth file contents without actually restart the python instance
         # pylint: disable=expression-not-assigned
         [sys.path.append(path) for path in Path(pth_file_location).read_text().strip().split('\n')]
-        from deployment.install_utils import setup_host, load_images, launch_axonius_manager, set_logrotate
+        from deployment.install_utils import setup_host, load_images, launch_axonius_manager, set_logrotate, \
+            restart_host_tasks
     setup_host()
     # We load for the first time only to get the axonius-manager image
     load_images()
@@ -278,17 +289,18 @@ def install(first_time, no_research, master_only, inside_container=False):
     launch_axonius_manager()
     extra_args = f'{"--first-time" if first_time else ""} {"--no-research" if no_research else ""} ' \
                  f'{"--master-only" if master_only else ""}'
-    try:
-        subprocess.check_output(shlex.split(f'docker exec axonius-manager /bin/bash -c '
-                                            f'"python3 ./devops/create_pth.py; '
-                                            f'python3 ./deployment/install.py --inside-container {extra_args}"'))
-    finally:
-        # Cleanup
-        os.remove(f'{AXONIUS_DEPLOYMENT_PATH}/images.tar')
+
+    os.system(f'docker exec axonius-manager /bin/bash -c '
+              f'"python3 ./devops/create_pth.py; '
+              f'python3 ./deployment/install.py --inside-container {extra_args}"')
+
+    # Cleanup
+    os.remove(f'{AXONIUS_DEPLOYMENT_PATH}/images.tar')
 
     print('Restarting axonius-manager')
     # Cleaning all hanging exec process before
     launch_axonius_manager()
+    restart_host_tasks()
 
 
 if __name__ == '__main__':

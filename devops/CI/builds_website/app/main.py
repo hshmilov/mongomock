@@ -130,8 +130,6 @@ git init
 # Beware! do not save this token.
 git pull https://{github_token}@github.com/{fork}/cortex {branch}
 ./devops/scripts/host_installation/init_host.sh
-cd /home/ubuntu/cortex/bandicoot
-sudo go mod vendor
 cd /home/ubuntu/cortex/install
 chmod 777 *
 # Notice that this raises the system in debug mode (all ports are opened outside and files are mounted from the outside of the system).

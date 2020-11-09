@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e # from now on exit on any error
+cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1
 source bash_imports.sh
 
 if [ ! -f /.dockerenv ]; then

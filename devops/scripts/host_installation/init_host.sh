@@ -254,10 +254,6 @@ else
     rm scalyr-repo-bootstrap_1.2.2_all.deb
 fi
 
-#### Go patch TO DELETE after updating builds web####
-sudo /bin/bash -c 'echo -e "#!/bin/bash\necho OK;exit 0" > /usr/bin/go'
-sudo chmod +x /usr/bin/go
-
 # Install Zscaler root certificate
 set +e
 cp ./uploads/ZscalerRootCertificate-2048-SHA256.crt /usr/local/share/ca-certificates/

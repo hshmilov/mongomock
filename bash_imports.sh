@@ -9,7 +9,7 @@ WEAVE_BIN_PATH=$(command -v weave) || WEAVE_BIN_PATH='/usr/local/bin/weave'
 AXONIUS_SH='/home/ubuntu/cortex/axonius.sh'
 CORTEX_PATH='/home/ubuntu/cortex'
 INSTANCE_CONTROL_SSH_KEYS='plugins/instance_control/rsa_keys'
-DEFAULT_ROOT_DOCKER_DIR='/var/lib/docker'
+DEFAULT_ROOT_DOCKER_DIR=$(docker info | grep "Docker Root Dir" | cut -d ':' -f 2 | xargs)
 TMP_ENV_FILE='/tmp/docker_env_file'
 
 DOCKER_NETWORK_NAME='axonius'
@@ -107,6 +107,7 @@ function create_axonius_manager {
   fi
 }
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 alias dkill='docker kill $(docker ps -q)'
 alias drm='docker rm $(docker ps -a -q)'
 alias dclear='dkill;drm'
@@ -115,3 +116,4 @@ alias dlogs='find ${CORTEX_ROOT}/logs | grep "\.log" | xargs rm'
 alias softclean='dkill;drm;dlogs'
 alias dstat='docker stats $(docker ps --format={{.Names}})'
 alias cdax='cd ${CORTEX_ROOT}/axonius-libs/src/libs/axonius-py/axonius'
+alias axd=$DIR/devops_debug_wrapper.sh

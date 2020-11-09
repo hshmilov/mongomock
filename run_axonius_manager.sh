@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1
 source bash_imports.sh
 sleep 3
 mkdir -p logs/manager

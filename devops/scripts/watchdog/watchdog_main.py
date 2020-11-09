@@ -10,8 +10,12 @@ WATCHDOG_MAIN_SCRIPT_PATH = os.path.abspath(__file__)
 TASKS_DIR = Path(os.path.abspath(os.path.dirname(__file__))) / 'tasks'
 
 
+def is_linux():
+    return docker.from_env().info()['OperatingSystem'] != 'Docker Desktop'
+
+
 def run_tasks(action, detached=False):
-    if os.name != 'posix' or docker.from_env().info()['OperatingSystem'] == 'Docker Desktop':
+    if os.name != 'posix' or not is_linux():
         print(f'will not spawn *nix style daemons')
     else:
         for task in TASKS_DIR.glob('*_task.py'):

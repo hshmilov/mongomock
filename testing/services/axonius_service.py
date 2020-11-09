@@ -65,6 +65,10 @@ def get_service():
     return AxoniusService()
 
 
+def is_linux():
+    return docker.from_env().info()['OperatingSystem'] != 'Docker Desktop'
+
+
 # pylint: disable=too-many-instance-attributes
 
 class AxoniusService:
@@ -106,7 +110,7 @@ class AxoniusService:
         # No instance control and OpenVPN on windows
         # Docker 'OperatingSystem' value is 'Docker Desktop' for OSX and Windows docker daemons and the linux version
         # for docker-ce./
-        if 'linux' in sys.platform.lower() and docker.from_env().info()['OperatingSystem'] != 'Docker Desktop':
+        if 'linux' in sys.platform.lower() and is_linux():
             self.axonius_services.append(self.instance_control)
             self.axonius_services.append(self.openvpn)
 
@@ -127,8 +131,7 @@ class AxoniusService:
 
     @classmethod
     def create_network(cls):
-        if not is_weave_up() and 'linux' in sys.platform.lower() and \
-                docker.from_env().info()['OperatingSystem'] != 'Docker Desktop':
+        if not is_weave_up() and 'linux' in sys.platform.lower() and is_linux():
             weave_subnet_ip_range = get_weave_subnet_ip_range()
             # Getting network encryption key.
             if NODE_MARKER_PATH.is_file():

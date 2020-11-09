@@ -11,8 +11,7 @@ from install import INSTANCE_IS_MASTER_MARKER_PATH, INSTANCES_SETUP_SCRIPT_PATH,
     DELETE_INSTANCES_USER_CRON_SCRIPT_PATH, SYSTEM_BOOT_CRON_SCRIPT_PATH, DEPLOYMENT_FOLDER_PATH
 from lists import OLD_CRONJOBS
 from scripts.host_installation.watchdog_cron import WATCHDOG_CRON_SCRIPT_PATH
-from scripts.instances.instances_consts import INSTANCE_CONNECT_USER_NAME, UPGRADE_USER_NAME, UPGRADE_SCRIPT_PATH, \
-    NOLOGINER_USER_NAME, WEAVE_NETWORK_SUBNET_KEY
+from scripts.instances.instances_consts import INSTANCE_CONNECT_USER_NAME, NOLOGINER_USER_NAME, WEAVE_NETWORK_SUBNET_KEY
 from sysctl_editor import get_sysctl_value, set_sysctl_value
 from utils import print_state, AXONIUS_DEPLOYMENT_PATH, RESOURCES_PATH, run_cmd
 DEFAULT_WEAVE_SUBNET_IP_RANGE = '171.17.0.0/16'
@@ -112,11 +111,6 @@ def setup_instances_user():
                 subprocess.check_call(
                     f'echo "{INSTANCE_CONNECT_USER_NAME} ALL=(ALL) NOPASSWD: '
                     f'/bin/mkdir" | EDITOR="tee -a" visudo',
-                    shell=True)
-            if UPGRADE_USER_NAME not in sudoers:
-                subprocess.check_call(
-                    f'echo "{UPGRADE_USER_NAME} ALL=(ALL) NOPASSWD: '
-                    f'{UPGRADE_SCRIPT_PATH}" | EDITOR="tee -a" visudo',
                     shell=True)
 
 
@@ -251,6 +245,10 @@ def load_images():
 
 def launch_axonius_manager():
     os.system(f'/bin/sh -c "cd {AXONIUS_DEPLOYMENT_PATH}; ./run_axonius_manager.sh"')
+
+
+def restart_host_tasks():
+    os.system(f'/bin/sh -c "cd {AXONIUS_DEPLOYMENT_PATH}/devops/scripts/watchdog; ./restart_host_tasks.sh"')
 
 
 def stop_old():

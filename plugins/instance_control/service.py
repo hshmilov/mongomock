@@ -23,7 +23,7 @@ from axonius.consts.instance_control_consts import (InstanceControlConsts,
                                                     UPLOAD_FILE_SCRIPTS_PATH, UPLOAD_FILE_SCRIPT_NAME,
                                                     METRICS_INTERVAL_MINUTES,
                                                     MetricsFields, BOOT_CONFIG_FILE_PATH,
-                                                    METRICS_CONTAINER_PATH, PASSWORD_GET_URL, UPGRADE_USER_NAME)
+                                                    METRICS_CONTAINER_PATH, HOST_UPGRADE_MAGIC_FILEPATH)
 from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME,
                                           PLUGIN_NAME,
                                           NODE_ID, GUI_PLUGIN_NAME, CORE_UNIQUE_NAME,
@@ -421,17 +421,11 @@ class InstanceControlService(Triggerable, PluginBase):
 
     def __upgrade_host(self, environment: dict = None) -> paramiko.ChannelFile:
         """
-        Executes a command on the host using ssh
+        Puts a file on specific directory that causes the axonius system to upgrade
         :param cmd: command to execute
         :return: stdout
         """
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
-        upgrade_user_password = requests.get(f'{PASSWORD_GET_URL}{self.node_id}', verify=False).text
-
-        client.connect(get_default_gateway_linux(), username=UPGRADE_USER_NAME, password=upgrade_user_password)
-        _, stdout, _ = client.exec_command('id', environment=environment)
-        return stdout
+        return self.__exec_command(cmd=f'touch {HOST_UPGRADE_MAGIC_FILEPATH}', environment=environment)
 
     @retry(wait_fixed=10000,
            stop_max_delay=120000,

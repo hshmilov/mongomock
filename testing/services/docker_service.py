@@ -267,13 +267,14 @@ class DockerService(AxonService):
 
     def _get_exposed_ports(self, mode, expose_port):
         publish_ports = []
+        self.run_mode = mode
         publish_port_mode = '127.0.0.1:'  # bind host port only to localhost
         if mode != 'prod' or self.override_exposed_port or expose_port:
             publish_port_mode = ''  # if in debug mode or override_exposed_port is set, bind on all ips on host
 
         for exposed in self.exposed_ports:
             publish_ports.extend(['--publish', f'{publish_port_mode}{exposed[0]}:{exposed[1]}'])
-
+        del self.run_mode
         return publish_ports
 
     def _get_volumes(self):

@@ -25,7 +25,4 @@ VPNNET_NETWORK = 'vpnnet'
 DOCKER_NETWORK_SUBNET_KEY = 'docker-network-subnet'
 DOCKER_TUNNEL_SUBNET_KEY = 'docker-vpnnet-subnet'
 NOLOGINER_USER_NAME = 'nologiner'
-UPGRADE_USER_NAME = 'axonius_upgrade'
 INSTANCE_MODE = 'instance-mode'
-
-UPGRADE_SCRIPT_PATH = Path(CORTEX_PATH) / 'devops/scripts/instances/run_upgrade_on_instance.sh'

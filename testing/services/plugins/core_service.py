@@ -58,7 +58,7 @@ class CoreService(PluginService, SystemService, UpdatablePluginMixin):
 
     @property
     def exposed_ports(self):
-        return [(DOCKER_PORTS[CORE_UNIQUE_NAME], '443')] if os.getenv('PROD') != 'True' else []
+        return [(DOCKER_PORTS[CORE_UNIQUE_NAME], '443')] if self.run_mode == '' else []
 
     @db_migration(raise_on_failure=False)
     def _update_schema_version_1(self):

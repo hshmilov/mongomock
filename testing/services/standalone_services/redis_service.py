@@ -64,4 +64,4 @@ tls-ca-cert-file {redis_ca_crt}
 
     @property
     def exposed_ports(self):
-        return [(DOCKER_PORTS['redis'], DOCKER_PORTS['redis'])] if os.getenv('PROD') != 'True' else []
+        return [(DOCKER_PORTS['redis'], DOCKER_PORTS['redis'])] if self.run_mode == '' else []

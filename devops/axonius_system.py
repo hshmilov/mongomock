@@ -17,7 +17,7 @@ from scripts.instances.network_utils import fix_node_axonius_manager_hosts
 from axonius.utils.build_modes import BuildModes
 from conf_tools import get_customer_conf_json
 from exclude_helper import ExcludeHelper
-from services.axonius_service import get_service
+from services.axonius_service import get_service, is_linux
 from services.standalone_services.mockingbird_service import MOCKINGBIRD_SERVICE
 from axonius.saas.input_params import read_saas_input_params
 from axonius.consts.system_consts import (METADATA_PATH,
@@ -132,7 +132,7 @@ def system_entry_point(args):
     if not os.path.exists(os.path.join(AXONIUS_VPN_DATA_PATH, 'openvpn.conf')) \
             and (read_saas_input_params() or args.saas) and not NODE_MARKER_PATH.is_file() and \
             not os.environ.get('NODE_INIT_NAME', None) and 'linux' in sys.platform.lower() and \
-            docker.from_env().info()['OperatingSystem'] != 'Docker Desktop':
+            is_linux():
         setup_openvpn()
 
     axonius_system = get_service()
