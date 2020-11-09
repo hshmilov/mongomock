@@ -1,12 +1,14 @@
 import logging
 import random
 import contextlib
+import time
 
 import axonius.utils.json as jsonutils
 from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.exception import RESTException
 from cisco_ise_adapter.consts import (ISE_PXGRID_PORT, CiscoIseDeviceType,
-                                      PXGRID_URL_BASE_PREFIX)
+                                      PXGRID_URL_BASE_PREFIX, PXGRID_TIME_TO_SLEEP_BETWEEN_TRIES,
+                                      PXGRID_MAX_ACTIVATE_RETRIES)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -64,21 +66,34 @@ class CiscoIsePxGridConnection(RESTConnection):
 
     def _account_activate(self):
 
-        response_raw = self._post('control/AccountActivate',
-                                  raise_for_status=False,
-                                  return_response_raw=True,
-                                  use_json_in_response=False)
-        if response_raw.status_code == 401:
-            raise UserNonExistsError()
+        # According the following example, it may take the account up to 60 seconds to be activated
+        # https://developer.cisco.com/docs/pxgrid/#!retrieving-radius-failure-messages/output
+        response = None
+        for i in range(PXGRID_MAX_ACTIVATE_RETRIES):
+            response_raw = self._post('control/AccountActivate',
+                                      raise_for_status=False,
+                                      return_response_raw=True,
+                                      use_json_in_response=False)
+            if response_raw.status_code == 401:
+                raise UserNonExistsError()
 
-        response = self._handle_response(response_raw)
+            response = self._handle_response(response_raw)
 
-        if not jsonutils.is_valid(response, 'accountState'):
-            raise RESTException(f'control/AccountActivate bad response: {response}')
+            if not jsonutils.is_valid(response, 'accountState'):
+                raise RESTException(f'control/AccountActivate bad response: {response}')
 
-        if response['accountState'] != 'ENABLED':
+            if response['accountState'] == 'ENABLED':
+                break
+
+            logger.debug(f'Retry {i} - Account \'{self._username}\' not activated yet,'
+                         f' sleeping {PXGRID_TIME_TO_SLEEP_BETWEEN_TRIES} seconds')
+            time.sleep(PXGRID_TIME_TO_SLEEP_BETWEEN_TRIES)
+
+        if not (response and response['accountState'] == 'ENABLED'):
             msg = f'Please make sure ‘{self._username}’ is authorized in pxGrid Services on your Cisco ISE domain'
             raise RESTException(msg)
+
+        logger.info(f'Account {self._username} activated succesfully')
 
     def _account_create_and_activate(self):
         """ create an account if needed and activate it """
