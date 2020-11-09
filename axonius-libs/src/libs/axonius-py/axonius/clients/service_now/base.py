@@ -255,8 +255,15 @@ class ServiceNowConnectionMixin(ABC):
                              use_cached_users: bool=False,
                              plugin_name: Optional[str]=None,
                              **_) -> Dict[str, dict]:
+
+        subtables_by_key = {}
+
         additional_params_by_table_key = {}
         sub_tables_to_request_by_key = consts.DEVICE_SUB_TABLES_KEY_TO_NAME.copy()
+
+        # inject cached users
+        if use_cached_users:
+            self._inject_subtables_from_axonius_db(subtables_by_key, plugin_name)
 
         if contract_parent_numbers:
             sub_tables_to_request_by_key[consts.CONTRACT_TO_ASSET_TABLE] = consts.CONTRACT_TO_ASSET_TABLE
@@ -306,14 +313,11 @@ class ServiceNowConnectionMixin(ABC):
         sub_tables_to_request_by_key = {**{table_name: table_name for table_name in consts.SAMPLE_TABLES},
                                         **sub_tables_to_request_by_key}
 
-        subtables_by_key = self._get_subtables_by_key(sub_tables_to_request_by_key,
-                                                      additional_params_by_table_key=additional_params_by_table_key,
-                                                      parallel_requests=parallel_requests)
-
-        # inject cached users
-        if use_cached_users:
-            self._inject_subtables_from_axonius_db(subtables_by_key, plugin_name)
-
+        fetch_subtables_by_key = self._get_subtables_by_key(
+            sub_tables_to_request_by_key,
+            additional_params_by_table_key=additional_params_by_table_key,
+            parallel_requests=parallel_requests)
+        subtables_by_key.update(fetch_subtables_by_key)
         return subtables_by_key
 
     @staticmethod
@@ -346,9 +350,14 @@ class ServiceNowConnectionMixin(ABC):
         user_entities = db[AGGREGATOR_PLUGIN_NAME][USER_ADAPTERS_RAW_DB].find({
             PLUGIN_UNIQUE_NAME: {'$in': all_adapter_pun}
         }, projection={
-            f'raw_data': 1,
-        })
+            f'raw_data.{raw_field}': 1
+            for raw_field in consts.USER_TABLE_FIELDS
+        }, batch_size=20)
+
+        i = 0
         for user_entity in user_entities:
+            if i % 10000 == 0:
+                logger.debug(f'got {i} users')
             if not (isinstance(user_entity, dict) and
                     isinstance(user_entity.get('raw_data'), dict) and user_entity.get('raw_data')):
                 continue
@@ -357,6 +366,7 @@ class ServiceNowConnectionMixin(ABC):
                 logger.debug(f'cached user missing sys_id')
                 continue
             users_subtable.setdefault(raw_data.get('sys_id'), raw_data)
+            i += 1
         logger.info(f'Injected {len(users_subtable.keys())} cached users')
 
     def _iter_user_table_chunks_by_details(self,

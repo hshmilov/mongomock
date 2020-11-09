@@ -184,6 +184,13 @@ ADDITIONAL_SUBTABLES_WHEN_NO_DOTWALKS = {
     USER_GROUPS_TABLE_KEY: USER_GROUPS_TABLE,
 }
 
+USER_TABLE_FIELDS = ['sys_id', 'email', 'owned_by', 'assigned_to', 'u_director',
+                     'u_manager', 'managed_by', 'u_access_authorisers', 'u_acl_contacts', 'u_bucf_contacts',
+                     'u_business_owner', 'u_cmdb_data_owner', 'u_cmdb_data_steward', 'u_custodian',
+                     'u_orphan_account_contacts', 'u_orphan_account_manager', 'u_primary_support_sme',
+                     'u_recertification_contacts', 'u_security_administrators', 'u_technical_admin_contacts',
+                     'u_uar_contacts', 'u_uav_delegates']
+
 DEFAULT_ASYNC_CHUNK_SIZE = 50
 DEFAULT_DOTWALKING_PER_REQUEST = 15
 MAX_DOTWALKING_PER_REQUEST = 50
