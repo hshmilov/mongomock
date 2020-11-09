@@ -19,6 +19,7 @@ logger = logging.getLogger(f'axonius.{__name__}')
 class MobileironAdapter(AdapterBase, Configurable):
 
     class MyDeviceAdapter(DeviceAdapter):
+        status = Field(str, 'Status')
         user_id = Field(str, 'Device User Id')
         imei = Field(str, 'Device IMEI')
         storage_capacity = Field(str, 'Storage Capacity')
@@ -223,6 +224,7 @@ class MobileironAdapter(AdapterBase, Configurable):
             device.email = device_raw.get('user.email_address')
             device.current_phone_number = device_raw.get('common.current_phone_number')
             device.imsi = device_raw.get('common.imsi')
+            device.status = device_raw.get('common.status')
             device.device_encrypted = bool(device_raw.get('common.device_encrypted'))
             device.device_is_compromised = bool(device_raw.get('common.device_is_compromised'))
             health_data_bit_locker_status = device_raw.get('windows_phone.health_data_bit_locker_status')
