@@ -133,7 +133,7 @@ class AxoniusRestore:
 
         cmd = (
             f'docker exec mongo mongorestore --drop --preserveUUID --uri={uri} '
-            f'{f"--archive={MONGO_RESTORE_DIR}/aggregator.gz" if is_aggregator else f"{MONGO_RESTORE_DIR}/dump"}'
+            f'{f"--gzip --archive={MONGO_RESTORE_DIR}/aggregator.gz" if is_aggregator else f"{MONGO_RESTORE_DIR}/dump"}'
         )
         yellowprint(f'##### mongorestore cmd: {cmd} ##### ')
         subprocess.check_call(shlex.split(cmd), timeout=RESTORE_TIMEOUT)

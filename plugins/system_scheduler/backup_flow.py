@@ -252,9 +252,10 @@ class BackupManager:
                 #   --archive => mongodump support of output stream in order to pipe to another process.
                 #  create subprocess with stdout as pipeline into 2nd subprocess to communicate as recommanded in docs
 
-                cmd += '--gzip  --archive'
+                cmd += ' --gzip  --archive'
                 gpg_cmd = (f'gpg --passphrase {self.pre_shared_key} --symmetric --cipher-algo {self.cipher_algo} '
                            f'--output {AXONIUS_BACKUP_PATH}/{db_name}.gz.gpg')
+                logger.debug(f'mongodump cmd={cmd}')
 
                 if self.pre_shared_key is None or len(self.pre_shared_key) < 16:
                     raise BackupException('invalid pre-shared-key - aborting backup ! ')
