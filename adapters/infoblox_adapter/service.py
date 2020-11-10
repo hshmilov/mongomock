@@ -320,7 +320,7 @@ class InfobloxAdapter(AdapterBase, Configurable):
                 start_time = device_raw.get('starts')
                 if start_time:
                     device.start_time = datetime.datetime.fromtimestamp(start_time)
-                    if not end_time:
+                    if not end_time or self.__use_start_time_last_seen:
                         device.last_seen = datetime.datetime.fromtimestamp(start_time)
             except Exception:
                 logger.exception(f'Problem getting start time {start_time}')
@@ -477,6 +477,11 @@ class InfobloxAdapter(AdapterBase, Configurable):
                     'name': 'ignore_netmri_a_records',
                     'type': 'bool',
                     'title': 'Ignore A records discovered by NetMRI'
+                },
+                {
+                    'name': 'use_start_time_last_seen',
+                    'type': 'bool',
+                    'title': 'Use start time as last seen'
                 }
             ],
             'required': [
@@ -486,6 +491,7 @@ class InfobloxAdapter(AdapterBase, Configurable):
                 'fetch_used_addresses',
                 'fetch_a_records',
                 'ignore_netmri_a_records',
+                'use_start_time_last_seen'
             ],
             'pretty_name': 'Infoblox Configuration',
             'type': 'array'
@@ -502,6 +508,7 @@ class InfobloxAdapter(AdapterBase, Configurable):
             'fetch_used_addresses': DEFAULT_FETCH_USED_ADDR,
             'fetch_a_records': DEFAULT_FETCH_A_RECORDS,
             'ignore_netmri_a_records': False,
+            'use_start_time_last_seen': False
         }
 
     def _on_config_update(self, config):
@@ -515,3 +522,4 @@ class InfobloxAdapter(AdapterBase, Configurable):
                                        bool(config.get('fetch_lease_and_used_addr')))
         self.__fetch_a_records = bool(config.get('fetch_a_records'))
         self.__ignore_netmri_a_records = bool(config.get('ignore_netmri_a_records'))
+        self.__use_start_time_last_seen = config.get('use_start_time_last_seen') or False

@@ -111,6 +111,7 @@ class MobileironConnection(RESTConnection):
             'devices/count', url_params={'adminDeviceSpaceId': self._device_space_id, 'query': ''})['totalCount']
         # We use only these fields, and when I tried to fetch all the fields the query gave me HTTP 400
         fields = 'common.id,common.uuid,ios.DeviceNamem,common.platform,common.ip_address,' \
+                 'common.registration_date,common.current_operator_name,common.home_operator_name,common.owner,' \
                  'common.wifi_mac_address,common.client_version,common.model,android.security_patch,' \
                  'user.user_id,common.miclient_last_connected_at,common.imei,common.storage_capacity,' \
                  'user.email_address,common.current_phone_number,common.last_connected_at,common.status,' \

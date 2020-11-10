@@ -32,6 +32,8 @@ class MobileironAdapter(AdapterBase, Configurable):
         health_data_bit_locker_status = Field(bool, 'Bitlocker Status')
         registration_state = Field(str, 'Registration State')
         display_name = Field(str, 'Display Name')
+        home_operator_name = Field(str, 'Home Operator Name')
+        current_operator_name = Field(str, 'Current Operator Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -225,6 +227,10 @@ class MobileironAdapter(AdapterBase, Configurable):
             device.current_phone_number = device_raw.get('common.current_phone_number')
             device.imsi = device_raw.get('common.imsi')
             device.status = device_raw.get('common.status')
+            device.owner = device_raw.get('common.owner')
+            device.first_seen = parse_date(device_raw.get('common.registration_date'))
+            device.home_operator_name = device_raw.get('common.home_operator_name')
+            device.current_operator_name = device_raw.get('common.current_operator_name')
             device.device_encrypted = bool(device_raw.get('common.device_encrypted'))
             device.device_is_compromised = bool(device_raw.get('common.device_is_compromised'))
             health_data_bit_locker_status = device_raw.get('windows_phone.health_data_bit_locker_status')
