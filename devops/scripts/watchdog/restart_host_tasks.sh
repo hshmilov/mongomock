@@ -1,6 +1,6 @@
 #!/bin/sh
 cd tasks
-if [ "$1" == "stop" ]; then
+if [ $# -gt 0 ] && [ "$1" = "stop" ]; then
   ./chef_client_task_host stop
   ./reset_passwords_task_host stop
   ./inotify_task_host stop
