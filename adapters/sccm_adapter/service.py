@@ -91,6 +91,7 @@ class SccmAdapter(AdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter, ADEntity):
         resource_id = Field(str, 'Resource ID')
         sccm_server = Field(str, 'SCCM Server')
+        vm_host_name = Field(str, 'Virtual Machine Host Name')
         top_user = Field(str, 'Top Console User')
         macs_no_ip = ListField(str, 'MAC addresses with No IP')
         sccm_type = Field(str, 'SCCM Computer Type')
@@ -127,6 +128,7 @@ class SccmAdapter(AdapterBase, Configurable):
         primary_owner_name = Field(str, 'Primary Owner Name')
         primary_owner_contact = Field(str, 'Primary Owner Contact')
         site_code = Field(str, 'Site Code')
+        bios_in_hostname = Field(bool, 'Bios serial in hostname')
 
         def add_sccm_vm(self, **kwargs):
             try:
@@ -388,6 +390,12 @@ class SccmAdapter(AdapterBase, Configurable):
                     if isinstance(device_raw['bios_data'], dict):
                         bios_data = device_raw['bios_data']
                         device.bios_serial = bios_data.get('SerialNumber0')
+                        try:
+                            if bios_data.get('SerialNumber0') \
+                                    and bios_data.get('SerialNumber0').upper() in device.hostname.upper():
+                                device.bios_in_hostname = True
+                        except Exception:
+                            pass
                         device_manufacturer = bios_data.get('Manufacturer0')
                         device.device_manufacturer = device_manufacturer
                         device.bios_release_date = parse_date(bios_data.get('ReleaseDate0'))
@@ -403,6 +411,7 @@ class SccmAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting bios data dor {device_raw}')
                 device.sccm_type = computer_data.get('SystemType0')
+                device.vm_host_name = device_raw.get('Virtual_Machine_Host_Name0')
                 try:
                     device.primary_owner_name = computer_data.get('PrimaryOwnerName0')
                     device.primary_owner_contact = computer_data.get('PrimaryOwnerContact0')
