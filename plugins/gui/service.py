@@ -466,6 +466,7 @@ class GuiService(Triggerable,
                 f'{RESET_PASSWORD_SETTINGS}.{RESET_PASSWORD_LINK_EXPIRATION}': 168
             }
         )
+        self._update_user_tokens_index(168)
 
         # Automatic signup
         random_password = random_string(32)
