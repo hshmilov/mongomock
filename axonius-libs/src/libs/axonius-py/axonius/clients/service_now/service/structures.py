@@ -33,7 +33,9 @@ class RelativeInformationLeaf(SmartJsonClass):
     sys_class_name = Field(str, 'Class Name')
 
 
-class RelativeInformationNode1(RelativeInformationLeaf):
+class RelativeInformationNode1(SmartJsonClass):
+    name = Field(str, 'Name')
+    sys_class_name = Field(str, 'Class Name')
     upstream = ListField(RelativeInformationLeaf, 'Upstream')
     downstream = ListField(RelativeInformationLeaf, 'Downstream')
 

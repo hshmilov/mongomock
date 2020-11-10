@@ -37,6 +37,8 @@ class S3Client:  # pylint: disable=too-many-instance-attributes
         self._use_instance_role = use_instance_role
         self._set_credentials(access_key, secret_key, session_token)
 
+        if not region:
+            raise ValueError(f'Please specify region')
         self.regions = self.get_available_regions()
         self.region = region if region in self.regions else None
 

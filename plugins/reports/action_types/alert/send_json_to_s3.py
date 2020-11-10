@@ -50,6 +50,11 @@ class SendJsonToS3(ActionTypeAlert):
                     'type': 'string'
                 },
                 {
+                    'name': AWS_REGION_NAME,
+                    'title': 'AWS Region',
+                    'type': 'string',
+                },
+                {
                     'name': AWS_S3_BUCKET_NAME,
                     'title': 'Amazon S3 bucket name',
                     'type': 'string',
@@ -57,11 +62,6 @@ class SendJsonToS3(ActionTypeAlert):
                 {
                     'name': AWS_S3_KEY_NAME,
                     'title': 'Amazon S3 object location (key)',
-                    'type': 'string',
-                },
-                {
-                    'name': AWS_REGION_NAME,
-                    'title': 'Amazon Region',
                     'type': 'string',
                 },
                 {
