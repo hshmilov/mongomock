@@ -96,11 +96,17 @@ class ServiceNowComputerAction(ActionTypeBase):
                     'name': 'mac_delimiter',
                     'title': 'MAC addresses delimiter',
                     'type': 'string'
+                },
+                {
+                    'name': 'use_full_url',
+                    'title': 'Use full URL for device creation',
+                    'type': 'bool'
                 }
             ],
             'required': [
                 'use_adapter',
                 'verify_ssl',
+                'use_full_url',
                 'use_first_ip_only',
                 'exclude_default_fields',
                 'use_first_mac_only',
@@ -115,6 +121,7 @@ class ServiceNowComputerAction(ActionTypeBase):
             'use_adapter': False,
             'domain': None,
             'username': None,
+            'use_full_url': False,
             'password': None,
             'https_proxy': None,
             'exclude_default_fields': False,
@@ -130,7 +137,7 @@ class ServiceNowComputerAction(ActionTypeBase):
         })
 
     # pylint: disable=too-many-arguments,too-many-branches,too-many-locals
-    def _create_service_now_computer(self, name, mac_address=None, ip_address=None,
+    def _create_service_now_computer(self, name, mac_address=None, ip_address=None, full_url=None,
                                      manufacturer=None, os_type=None, serial_number=None,
                                      to_correlate_plugin_unique_name=None, to_correlate_device_id=None,
                                      cmdb_ci_table=None, extra_fields=None, ax_snow_values_map_dict=None,
@@ -181,7 +188,7 @@ class ServiceNowComputerAction(ActionTypeBase):
                                                           password=self._config.get('password'),
                                                           https_proxy=self._config.get('https_proxy'))
             with service_now_connection:
-                service_now_connection.create_service_now_computer(connection_dict)
+                service_now_connection.create_service_now_computer(connection_dict, full_url=full_url)
                 return ''
         except Exception as e:
             logger.exception(f'Got exception creating ServiceNow computer with {name}')
@@ -189,6 +196,7 @@ class ServiceNowComputerAction(ActionTypeBase):
 
     # pylint: disable=R0912,R0914,R0915,R1702
     def _run(self) -> EntitiesResult:
+        full_url = self._config.get('domain') if self._config.get('use_full_url') else None
         ax_snow_fields_map_dict = dict()
         try:
             ax_snow_fields_map = self._config.get('ax_snow_fields_map')
@@ -336,6 +344,7 @@ class ServiceNowComputerAction(ActionTypeBase):
                                                             ip_address=ip_address_raw,
                                                             manufacturer=manufacturer_raw,
                                                             os_type=os_raw,
+                                                            full_url=full_url,
                                                             serial_number=serial_number_raw,
                                                             to_correlate_plugin_unique_name=corre_plugin_id,
                                                             to_correlate_device_id=to_correlate_device_id,

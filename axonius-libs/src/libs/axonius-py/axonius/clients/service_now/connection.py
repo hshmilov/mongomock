@@ -431,7 +431,7 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
             logger.exception(f'Exception while creating incident')
             return False
 
-    def create_service_now_computer(self, connection_dict):
+    def create_service_now_computer(self, connection_dict, full_url=None):
         identifyreconcile_endpoint = None
         try:
             identifyreconcile_endpoint = connection_dict.pop('identifyreconcile_endpoint', None)
@@ -448,7 +448,11 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
                        body_params=body_params)
             return True, None
         try:
-            device_raw = self.__add_dict_to_table(cmdb_ci_table, connection_dict)['result']
+            if full_url:
+                device_raw = self._post(full_url, force_full_url=True, body_params=connection_dict,
+                                        do_basic_auth=True)['result']
+            else:
+                device_raw = self.__add_dict_to_table(cmdb_ci_table, connection_dict)['result']
             return True, device_raw
         except Exception:
             logger.exception(f'Exception while creating incident with connection dict {connection_dict}')
