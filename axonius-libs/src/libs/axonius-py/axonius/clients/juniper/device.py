@@ -269,6 +269,8 @@ def _get_id_for_juniper(raw_device):
         mac = list_[0].get('current-physical-address', '')
     if mac:
         return mac
+    if raw_device.get('version') and raw_device['version'].get('host-name'):
+        return raw_device['version'].get('host-name')
     return ''
 
 

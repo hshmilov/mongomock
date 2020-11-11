@@ -1611,6 +1611,8 @@ def hostnames_do_not_contradict(adapter_device1, adapter_device2):
         asset_low_2 = get_hostname(adapter_device2).lower().replace('-', '_')
         if asset_low_1 == asset_low_2:
             return True
+        if (asset_low_1 + 'sf' == asset_low_2) or (asset_low_2 + 'sf' == asset_low_1):
+            return True
     return compare_device_normalized_hostname(adapter_device1, adapter_device2)
 
 

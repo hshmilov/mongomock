@@ -49,8 +49,7 @@ class ForcepointAdapter(AdapterBase, Configurable):
             connection.set_credentials(username=client_config[consts.USER],
                                        password=client_config[consts.PASSWORD])
             with connection:
-                for _ in connection.query(consts.FORCEPOINT_QUERY):
-                    break
+                pass
             return connection
         except Exception as err:
             message = f'Error connecting to client host: {client_config[consts.FORCEPOINT_HOST]}  ' \

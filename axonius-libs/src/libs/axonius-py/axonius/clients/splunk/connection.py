@@ -80,6 +80,20 @@ class SplunkConnection(object):
         return raw_device
 
     @staticmethod
+    def fetch_netscaler(raw_line):
+        netsclaer_fecth_dict = {'Destination ': 'dst',
+                                'Source ': 'source',
+                                'Vserver ': 'vserver',
+                                'NatIP ': 'nat',
+                                'Total_bytes_send ': 'send',
+                                'Total_bytes_recv ': 'recv'}
+        raw_device = dict()
+        for key, value in netsclaer_fecth_dict.items():
+            if key in raw_line:
+                raw_device[value] = raw_line[raw_line.find(key) + len(key):].split(' ')[0]
+        return raw_device
+
+    @staticmethod
     def parse_cisco_sig_alarm(raw_line):
         raw_device = dict()
         if 'mac= ' in raw_line:
@@ -348,6 +362,13 @@ class SplunkConnection(object):
 
     def get_devices(self, earliest, maximum_records_per_search, fetch_plugins_dict,
                     splunk_macros_list, splunk_sw_macros_list):
+        if fetch_plugins_dict.get('fetch_netscaler_only'):
+            yield from self.fetch(f'search index=netscaler sourcetype="citrix:netscaler" CONN_DELINK',
+                                  SplunkConnection.fetch_netscaler,
+                                  earliest,
+                                  maximum_records_per_search,
+                                  f'Netscaler')
+            return
         if fetch_plugins_dict.get('fetch_zscaler_only'):
             macro_str = splunk_macros_list[0]
             yield from self.fetch(f'search `{macro_str}`',

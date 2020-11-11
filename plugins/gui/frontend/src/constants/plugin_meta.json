@@ -1352,6 +1352,10 @@
     "link": "https://docs.axonius.com/docs/juniper-junos-space-network-management-platform",
     "description": "Juniper Junos Space Network Management Platform automates management of Juniper's switching, routing, and security devices."
   },
+  "netscaler_splunk_adapter": {
+    "title": "Netscaler Splunk",
+    "description": "Netscaler Splunk"
+  },
   "junos_adapter": {
     "title": "Juniper Junos",
     "link": "https://docs.axonius.com/docs/juniper-junos",
