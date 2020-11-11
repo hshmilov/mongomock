@@ -217,8 +217,10 @@ export default {
             .draggable-expression-handle {
               cursor: move;
               opacity: 0;
-              margin: auto;
               width: 30px;
+              height: 32px;
+              line-height: 32px;
+              padding: 2px 0;
             }
             .x-expression {
               width: 95%;
