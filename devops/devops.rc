@@ -10,5 +10,9 @@ else
 fi
 
 function axlog {
-    tail -f $1 | raw_log.py
+    if [ -f /.dockerenv ]; then
+        tail -f $1 | /home/ubuntu/cortex/devops/scripts/log_utils/raw_log.py
+    else
+        docker exec -it axonius-manager /bin/bash -c "tail -f $1 | /home/ubuntu/cortex/devops/scripts/log_utils/raw_log.py"
+    fi
 }
