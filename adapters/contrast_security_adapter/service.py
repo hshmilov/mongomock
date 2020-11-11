@@ -210,7 +210,8 @@ class ContrastSecurityAdapter(AdapterBase):
             if device_id is None:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = f'contrast_{device_id}'
+            device.id = 'contrast_' + str(device_id) + '_' + (device_raw.get('name') or '')
+
             self._parse_generic_fields(device, device_raw)
             self._parse_specific_fields(device, device_raw)
             device.organization_uuid = org_uuid
