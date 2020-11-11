@@ -2034,6 +2034,7 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             },
             new_id_func)
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_62(self):
         print('Update to schema 62 - Convert NetMRI device.id to a new format')
 
@@ -2100,6 +2101,7 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
 
         self._upgrade_adapter_client_id('azure_adapter', azure_adapter_new_client_id)
 
+    @db_migration(raise_on_failure=False)
     def _update_schema_version_65(self):
         print('Update to schema 65 - Convert qualys_scans id')
 
