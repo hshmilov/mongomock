@@ -99,6 +99,7 @@ class QualysHost(SmartJsonClass):
 class QualysScansAdapter(ScannerAdapterBase, Configurable):
     class MyDeviceAdapter(DeviceAdapter):
         qualys_id = Field(str, 'Qualys ID')
+        agent_id = Field(str, 'Agent ID')
         qualys_agnet_ports = ListField(QualysAgentPort, 'Qualys Open Ports')
         qualys_tags = ListField(str, 'Qualys Tags')
         last_vuln_scan = Field(datetime.datetime, 'Last Vuln Scan')
@@ -580,6 +581,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 device.last_seen = max(d for d in last_seens if isinstance(d, datetime.datetime))
             except Exception:
                 logger.exception(f'Problem getting last seen for {device_raw}')
+            device.agent_id = (device_raw.get('agentInfo') or {}).get('agentId')
             device.add_agent_version(agent=AGENT_NAMES.qualys_scans,
                                      version=(device_raw.get('agentInfo') or {}).get('agentVersion'),
                                      status=(device_raw.get('agentInfo') or {}).get('status'))

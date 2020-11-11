@@ -352,12 +352,26 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                 except Exception:
                     logger.exception(f'Problem getting hostname for {device_raw}')
                 try:
+                    instance_id = device_raw.get('instance_id')
+                    if instance_id and instance_id.startswith('i-'):
+                        device.cloud_provider = 'AWS'
+                        device.cloud_id = instance_id
+                except Exception:
+                    logger.exception(f'Problem with cloud provider')
+                try:
                     device.figure_os((device_raw.get('platform_name') or '') + ' ' +
                                      (device_raw.get('os_version') or ''))
                     device.os.build = device_raw.get('build_number')
                     try:
                         device.os.major = int(device_raw.get('service_pack_major'))
                         device.os.minor = int(device_raw.get('service_pack_minor'))
+                        try:
+                            if device_raw.get('major_version'):
+                                device.os.major = int(device_raw.get('major_version'))
+                            if device_raw.get('minor_version'):
+                                device.os.minor = int(device_raw.get('minor_version'))
+                        except Exception:
+                            logger.exception(f'Problem with major minor')
                     except Exception:
                         pass
 
