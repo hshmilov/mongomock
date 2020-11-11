@@ -262,10 +262,10 @@ class TestDevicesTableMoreCases(TestEntitiesTable):
                                            last_seen_threshold_hours='0')
         self.devices_page.switch_to_page()
 
-        fields = 'specific_data.data.agent_versions,specific_data.data.agent_versions.adapter_name'
+        fields = 'specific_data.data.agent_versions.adapter_name,specific_data.data.agent_versions'
         field_filters = {'specific_data.data.agent_versions.adapter_name': [{'include': True, 'term': 'aaaaaa'}]}
         self.axonius_system.gui.login_user(DEFAULT_USER)
         result = self.axonius_system.gui.get_entity_view_csv('devices', fields, field_filters=field_filters)
         assert result == b'\xef\xbb\xbf\xef\xbb\xbf"Aggregated: Agent Versions: Name",' \
-                         b'"Aggregated: Agent Versions: Version","Aggregated: Agent Versions: Status",' \
-                         b'"Aggregated: Agent Versions: Name"\r\n"Cylance Agent","2.0.1490","",""\r\n'
+                         b'"Aggregated: Agent Versions: Name","Aggregated: Agent Versions: Version",' \
+                         b'"Aggregated: Agent Versions: Status"\r\n"","Cylance Agent","2.0.1490",""\r\n'

@@ -22,6 +22,7 @@ from .constants import (
 from .tools import build_selected_map
 
 logger = logging.getLogger(f'axonius.{__name__}')
+COMPLEX = 'complex_'
 
 
 def handle_entities(stream: io.StringIO, entity_fields: dict, selected: Union[dict, List[str]], entities: List[dict],
@@ -71,18 +72,17 @@ def handle_entities(stream: io.StringIO, entity_fields: dict, selected: Union[di
 
         row = process_entity(entity=entity, selected_map=selected_map, cell_joiner=cell_joiner, null_value=null_value)
         if row:
-            row_list = [v for k, v in row if k in headers]
+            copy_row = row.copy()
+            row_list = [copy_row[field] for field in copy_row.keys() if field.replace(COMPLEX, '') in headers]
             yield writer.writer.writerow(row_list)
-        # yield writer.writerow(process_entity(entity, selected_map, cell_joiner))
 
 
-def process_entity(entity: dict, selected_map: dict, cell_joiner: str, null_value: str = '') -> list:
+def process_entity(entity: dict, selected_map: dict, cell_joiner: str, null_value: str = '') -> dict:
     """Process an entity.
 
     - Changes the key of a field to the header defined in selected_map.
     - Processes complex or simple fields based on processor defined in selected_map.
     """
-    res = []
     for field_name in list(entity):
         if field_name not in selected_map:
             msg = f'Field {field_name} not in {list(selected_map)}'
@@ -98,13 +98,13 @@ def process_entity(entity: dict, selected_map: dict, cell_joiner: str, null_valu
         value = entity.pop(field_name)
 
         if processor == PROCESS_COMPLEX:
-            res_dict = process_complex(value=value, field=field, cell_joiner=cell_joiner, null_value=null_value)
-            res.extend(res_dict.items())
+            result = process_complex(value=value, field=field, cell_joiner=cell_joiner, null_value=null_value)
+            entity.update({f'{COMPLEX}{field}': result[field] for field in result})
         elif processor == PROCESS_TOO_COMPLEX:
             entity[header] = TOO_COMPLEX_STR
         else:
-            res.append((header, process_simple(value=value, field=field, cell_joiner=cell_joiner)))
-    return res
+            entity[header] = process_simple(value=value, field=field, cell_joiner=cell_joiner)
+    return entity
 
 
 def process_complex(value: list, field: dict, cell_joiner: str, null_value: str = '') -> dict:
