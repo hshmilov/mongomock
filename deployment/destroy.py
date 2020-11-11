@@ -43,14 +43,12 @@ def destroy():
         client.volumes.get('gui_data').remove(force=True)
     except Exception as e:
         print(f'gui_data volume not found {str(e)}')
-        raise
 
     print('Removing instance-control volume')
     try:
         client.volumes.get('instance-control_data').remove(force=True)
     except Exception as e:
         print(f'instance-control_data volume not found {str(e)}')
-        raise
 
     # docker is a bad boy. If there is some kind of dependency you should try to remove all images twice
     for x in range(1, 5):
