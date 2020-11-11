@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e # from now on exit on any error
+cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1
 source bash_imports.sh
-
 if [ `docker ps | grep -c $DOCKER_NAME` -eq "0" ]; then
   echo "host container is not running..."
   exit 1

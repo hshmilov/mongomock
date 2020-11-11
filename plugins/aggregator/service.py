@@ -537,7 +537,7 @@ class AggregatorService(Triggerable, PluginBase):
 
     # pylint: disable=too-many-nested-blocks,too-many-branches,too-many-statements,too-many-boolean-expressions
     def update_device_preferred_fields(self, device_id, preferred_field, device_data, specific_property, sub_property):
-        sub_property_val, val, last_seen = '', '', datetime(1970, 1, 1, 0, 0, 0)
+        val, last_seen, type_used = '', datetime(1970, 1, 1, 0, 0, 0), None
         remove_domain_from_preferred_hostname = False
         try:
             # pylint: disable=protected-access
@@ -548,6 +548,7 @@ class AggregatorService(Triggerable, PluginBase):
         for adapter in device_data['adapters']:
             if adapter.get('plugin_type', '') != 'Adapter':
                 continue
+            sub_property_val = ''
             _adapter = adapter.get('data', {})
             # IP addresses we take from cloud providers no matter what (AX-7875)
             if specific_property == 'network_interfaces' and sub_property == 'ips' and \
@@ -559,41 +560,47 @@ class AggregatorService(Triggerable, PluginBase):
                 # Field not in result
                 except Exception:
                     sub_property_val = None
-            if sub_property_val:
-                val = sub_property_val
-                last_seen = datetime.now()
+                if sub_property_val:
+                    val = sub_property_val
+                    last_seen = datetime.now()
 
             # First priority is the latest seen Agent adapter
             if 'adapter_properties' in _adapter and 'Agent' in _adapter['adapter_properties'] \
                     and 'last_seen' in _adapter and isinstance(_adapter['last_seen'], datetime) \
-                    and _adapter['last_seen'] > last_seen and val == '':
-                val, last_seen = self._get_preferred_field_from_agent_adapter(sub_property,
-                                                                              specific_property,
-                                                                              _adapter)
-                if isinstance(last_seen, str):
-                    last_seen = parse_date(last_seen)
+                    and (_adapter['last_seen'] > last_seen or type_used != 'Agent'):
+                tmp_val, tmp_last_seen = self._get_preferred_field_from_agent_adapter(sub_property,
+                                                                                      specific_property,
+                                                                                      _adapter)
+                if isinstance(tmp_last_seen, str):
+                    tmp_last_seen = parse_date(tmp_last_seen)
+                if tmp_val and (tmp_last_seen > last_seen or type_used != 'Agent'):
+                    val, last_seen, type_used = tmp_val, tmp_last_seen, 'Agent'
 
             # Second priority is active-directory data
             if (val != '' and last_seen is not None and isinstance(last_seen, datetime) and
                 (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
                     (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
-                val, last_seen = self._get_preferred_field_from_ad(device_data,
-                                                                   specific_property,
-                                                                   sub_property,
-                                                                   preferred_field)
-                if isinstance(last_seen, str):
-                    last_seen = parse_date(last_seen)
+                tmp_val, tmp_last_seen = self._get_preferred_field_from_ad(device_data,
+                                                                           specific_property,
+                                                                           sub_property,
+                                                                           preferred_field)
+                if isinstance(tmp_last_seen, str):
+                    tmp_last_seen = parse_date(tmp_last_seen)
+                if tmp_val and tmp_last_seen > last_seen:
+                    val, last_seen, type_used = tmp_val, tmp_last_seen, 'AD'
 
             # Third priority is the latest seen Assets adapter
             if (val != '' and last_seen != datetime(1970, 1, 1, 0, 0, 0) and
                 isinstance(last_seen, datetime) and
                 (datetime.now() - last_seen).days > MAX_DAYS_SINCE_LAST_SEEN) or \
                     (last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == ''):
-                val, last_seen = self._get_preferred_field_from_assets_adapter(_adapter,
-                                                                               sub_property,
-                                                                               specific_property)
-                if isinstance(last_seen, str):
-                    last_seen = parse_date(last_seen)
+                tmp_val, tmp_last_seen = self._get_preferred_field_from_assets_adapter(_adapter,
+                                                                                       sub_property,
+                                                                                       specific_property)
+                if isinstance(tmp_last_seen, str):
+                    tmp_last_seen = parse_date(tmp_last_seen)
+                if tmp_val and tmp_last_seen > last_seen:
+                    val, last_seen, type_used = tmp_val, tmp_last_seen, 'Assets'
 
         # Forth priority is first adapter that has the value
         if last_seen == datetime(1970, 1, 1, 0, 0, 0) and val == '':
