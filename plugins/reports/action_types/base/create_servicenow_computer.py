@@ -248,7 +248,7 @@ class ServiceNowComputerAction(ActionTypeBase):
                         found_snow = True
                         break
                     data_from_adapter = from_adapter['data']
-                    if not self._config('exclude_default_fields'):
+                    if not self._config.get('exclude_default_fields'):
                         if corre_plugin_id is None:
                             corre_plugin_id = from_adapter.get('plugin_unique_name')
                             to_correlate_device_id = data_from_adapter.get('id')
@@ -289,7 +289,7 @@ class ServiceNowComputerAction(ActionTypeBase):
                     except Exception:
                         logger.exception(f'Problem with translating dict')
                 try:
-                    if not self._config('exclude_default_fields'):
+                    if not self._config.get('exclude_default_fields'):
                         preferred_fields = entry.get('preferred_fields')
                         if not isinstance(preferred_fields, dict):
                             preferred_fields = {}

@@ -70,7 +70,7 @@ class DesktopCentralSomAction(ActionTypeBase):
                         client_id = adapter_data['client_used']
                         desktop_central_response_dict = dict()
                         desktop_central_response_dict['resource_id'] = resource_id
-                        desktop_central_response_dict['action'] = SOM_ACTIONS[self._config('action_name')]
+                        desktop_central_response_dict['action'] = SOM_ACTIONS[self._config.get('action_name')]
                         desktop_central_response_dict['client_id'] = client_id
                         response = PluginBase.Instance.request_remote_plugin('do_som_action', adapter_unique_name,
                                                                              'post', json=desktop_central_response_dict)
