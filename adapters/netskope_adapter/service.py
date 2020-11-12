@@ -28,7 +28,8 @@ class NetskopeAdapter(AdapterBase):
     class MyDeviceAdapter(DeviceAdapter):
         last_status = Field(str, 'Last Status')
         last_event = Field(str, 'Last Event')
-        lsat_actor = Field(str, 'Last Actor')
+        last_actor = Field(str, 'Last Actor')
+        last_npa_status = Field(str, 'Last NPA Status')
         device_classification_status = Field(str, 'Device Classification Status')
 
     def __init__(self, *args, **kwargs):
@@ -136,9 +137,10 @@ class NetskopeAdapter(AdapterBase):
             try:
                 last_event_raw = device_raw.get('last_event') or {}
                 device.last_seen = parse_date(last_event_raw.get('timestamp'))
-                device.last_status = STATUS_DICT.get(last_event_raw.get('status'))
-                device.last_event = EVENT_DICT.get(last_event_raw.get('event'))
-                device.lsat_actor = ACTOR_DICT.get(last_event_raw.get('actor'))
+                device.last_status = STATUS_DICT.get(last_event_raw.get('status')) or last_event_raw.get('status')
+                device.last_event = EVENT_DICT.get(last_event_raw.get('event')) or last_event_raw.get('event')
+                device.last_actor = ACTOR_DICT.get(last_event_raw.get('actor')) or last_event_raw.get('actor')
+                device.last_npa_status = last_event_raw.get('npa_status')
             except Exception:
                 logger.exception(f'Probelm getting last event')
             users_raw = device_raw.get('users')

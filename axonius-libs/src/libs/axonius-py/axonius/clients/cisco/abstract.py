@@ -47,6 +47,7 @@ class CiscoDevice(DeviceAdapter):
     association_time = Field(datetime.datetime, 'Association Time')
     device_type = Field(str, 'Device Type')
     ssid = Field(str, 'SSID')
+    location = Field(str, 'Location')
 
 
 class AbstractCiscoClient:

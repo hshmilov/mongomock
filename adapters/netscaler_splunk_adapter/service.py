@@ -157,13 +157,13 @@ class NetscalerSplunkAdapter(ScannerAdapterBase, Configurable):
                     netscaler_data.source_port = source_port
                     vserver = device_raw.get('vserver')
                     vserver_port = None
-                    if ':' in source:
+                    if ':' in vserver:
                         vserver, vserver_port = vserver.split(':')[0], vserver.split(':')[1]
                     netscaler_data.vserver = vserver
                     netscaler_data.vserver_port = vserver_port
                     nat = device_raw.get('nat')
                     nat_port = None
-                    if ':' in source:
+                    if ':' in nat:
                         nat, nat_port = nat.split(':')[0], nat.split(':')[1]
                     netscaler_data.nat = nat
                     netscaler_data.nat_port = nat_port

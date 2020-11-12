@@ -256,6 +256,7 @@ class CiscoPrimeAdapter(AdapterBase):
             logger.exception(f'Problem getting AP info for {raw_device}')
         device.nac_state = raw_device.get('nacState')
         device.ssid = raw_device.get('ssid')
+        device.location = raw_device.get('location')
         try:
             device.last_used_users = (raw_device.get('userName') or '').split(',')
         except Exception:
