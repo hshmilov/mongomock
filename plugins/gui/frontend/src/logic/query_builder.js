@@ -134,10 +134,6 @@ const QueryBuilder = (schema, expressions, meta, prevExpressionsQuery) => {
         ).compileExpression();
         if (expressionResult.error) {
           errors.push(expressionResult.error);
-          if (expression.filter) {
-            filters.push(expression.filter);
-          }
-          return;
         }
         expression.filter = expressionResult.filter;
         expression.bracketWeight = expressionResult.bracketWeight;
