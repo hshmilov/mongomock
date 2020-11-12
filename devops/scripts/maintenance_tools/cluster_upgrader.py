@@ -19,6 +19,8 @@ REQUEST_TIMEOUT = 60 * 30
 
 def request_instance_control(plugin_unique_name, endpoint):
     plugin_unique_name_ip = weave_dns_lookup(plugin_unique_name)
+    if not plugin_unique_name_ip:
+        print(f'Error while resolving {plugin_unique_name}')
     res = requests.get(f'https://{plugin_unique_name_ip}:443/api/{endpoint}', verify=False,
                        timeout=REQUEST_TIMEOUT)
     print(res.text.strip())

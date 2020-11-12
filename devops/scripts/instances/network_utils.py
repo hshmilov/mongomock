@@ -1,4 +1,6 @@
+import os
 import random
+import re
 import string
 import subprocess
 import shlex
@@ -22,6 +24,8 @@ DOCKER_NETOWRK_DEFAULT_DNS = '172.17.0.1'
 DOCKER_TUNNEL_INTERFACE_NAME = 'br-ax-vpnnet'
 DOCKER_BRIDGE_INTERFACE_NAME = 'br-ax-docker'
 DOCKER_BRIDGE_INSPECT_COMMAND = "docker network inspect bridge --format='{{(index .IPAM.Config 0).Gateway}}'"
+
+WEAVE_STATUS_REGEX = r'(.*)\s+(\d+.*)\s+(.*)\s+.*'
 
 
 def get_docker_subnet_ip_range():
@@ -89,9 +93,26 @@ def connect_axonius_manager_to_weave():
     subprocess.check_call(weave_attach_command)
 
 
+def get_weave_dns_status():
+    containers = {}
+    if not os.path.exists(WEAVE_PATH):
+        raise Exception(f'Weave binary does not exist in path: {WEAVE_PATH}')
+    command_output = subprocess.check_output([WEAVE_PATH, 'status', 'dns']).decode('utf-8')
+    for weave_record in command_output.strip().split('\n'):
+        container_name, container_ip, container_id = re.findall(WEAVE_STATUS_REGEX, weave_record.strip())[0]
+        container_id = container_id.strip()
+        container_ip = container_ip.strip()
+        container_name = container_name.strip()
+        containers[container_name] = container_ip
+    return containers
+
+
 def weave_dns_lookup(hostname: str) -> str:
     command = shlex.split(f'weave dns-lookup {hostname}')
-    return subprocess.check_output(command).decode('utf-8').splitlines()[0]
+    res = subprocess.check_output(command).decode('utf-8').splitlines()
+    if res:
+        return res[0]
+    return get_weave_dns_status().get(hostname)
 
 
 def fix_node_axonius_manager_hosts():

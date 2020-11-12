@@ -42,6 +42,9 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
         print_state('Upgrading entire cluster')
         if is_weave_up():
             connect_axonius_manager_to_weave()
+            print_state('Axonius manager was connected to weave')
+        else:
+            print_state('weave is down')
         cluster_data = read_cluster_data()
         if cluster_data:
             node_instances = [instance for instance in cluster_data['instances']
