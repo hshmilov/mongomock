@@ -276,6 +276,7 @@ class Plugins:
             aws_s3_settings = config_to_set.get('aws_s3_settings')
             if aws_s3_settings and aws_s3_settings.get('enabled') is True:
                 enable_backups = aws_s3_settings.get('enable_backups')
+                https_proxy = aws_s3_settings.get('https_proxy')
                 preshared_key = aws_s3_settings.get('preshared_key') or ''
                 filename_format = aws_s3_settings.get('filename_format') or ''
                 if enable_backups is True:
@@ -295,6 +296,7 @@ class Plugins:
                             bucket_name=bucket_name,
                             access_key_id=aws_access_key_id,
                             secret_access_key=aws_secret_access_key,
+                            https_proxy=https_proxy,
                             just_one=True
                     ):
                         break

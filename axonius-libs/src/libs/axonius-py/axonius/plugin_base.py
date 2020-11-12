@@ -4413,6 +4413,11 @@ class PluginBase(Configurable, Feature, ABC):
                             'format': 'password'
                         },
                         {
+                            'name': 'https_proxy',
+                            'title': 'Proxy',
+                            'type': 'string',
+                        },
+                        {
                             'name': 'filename_format',
                             'title': 'Filename format',
                             'type': 'string'
@@ -4727,6 +4732,7 @@ class PluginBase(Configurable, Feature, ABC):
                 'preshared_key': None,
                 'aws_access_key_id': None,
                 'aws_secret_access_key': None,
+                'https_proxy': None,
                 'filename_format': None
             },
             'smb_settings': {

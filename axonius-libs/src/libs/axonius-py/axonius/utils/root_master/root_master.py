@@ -215,7 +215,11 @@ def gpg_decrypt_file(preshared_key: str, decrypt_output: str, decrypt_input: str
         raise ValueError(f'Failed to decrypt Object {key_name!r} from location {location!r}, bad password? {str(exc)}')
 
 
-def verify_restore_s3(bucket_name, access_key_id=None, secret_access_key=None):
+def verify_restore_s3(bucket_name,
+                      access_key_id=None,
+                      secret_access_key=None,
+                      **kwargs
+                      ):
     """Verify root master enabled s3 settings and available disk space."""
     root_master_settings = PluginBase.Instance.feature_flags_config().get(RootMasterNames.root_key) or {}
     root_master_enabled = root_master_settings.get(RootMasterNames.enabled)
@@ -259,6 +263,7 @@ def root_master_restore_from_s3():
         bucket_name = aws_s3_settings.get('bucket_name')
         preshared_key = aws_s3_settings.get('preshared_key')
         aws_s3_enabled = aws_s3_settings.get('enabled')
+        https_proxy = aws_s3_settings.get('https_proxy')
 
         if not aws_s3_enabled:
             raise ValueError(f'AWS S3 Settings are not enabled')
@@ -267,7 +272,11 @@ def root_master_restore_from_s3():
 
         # Now when we have all settings configured, we can start the process.
         # First, get the list of all keys in the s3 bucket
-        list_s3_args = dict(bucket_name=bucket_name, access_key_id=access_key_id, secret_access_key=secret_access_key)
+        list_s3_args = dict(bucket_name=bucket_name,
+                            access_key_id=access_key_id,
+                            secret_access_key=secret_access_key,
+                            https_proxy=https_proxy,
+                            )
         key_names = [x['Key'] for x in aws_list_s3_objects(**list_s3_args)]
         logger.info(f'S3 keys found: {",".join(key_names)}')
 
@@ -279,6 +288,7 @@ def root_master_restore_from_s3():
                     bucket_name=bucket_name,
                     access_key_id=access_key_id,
                     secret_access_key=secret_access_key,
+                    https_proxy=https_proxy,
                     preshared_key=preshared_key,
                     delete_backups=delete_backups,
                 )
@@ -297,6 +307,7 @@ def restore_from_s3_key(
         preshared_key=None,
         access_key_id=None,
         secret_access_key=None,
+        https_proxy=None,
         delete_backups=False,
         allow_re_restore=False,
 ):
@@ -305,7 +316,11 @@ def restore_from_s3_key(
         err = f'Must supply "preshared_key" or configure Global Settings > Amazon S3 settings'
         raise ValueError(err)
 
-    s3_args = dict(bucket_name=bucket_name, access_key_id=access_key_id, secret_access_key=secret_access_key)
+    s3_args = dict(bucket_name=bucket_name,
+                   access_key_id=access_key_id,
+                   secret_access_key=secret_access_key,
+                   https_proxy=https_proxy,
+                   )
 
     verify_restore_s3(**s3_args)
     restore_cleanup()
@@ -357,6 +372,7 @@ def restore_from_s3_key(
                     file_obj=file_obj,
                     access_key_id=access_key_id,
                     secret_access_key=secret_access_key,
+                    https_proxy=https_proxy,
                 )
             logger.info(f'Download complete: {key_name}, Decrypting')
         except Exception as exc:
@@ -385,6 +401,7 @@ def restore_from_s3_key(
                     key_name=key_name,
                     access_key_id=access_key_id,
                     secret_access_key=secret_access_key,
+                    https_proxy=https_proxy,
                 )
                 obj_meta['deleted'] = True
             except Exception:

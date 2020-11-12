@@ -319,6 +319,7 @@ def backup_to_s3() -> int:
         aws_secret_access_key = aws_s3_settings.get('aws_secret_access_key')
         aws_bucket_name = aws_s3_settings.get('bucket_name')
         preshared_key = aws_s3_settings.get('preshared_key')
+        https_proxy = aws_s3_settings.get('https_proxy')
         filename_format = aws_s3_settings.get('filename_format') or ''
         filename_after_format = get_filename_from_format(filename_format)
 
@@ -386,7 +387,13 @@ def backup_to_s3() -> int:
             key_name = f'axonius_backup_{system_id}_{str(datetime.datetime.now()).replace(" ", "_")}.tar.gz.gpg'
         # Final step: Upload the file to s3
         with open(f'{AXONIUS_BACKUP_FILENAME}.gpg', 'rb') as file_obj:
-            upload_file_to_s3(aws_bucket_name, key_name, file_obj, aws_access_key_id, aws_secret_access_key)
+            upload_file_to_s3(aws_bucket_name,
+                              key_name,
+                              file_obj,
+                              aws_access_key_id,
+                              aws_secret_access_key,
+                              https_proxy,
+                              )
             logger.info(f'Completed S3 backup file name: {key_name}')
 
         return_code = RETURN_SUCCESS_CODE

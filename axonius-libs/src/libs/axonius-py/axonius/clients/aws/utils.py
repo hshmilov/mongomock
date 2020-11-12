@@ -46,7 +46,8 @@ def download_s3_object_to_file_obj(
         key: str,
         file_obj,
         access_key_id: Optional[str] = None,
-        secret_access_key: Optional[str] = None
+        secret_access_key: Optional[str] = None,
+        https_proxy: Optional[str] = None,
 ):
     """
     Gets an object from an s3 bucket.
@@ -54,12 +55,16 @@ def download_s3_object_to_file_obj(
     :param key: the location of the object within the bucket.
     :param access_key_id: access key id to access the bucket. pass None to use the instance attached IAM role.
     :param secret_access_key: secret access key to access the bucket. pass None to use the instance attached IAM role.
+    :param https_proxy: https proxy url and port
     :return:
     """
+    aws_config = get_aws_config(https_proxy=https_proxy)
+
     s3_client = boto3.client(
         's3',
         aws_access_key_id=access_key_id,
-        aws_secret_access_key=secret_access_key
+        aws_secret_access_key=secret_access_key,
+        config=aws_config,
     )
     s3_client.download_fileobj(bucket_name, key, file_obj)
 
@@ -69,7 +74,8 @@ def aws_list_s3_objects(
         prefix: str = '',
         access_key_id: Optional[str] = None,
         secret_access_key: Optional[str] = None,
-        just_one: bool = False
+        just_one: bool = False,
+        https_proxy: Optional[str] = None,
 ):
     """
     Lists objects within an s3 bucket and key
@@ -78,12 +84,16 @@ def aws_list_s3_objects(
     :param access_key_id: access key id to access the bucket. pass None to use the instance attached IAM role.
     :param secret_access_key: secret access key to access the bucket. pass None to use the instance attached IAM role.
     :param just_one: Fetch just one (useful for testing permissions)
+    :param https_proxy: https proxy url and port
     :return:
     """
+    aws_config = get_aws_config(https_proxy=https_proxy)
+
     s3_client = boto3.client(
         's3',
         aws_access_key_id=access_key_id,
-        aws_secret_access_key=secret_access_key
+        aws_secret_access_key=secret_access_key,
+        config=aws_config,
     )
 
     if just_one:
@@ -101,7 +111,8 @@ def upload_file_to_s3(
         key_name: str,
         file_obj,
         access_key_id: Optional[str] = None,
-        secret_access_key: Optional[str] = None
+        secret_access_key: Optional[str] = None,
+        https_proxy: Optional[str] = None,
 ):
     """
     Uploads a file to s3.
@@ -112,13 +123,15 @@ def upload_file_to_s3(
     :param access_key_id: optional access key id to access the bucket. pass None to use the instance attached IAM role.
     :param secret_access_key: optional secret access key to access the bucket.
                               pass None to use the instance attached IAM role.
-    :return:
-    :return:
+    :param https_proxy: https proxy url and port
     """
+    aws_config = get_aws_config(https_proxy=https_proxy)
+
     s3_client = boto3.client(
         's3',
         aws_access_key_id=access_key_id,
-        aws_secret_access_key=secret_access_key
+        aws_secret_access_key=secret_access_key,
+        config=aws_config,
     )
     s3_client.upload_fileobj(file_obj, bucket_name, key_name, ExtraArgs={'ACL': 'bucket-owner-full-control'})
 
@@ -127,7 +140,8 @@ def delete_file_from_s3(
         bucket_name: str,
         key_name: str,
         access_key_id: Optional[str] = None,
-        secret_access_key: Optional[str] = None
+        secret_access_key: Optional[str] = None,
+        https_proxy: Optional[str] = None,
 ):
     """
     Deletes the specific key from an s3 object.
@@ -135,13 +149,15 @@ def delete_file_from_s3(
     :param key_name: the object key
     :param access_key_id: access key id to access the bucket. pass None to use the instance attached IAM role.
     :param secret_access_key: secret access key to access the bucket. pass None to use the instance attached IAM role.
-    :return:
-    :return:
+    :param https_proxy: https proxy url and port
     """
+    aws_config = get_aws_config(https_proxy=https_proxy)
+
     s3_client = boto3.client(
         's3',
         aws_access_key_id=access_key_id,
-        aws_secret_access_key=secret_access_key
+        aws_secret_access_key=secret_access_key,
+        config=aws_config,
     )
 
     s3_client.delete_object(
@@ -187,7 +203,8 @@ def get_s3_key_meta(
         bucket_name: str,
         key_name: str,
         access_key_id: Optional[str] = None,
-        secret_access_key: Optional[str] = None
+        secret_access_key: Optional[str] = None,
+        https_proxy: Optional[str] = None,
 ):
     """
     Get the meta data for an s3 file exists
@@ -195,13 +212,15 @@ def get_s3_key_meta(
     :param key_name: the object key
     :param access_key_id: access key id to access the bucket. pass None to use the instance attached IAM role.
     :param secret_access_key: secret access key to access the bucket. pass None to use the instance attached IAM role.
-    :return:
-    :return:
+    :param https_proxy: https proxy url and port
     """
+    aws_config = get_aws_config(https_proxy=https_proxy)
+
     s3_client = boto3.client(
         's3',
         aws_access_key_id=access_key_id,
-        aws_secret_access_key=secret_access_key
+        aws_secret_access_key=secret_access_key,
+        config=aws_config,
     )
 
     try:
