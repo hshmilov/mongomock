@@ -17,7 +17,8 @@
       "mongo",
       "master_proxy",
       "reimage_tags_analysis",
-      "compliance"
+      "compliance",
+      "redis"
     ],
     "remove-from-exclude": []
   }
