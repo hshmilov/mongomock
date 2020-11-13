@@ -2,6 +2,7 @@
 import logging
 from collections import defaultdict
 from itertools import combinations
+import phonenumbers
 
 from axonius.blacklists import ALL_BLACKLIST, FROM_FIELDS_BLACK_LIST_REG, compare_reg_mac
 from axonius.consts.plugin_consts import PLUGIN_NAME, ACTIVE_DIRECTORY_PLUGIN_NAME
@@ -169,8 +170,13 @@ def is_only_host_adapter_not_localhost(adapter_device):
 
 def get_fqdn(adapter_device):
     # For now we support only Chef to avoid confusion of future adapters writers
-    if adapter_device.get('plugin_name') not in ['chef_adapter']:
+    if adapter_device.get('plugin_name') not in ['chef_adapter', 'infoblox_adapter']:
         return None
+    try:
+        if adapter_device['data'].get('address_types') and adapter_device['data'].get('address_types') != ['DNS']:
+            return None
+    except Exception:
+        pass
     return adapter_device['data'].get('fqdn')
 
 
@@ -596,7 +602,9 @@ def is_a_record_device(adapter_device):
 
 def is_full_hostname_adapter(adapter_device):
     return adapter_device.get('plugin_name') in ['active_directory_adapter', 'panorays_adapter',
-                                                 'sccm_adapter', 'cisco_firepower_management_center_adapter'] \
+                                                 'cisco_firepower_management_center_adapter'] \
+        or (adapter_device.get('plugin_name') in ['sccm_adapter']
+            and get_hostname(adapter_device) and '.' in get_hostname(adapter_device))\
         or is_a_record_device(adapter_device) or (hostname_not_problematic(adapter_device)
                                                   and adapter_device.get('plugin_name') in ['tanium_adapter',
                                                                                             'free_ipa_adapter'])
@@ -737,6 +745,44 @@ def get_imei(adapter_device):
     if not imei:
         return None
     return imei.lower().replace(' ', '')
+
+
+def get_mi_number(adapter_device):
+    if not adapter_device.get('plugin_name') == 'mobileiron_adapter':
+        return None
+    if not adapter_device['data'].get('current_phone_number'):
+        return None
+    try:
+        return str(phonenumbers.parse(adapter_device['data'].get('current_phone_number'), None).national_number)
+    except Exception:
+        return None
+
+
+def get_snow_name_number(adapter_device):
+    if adapter_device.get('plugin_name') not in ['service_now_adapter', 'service_now_sql_adapter',
+                                                 'service_now_akana_adapter']:
+        return None
+    if not adapter_device['data'].get('name'):
+        return None
+    try:
+        return str(int(adapter_device['data'].get('name').replace(' ', '')))
+    except Exception:
+        return None
+
+
+def one_mi_one_snow(adapter_device1, adapter_device2):
+    return (get_mi_number(adapter_device1) and get_snow_name_number(adapter_device2)) or \
+           (get_mi_number(adapter_device2) and get_snow_name_number(adapter_device1))
+
+
+def get_phone_numbers_mi_snow(adapter_device):
+    return get_mi_number(adapter_device) or get_snow_name_number(adapter_device)
+
+
+def compare_phone_numbers_mi_snow(adapter_device1, adapter_device2):
+    asset1 = get_phone_numbers_mi_snow(adapter_device1)
+    asset2 = get_phone_numbers_mi_snow(adapter_device2)
+    return asset1 and asset2 and asset1 == asset2
 
 
 def get_imei_or_serial(adapter_device):
@@ -1191,6 +1237,17 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
                                                   inner_compare_funcs,
                                                   {'Reason': 'They have the same MAC'},
                                                   CorrelationReason.StaticAnalysis)
+
+    def _correlate_phone_snow_mi(self, adapters_to_correlate):
+        logger.info('Starting to correlate phone number snow mi')
+        filtered_adapters_list = filter(get_phone_numbers_mi_snow, adapters_to_correlate)
+        return self._bucket_correlate(list(filtered_adapters_list),
+                                      [get_phone_numbers_mi_snow],
+                                      [compare_phone_numbers_mi_snow],
+                                      [],
+                                      [one_mi_one_snow],
+                                      {'Reason': 'They have the same phone number one is snow one mi'},
+                                      CorrelationReason.StaticAnalysis)
 
     def _correlate_imei_serial(self, adapters_to_correlate):
         logger.info('Starting to correlate imei serial')
@@ -1769,6 +1826,7 @@ class StaticCorrelatorEngine(CorrelatorEngineBase):
         # wait for all correlation to end until the marker in _map_correlation
         yield CorrelationMarker()
         yield from self._correlate_imei_serial(adapters_to_correlate)
+        yield from self._correlate_phone_snow_mi(adapters_to_correlate)
         yield from self._correlate_with_twistlock(adapters_to_correlate)
 
         yield from self._correlate_with_digicert_pki(adapters_to_correlate)

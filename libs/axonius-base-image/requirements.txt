@@ -138,3 +138,4 @@ aiodnsresolver==0.0.140
 flask-jwt-extended[asymmetric_crypto]==3.24.1
 requests-ntlm2==6.2.7
 filemagic==1.6
+phonenumbers==8.12.12
