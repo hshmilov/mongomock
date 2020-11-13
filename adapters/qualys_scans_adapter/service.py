@@ -22,7 +22,7 @@ from axonius.utils.parsing import parse_bool_from_raw, int_or_none
 from axonius.clients.qualys import consts
 from axonius.clients.qualys.connection import QualysScansConnection
 from qualys_scans_adapter.structures import InventoryInstance, InventoryContainer, InventoryAgent, InventorySensor, \
-    InventoryActivation
+    InventoryActivation, InventoryProcessor
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -182,6 +182,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             proxy_username=client_config.get('proxy_username'),
             proxy_password=client_config.get('proxy_password'),
             fetch_from_inventory=self.__fetch_from_inventory,
+            use_qualys_api=self.__use_qualys_api,
             fetch_report=self.__fetch_report,
             fetch_tickets=self.__fetch_tickets,
             fetch_unscanned_ips=self.__fetch_unscanned_ips
@@ -346,6 +347,19 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         except Exception:
             logger.exception(f'Failed creating container for inventory device {device_raw}')
 
+    @staticmethod
+    def _fill_inventory_processor_instance(processor_raw: dict, device: InventoryInstance):
+        try:
+            processor = InventoryProcessor()
+
+            processor.description = processor_raw.get('description')
+            processor.speed = int_or_none(processor_raw.get('speed'))
+            processor.number_cpus = int_or_none(processor_raw.get('numCPUs'))
+
+            device.processor = processor
+        except Exception:
+            logger.exception(f'Failed creating processor for inventory device {processor_raw}')
+
     def _fill_inventory_asset_instance(self, device_raw: dict, device: MyDeviceAdapter):
         try:
             inventory_instance = InventoryInstance()
@@ -367,6 +381,9 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
 
             if isinstance(device_raw.get('agent'), dict):
                 self._fill_inventory_agent_instance(device_raw.get('agent'), inventory_instance)
+
+            if isinstance(device_raw.get('processor'), dict):
+                self._fill_inventory_processor_instance(device_raw.get('processor'), inventory_instance)
 
             device.inventory_instance = inventory_instance
         except Exception:
@@ -880,6 +897,16 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         return {
             'items': [
                 {
+                    'name': 'use_qualys_api',
+                    'type': 'bool',
+                    'title': 'Use Qualys API'
+                },
+                {
+                    'name': 'fetch_from_inventory',
+                    'type': 'bool',
+                    'title': 'Use Global IT Asset Inventory API'
+                },
+                {
                     'name': 'request_timeout',
                     'title': 'Request timeout',
                     'type': 'integer'
@@ -908,11 +935,6 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                     'name': 'fetch_vulnerabilities_data',
                     'type': 'bool',
                     'title': 'Fetch vulnerabilities data'
-                },
-                {
-                    'name': 'fetch_from_inventory',
-                    'type': 'bool',
-                    'title': 'Use Inventory API'
                 },
                 {
                     'name': 'fetch_report',
@@ -958,7 +980,9 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
                 'retry_sleep_time',
                 'drop_only_ip_devices',
                 'devices_per_page',
-                'fetch_from_inventory', 'use_dns_host_as_hostname',
+                'fetch_from_inventory',
+                'use_qualys_api',
+                'use_dns_host_as_hostname',
                 'fetch_report',
                 'fetch_tickets',
                 'fetch_unscanned_ips',
@@ -979,6 +1003,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
             'devices_per_page': consts.DEVICES_PER_PAGE,
             'fetch_vulnerabilities_data': True,
             'fetch_from_inventory': False,
+            'use_qualys_api': True,
             'use_dns_host_as_hostname': False,
             'fetch_unscanned_ips': False,
             'fetch_report': False,
@@ -1017,6 +1042,7 @@ class QualysScansAdapter(ScannerAdapterBase, Configurable):
         self.__retry_sleep_time = config.get('max_retries', consts.RETRY_SLEEP_TIME)
         self.__devices_per_page = config.get('devices_per_page', consts.DEVICES_PER_PAGE)
         self.__fetch_from_inventory = config.get('fetch_from_inventory', False)
+        self.__use_qualys_api = config['use_qualys_api'] if 'use_qualys_api' in config else True
         self.__use_dns_host_as_hostname = config.get('use_dns_host_as_hostname', False)
         self.__fetch_report = config.get('fetch_report', False)
         self.__fetch_tickets = config.get('fetch_tickets', False)

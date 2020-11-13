@@ -66,6 +66,7 @@ class QualysScansConnection(RESTConnection):
                  max_retries=None,
                  date_filter=None,
                  fetch_from_inventory=False,
+                 use_qualys_api=True,
                  fetch_report=False,
                  fetch_tickets=False,
                  fetch_unscanned_ips=False,
@@ -85,6 +86,7 @@ class QualysScansConnection(RESTConnection):
         self._retry_sleep_time = retry_sleep_time or consts.RETRY_SLEEP_TIME
         self._max_retries = max_retries or consts.MAX_RETRIES
         self._fetch_from_inventory = fetch_from_inventory
+        self._use_qualys_api = use_qualys_api
         self._fetch_report = fetch_report
         self._fetch_tickets = fetch_tickets
         self._fetch_unscanned_ips = fetch_unscanned_ips
@@ -449,7 +451,11 @@ class QualysScansConnection(RESTConnection):
         try:
             if self._fetch_from_inventory:
                 yield from self._paginated_inventory_get()
-            else:
+        except Exception:
+            logger.exception(f'Problem getting Inventory API')
+
+        try:
+            if self._use_qualys_api:
                 for device_raw in self._get_hostassets(fetch_asset_groups, fetch_pci_flag):
                     yield device_raw, HOST_ASSET_TYPE
         except Exception:

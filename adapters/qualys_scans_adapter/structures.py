@@ -36,6 +36,12 @@ class InventoryContainer(SmartJsonClass):
     num_of_images = Field(int, 'Number Of Images')
 
 
+class InventoryProcessor(SmartJsonClass):
+    description = Field(str, 'Description')
+    speed = Field(int, 'Speed')
+    number_cpus = Field(int, 'Number Of CPUs')
+
+
 class InventoryInstance(SmartJsonClass):
     host_id = Field(str, 'Host ID')
     agent_id = Field(str, 'Agent ID')
