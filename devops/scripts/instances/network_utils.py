@@ -108,10 +108,13 @@ def get_weave_dns_status():
 
 
 def weave_dns_lookup(hostname: str) -> str:
-    command = shlex.split(f'weave dns-lookup {hostname}')
-    res = subprocess.check_output(command).decode('utf-8').splitlines()
-    if res:
-        return res[0]
+    try:
+        command = shlex.split(f'weave dns-lookup {hostname}')
+        res = subprocess.check_output(command).decode('utf-8').splitlines()
+        if res:
+            return res[0]
+    except Exception:
+        print('Error while running weave dns-lookup, fallback to weave status')
     return get_weave_dns_status().get(hostname)
 
 
