@@ -61,6 +61,8 @@ def get_ssh_connection() -> paramiko.SSHClient:
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy)
     key = paramiko.RSAKey.from_private_key_file('/home/axonius/app/rsa_keys/id_rsa')   # directly parse as rsa
     client.connect(AXONIUS_MANAGER_PLUGIN_NAME, username='root', pkey=key)
+    transport = client.get_transport()
+    transport.set_keepalive(60)
     return client
 
 
