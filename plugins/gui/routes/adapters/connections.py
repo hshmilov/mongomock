@@ -72,13 +72,14 @@ class Connections:
             except Exception:
                 logger.exception(f'error in audit message loading client_id from json client data {client_data}')
             try:
-                self.request_remote_plugin('update_connection_scheduler',
-                                           plugin_unique_name=SYSTEM_SCHEDULER_PLUGIN_NAME,
-                                           method='POST',
-                                           timeout=10,
-                                           json={'adapter_name': adapter_name,
-                                                 'client_id': client_id,
-                                                 CONNECTION_DISCOVERY: connection_data[CONNECTION_DISCOVERY]})
+                if connection_data.get(CONNECTION_DISCOVERY):
+                    self.request_remote_plugin('update_connection_scheduler',
+                                               plugin_unique_name=SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                               method='POST',
+                                               timeout=10,
+                                               json={'adapter_name': adapter_name,
+                                                     'client_id': client_id,
+                                                     CONNECTION_DISCOVERY: connection_data[CONNECTION_DISCOVERY]})
             except Exception as e:
                 logger.exception(f'Error while triggering update_connection_scheduler {e}')
         return client_data, code
@@ -258,13 +259,14 @@ class Connections:
             logger.exception('failed to audit adapter client connection changes')
 
         try:
-            self.request_remote_plugin('update_connection_scheduler',
-                                       plugin_unique_name=SYSTEM_SCHEDULER_PLUGIN_NAME,
-                                       method='POST',
-                                       timeout=10,
-                                       json={'adapter_name': adapter_name,
-                                             'client_id': client_id,
-                                             CONNECTION_DISCOVERY: connection_data[CONNECTION_DISCOVERY]})
+            if connection_data.get(CONNECTION_DISCOVERY):
+                self.request_remote_plugin('update_connection_scheduler',
+                                           plugin_unique_name=SYSTEM_SCHEDULER_PLUGIN_NAME,
+                                           method='POST',
+                                           timeout=10,
+                                           json={'adapter_name': adapter_name,
+                                                 'client_id': client_id,
+                                                 CONNECTION_DISCOVERY: connection_data[CONNECTION_DISCOVERY]})
         except Exception:
             logger.exception('Failed triggering update_connection_scheduler')
 
