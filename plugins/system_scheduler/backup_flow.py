@@ -61,28 +61,23 @@ def get_mongo_space_documents_size(include_history=False, include_devices_users_
     :param include_devices_users_data:
     :return: size in GB
     """
-    try:
-        db_client = get_db_client()
-        dbs = db_client.list_database_names()
-        dbs_to_filter = ['aggregator', 'local']
+    db_client = get_db_client()
+    dbs = db_client.list_database_names()
+    dbs_to_filter = ['aggregator', 'local']
 
-        size_of_databases_without_aggregator = sum([
-            get_database_data_size(db_client.get_database(db_name)) for db_name in dbs if db_name not in dbs_to_filter
-        ])
+    size_of_databases_without_aggregator = sum([
+        get_database_data_size(db_client.get_database(db_name)) for db_name in dbs if db_name not in dbs_to_filter
+    ])
 
-        aggragator_collections_to_backup = list(
-            filter(lambda col: aggregator_collection_filter(col, include_history, include_devices_users_data),
-                   db_client.aggregator.list_collection_names())
-        )
+    aggragator_collections_to_backup = list(
+        filter(lambda col: aggregator_collection_filter(col, include_history, include_devices_users_data),
+               db_client.aggregator.list_collection_names())
+    )
 
-        aggregator_size = sum(get_collection_storage_size(db_client.aggregator.get_collection(col_name))
-                              for col_name in aggragator_collections_to_backup)
+    aggregator_size = sum(get_collection_storage_size(db_client.aggregator.get_collection(col_name))
+                          for col_name in aggragator_collections_to_backup)
 
-        return (aggregator_size / BYTES_TO_GB) + size_of_databases_without_aggregator
-
-    finally:
-        if db_client:
-            db_client.close()
+    return (aggregator_size / BYTES_TO_GB) + size_of_databases_without_aggregator
 
 
 def aggregator_collection_filter(col_name='', include_history=False, include_devices_users_data=True) -> bool:
@@ -131,11 +126,6 @@ class BackupManager:
         self._aws_s3_settings = config.get(BackupSettings.backup_to_aws_s3) or {}
         self._azure_storage_settings = config.get(BackupSettings.backup_to_azure) or {}
         self._build_version = loads(METADATA_PATH.read_text()).get('Version')
-
-    # when gc make sure db connection is closed
-    def __del__(self):
-        if self.db_client:
-            self.db_client.close()
 
     def _get_db_names(self) -> list:
         dbs = self.db_client.list_database_names()
@@ -405,7 +395,6 @@ class BackupManager:
 
         finally:
             self.clean_backup_folder()
-            self.db_client.close()
 
     def _create_backup_folder(self):
         try:
