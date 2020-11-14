@@ -24,7 +24,8 @@ from scripts.instances.instances_consts import NOLOGINER_USER_NAME
 from scripts.instances.instances_modes import get_instance_mode, InstancesModes
 from scripts.instances.network_utils import connect_axonius_manager_to_weave
 from scripts.maintenance_tools.cluster_reader import read_cluster_data
-from scripts.maintenance_tools.cluster_upgrader import shutdown_adapters, download_upgrader_on_nodes, upgrade_nodes
+from scripts.maintenance_tools.cluster_upgrader import shutdown_adapters, download_upgrader_on_nodes, upgrade_nodes, \
+    update_instances_upgrade_script
 from services.plugins.httpd_service import HttpdService
 from services.standalone_services.node_proxy_service import NodeProxyService
 from services.standalone_services.tunneler_service import TunnelerService
@@ -49,6 +50,11 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
         if cluster_data:
             node_instances = [instance for instance in cluster_data['instances']
                               if instance['node_id'] != cluster_data['my_entity']['node_id']]
+            print_state('Upgrading upgrade script on nodes')
+            try:
+                update_instances_upgrade_script(node_instances)
+            except Exception as e:
+                print_state(f'Error while upgrading script on nodes {str(e)}')
             print_state('Shutting down adapters on nodes')
             shutdown_adapters(node_instances)
             # if we use remote mongo, upgrade the mongo node before master
