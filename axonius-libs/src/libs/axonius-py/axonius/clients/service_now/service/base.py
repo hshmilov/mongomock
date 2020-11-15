@@ -8,9 +8,10 @@ import chardet
 
 from axonius.adapter_base import AdapterProperty, AdapterBase
 from axonius.clients.service_now import consts
+from axonius.clients.service_now.consts import InjectedRawFields
 from axonius.clients.service_now.external import generic_service_now_query_devices_by_client, \
     generic_service_now_query_users_by_client
-from axonius.clients.service_now.parse import InjectedRawFields
+from axonius.clients.service_now.parse import get_reference_display_value
 from axonius.clients.service_now.service.structures import RelativeInformationNode1, RelativeInformationLeaf, \
     MaintenanceSchedule, CiIpData, SnowComplianceException, SnowDeviceContract
 from axonius.multiprocess.multiprocess import concurrent_multiprocess_yield
@@ -188,6 +189,12 @@ class ServiceNowAdapterBase(AdapterBase):
             'min': 0,
         },
         {
+            'name': 'snow_user_last_created',
+            'title': 'Fetch users created in ServiceNow in the last X hours (0: All)',
+            'type': 'number',
+            'min': 0,
+        },
+        {
             'name': 'use_dotwalking',
             'title': 'Use dotwalking queries',
             'type': 'bool',
@@ -249,6 +256,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'contract_parent_numbers': None,
         'diversiture_contract_parent_numbers': None,
         'snow_last_updated': 0,
+        'snow_user_last_created': 0,
         'use_dotwalking': False,
         'dotwalking_per_request_limit': consts.DEFAULT_DOTWALKING_PER_REQUEST,
     }
@@ -284,6 +292,7 @@ class ServiceNowAdapterBase(AdapterBase):
                     'fetch_cmdb_model': self._fetch_cmdb_model,
                     'fetch_installed_software': self._fetch_installed_software,
                     'last_seen_timedelta': self._snow_last_updated_threashold,
+                    'user_last_created_timedelta': self._snow_user_last_created_threashold,
                     'contract_parent_numbers': self._prepare_contract_parent_numbers(),
                     'parallel_requests': self.__parallel_requests,
                     'use_dotwalking': self._use_dotwalking,
@@ -425,6 +434,9 @@ class ServiceNowAdapterBase(AdapterBase):
                 if isinstance(u_manager, dict):
                     u_manager = u_manager.get('display_value')
                 device.u_manager = u_manager
+                device.support_group_manager_company = device_raw.pop(InjectedRawFields.u_manager_company.value, None)
+                device.support_group_manager_business_segment = \
+                    device_raw.pop(InjectedRawFields.u_manager_business_segment.value, None)
             except Exception:
                 logger.warning(f'Problem adding support group to {device_raw}', exc_info=True)
 
@@ -849,6 +861,18 @@ class ServiceNowAdapterBase(AdapterBase):
                 device.u_pg_email_address = device_raw.pop(InjectedRawFields.u_pg_email_address.value, None)
             except Exception:
                 logger.exception(f'failed parsing levelx_mgmt fields')
+            try:
+                device.u_employee_type = device_raw.get('u_employee_type')
+                device.u_job_function = device_raw.get('u_job_function')
+                device.u_legal_entity_name = device_raw.get('u_legal_entity_name')
+                device.u_organization_segment = device_raw.get('u_organization_segment')
+                device.u_sub_organization_segment = device_raw.get('u_sub_organization_segment')
+                device.u_labor_model = device_raw.get('u_labor_model')
+                device.u_parent_organization_name = device_raw.get('u_parent_organization_name')
+                device.u_organization_name = device_raw.get('u_organization_name')
+                device.u_organization_id = device_raw.get('u_organization_id')
+            except Exception:
+                logger.exception(f'failed parsing u_labor_model fields')
             device.domain = device_raw.get('dns_domain') or device_raw.get('os_domain')
             device.used_for = device_raw.get('used_for')
             device.tenable_asset_group = device_raw.get('u_tenable_asset_group')
@@ -1092,6 +1116,7 @@ class ServiceNowAdapterBase(AdapterBase):
                 user.username = user_raw.get('name')
                 updated_on = parse_date(user_raw.get('sys_updated_on'))
                 user.updated_on = updated_on
+                user.user_created = parse_date(user_raw.get('sys_created_on'))
                 last_logon = parse_date(user_raw.get('last_login_time'))
                 user.last_logon = last_logon
                 try:
@@ -1103,7 +1128,7 @@ class ServiceNowAdapterBase(AdapterBase):
                     logger.exception(f'Problem getting last seen for {user_raw}')
                 user.user_title = user_raw.get('title') or user_raw.get('u_playtika_title')
                 try:
-                    user.user_manager = (user_raw.get('manager_full') or {}).get('name')
+                    user.user_manager = get_reference_display_value(user_raw.get('manager'))
                 except Exception:
                     logger.warning(f'Problem getting manager for {user_raw}', exc_info=True)
                 user.snow_source = user_raw.get('source')
@@ -1265,5 +1290,10 @@ class ServiceNowAdapterBase(AdapterBase):
         last_updated = config.get('snow_last_updated')
         if isinstance(last_updated, int) and last_updated > 0:
             self._snow_last_updated_threashold = timedelta(hours=last_updated)
+
+        self._snow_user_last_created_threashold = None
+        snow_user_last_created = config.get('snow_user_last_created')
+        if isinstance(snow_user_last_created, int) and snow_user_last_created > 0:
+            self._snow_user_last_created_threashold = timedelta(hours=snow_user_last_created)
 
         self.__parallel_requests = config.get('parallel_requests') or consts.DEFAULT_ASYNC_CHUNK_SIZE

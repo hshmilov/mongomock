@@ -369,41 +369,34 @@ class ServiceNowConnectionMixin(ABC):
             i += 1
         logger.info(f'Injected {len(users_subtable.keys())} cached users')
 
-    def _iter_user_table_chunks_by_details(self,
-                                           parallel_requests: int = consts.DEFAULT_ASYNC_CHUNK_SIZE,
-                                           dotwalking_per_request_limit: int = consts.DEFAULT_DOTWALKING_PER_REQUEST) \
-            -> Generator[Tuple[str, str, List[dict]], None, None]:
-
-        # prepare users dict by sys_id
-        tables_by_key = {}
-        for table_key, table_result in self._iter_table_results_by_key(
-                {consts.USERS_TABLE_KEY: consts.USERS_TABLE},
-                parallel_requests=parallel_requests):
-            self._handle_table_result(table_result, table_key, tables_by_key)
-        users_table_dict = tables_by_key.get(consts.USERS_TABLE_KEY) or {}
-
-        for user in users_table_dict.values():
-            user_to_yield = user.copy()
-            try:
-                if (user.get('manager') or {}).get('value'):
-                    user_to_yield['manager_full'] = users_table_dict.get(user.get('manager').get('value'))
-            except Exception:
-                logger.exception(f'Problem getting manager for user {user}')
-
-            yield user_to_yield
-
     def get_user_list(self,
                       parallel_requests=consts.DEFAULT_ASYNC_CHUNK_SIZE,
-                      dotwalking_per_request_limit: int = consts.DEFAULT_DOTWALKING_PER_REQUEST,
+                      user_last_created_timedelta: Optional[datetime.timedelta] = None,
                       **_):
         # Note: **_ was added to support consistent calling between get_user_list and get_device_list
         #       for parallel adapter fetching
 
-        # Note: I kept this helper method because I dont want to override get_user_list.
-        #        this method is overriden in ServiceNowConnection, for Tables *REST* API handling
-        yield from self._iter_user_table_chunks_by_details(
-            parallel_requests=parallel_requests,
-            dotwalking_per_request_limit=dotwalking_per_request_limit)
+        additional_params_by_table_key = {}
+        if isinstance(user_last_created_timedelta, datetime.timedelta):
+            last_created_query = self.prepare_last_hours_filter_query('sys_created_on', user_last_created_timedelta)
+            # pylint: disable=consider-iterating-dictionary
+            additional_params_by_table_key[consts.USERS_TABLE_KEY] = {'sysparm_query': last_created_query}
+
+        for table_key, user_raw in self._iter_table_results_by_key(
+                {consts.USERS_TABLE_KEY: consts.USERS_TABLE},
+                additional_params_by_table_key=additional_params_by_table_key,
+                parallel_requests=parallel_requests):
+            yield user_raw
+
+    @staticmethod
+    def prepare_last_hours_filter_query(date_field_name: str, last_hours: datetime.timedelta):
+
+        last_timestamp = datetime.datetime.utcnow() - last_hours
+        last_date = last_timestamp.strftime('%Y-%m-%d')
+        last_time = last_timestamp.strftime('%H:%M:%S')
+
+        # https://community.servicenow.com/community?id=community_question&sys_id=ba88032adb9ee780fb115583ca9619e4
+        return f'{date_field_name}>javascript:gs.dateGenerate(\'{last_date}\',\'{last_time}\')'
 
     def _iter_device_table_chunks_by_details(self,
                                              parallel_requests: int = consts.DEFAULT_ASYNC_CHUNK_SIZE,
@@ -413,15 +406,7 @@ class ServiceNowConnectionMixin(ABC):
 
         additional_params_by_table_key = {}
         if isinstance(last_seen_timedelta, datetime.timedelta):
-            last_timestamp = datetime.datetime.utcnow() - last_seen_timedelta
-            last_date = last_timestamp.strftime('%Y-%m-%d')
-            last_time = last_timestamp.strftime('%H:%M:%S')
-
-            # pylint: disable=line-too-long
-            # https://community.servicenow.com/community?id=community_question&sys_id=ba88032adb9ee780fb115583ca9619e4&view_source=searchResult
-            last_seen_query = f'sys_updated_on>javascript:gs.dateGenerate(\'{last_date}\',\'{last_time}\')'
-            # pylint: enable=line-too-long
-
+            last_seen_query = self.prepare_last_hours_filter_query('sys_updated_on', last_seen_timedelta)
             # set the current query for all the devices
             # pylint: disable=consider-iterating-dictionary
             additional_params_by_table_key.update({table_key: {'sysparm_query': last_seen_query}

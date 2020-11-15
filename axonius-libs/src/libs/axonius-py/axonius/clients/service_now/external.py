@@ -54,8 +54,7 @@ def generic_service_now_query_users_by_client(client_data):
             if not isinstance(user_raw, dict):
                 logger.debug(f'skipping false user_raw {user_raw}')
                 continue
-            inject_subtables_fields_to_user(user_subtables, user_raw,
-                                            use_dotwalking=get_entities_kwargs.get('use_dotwalking'))
+            inject_subtables_fields_to_user(user_subtables, user_raw)
             yield user_raw
 
 

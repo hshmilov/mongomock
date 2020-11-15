@@ -227,6 +227,8 @@ class InjectedRawFields(Enum):
     support_group = 'z_support_group'
     u_director = 'z_u_director'
     u_manager = 'z_u_manager'
+    u_manager_company = 'z_u_manager_company'
+    u_manager_business_segment = 'z_u_manager_business_segment'
     device_model = 'z_device_model'
     snow_department = 'z_snow_department'
     physical_location = 'z_physical_location'
@@ -310,16 +312,15 @@ class InjectedRawFields(Enum):
     u_department = 'z_u_department'
 
 
-USER_EXTRA_FIELDS_BY_TARGET = {
-    InjectedRawFields.u_company: ['u_company.name', 'company.name'],
-    InjectedRawFields.u_department: ['u_department.name', 'department.name'],
-}
-
 DEVICE_EXTRA_FIELDS_BY_TARGET: Dict[InjectedRawFields, Union[str, List[str]]] = {
     # Single value will be consumed per target! the first value is taken.
     InjectedRawFields.support_group: 'u_logical_ci.support_group',
     InjectedRawFields.u_director: ['support_group.u_director', 'u_logical_ci.support_group.u_director'],
     InjectedRawFields.u_manager: ['support_group.u_manager', 'u_logical_ci.support_group.u_manager'],
+    InjectedRawFields.u_manager_company: ['support_group.u_manager.company',
+                                          'u_logical_ci.support_group.u_manager.company'],
+    InjectedRawFields.u_manager_business_segment: ['support_group.u_manager.u_business_segment',
+                                                   'u_logical_ci.support_group.u_manager.u_business_segment'],
     InjectedRawFields.os_title: 'u_operating_system.title',
     InjectedRawFields.major_version: 'u_operating_system.major_version',
     InjectedRawFields.minor_version: 'u_operating_system.minor_version',

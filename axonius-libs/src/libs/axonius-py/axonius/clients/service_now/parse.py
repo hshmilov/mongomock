@@ -377,6 +377,21 @@ def inject_subtables_fields_to_device(device_subtables_data: Dict[str, dict],
             device_raw[InjectedRawFields.u_manager.value] = \
                 _parse_optional_reference_value(snow_support_group_value, 'u_manager',
                                                 users_table_dict, 'name')
+
+            u_manager_company = \
+                _parse_optional_reference_value(snow_support_group_value, 'u_manager',
+                                                users_table_dict, 'company')
+            if isinstance(u_manager_company, dict):
+                u_manager_company = get_reference_display_value(u_manager_company) or u_manager_company
+            device_raw[InjectedRawFields.u_manager_company.value] = u_manager_company
+
+            u_manager_business_segment = \
+                _parse_optional_reference_value(snow_support_group_value, 'u_manager',
+                                                users_table_dict, 'u_business_segment')
+            if isinstance(u_manager_business_segment, dict):
+                u_manager_business_segment = (get_reference_display_value(u_manager_business_segment) or
+                                              u_manager_business_segment)
+            device_raw[InjectedRawFields.u_manager_business_segment.value] = u_manager_business_segment
     except Exception:
         logger.warning(f'Problem adding support group to {device_raw}', exc_info=True)
 
@@ -570,16 +585,11 @@ def inject_subtables_fields_to_device(device_subtables_data: Dict[str, dict],
 
 
 def inject_subtables_fields_to_user(subtables_dict: Dict[str, dict],
-                                    user_raw: dict,
-                                    use_dotwalking: Optional[bool]=True):
+                                    user_raw: dict):
 
     if not isinstance(subtables_dict, dict):
         logger.warning(f'Invalid subtables retrieved: {subtables_dict}')
         return
-
-    if use_dotwalking:
-        _inject_extra_fields(user_raw,
-                             extra_fields_definition=consts.USER_EXTRA_FIELDS_BY_TARGET)
 
     snow_department_table_dict = subtables_dict.get(consts.DEPARTMENT_TABLE_KEY) or {}
     companies_table_dict = subtables_dict.get(consts.COMPANY_TABLE) or {}

@@ -525,38 +525,3 @@ class ServiceNowConnection(RESTConnection, ServiceNowConnectionMixin):
 
             for device_raw in curr_devices_by_id.values():
                 yield (table_key, device_raw)
-
-    def _iter_user_table_chunks_by_details(self,
-                                           parallel_requests: int = consts.DEFAULT_ASYNC_CHUNK_SIZE,
-                                           dotwalking_per_request_limit: int=consts.DEFAULT_DOTWALKING_PER_REQUEST) \
-            -> Generator[Tuple[str, str, List[dict]], None, None]:
-
-        # prepare extra fields (for dotwalking)
-        extra_fields = self._prepare_extra_fields(list(consts.USER_EXTRA_FIELDS_BY_TARGET.values()))
-
-        # consolidate page_chunks into single device dicts
-        tables_by_key = {}
-
-        # prepare table_name_by_key for async requests
-        for table_key, page_chunks in self._iter_async_table_chunks_and_extra_by_key(
-                {consts.USERS_TABLE_KEY: consts.USERS_TABLE},
-                extra_fields=extra_fields,
-                async_chunks=parallel_requests,
-                dotwalking_per_request_limit=dotwalking_per_request_limit):
-
-            for page_result in page_chunks:
-                # consolidats each user's fields dicts into users_by_table_key
-                self._handle_table_result(page_result, table_key, tables_by_key)
-        # FETCH ALL in memory
-        # TO DO - find dotwalking for user<->manager
-        users_table_dict = tables_by_key.get(consts.USERS_TABLE_KEY) or {}
-
-        for user in users_table_dict.values():
-            user_to_yield = user.copy()
-            try:
-                if (user.get('manager') or {}).get('value'):
-                    user_to_yield['manager_full'] = users_table_dict.get(user.get('manager').get('value'))
-            except Exception:
-                logger.exception(f'Problem getting manager for user {user}')
-
-            yield user_to_yield

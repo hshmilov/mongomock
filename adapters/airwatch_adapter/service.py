@@ -415,11 +415,11 @@ class AirwatchAdapter(AdapterBase, Configurable):
             'page_size': 500,
             'recv_session_timeout': 300,
             'fetch_not_enrolled_devices': True,
-            'fetch_device_apps': True,
-            'fetch_device_networks': True,
-            'fetch_device_notes': True,
-            'fetch_device_tags': True,
-            'fetch_device_profiles': True,
+            'fetch_device_apps': False,
+            'fetch_device_networks': False,
+            'fetch_device_notes': False,
+            'fetch_device_tags': False,
+            'fetch_device_profiles': False,
         }
 
     def _on_config_update(self, config):
