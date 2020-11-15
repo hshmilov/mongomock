@@ -69,6 +69,8 @@ echo "127.0.0.1 $(hostname)" >> /etc/hosts
 sed -i '/PasswordAuthentication/ d' /etc/ssh/sshd_config
 sed -i -e '$a\' /etc/ssh/sshd_config
 echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+echo "ClientAliveInterval 60" >> /etc/ssh/sshd_config
+echo "ClientAliveCountMax 5" >> /etc/ssh/sshd_config
 useradd -ou 0 -g 0 ubuntu
 
 # Make sure ssh runs at boot

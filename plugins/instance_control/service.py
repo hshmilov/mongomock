@@ -418,6 +418,9 @@ class InstanceControlService(Triggerable, PluginBase):
         :param cmd: command to execute
         :return: stdout
         """
+        transport = self.__host_ssh.get_transport()
+        if not transport.is_active():
+            self.__host_ssh = get_ssh_connection()
         _, stdout, _ = self.__host_ssh.exec_command(cmd, environment=environment)
         return stdout
 
@@ -438,6 +441,9 @@ class InstanceControlService(Triggerable, PluginBase):
         command doesn't return stdout .
         :param cmd: command to execute
         """
+        transport = self.__host_ssh.get_transport()
+        if not transport.is_active():
+            self.__host_ssh = get_ssh_connection()
         _, stdout, stderr = self.__host_ssh.exec_command(cmd, environment=environment)
         err = stderr.read().decode('utf-8').strip()
         out = stdout.read().decode('utf-8').strip()
