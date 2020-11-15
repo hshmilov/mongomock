@@ -28,7 +28,7 @@ def _create_sccm_client_connection(client_config, devices_fetched_at_a_time) -> 
 
 # pylint: disable=too-many-locals, too-many-nested-blocks, too-many-branches, too-many-statements
 def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, device_id=None,
-                                 fetch_legacy_sw_tables=False):
+                                 fetch_legacy_sw_tables=False, fetch_files_path=False):
     client_data = _create_sccm_client_connection(client_config, devices_fetched_at_a_time)
     client_data.set_devices_paging(devices_fetched_at_a_time)
     with client_data:
@@ -90,7 +90,7 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
 
         product_files_dict = dict()
         try:
-            if not device_id:
+            if not device_id and fetch_files_path:
                 for file_data in client_data.query(consts.FILE_PRODUCT_QUERY):
                     product_id = file_data.get('ProductId')
                     resource_id = file_data.get('ResourceID')

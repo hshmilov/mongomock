@@ -58,7 +58,8 @@ ALLOW_OLD_MAC_LIST = ['clearpass_adapter', 'tenable_security_center', 'nexpose_a
                       'nessus_csv_adapter', 'tenable_io_adapter', 'qualys_scans_adapter', 'airwave_adapter',
                       'counter_act_adapter', 'tanium_discover_adapter', 'infoblox_adapter', 'aws_adapter',
                       'airwatch_adapter', 'iboss_cloud_adapter']
-DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'counter_act_adapter', 'nexpose_adapter',
+DANGEROUS_ADAPTERS = ['lansweeper_adapter', 'carbonblack_protection_adapter', 'tenable_security_center',
+                      'counter_act_adapter', 'nexpose_adapter', 'tenable_io_adapter',
                       'infoblox_adapter', 'azure_ad_adapter', 'tanium_discover_adapter', 'qualys_scans_adapter',
                       'solarwinds_orion_adapter', 'mssql_adapter', 'iboss_cloud_adapter', 'rumble_adapter']
 SEMI_DANGEROUS_ADAPTERS = ['symantec_adapter', 'tanium_asset_adapter']

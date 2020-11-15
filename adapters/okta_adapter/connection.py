@@ -2,6 +2,7 @@ import asyncio
 import logging
 import math
 import time
+import datetime
 from typing import Iterable
 import requests
 import uritools
@@ -48,6 +49,23 @@ class OktaConnection:
             time.sleep(self._sleep_between_requests_in_sec)
         response = requests.get(forced_url or uritools.urijoin(self.__base_url, api), params=params,
                                 headers=headers, proxies={'https': self.__https_proxy}, timeout=get_default_timeout())
+        try:
+            remaining = int(response.headers.get('X-Rate-Limit-Remaining'))
+            limit = int(response.headers.get('X-Rate-Limit-Limit'))
+            reset = datetime.datetime.utcfromtimestamp(int(response.headers.get('X-Rate-Limit-Reset')))
+            seconds = (reset - datetime.datetime.utcnow()).seconds
+            logger.debug(f'remaining: {remaining}')
+            logger.debug(f'limit: {limit}')
+            logger.debug(f'reset: {reset}')
+            logger.debug(f'seconds: {seconds}')
+            if remaining / limit < 0.1:
+                logger.info(f'remaining: {remaining}')
+                logger.info(f'limit: {limit}')
+                logger.info(f'reset: {reset}')
+                logger.info(f'seconds: {seconds}')
+                time.sleep(seconds)
+        except Exception:
+            pass
         if response.status_code == 429:
             logger.info(f'Got 429 going to sleep')
             time.sleep(DEFAULT_SLEEP_TIME)

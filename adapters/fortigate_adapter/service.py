@@ -2,13 +2,15 @@
 import datetime
 import logging
 
-from axonius.adapter_base import AdapterBase, AdapterProperty
+from axonius.adapter_base import AdapterProperty
 from axonius.adapter_exceptions import ClientConnectionException
 from axonius.clients.rest.connection import RESTConnection
 from axonius.devices.device_adapter import DeviceAdapter
 from axonius.fields import Field
 from axonius.mixins.configurable import Configurable
+from axonius.utils.datetime import parse_date
 from axonius.smart_json_class import SmartJsonClass
+from axonius.scanner_adapter_base import ScannerAdapterBase
 from axonius.utils.files import get_local_config_file
 from axonius.utils.parsing import format_mac
 from fortigate_adapter import consts
@@ -26,7 +28,7 @@ class FortigateVPNClient(SmartJsonClass):
     parent = Field(str, 'Parent')
 
 
-class FortigateAdapter(AdapterBase, Configurable):
+class FortigateAdapter(ScannerAdapterBase, Configurable):
     """
     Connects axonius to Fortigate devices
     """
@@ -39,6 +41,8 @@ class FortigateAdapter(AdapterBase, Configurable):
         platform_str = Field(str, 'Platform Name')
         mgt_vdom = Field(str, 'Management VDOM')
         mgmt_if = Field(str, 'Management Interface')
+        subsession_type = Field(str, 'Subsession Type')
+        remote_host = Field(str, 'Remote Host')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -223,6 +227,45 @@ class FortigateAdapter(AdapterBase, Configurable):
             logger.exception(f'Problem with device raw {device_raw}')
             return None
 
+    def _create_ssl_vpn_device(self, raw_device):
+        try:
+            device = self._new_device_adapter()
+            name = raw_device.get('user_name')
+            if not name:
+                logger.warning(f'Bad device with no usernamename {raw_device}')
+                return None
+            device.last_used_users = [raw_device.get('user_name')]
+            device.id = 'ssl_vpn_fortigate_' + '_' + (name or '') + '_' + (raw_device.get('subsession_desc') or '')
+            device.last_seen = parse_date(raw_device.get('last_login_time'))
+            device.fortigate_name = raw_device.get('fortios_name')
+            device.subsession_type = raw_device.get('subsession_type')
+            device.remote_host = raw_device.get('remote_host')
+            if raw_device.get('subsession_desc'):
+                ip = raw_device.get('subsession_desc').split(':')[-1]
+                device.add_nic(ips=[ip])
+            device.set_raw(raw_device)
+            return device
+        except Exception:
+            logger.exception(f'Problem with raw device {raw_device}')
+            return None
+
+    def _create_visibility_device(self, raw_device):
+        try:
+            device = self._new_device_adapter()
+            name = raw_device.get('name')
+            if not name:
+                logger.warning(f'Bad device with no name {raw_device}')
+                return None
+            device.hostname = raw_device.get('hostname')
+            device.id = 'visibility_fortigate_' + '_' + (name or '')
+            device.figure_os(raw_device.get('os'))
+            device.add_ips_and_macs(macs=device.get('mac'), ips=device.get('ip'))
+            device.set_raw(raw_device)
+            return device
+        except Exception:
+            logger.exception(f'Problem with raw device {raw_device}')
+            return None
+
     def _parse_raw_data(self, devices_raw_data):
 
         for raw_device, device_type in devices_raw_data:
@@ -235,6 +278,10 @@ class FortigateAdapter(AdapterBase, Configurable):
                 device = self._create_fortigate_vpn_device(raw_device)
             if device_type == 'fortigate_wifi_client':
                 device = self._create_fortigate_wifi_client_device(raw_device)
+            if device_type == 'visibility_device':
+                logger.info(f'DEVICE: {raw_device}')
+            if device_type == 'fortigate_ssl_vpn':
+                device = self._create_ssl_vpn_device(raw_device)
             if device:
                 yield device
 

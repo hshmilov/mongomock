@@ -96,6 +96,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
         full_osx_version = Field(str, 'Full OS X Version')
         cs_cid = Field(str, 'CID')
         spotlight_vulnerabilities = ListField(SpotlightVulnerability, 'Device Vulnerabilities')
+        site_name = Field(str, 'Site Name')
 
     def __init__(self, *args, **kwargs):
         super().__init__(config_file_path=get_local_config_file(__file__), *args, **kwargs)
@@ -308,6 +309,7 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                 device.add_agent_version(agent=AGENT_NAMES.crowd_strike, version=device_raw.get('agent_version'),
                                          status=device_raw.get('status'))
                 device.cs_agent_version = device_raw.get('agent_version')
+                device.site_name = device_raw.get('site_name')
                 try:
                     if isinstance(device_raw.get('ou'), list):
                         device.organizational_unit = device_raw.get('ou')

@@ -94,6 +94,7 @@ class FortigateClient():
             # Logout.
             self._make_request(session, 'get', 'logout')
 
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, too-many-nested-blocks
     def get_all_devices(self, fortios_name):
         with self._get_session() as session:
             raw_devices = self._make_request(session, 'get', 'api/v2/monitor/system/dhcp/')
@@ -108,21 +109,50 @@ class FortigateClient():
                     # pylint: disable=W1203
                     logger.exception(f'Problem with interface {str(current_interface)}')
             try:
+                device_list = self._make_request(session, 'get', 'api/v2/cmdb/visibility/device-list/')
+                for inventory_raw in (device_list.get('results') or []):
+                    try:
+                        inventory_raw['fortios_name'] = fortios_name
+                        yield inventory_raw, 'visibility_device'
+                        # waiting to get a model
+                        break
+                    except Exception:
+                        logger.exception('Problem with access point')
+            except Exception:
+                logger.exception(f'Problem with device type')
+            try:
+                ssl_vpn = self._make_request(session, 'get', 'api/v2/monitor/vpn/ssl/')
+                for raw_ssl_vpn in (ssl_vpn.get('results') or []):
+                    try:
+                        raw_ssl_vpn['fortios_name'] = fortios_name
+                        yield raw_ssl_vpn, 'fortigate_ssl_vpn'
+                    except Exception:
+                        logger.exception('Problem with access point')
+            except Exception:
+                logger.exception(f'Problem with vpn ssl')
+
+            try:
                 managed_aps = self._make_request(session, 'get', 'api/v2/monitor/wifi/managed_ap/')
-                ipsec_vpns = self._make_request(session, 'get', 'api/v2/monitor/vpn/ipsec')
-                wifi_clients = self._make_request(session, 'get', 'api/v2/monitor/wifi/client')
                 for raw_ap_device in (managed_aps.get('results') or []):
                     try:
                         raw_ap_device['fortios_name'] = fortios_name
                         yield raw_ap_device, 'fortigate_access_point'
                     except Exception:
                         logger.exception('Problem with access point')
+            except Exception:
+                logger.exception(f'Problem with managed aps')
+            try:
+                ipsec_vpns = self._make_request(session, 'get', 'api/v2/monitor/vpn/ipsec')
                 for vpn_device in (ipsec_vpns.get('results') or []):
                     try:
                         vpn_device['fortios_name'] = fortios_name
                         yield vpn_device, 'fortigate_vpn'
                     except Exception:
                         logger.exception('Problem with VPN')
+            except Exception:
+                logger.exception(f'Problem with VPN')
+            try:
+                wifi_clients = self._make_request(session, 'get', 'api/v2/monitor/wifi/client')
                 for wifi_client in (wifi_clients.get('resources') or []):
                     try:
                         wifi_client['fortios_name'] = fortios_name
@@ -130,4 +160,4 @@ class FortigateClient():
                     except Exception:
                         logger.exception('Problem with wifi client')
             except Exception:
-                logger.exception(f'Problem getting extended fortigate data')
+                logger.exception(f'Problem with wifi data')

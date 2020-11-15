@@ -185,7 +185,8 @@ class SccmAdapter(AdapterBase, Configurable):
                         client_data,
                         self.__devices_fetched_at_a_time,
                         None,
-                        self.__fetch_legacy_sw_tables
+                        self.__fetch_legacy_sw_tables,
+                        self.__fetch_files_path
                     ),
                     {}
                 )
@@ -856,9 +857,15 @@ class SccmAdapter(AdapterBase, Configurable):
                     'name': 'fetch_legacy_sw_tables',
                     'type': 'bool',
                     'title': 'Fetch v_GS_ADD_REMOVE_PROGRAMS software legacy table'
+                },
+                {
+                    'name': 'fetch_files_path',
+                    'type': 'bool',
+                    'title': 'Fetch files path table'
                 }
             ],
-            "required": ['drop_no_last_seen', 'exclude_ipv6', 'devices_fetched_at_a_time', 'fetch_legacy_sw_tables'],
+            "required": ['drop_no_last_seen', 'exclude_ipv6', 'devices_fetched_at_a_time', 'fetch_legacy_sw_tables',
+                         'fetch_files_path'],
             "pretty_name": "SCCM Configuration",
             "type": "array"
         }
@@ -869,6 +876,7 @@ class SccmAdapter(AdapterBase, Configurable):
             'exclude_ipv6': False,
             'fetch_legacy_sw_tables': False,
             'drop_no_last_seen': False,
+            'fetch_files_path': True,
             'devices_fetched_at_a_time': 1000,
             'machine_domain_whitelist': None
         }
@@ -881,3 +889,5 @@ class SccmAdapter(AdapterBase, Configurable):
             if config.get('machine_domain_whitelist') else None
         self.__fetch_legacy_sw_tables = config.get('fetch_legacy_sw_tables') \
             if 'fetch_legacy_sw_tables' in config else False
+        self.__fetch_files_path = config.get('fetch_files_path') \
+            if 'fetch_files_path' in config else True
