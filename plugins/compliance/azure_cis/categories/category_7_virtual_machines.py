@@ -1,5 +1,6 @@
 # pylint: disable=too-many-branches, too-many-nested-blocks
 import logging
+from typing import Optional
 
 from axonius.clients.azure.client import AzureCloudConnection
 from axonius.entities import EntityType
@@ -61,12 +62,16 @@ class CISAzureCategory7:
         self._vms_disks = get_all_disks(azure)
 
     @staticmethod
-    def is_disk_encrypted(disk: dict) -> bool:
-        return str(((disk.get('properties') or {}).get('encryption') or {}).get('type')).lower() in [
-            'encryptionatrestwithplatformkey',
-            'encryptionatrestwithcustomerkey',
-            'encryptionatrestwithplatformandcustomerkeys'
-        ]
+    def is_disk_encrypted(disk: dict) -> Optional[bool]:
+        props = disk.get('properties') or {}
+        encryption_settings = props.get('encryptionSettingsCollection')
+        if not encryption_settings:
+            return False  # If the encryption settings do not exist then disk is not encrypted
+        if isinstance(encryption_settings, dict):
+            return encryption_settings.get('enabled') is True
+        if isinstance(encryption_settings, list):
+            return any([entry.get('enabled') is True for entry in encryption_settings])  # Send possible exception to ui
+        return None
 
     # pylint: disable=too-many-locals, too-many-branches
     @cis_rule('7.1')

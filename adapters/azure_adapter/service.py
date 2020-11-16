@@ -127,6 +127,7 @@ class AzureAdapter(AdapterBase, Configurable):
             raise ClientConnectionException(f'Unable to find a subscription')
 
         connections = list()
+        errors = 0  # Count the errors. If all subscriptions failed, then raise an exception.
         for subscription_idx, (subscription_id, subscription_data) in enumerate(subscriptions.items()):
             logger.info(f'Working with subscription {subscription_id}: '
                         f'({subscription_idx+1}/{len(subscriptions)})')
@@ -161,7 +162,11 @@ class AzureAdapter(AdapterBase, Configurable):
                 message = f'Error connecting to azure with subscription_id (subscription),' \
                           f' reason: {str(err)}'
                 logger.exception(message)
-                raise ClientConnectionException(message)
+                errors += 1
+                # Skip subscriptions with errors unless all subscriptions have errors
+                # For detailed info on subscriptions with errors see logs!
+                if errors >= len(subscriptions.items()):
+                    raise ClientConnectionException(message)
 
         return connections
 

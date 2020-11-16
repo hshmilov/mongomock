@@ -3,7 +3,7 @@ Azure Cis helpers
 """
 # pylint: disable=too-many-branches, too-many-nested-blocks
 import logging
-from typing import List
+from typing import List, Optional
 
 from axonius.clients.azure.structures import AzureAdapterEntity
 from azure_adapter.structures import AzureDeviceInstance, AzureNetworkSecurityGroupRule
@@ -67,23 +67,29 @@ def _check_inbound_nsg_list(device: AzureDeviceInstance,
             break
 
 
-def is_disk_encrypted(disk: dict) -> bool:
-    # XXX Currently does not work! Requires getting full disk information
-    # and searching by disk name.
-    try:
-        props = disk.get('properties') or {}
-        enc = props.get('encryption') or {}
-        encryption_settings = enc.get('type')
-        if encryption_settings:
-            return str(encryption_settings).lower() in [
-                'encryptionatrestwithplatformkey',
-                'encryptionatrestwithcustomerkey',
-                'encryptionatrestwithplatformandcustomerkeys'
-            ]
+def is_disk_encrypted(disk_name: str, vm_instance_view: dict) -> Optional[bool]:
+    if not (vm_instance_view and isinstance(vm_instance_view, dict)):
+        return None  # None value means we couldn't get information.
+    disks = vm_instance_view.get('disks') or []
+    if not (disks and isinstance(disks, list)):
         return None
-    except Exception as e:
-        logger.exception(f'Could not determine encryption status: {str(e)}')
-        return None
+    for disk in disks:
+        if not (disk and isinstance(disk, dict)):
+            continue
+        name = disk.get('name')
+        if not name == disk_name:
+            continue
+        encryption_settings = disk.get('encryption_settings') or []
+        if not (encryption_settings and isinstance(encryption_settings, list)):
+            return False  # If no encryption settings, disk is not encrypted
+        for enc_entry in encryption_settings:
+            if not isinstance(enc_entry, dict):
+                continue
+            if enc_entry.get('enabled') is True:
+                return True  # If even one setting is enabled, disk is encrypted
+    # If we got here then this disk either has no encryption settings, or they exist but are not enabled.
+    # Meaning, disk is not encrypted - so return False.
+    return False
 
 
 def append_azure_cis_data_to_user(user: AzureAdapterEntity):
@@ -109,13 +115,16 @@ def append_azure_cis_data_to_device(device: AzureAdapterEntity):
         _check_inbound_nsg_list(device, nsg_list, '6.1', PORT_RDP)
         _check_inbound_nsg_list(device, nsg_list, '6.2', PORT_SSH)
 
-    # section 7  - CURRENTLY DOES NOT WORK! NEEDS SEPARATE API CALLS.
-
     device_raw = device.get_raw()
+
+    instance_view = device_raw.get('instance_view')
+
     os_disk = device_raw.get('storage_profile', {}).get('os_disk')
-    if is_disk_encrypted(os_disk) is False:
+    os_disk_name = os_disk.get('name')
+    if is_disk_encrypted(os_disk_name, instance_view) is False:
         device.add_azure_cis_incompliant_rule('7.1')
     for disk in device_raw.get('storage_profile', {}).get('data_disks', []):
-        if is_disk_encrypted(disk) is False:
+        disk_name = disk.get('name')
+        if is_disk_encrypted(disk_name, instance_view) is False:
             device.add_azure_cis_incompliant_rule('7.2')
             break
