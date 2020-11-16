@@ -131,6 +131,9 @@ export default {
       this.ldapData.active = !this.ldapData.active;
     },
     handleSettingsChange(newSettings) {
+      if (!newSettings) {
+        return;
+      }
       this.samlConfig = newSettings.saml;
       this.ldapConfig = newSettings.ldap;
       if (this.ldapConfig.default_domain) {
