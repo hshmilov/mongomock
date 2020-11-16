@@ -326,11 +326,13 @@ class AirwatchAdapter(AdapterBase, Configurable):
                 if isinstance(device_raw.get('CompromisedStatus'), bool):
                     device.compromised_status = device_raw.get('CompromisedStatus')
                 try:
+                    device_extended_info = device_raw.get(DEVICE_EXTENDED_INFO_KEY)
+                    if isinstance(device_extended_info, dict):
+                        device.hostname = device_extended_info.get('HostName')
+
                     security_patch_date = parse_date(device_raw.get('SecurityPatchDate'))
-                    if not security_patch_date:
-                        device_extended_info = device_raw.get(DEVICE_EXTENDED_INFO_KEY)
-                        if isinstance(device_extended_info, dict):
-                            security_patch_date = parse_date(device_extended_info.get('SecurityPatchDate'))
+                    if not security_patch_date and device_extended_info:
+                        security_patch_date = parse_date(device_extended_info.get('SecurityPatchDate'))
                     device.security_patch_date = security_patch_date
                 except Exception:
                     logger.warning(f'Failed parsing extensivesearch information for device {device_raw}', exc_info=True)
