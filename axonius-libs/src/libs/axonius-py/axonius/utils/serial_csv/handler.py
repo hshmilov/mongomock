@@ -45,6 +45,8 @@ def handle_entities(stream: io.StringIO, entity_fields: dict, selected: Union[di
     headers = []
     for i in selected_map.values():
         if i:
+            if i.get('process') == PROCESS_COMPLEX:
+                i['headers'] = [f'{COMPLEX}{header}' for header in i['headers']]
             headers += i['headers']
 
     if not cell_joiner:
@@ -57,9 +59,9 @@ def handle_entities(stream: io.StringIO, entity_fields: dict, selected: Union[di
     stream.write(bom)
     yield bom
 
-    writer = csv.DictWriter(f=stream, fieldnames=headers, quoting=csv.QUOTE_NONNUMERIC)
-
-    yield writer.writerow(dict(zip(headers, headers)))
+    write_headers = [header.replace(COMPLEX, '') for header in headers]
+    writer = csv.DictWriter(f=stream, fieldnames=write_headers, quoting=csv.QUOTE_NONNUMERIC)
+    yield writer.writerow(dict(zip(write_headers, write_headers)))
 
     entity_cnt = 0
     for entity in entities:
@@ -72,9 +74,8 @@ def handle_entities(stream: io.StringIO, entity_fields: dict, selected: Union[di
 
         row = process_entity(entity=entity, selected_map=selected_map, cell_joiner=cell_joiner, null_value=null_value)
         if row:
-            copy_row = row.copy()
-            row_list = [copy_row[field] for field in copy_row.keys() if field.replace(COMPLEX, '') in headers]
-            yield writer.writer.writerow(row_list)
+            row_data = [row.get(header, '') for header in headers]
+            yield writer.writer.writerow(row_data)
 
 
 def process_entity(entity: dict, selected_map: dict, cell_joiner: str, null_value: str = '') -> dict:
