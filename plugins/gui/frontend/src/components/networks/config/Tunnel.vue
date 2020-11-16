@@ -174,6 +174,7 @@ import {
   SAVE_TUNNEL_PROXY_SETTINGS,
   GET_TUNNEL_PROXY_SETTINGS,
 } from '@store/actions';
+import axiosClient from '@api/axios';
 import { emptyScheme } from '@constants/settings';
 import XArrayEdit from '@neurons/schema/types/array/ArrayEdit.vue';
 import XForm from '@neurons/schema/Form.vue';
@@ -323,7 +324,15 @@ export default {
       window.open('https://docs.axonius.com/docs/installing-axonius-tunnel', '_blank');
     },
     downloadTunnel() {
-      window.open('/api/tunnel/download_agent', '_blank');
+      axiosClient.get('/tunnel/download_agent', { responseType: 'blob' })
+        .then((response) => {
+          const blob = new Blob([response.data], { type: 'application/x-sh' });
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = 'axonius_tunnel_launcher.sh';
+          link.click();
+          URL.revokeObjectURL(link.href);
+        }).catch(console.error);
     },
     async checkTunnelStatus() {
       this.tunnelStatus = false;
