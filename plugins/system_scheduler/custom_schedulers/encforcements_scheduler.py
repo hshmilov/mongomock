@@ -46,7 +46,7 @@ class EnforcementsCustomScheduler(CustomScheduler):
             return CronTrigger(hour=hour,
                                minute=minute,
                                second='0',
-                               day_of_week=','.join(str(x) for x in trigger.period_recurrence))
+                               day=','.join(str(x) for x in trigger.period_recurrence))
         return None
 
     def init_enforcements_custom_discovery_scheduling(self, callback):
