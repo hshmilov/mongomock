@@ -1616,6 +1616,13 @@ def hostnames_do_not_contradict(adapter_device1, adapter_device2):
     return compare_device_normalized_hostname(adapter_device1, adapter_device2)
 
 
+def fortiuser_compare(adapter_device1, adapter_device2):
+    if compare_last_used_users(adapter_device1, adapter_device2):
+        return True
+    return adapter_device1.get('plugin_name') not in ['fortigate_adapter'] \
+        and adapter_device2.get('plugin_name') not in ['fortigate_adapter']
+
+
 def os_do_not_contradict(adapter_device1, adapter_device2):
     if not get_os_type(adapter_device1) or not get_os_type(adapter_device2):
         return True

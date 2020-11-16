@@ -186,7 +186,9 @@ class SccmAdapter(AdapterBase, Configurable):
                         self.__devices_fetched_at_a_time,
                         None,
                         self.__fetch_legacy_sw_tables,
-                        self.__fetch_files_path
+                        self.__fetch_files_path,
+                        self.__fetch_v_gs_installed_sw,
+                        self.__fetch_services
                     ),
                     {}
                 )
@@ -862,10 +864,20 @@ class SccmAdapter(AdapterBase, Configurable):
                     'name': 'fetch_files_path',
                     'type': 'bool',
                     'title': 'Fetch files path table'
+                },
+                {
+                    'name': 'fetch_v_gs_installed_sw',
+                    'title': 'Fetch v_GS_INSTALLED_SOFTWARE table',
+                    'type': 'bool'
+                },
+                {
+                    'name': 'fetch_services',
+                    'type': 'bool',
+                    'title': 'Fetch services information'
                 }
             ],
             "required": ['drop_no_last_seen', 'exclude_ipv6', 'devices_fetched_at_a_time', 'fetch_legacy_sw_tables',
-                         'fetch_files_path'],
+                         'fetch_files_path', 'fetch_v_gs_installed_sw', 'fetch_services'],
             "pretty_name": "SCCM Configuration",
             "type": "array"
         }
@@ -878,7 +890,9 @@ class SccmAdapter(AdapterBase, Configurable):
             'drop_no_last_seen': False,
             'fetch_files_path': True,
             'devices_fetched_at_a_time': 1000,
-            'machine_domain_whitelist': None
+            'machine_domain_whitelist': None,
+            'fetch_v_gs_installed_sw': True,
+            'fetch_services': True
         }
 
     def _on_config_update(self, config):
@@ -891,3 +905,7 @@ class SccmAdapter(AdapterBase, Configurable):
             if 'fetch_legacy_sw_tables' in config else False
         self.__fetch_files_path = config.get('fetch_files_path') \
             if 'fetch_files_path' in config else True
+        self.__fetch_v_gs_installed_sw = config.get('fetch_v_gs_installed_sw') \
+            if 'fetch_v_gs_installed_sw' in config else True
+        self.__fetch_services = config.get('fetch_services') \
+            if 'fetch_services' in config else True

@@ -294,8 +294,9 @@ class CrowdStrikeConnection(RESTConnection):
                           url_params=url_params,
                           do_basic_auth=not self._got_token)
 
-    # pylint: disable=arguments-differ
-    def get_device_list(self, should_get_policies, should_get_vulnerabilities):
+    # pylint: disable=too-many-nested-blocks, too-many-branches, too-many-statements
+    # pylint: disable=arguments-differ, too-many-boolean-expressions
+    def get_device_list(self, should_get_policies, should_get_vulnerabilities, avoid_aws_dups=False):
         """
         Get devices data list from CrowdStrike Api
         """
@@ -311,7 +312,39 @@ class CrowdStrikeConnection(RESTConnection):
             has_scroll_api = False
 
         if has_scroll_api:
-            yield from self.get_device_list_with_scroll_api(should_get_policies, should_get_vulnerabilities)
+            aws_dups_dict = dict()
+            try:
+                if avoid_aws_dups:
+                    for device_raw in self.get_device_list_with_scroll_api(should_get_policies=False,
+                                                                           should_get_vulnerabilities=False):
+                        hostname = device_raw.get('hostname')
+                        dict_id = hostname
+                        for key in ['local_ip', 'service_provider_account_id']:
+                            dict_id += '_' + (device_raw.get(key) or '')
+                        device_id = device_raw.get('device_id')
+                        last_seen = device_raw.get('last_seen')
+                        if hostname and hostname.startswith('ip-') and hostname.endswith('.compute.internal') \
+                                and device_raw.get('service_provider') == 'AWS_EC2':
+                            if dict_id not in aws_dups_dict:
+                                aws_dups_dict[dict_id] = [device_id, last_seen]
+                            if last_seen and not aws_dups_dict[dict_id][1]:
+                                aws_dups_dict[dict_id] = [device_id, last_seen]
+                            if last_seen and aws_dups_dict[dict_id][1] and last_seen > aws_dups_dict[dict_id][1]:
+                                aws_dups_dict[dict_id] = [device_id, last_seen]
+            except Exception:
+                logger.exception(f'Problem with AWS dups')
+            for device_raw in self.get_device_list_with_scroll_api(should_get_policies, should_get_vulnerabilities):
+                if avoid_aws_dups:
+                    hostname = device_raw.get('hostname')
+                    dict_id = hostname
+                    for key in ['local_ip', 'service_provider_account_id']:
+                        dict_id += '_' + (device_raw.get(key) or '')
+                    device_id = device_raw.get('device_id')
+                    if hostname and hostname.startswith('ip-') and hostname.endswith('.compute.internal') and \
+                            device_raw.get('service_provider') == 'AWS_EC2':
+                        if aws_dups_dict.get(dict_id)[0] != device_id:
+                            continue
+                yield device_raw
             return
 
         # If that doesn't work then we need to use the 'regular' api.

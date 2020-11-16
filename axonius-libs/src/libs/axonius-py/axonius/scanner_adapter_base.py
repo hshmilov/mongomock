@@ -22,7 +22,7 @@ from axonius.consts.adapter_consts import IGNORE_DEVICE
 from axonius.consts.plugin_consts import AGGREGATOR_PLUGIN_NAME, PLUGIN_UNIQUE_NAME, PLUGIN_NAME
 from axonius.utils.parsing import pair_comparator, is_different_plugin, parameter_function, normalize_adapter_device, \
     extract_all_macs, get_hostname, macs_do_not_contradict, hostnames_do_not_contradict, os_do_not_contradict, \
-    ips_do_not_contradict, NORMALIZED_IPS, remove_duplicates_by_reference, \
+    ips_do_not_contradict, NORMALIZED_IPS, remove_duplicates_by_reference, fortiuser_compare, \
     NORMALIZED_MACS, NORMALIZED_HOSTNAME_STRING, not_snow_adapters, not_airwatch_adapters
 
 
@@ -188,6 +188,7 @@ class ScannerCorrelatorBase(object):
         predicates = [is_different_plugin,
                       macs_do_not_contradict,
                       hostnames_do_not_contradict,
+                      fortiuser_compare,
                       os_do_not_contradict,
                       not_airwatch_adapters]
         if not self._allow_service_now_by_name_only:
@@ -261,6 +262,7 @@ class ScannerAdapterBase(AdapterBase, Feature, ABC):
             f'adapters.{PLUGIN_UNIQUE_NAME}': 1,
             'adapters.data.id': 1,
             'adapters.data.last_seen': 1,
+            'adapters.data.last_used_users': 1,
             'adapters.data.network_interfaces.ips': 1,
             'adapters.data.os.type': 1,
         })

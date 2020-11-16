@@ -28,7 +28,8 @@ def _create_sccm_client_connection(client_config, devices_fetched_at_a_time) -> 
 
 # pylint: disable=too-many-locals, too-many-nested-blocks, too-many-branches, too-many-statements
 def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, device_id=None,
-                                 fetch_legacy_sw_tables=False, fetch_files_path=False):
+                                 fetch_legacy_sw_tables=False, fetch_files_path=True,
+                                 fetch_v_gs_installed_sw=True, fetch_services=True):
     client_data = _create_sccm_client_connection(client_config, devices_fetched_at_a_time)
     client_data.set_devices_paging(devices_fetched_at_a_time)
     with client_data:
@@ -103,13 +104,14 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
 
         svc_dict = dict()
         try:
-            for svc_data in client_data.query(_wrap_query_with_resource_id(consts.SVC_QUERY, device_id)):
-                asset_id = svc_data.get('ResourceID')
-                if not asset_id:
-                    continue
-                if asset_id not in svc_dict:
-                    svc_dict[asset_id] = []
-                svc_dict[asset_id].append(svc_data)
+            if fetch_services:
+                for svc_data in client_data.query(_wrap_query_with_resource_id(consts.SVC_QUERY, device_id)):
+                    asset_id = svc_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in svc_dict:
+                        svc_dict[asset_id] = []
+                    svc_dict[asset_id].append(svc_data)
         except Exception:
             logger.warning(f'Problem getting services', exc_info=True)
 
@@ -391,14 +393,15 @@ def sccm_query_devices_by_client(client_config, devices_fetched_at_a_time, devic
 
         asset_software_dict = dict()
         try:
-            for asset_soft_data \
-                    in client_data.query(_wrap_query_with_resource_id(consts.QUERY_SOFTWARE, device_id)):
-                asset_id = asset_soft_data.get('ResourceID')
-                if not asset_id:
-                    continue
-                if asset_id not in asset_software_dict:
-                    asset_software_dict[asset_id] = []
-                asset_software_dict[asset_id].append(asset_soft_data)
+            if fetch_v_gs_installed_sw:
+                for asset_soft_data \
+                        in client_data.query(_wrap_query_with_resource_id(consts.QUERY_SOFTWARE, device_id)):
+                    asset_id = asset_soft_data.get('ResourceID')
+                    if not asset_id:
+                        continue
+                    if asset_id not in asset_software_dict:
+                        asset_software_dict[asset_id] = []
+                    asset_software_dict[asset_id].append(asset_soft_data)
         except Exception:
             logger.warning(f'Problem getting query software', exc_info=True)
 

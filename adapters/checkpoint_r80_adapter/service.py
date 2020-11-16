@@ -1,3 +1,4 @@
+import ipaddress
 import logging
 
 from axonius.adapter_base import AdapterBase, AdapterProperty
@@ -121,7 +122,16 @@ class CheckpointR80Adapter(AdapterBase):
                 logger.warning(f'Bad device with not ID {device_raw}')
                 return None
             device.id = device_id + '_' + (device_raw.get('name') or '')
-            device.name = device_raw.get('name')
+            name = device_raw.get('name')
+            ip_name = None
+            try:
+                ip_name = str(ipaddress.ip_address(name.split('_')[-1]))
+                name = '_'.join(name.split('_')[:-1])
+            except Exception:
+                pass
+            device.name = name
+            if ip_name:
+                device.add_nic(ips=[ip_name])
             device.cp_type = device_raw.get('type')
             try:
                 ips = [device_raw.get('ipv4-address')] if device_raw.get('ipv4-address') else None

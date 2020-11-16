@@ -229,7 +229,7 @@ class WsusAdapter(AdapterBase):
                     logger.warning(f'Bad device with no ID {device_raw}')
                     continue
                 device.id = str(device_id) + '_' + (device_raw.get('FullDomainName') or '')
-                device.name = device_raw.get('FullDomainName')
+                device.hostname = device_raw.get('FullDomainName')
                 try:
                     if device_raw.get('IPAddress'):
                         # logger.info(f'XXXX IPAddress: {device_raw.get("IPAddress")}')
@@ -243,7 +243,7 @@ class WsusAdapter(AdapterBase):
                     logger.warning(f'Failed to parse IP info: {str(e)}')
                 try:
                     domain_parts = device_raw.get('FullDomainName', '').split('.')
-                    device.hostname = domain_parts[0]
+                    device.name = domain_parts[0]
                     device.domain = '.'.join(domain_parts[1:])
                 except Exception:
                     message = f'Failed to parse device domain from {device_raw.get("FullDomainName")}!'

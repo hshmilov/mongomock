@@ -150,7 +150,8 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
         """
         for connection in client_data:
             with connection:
-                yield from connection.get_device_list(self._get_policies, self._get_vulnerabilities)
+                yield from connection.get_device_list(self._get_policies, self._get_vulnerabilities,
+                                                      self._avoid_aws_dups)
 
     @staticmethod
     def _clients_schema():
@@ -470,11 +471,17 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
                     'name': 'group_name_whitelist',
                     'title': 'Group name whitelist',
                     'type': 'string'
+                },
+                {
+                    'name': 'avoid_aws_dups',
+                    'type': 'bool',
+                    'title': 'Avoid AWS duplications'
                 }
             ],
             'required': [
                 'get_policies',
-                'get_vulnerabilities'
+                'get_vulnerabilities',
+                'avoid_aws_dups'
             ],
             'pretty_name': 'CrowdStrike Falcon Configuration',
             'type': 'array'
@@ -486,12 +493,14 @@ class CrowdStrikeAdapter(AdapterBase, Configurable):
             'get_policies': False,
             'get_vulnerabilities': False,
             'machine_domain_whitelist': None,
-            'group_name_whitelist': None
+            'group_name_whitelist': None,
+            'avoid_aws_dups': False
         }
 
     def _on_config_update(self, config):
         self._get_policies = config['get_policies']
         self._get_vulnerabilities = config['get_vulnerabilities']
+        self._avoid_aws_dups = config.get('avoid_aws_dups') or False
         self.__machine_domain_whitelist = [x.lower() for x in config.get('machine_domain_whitelist').split(',')] \
             if config.get('machine_domain_whitelist') else None
         self.__group_name_whitelist = config.get('group_name_whitelist').split(',') \
