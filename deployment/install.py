@@ -106,7 +106,7 @@ def main():
                 if not success:
                     INTERNAL_INSTALLER_FAILURE_MARKER_FILE_PATH.touch()
             elif INTERNAL_INSTALLER_FAILURE_MARKER_FILE_PATH.exists():
-                print(f'Upgrader completed with failure in internal installer {metadata}')
+                print(f'Upgrader completed - failure in internal installer {metadata}')
                 INTERNAL_INSTALLER_FAILURE_MARKER_FILE_PATH.unlink()
                 success = False
             else:

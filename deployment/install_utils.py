@@ -16,6 +16,7 @@ from sysctl_editor import get_sysctl_value, set_sysctl_value
 from utils import print_state, AXONIUS_DEPLOYMENT_PATH, RESOURCES_PATH, run_cmd
 DEFAULT_WEAVE_SUBNET_IP_RANGE = '171.17.0.0/16'
 
+HOST_TASKS_SCRIPT_PATH = '/home/ubuntu/cortex/devops/scripts/watchdog/restart_host_tasks.sh'
 CRON_D_PATH = Path('/etc/cron.d')
 SOMAXCONN = 20000
 
@@ -186,6 +187,12 @@ def create_system_cronjobs():
     create_cronjob(script_path=WATCHDOG_CRON_SCRIPT_PATH,
                    cronjob_timing='*/15 * * * *',
                    specific_run_env='/usr/local/bin/python3',
+                   keep_script_location=True)
+
+    remove_cronjob(HOST_TASKS_SCRIPT_PATH)
+    create_cronjob(script_path=HOST_TASKS_SCRIPT_PATH,
+                   cronjob_timing='*/15 * * * *',
+                   specific_run_env='/bin/bash',
                    keep_script_location=True)
 
     sched_prov_cron = 'chef_scheduled_provision'
