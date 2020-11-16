@@ -30,7 +30,7 @@ class SegmentConfig(SortableConfig):
         return SegmentConfig(entity=EntityType(data['entity']),
                              view=data['view'],
                              field_name=data['field']['name'],
-                             value_filter=data['value_filter'],
+                             value_filter=data.get('value_filter', []),
                              include_empty=data.get('include_empty', False),
                              sort=SortableConfig.parse_sort(data))
 
