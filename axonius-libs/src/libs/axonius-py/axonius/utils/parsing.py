@@ -74,7 +74,7 @@ DEFAULT_VERSION_EXTENSION = '00000000'
 DEFAULT_LINUX_VERSION_EPOCH = '0'
 DUPLICATES_NAMES = ['SYSOPS-MACBOOK-PRO.LOCAL']
 BAD_SERIALS = ['INVALID', 'NON-UNIQUES/N', '0', '1', 'SYSTEMSERIALNUMBER', 'TOBEFILLEDBYO.E.M.', 'VIRTUAL', 'DELETE',
-               'DELETED', 'NO INFORMATION', '00001',
+               'DELETED', 'NO INFORMATION', '00001', 'VMWARE VIRTUAL PLATFORM',
                'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN', '-', '0123456789', 'NA-VIRTUAL', 'TBD', 'X',
                '0123456789ABCDEF', 'NONE', 'VMWARE', '(VM)', 'SUN', 'NO INFORMATION', 'VIRTUAL SERVER']
 
@@ -1331,6 +1331,8 @@ def get_serial(adapter_device):
                                                        'service_now_sql_adapter',
                                                        'service_now_akana_adapter'])\
             and len(serial) > 4:
+        if serial.upper().endswith('VMWARE VIRTUAL PLATFORM'):
+            return serial.upper()[:-len('VMWARE VIRTUAL PLATFORM')]
         return serial.upper()
     return None
 

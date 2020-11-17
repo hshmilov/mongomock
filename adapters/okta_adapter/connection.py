@@ -21,9 +21,11 @@ _MAX_PAGE_COUNT = 10000
 
 
 class OktaConnection:
-    def __init__(self, url: str, api_key: str, https_proxy: str, parallel_requests: int):
+    def __init__(self, url: str, api_key: str, https_proxy: str, parallel_requests: int,
+                 threshold_percentenge: int):
         url = RESTConnection.build_url(url).strip('/')
         self.__base_url = url
+        self.__threshold_percentenge = threshold_percentenge / 100.0
         self.__api_key = api_key
         self.__https_proxy = https_proxy
         self._sleep_between_requests_in_sec = 0
@@ -53,12 +55,15 @@ class OktaConnection:
             remaining = int(response.headers.get('X-Rate-Limit-Remaining'))
             limit = int(response.headers.get('X-Rate-Limit-Limit'))
             reset = datetime.datetime.utcfromtimestamp(int(response.headers.get('X-Rate-Limit-Reset')))
-            seconds = (reset - datetime.datetime.utcnow()).seconds
+            now_time = datetime.datetime.utcnow()
+            seconds = 60
+            if reset > now_time:
+                seconds = (reset - now_time).seconds
             logger.debug(f'remaining: {remaining}')
             logger.debug(f'limit: {limit}')
             logger.debug(f'reset: {reset}')
             logger.debug(f'seconds: {seconds}')
-            if remaining / limit < 0.1:
+            if remaining / limit < self.__threshold_percentenge:
                 logger.info(f'remaining: {remaining}')
                 logger.info(f'limit: {limit}')
                 logger.info(f'reset: {reset}')

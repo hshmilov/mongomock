@@ -54,10 +54,17 @@ class OktaAdapter(AdapterBase, Configurable):
                                                 https_proxy=client_config.get('https_proxy'))
 
     def _connect_client(self, client_config):
+        try:
+            threshold_percentenge = int(client_config.get('threshold_percentenge'))
+            if threshold_percentenge < 1 or threshold_percentenge > 99:
+                threshold_percentenge = 10
+        except Exception:
+            threshold_percentenge = 10
         connection = OktaConnection(url=client_config['url'],
                                     api_key=client_config['api_key'],
                                     https_proxy=client_config.get('https_proxy'),
-                                    parallel_requests=client_config.get('parallel_requests'))
+                                    parallel_requests=client_config.get('parallel_requests'),
+                                    threshold_percentenge=threshold_percentenge)
         try:
             connection.is_alive()
         except Exception as e:
@@ -93,6 +100,12 @@ class OktaAdapter(AdapterBase, Configurable):
                     'default': 75
                 },
                 {
+                    'name': 'threshold_percentenge',
+                    'title': 'API limit threshold percentenge',
+                    'type': 'integer',
+                    'default': 10
+                },
+                {
                     'name': 'https_proxy',
                     'title': 'HTTPS Proxy',
                     'type': 'string'
@@ -102,6 +115,7 @@ class OktaAdapter(AdapterBase, Configurable):
             'required': [
                 'url',
                 'api_key',
+                'threshold_percentenge',
                 'parallel_requests'
             ],
             'type': 'array'
