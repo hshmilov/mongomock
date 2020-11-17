@@ -152,6 +152,7 @@ class TenableSecurityScannerConnection(RESTConnection):
                     scap_mapping = self._get_scap_mapping(repository_id=repository_id)
 
                 if fetch_asset_groups:
+                    logger.info(f'Start fetching asset groups')
                     asset_groups_mapping = self._get_asset_groups_mapping(repository_id=repository_id,
                                                                           device_list=device_list,
                                                                           async_chunks=async_chunks)
@@ -274,18 +275,22 @@ class TenableSecurityScannerConnection(RESTConnection):
             asset_groups_mapping = {}
 
             assets_groups_raw_requests = []
-            device_uuid_list = []
+            device_info_list = []
             for device in device_list:
-                if not (isinstance(device, dict) and device.get('uuid')):
+                if not (isinstance(device, dict) and device.get('uuid') and device.get('ip') and device.get('dnsName')):
                     continue
-                device_uuid_list.append(device.get('uuid'))
+                device_info_list.append((device.get('uuid'), device.get('ip'), device.get('dnsName')))
                 assets_groups_raw_requests.append({
-                    'name': f'repository/{repository_id}/assetIntersections/{device.get("uuid")}',
+                    'name': f'repository/{repository_id}/assetIntersections',
+                    'url_params': {
+                        'ip': device.get('ip'),
+                        'dnsName': device.get('dnsName')}
                 })
 
-            for uuid, response in zip(device_uuid_list, self._async_get(assets_groups_raw_requests,
-                                                                        retry_on_error=True,
-                                                                        chunks=async_chunks)):
+            for (uuid, _, _), response in zip(device_info_list, self._async_get(assets_groups_raw_requests,
+                                                                                retry_on_error=True,
+                                                                                chunks=async_chunks,
+                                                                                copy_cookies=True)):
                 if not self._is_async_response_good(response):
                     logger.error(f'Async response returned bad, its {response}')
                     continue
