@@ -26,6 +26,7 @@ def request_instance_control(plugin_unique_name, endpoint):
     res = requests.get(f'https://{plugin_unique_name_ip}:443/api/{endpoint}', verify=False,
                        timeout=REQUEST_TIMEOUT)
     print(res.text.strip())
+    assert res.status_code == 200
 
 
 def update_instances_upgrade_script(instances):
@@ -37,12 +38,15 @@ def update_instances_upgrade_script(instances):
     some_config = client['core']['configs'].find_one({})
     for instance in instances:
         plugin_unique_name_ip = weave_dns_lookup(instance['plugin_unique_name'])
-        requests.post(f'https://{plugin_unique_name_ip}:443/api/trigger/execute_shell?blocking=False', verify=False,
-                      headers={API_KEY_HEADER: some_config['api_key'],
-                               'x-plugin-name': some_config['plugin_name'],
-                               'x-unique-plugin-name': some_config['plugin_unique_name']},
-                      json={
-                          'cmd': 'sed -i s/python3/sh/g /home/ubuntu/cortex/devops/scripts/instances/run_upgrade_on_instance.sh'})
+        res = requests.post(f'https://{plugin_unique_name_ip}:443/api/trigger/execute_shell?blocking=False',
+                            verify=False,
+                            headers={API_KEY_HEADER: some_config['api_key'],
+                                     'x-plugin-name': some_config['plugin_name'],
+                                     'x-unique-plugin-name': some_config['plugin_unique_name']},
+                            json={'cmd': 'sed -i s/python3/sh/g '
+                                         '/home/ubuntu/cortex/devops/scripts/instances/run_upgrade_on_instance.sh'})
+        print(res.text.strip())
+        assert res.status_code == 200
 
 
 def run_upgrade_phase_on_node(node, phase):
