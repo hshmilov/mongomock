@@ -101,7 +101,7 @@ class OktaAdapter(AdapterBase, Configurable):
                 },
                 {
                     'name': 'threshold_percentenge',
-                    'title': 'API limit threshold percentenge',
+                    'title': 'API limit threshold percentage',
                     'type': 'integer',
                     'default': 10
                 },
