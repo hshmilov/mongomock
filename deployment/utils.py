@@ -4,7 +4,7 @@ import os
 import subprocess
 from pathlib import Path
 
-MIN_GB_FOR_INSTALLATION = 10
+MIN_GB_FOR_INSTALLATION = 20
 
 
 # note: DO NOT IMPORT ANY EXTERNAL PACKAGE (axonius included) HERE. THIS FILE RUNS BEFORE VENV IS SET!

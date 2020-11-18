@@ -125,7 +125,7 @@ with AutoOutputFlush():
         shutil.copy(images_tar, f'{INSTALLER_TEMP_DIR}/images.tar')
         print_state('Finished copying')
         print_state('Creating installer')
-        subprocess.check_output(['/usr/bin/makeself', '--gzip', INSTALLER_TEMP_DIR,
+        subprocess.check_output(['/usr/bin/makeself', '--notemp', '--gzip', INSTALLER_TEMP_DIR,
                                  output_path, 'Axonius Setup', 'ORIGINAL_PWD=$PWD python3.6 __main__.py'])
         assert os.path.exists(output_path)
     finally:

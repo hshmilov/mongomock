@@ -292,7 +292,7 @@ def install(first_time, no_research, master_only, inside_container=False):
 
     os.system(f'docker exec axonius-manager /bin/bash -c '
               f'"python3 ./devops/create_pth.py; '
-              f'python3 ./deployment/install.py --inside-container {extra_args}"')
+              f'python3 ./deployment/install.py --do-not-verify-storage --inside-container {extra_args}"')
 
     # Cleanup
     os.remove(f'{AXONIUS_DEPLOYMENT_PATH}/images.tar')
