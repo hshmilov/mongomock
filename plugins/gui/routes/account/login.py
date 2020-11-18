@@ -619,8 +619,9 @@ class Login:
                 email = attributes.get('emailaddress')
                 picture = None
 
+                logger.info(f'Got SAML login, attributes are {str(attributes)}')
                 if not name_id:
-                    logger.info(f'SAML Login failure, attributes are {attributes}')
+                    logger.error(f'SAML Login failure - no name_id, attributes are {attributes}')
                     self._log_activity_login_failure(str(email) if email else str(name_id))
                     raise ValueError(f'Error! SAML identity provider did not respond with attribute "name"')
 

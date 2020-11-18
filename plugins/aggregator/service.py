@@ -177,6 +177,20 @@ class AggregatorService(Triggerable, PluginBase):
             check_fetch_time = False
             yield adapter_unique_name, from_json(data.content)
 
+    def get_adapter_clients(self, adapter_unique_name):
+        # pylint: disable=C0330
+        return [
+            x['client_id'] for x in self._get_db_connection()[adapter_unique_name]['clients'].find(
+                filter={
+                    CLIENT_ACTIVE: {'$ne': False}
+                },
+                projection={
+                    'client_id': True,
+                    '_id': False
+                }
+            )
+        ]
+
     def _request_insertion_from_adapters(self, adapter, clients):
         """Get mapped data from all devices.
 
@@ -193,20 +207,8 @@ class AggregatorService(Triggerable, PluginBase):
         :param str adapter: The address of the adapter (url)
         :param List clients: list of clients to execute fetch for.
         """
-        def get_adapter_clients():
-            # pylint: disable=C0330
-            return [x['client_id'] for x
-                    in self._get_db_connection()[adapter]['clients'].find(
-                    filter={
-                        CLIENT_ACTIVE: {'$ne': False}
-                    },
-                    projection={
-                        'client_id': True,
-                        '_id': False
-                    })]
-
         data = None
-        clients = clients or get_adapter_clients()
+        clients = clients or self.get_adapter_clients(adapter)
         if clients and self._notify_on_adapters is True:
             self.create_notification(f'Starting to fetch device for {adapter}')
         check_fetch_time = True
@@ -745,11 +747,17 @@ class AggregatorService(Triggerable, PluginBase):
             logger.exception(f'Getting devices from all adapters failed, adapters = {current_adapters}. {repr(e)}')
 
     # pylint: disable=too-many-branches
-    def _fetch_data_from_adapters(self, current_adapters: List[Tuple[dict, List]], run_identifier: RunIdentifier):
+    def _fetch_data_from_adapters(self, current_adapters_unfiltered: List[Tuple[dict, List]], run_identifier: RunIdentifier):
         """ Function for fetching devices from adapters.
         This function runs on all the received adapters and in a different thread fetches all of them.
-        @:param current_adapters: List of tuples of adapters and its relevant clients to trigger.
+        @:param current_adapters_unfiltered: List of tuples of adapters and its relevant clients to trigger.
         """
+        # Get rid of adapters with no clients at all
+        current_adapters = []
+        for adapter, clients in current_adapters_unfiltered:
+            if clients or self.get_adapter_clients(adapter[PLUGIN_UNIQUE_NAME]):
+                current_adapters.append((adapter, clients))
+
         known_adapters_status = {}
         for adapter, _ in current_adapters:
             known_adapters_status[adapter[PLUGIN_UNIQUE_NAME]] = AdapterStatuses.Pending.name
@@ -797,6 +805,14 @@ class AggregatorService(Triggerable, PluginBase):
                             known_adapters_status[futures_for_adapter[future]
                                                   [PLUGIN_UNIQUE_NAME]] = AdapterStatuses.Done.name
                         run_identifier.update_status(known_adapters_status)
+
+                        not_done_adapters = []
+                        for kas_name, kas_status in known_adapters_status.items():
+                            if kas_status != AdapterStatuses.Done.Name:
+                                not_done_adapters.append(f'{str(kas_name)}: {str(kas_status)}')
+
+                        if not_done_adapters:
+                            logger.info(f'Adapters still running or pending: {", ".join(not_done_adapters)}')
                         num_of_adapters_to_fetch -= 1 if not isinstance(futures_for_adapter[future], list) else \
                             len(futures_for_adapter[future])
                         # future.result()
@@ -855,7 +871,8 @@ class AggregatorService(Triggerable, PluginBase):
         known_adapters_status[adapter_unique_name] = AdapterStatuses.Fetching.name
         run_identifier.update_status(known_adapters_status)
 
-        logger.info(f'Starting to fetch device for {adapter_unique_name}')
+        all_clients = clients or self.get_adapter_clients(adapter_unique_name)
+        logger.info(f'Starting to fetch device for {adapter_unique_name} with {len(all_clients)} clients')
         try:
             data = self._request_insertion_from_adapters(adapter_unique_name, clients)
             for client_name, devices_per_client in data:
