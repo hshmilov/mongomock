@@ -76,6 +76,15 @@ def is_inside_container():
     return Path('/.dockerenv').exists()
 
 
+def delete_tmp_dir():
+    try:
+        # Protect against unknown unknown situations where the calculation will lead to a dangerous path
+        if Path(__file__).absolute().parents[2].as_posix() not in ('/home/ubuntu', '/home/ubuntu/cortex'):
+            shutil.rmtree(Path(__file__).absolute().parents[2].as_posix())
+    except Exception as e:
+        print(f'Couldn\'t delete tmp install directory - {str(e)}')
+
+
 # pylint: disable=too-many-branches
 def main():
     metadata = ''
@@ -109,8 +118,10 @@ def main():
                 print(f'Upgrader completed - failure in internal installer {metadata}')
                 INTERNAL_INSTALLER_FAILURE_MARKER_FILE_PATH.unlink()
                 success = False
+                delete_tmp_dir()
             else:
                 print(f'Upgrader completed - {status} {metadata}')
+                delete_tmp_dir()
 
             if PYTHON_INSTALLER_LOCK_FILE.is_file():
                 PYTHON_INSTALLER_LOCK_FILE.unlink()

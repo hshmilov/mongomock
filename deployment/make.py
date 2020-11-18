@@ -89,6 +89,7 @@ def create_package(output_path, version='', pull=False, rebuild=False, exclude=N
     main_template = f"""
 import sys
 import os
+[sys.path.remove(x) for x in sys.path if x.startswith('/home/ubuntu/cortex') or not x]
 sys.path.append(os.path.join(os.path.dirname(__file__), '{SOURCES_FOLDER_NAME}', 'deployment'))
 
 from utils import AutoOutputFlush
