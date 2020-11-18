@@ -50,7 +50,11 @@ DIR_MAP = {
 # The following line contains commands that we run before each new test. we are going to append more commands
 # to it later, hence we have ./prepare_python_env.sh (for these commands)
 FIRST_BASH_COMMANDS_BEFORE_EACH_TEST = 'set -e; source ./prepare_python_env.sh; ./clean_dockers.sh; ' \
-                                       './run_axonius_manager.sh; ./testing/host_port_forwarder.sh;' \
+                                       './run_axonius_manager.sh; ./testing/host_port_forwarder.sh; ' \
+                                       'echo -n Ki8zICogKiAqICogL2Jpbi9iYXNoIC9ob21lL3VidW50dS9jb3J0ZXgvZGV2b3BzL3Njc' \
+                                       'mlwdHMvd2F0Y2hkb2cvcmVzdGFydF9ob3N0X3Rhc2tzLnNoCgo= | base64 -d >> ' \
+                                       '/tmp/tmp_cron; sudo crontab /tmp/tmp_cron; ' \
+                                       'sudo ./devops/scripts/watchdog/restart_host_tasks.sh; ' \
                                        'docker exec axonius-manager sh ./testing/test_credentials/docker_login.sh;'
 SETUP_NGINX_CONF_FILES_CMD = 'python3 /home/ubuntu/cortex/testing/test_helpers/nginx_config_helper.py'
 MAX_SECONDS_FOR_ONE_JOB = 60 * 240  # no job (test / bunch of jobs) should take more than that

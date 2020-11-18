@@ -1,7 +1,5 @@
 import shutil
 
-import pytest
-
 from axonius.consts.metric_consts import SystemMetric
 from axonius.utils.wait import wait_until
 from devops.axonius_system import main as system_main
@@ -10,7 +8,6 @@ from scripts.watchdog.watchdog_task import WATCHDOG_LOGS_DIR
 from test_helpers.log_tester import LogTester
 
 
-@pytest.mark.skip('AX-10099')
 def test_watchdog_logs():
     shutil.rmtree(WATCHDOG_LOGS_DIR, ignore_errors=True)
     system_main('system up --restart'.split())
