@@ -23,7 +23,7 @@ from axonius.utils.parsing import get_exception_string, parse_bool_from_raw, int
 from beyond_trust_adapter.client_id import get_client_id
 from beyond_trust_adapter.structures import (BeyondTrustDeviceInstance,
                                              BeyondTrustUserInstance,
-                                             UserPolicy)
+                                             Policy)
 
 logger = logging.getLogger(f'axonius.{__name__}')
 
@@ -111,6 +111,28 @@ class BeyondTrustAdapter(AdapterBase, Configurable):
                 right_comparison_field='DomainID'
             )
 
+            del domains  # Release memory of domains object.
+
+            policies = client_data.query(POLICIES_QUERY)
+            user_sessions = client_data.query(USER_SESSIONS_QUERY)
+            user_sessions = MySQLConnection.left_join_tables(
+                left_table=user_sessions,
+                right_table=policies,
+                left_comparison_field='PolicyID',
+                right_comparison_field='PolicyID'
+            )
+
+            del policies    # Release memory of policies object.
+
+            hosts = MySQLConnection.left_join_tables(
+                left_table=hosts,
+                right_table=user_sessions,
+                left_comparison_field='HostID',
+                right_comparison_field='HostID'
+            )
+
+            del user_sessions   # Release memory of user sessions object.
+
             yield from hosts
 
     # pylint: disable=arguments-differ
@@ -125,8 +147,8 @@ class BeyondTrustAdapter(AdapterBase, Configurable):
         """
         client_data.set_devices_paging(self.__devices_fetched_at_a_time)
         with client_data:
-            domains = client_data.query(DOMAINS_QUERY)
             users = client_data.query(USERS_QUERY)
+            domains = client_data.query(DOMAINS_QUERY)
 
             # Extend users table with all relevant columns from other relevant tables.
             users = MySQLConnection.left_join_tables(
@@ -216,6 +238,13 @@ class BeyondTrustAdapter(AdapterBase, Configurable):
             device.name_netbios = device_raw.get('NameNETBIOS')
             device.chassis_type = device_raw.get('ChassisType')
             device.os_product_type = device_raw.get('OSProductType')
+            device.policy = Policy(
+                id=device_raw.get('PolicyID'),
+                guid=device_raw.get('PolicyGUID'),
+                name=device_raw.get('PolicyName'),
+                description=device_raw.get('Description'),
+                platform_type=device_raw.get('PlatformType')
+            )
         except Exception:
             logger.exception(f'Failed creating instance for device {device_raw}')
 
@@ -270,7 +299,7 @@ class BeyondTrustAdapter(AdapterBase, Configurable):
             user.ui_language = user_raw.get('UILanguage')
             user.locale = user_raw.get('Locale')
             user.last_used_host_id = user_raw.get('HostID')
-            user.policy = UserPolicy(
+            user.policy = Policy(
                 id=user_raw.get('PolicyID'),
                 guid=user_raw.get('PolicyGUID'),
                 name=user_raw.get('PolicyName'),

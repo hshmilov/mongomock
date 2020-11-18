@@ -4,7 +4,7 @@ from axonius.users.user_adapter import UserAdapter
 from axonius.devices.device_adapter import DeviceAdapter
 
 
-class UserPolicy(SmartJsonClass):
+class Policy(SmartJsonClass):
     id = Field(str, 'ID')
     guid = Field(str, 'GUID')
     name = Field(str, 'Name')
@@ -18,6 +18,7 @@ class BeyondTrustDeviceInstance(DeviceAdapter):
     name_netbios = Field(str, 'Name NetBIOS')
     chassis_type = Field(str, 'Chassis Type')
     os_product_type = Field(str, 'OS Product Type')
+    policy = Field(Policy, 'Policy')
 
 
 class BeyondTrustUserInstance(UserAdapter):
@@ -27,4 +28,4 @@ class BeyondTrustUserInstance(UserAdapter):
     ui_language = Field(str, 'UI Language')
     locale = Field(str, 'Locale')
     last_used_host_id = Field(str, 'Last Used Host ID')
-    policy = Field(UserPolicy, 'Policy')
+    policy = Field(Policy, 'Policy')
