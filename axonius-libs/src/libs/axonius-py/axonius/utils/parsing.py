@@ -315,7 +315,7 @@ def figure_out_os(s):
 
     os_type = None
     distribution = None
-    linux_names = ['linux', 'ubuntu', 'canonical', 'red hat', 'unix',
+    linux_names = ['linux', 'ubuntu', 'canonical', 'red hat', 'unix', 'redhat',
                    'debian', 'fedora', 'centos', 'oracle', 'opensuse', 'rhel server', 'sles', 'gentoo', 'arch']
 
     ios_devices = ['iphone', 'ipad', 'apple']
