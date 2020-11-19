@@ -808,7 +808,7 @@ class AggregatorService(Triggerable, PluginBase):
 
                         not_done_adapters = []
                         for kas_name, kas_status in known_adapters_status.items():
-                            if kas_status != AdapterStatuses.Done.Name:
+                            if kas_status != AdapterStatuses.Done.name:
                                 not_done_adapters.append(f'{str(kas_name)}: {str(kas_status)}')
 
                         if not_done_adapters:
