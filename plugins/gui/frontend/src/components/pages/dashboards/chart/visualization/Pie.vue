@@ -34,6 +34,7 @@
         :chart-metric="chart.metric"
         :base-color="baseQueryColor"
         :intersecting-colors="intersectingQueriesColors"
+        :chart-config="chart.config"
         @on-item-click="displaySegmentResults($event, data.content, history)"
       />
       <XChartContent

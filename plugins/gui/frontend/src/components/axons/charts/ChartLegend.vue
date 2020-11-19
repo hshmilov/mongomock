@@ -30,6 +30,7 @@
 
 import { formatPercentage } from '@constants/utils';
 import { ChartTypesEnum } from '@constants/dashboard';
+import _get from 'lodash/get';
 import defaultChartsColors from '@constants/colors';
 import { getItemIndex, getLegendItemColorClass, getRemainderSliceLabel } from '@/helpers/dashboard';
 import XPaginator from '../layout/Paginator.vue';
@@ -69,6 +70,10 @@ export default {
         return [...Object.values(ChartTypesEnum)].indexOf(value) > -1;
       },
     },
+    chartConfig: {
+      type: Object,
+      required: true,
+    },
   },
   data() {
     return {
@@ -93,6 +98,9 @@ export default {
         (maxWidth, legendItem) => Math.max(maxWidth, legendItem[this.valueLense]), 10,
       );
     },
+    customViewsColors() {
+      return _get(this.chartConfig, 'views', []).map((view) => view.chart_color);
+    },
     columnValues() {
       const result = [];
       return this.pageData.reduce((columnValues, legendItem, index) => {
@@ -101,7 +109,7 @@ export default {
         } = legendItem;
         const colorClassname = this.getLegendItemColorClass(index, legendItem);
         const style = this.getLegentItemColorStyle({
-          chartColor: legendItem.chart_color, colorClassname,
+          chartColor: this.customViewsColors[legendItem.index_in_config], colorClassname,
         });
         columnValues.push({
           value: '',
