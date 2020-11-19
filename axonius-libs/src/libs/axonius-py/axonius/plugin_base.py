@@ -781,6 +781,9 @@ class PluginBase(Configurable, Feature, ABC):
         logger.info(f'Plugin {self.plugin_unique_name}:{self.version} '
                     f'with axonius-libs:{self.lib_version} started successfully')
 
+        # This is specifically to prevent instance-control from restarting while core is offline during upgrade
+        self.upgrading_cluster_in_prog = False
+
     def run_all_migrations(self):
         migrator = DBMigration(migrations_prefix=MIGRATION_PREFIX,
                                migration_class=self,
@@ -1036,7 +1039,8 @@ class PluginBase(Configurable, Feature, ABC):
             self.comm_failure_counter = 0
         except Exception as e:
             self.comm_failure_counter += 1
-            if self.comm_failure_counter > retries:  # Two minutes
+            # Checking if two minutes passed, also checking we're not during upgrade
+            if self.comm_failure_counter > retries and not self.upgrading_cluster_in_prog:
                 logger.exception(f'Error communicating with Core for more '
                                  f'than 2 minutes, exiting. Reason: {e}')
                 # pylint: disable=protected-access

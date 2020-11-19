@@ -122,7 +122,6 @@ class InstanceControlService(Triggerable, PluginBase):
         self.__host_ssh = get_ssh_connection()
         self.__cortex_path = os.environ['CORTEX_PATH']
         self.__adapters = get_adapter_names_mappings(self.__exec_system_command('ls'))
-        self.upgrading_cluster_in_prog = False
         self.upgrade_started = False
         assert len(self.__adapters) > 100, f'Can not get all adapters mappings, got just {self.__adapters}'
 
