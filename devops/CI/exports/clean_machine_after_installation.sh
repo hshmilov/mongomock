@@ -8,6 +8,7 @@ rm -rf /home/ubuntu/cortex/devops/scripts/host_installation/init_host*
 
 rm -f /var/log/auth.log
 /usr/bin/apt-get clean
+
 rm -r /etc/apparmor.d/cache/* /etc/apparmor.d/cache/.features /etc/netplan/50-cloud-init.yaml /etc/sudoers.d/90-cloud-init-users
 /usr/bin/truncate --size 0 /etc/machine-id
 rm -r /root/.ssh

@@ -102,6 +102,12 @@
     },
     {
       "type": "shell",
+      "script": "./remove_floppy.sh",
+      "remote_folder": "/tmp",
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
       "script": "./grow_partition.sh",
       "remote_folder": "/tmp",
       "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
@@ -219,19 +225,16 @@
     },
     {
       "type": "shell",
-      "script": "./clean_machine_after_installation.sh",
+      "script": "./remove_splash_screen_grub.sh",
       "remote_folder": "/tmp",
-      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'",
+      "only": ["qemu"]
     },
     {
       "type": "shell",
-      "inline": [
-        "sudo sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"nomodeset console=tty0\"/'  /etc/default/grub",
-        "sudo update-grub"
-      ],
-      "only": [
-        "qemu"
-      ]
+      "script": "./clean_machine_after_installation.sh",
+      "remote_folder": "/tmp",
+      "execute_command": "sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     }
   ],
   "post-processors": [
