@@ -101,11 +101,17 @@ class ServiceNowComputerAction(ActionTypeBase):
                     'name': 'use_full_url',
                     'title': 'Use full URL for device creation',
                     'type': 'bool'
+                },
+                {
+                    'name': 'allow_create_if_snow',
+                    'title': 'Create ServiceNow computer even though the device was fetched by ServiceNow',
+                    'type': 'bool'
                 }
             ],
             'required': [
                 'use_adapter',
                 'verify_ssl',
+                'allow_create_if_snow',
                 'use_full_url',
                 'use_first_ip_only',
                 'exclude_default_fields',
@@ -123,6 +129,7 @@ class ServiceNowComputerAction(ActionTypeBase):
             'username': None,
             'use_full_url': False,
             'password': None,
+            'allow_create_if_snow': False,
             'https_proxy': None,
             'exclude_default_fields': False,
             'ax_snow_fields_map': None,
@@ -330,7 +337,8 @@ class ServiceNowComputerAction(ActionTypeBase):
                 if (name_raw is None and asset_name_raw is None) and not self._config.get('exclude_default_fields'):
                     results.append(EntityResult(entry['internal_axon_id'], False, 'Device With No Name'))
                     continue
-                if found_snow and not self._config.get('exclude_default_fields'):
+                if found_snow and not self._config.get('exclude_default_fields') \
+                        and not self._config.get('allow_create_if_snow'):
                     results.append(EntityResult(entry['internal_axon_id'], False,
                                                 'Device Already With ServiceNow Adapter'))
                     continue

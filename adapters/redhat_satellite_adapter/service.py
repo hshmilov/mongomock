@@ -283,7 +283,7 @@ class RedhatSatelliteAdapter(AdapterBase, Configurable):
 
     @classmethod
     def adapter_properties(cls):
-        return [AdapterProperty.Assets]
+        return [AdapterProperty.Agent]
 
     @classmethod
     def _db_config_schema(cls) -> dict:
