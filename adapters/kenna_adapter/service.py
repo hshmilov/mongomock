@@ -6,6 +6,7 @@ from axonius.clients.rest.connection import RESTConnection
 from axonius.clients.rest.connection import RESTException
 from axonius.devices.device_adapter import DeviceAdapter, DeviceOpenPortVulnerabilityAndFix
 from axonius.fields import Field, ListField
+from axonius.mixins.configurable import Configurable
 from axonius.utils.datetime import parse_date
 from axonius.utils.files import get_local_config_file
 from kenna_adapter import consts
@@ -16,7 +17,7 @@ from kenna_adapter.structures import AssetGroup
 logger = logging.getLogger(f'axonius.{__name__}')
 
 
-class KennaAdapter(AdapterBase):
+class KennaAdapter(AdapterBase, Configurable):
     # pylint: disable=too-many-instance-attributes
     class MyDeviceAdapter(DeviceAdapter):
         asset_id = Field(int, 'Asset ID')
@@ -42,12 +43,12 @@ class KennaAdapter(AdapterBase):
         return RESTConnection.test_reachability(client_config['domain'],
                                                 https_proxy=client_config.get('https_proxy'))
 
-    @staticmethod
-    def get_connection(client_config):
+    def get_connection(self, client_config):
         connection = KennaConnection(domain=client_config['domain'],
                                      api_token=client_config['api_token'],
                                      verify_ssl=client_config['verify_ssl'],
-                                     https_proxy=client_config.get('https_proxy'))
+                                     https_proxy=client_config.get('https_proxy'),
+                                     use_export_api=self.__use_export_api)
         with connection:
             pass
         return connection
@@ -158,9 +159,6 @@ class KennaAdapter(AdapterBase):
                             wasc_id=vuln.get('wasc_id'),
                             vuln_solution=vuln.get('solution'),
                             fix_title=fix.get('title'),
-                            fix_diagnosis=fix.get('diagnosis'),
-                            fix_consequence=fix.get('consequence'),
-                            fix_solution=fix.get('solution'),
                             fix_url=fix.get('url'),
                             fix_updated_at=parse_date(fix.get('updated_at')),
                             patch_publication_date=parse_date(fix.get('patch_publication_date')),
@@ -225,5 +223,28 @@ class KennaAdapter(AdapterBase):
 
     @classmethod
     def adapter_properties(cls):
-        # AUTOADAPTER - check if you need to add other properties'
         return [AdapterProperty.Assets]
+
+    @classmethod
+    def _db_config_schema(cls) -> dict:
+        return {
+            'items': [
+                {
+                    'name': 'use_export_api',
+                    'type': 'bool',
+                    'title': 'Use export API'
+                },
+            ],
+            'required': ['use_export_api'],
+            'pretty_name': 'Kenna Security Platform Configuration',
+            'type': 'array'
+        }
+
+    @classmethod
+    def _db_config_default(cls):
+        return {
+            'use_export_api': False,
+        }
+
+    def _on_config_update(self, config):
+        self.__use_export_api = config.get('use_export_api') or False

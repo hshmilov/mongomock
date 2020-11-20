@@ -166,6 +166,11 @@ class ServiceNowAdapterBase(AdapterBase):
             'title': 'Fetch business unit from \'business_unit\' table'
         },
         {
+            'name': 'fetch_nics_table',
+            'type': 'bool',
+            'title': 'Fetch NIC information from \'cmdb_ci_network_adapter\' table'
+        },
+        {
             'name': 'fetch_installed_software',
             'type': 'bool',
             'title': 'Fetch Software package information from \'cmdb_sam_sw_install\' table'
@@ -227,6 +232,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'fetch_software_product_model',
         'fetch_cmdb_model',
         'fetch_business_unit_table',
+        'fetch_nics_table',
         'fetch_installed_software',
         'use_dotwalking',
     ]
@@ -252,6 +258,7 @@ class ServiceNowAdapterBase(AdapterBase):
         'fetch_software_product_model': True,
         'fetch_cmdb_model': True,
         'fetch_business_unit_table': False,
+        'fetch_nics_table': True,
         'fetch_installed_software': False,
         'contract_parent_numbers': None,
         'diversiture_contract_parent_numbers': None,
@@ -291,6 +298,8 @@ class ServiceNowAdapterBase(AdapterBase):
                     'fetch_software_product_model': self._fetch_software_product_model,
                     'fetch_cmdb_model': self._fetch_cmdb_model,
                     'fetch_installed_software': self._fetch_installed_software,
+                    'fetch_business_unit_dict': self._fetch_business_unit_dict,
+                    'fetch_nics_table': self._fetch_nics_table,
                     'last_seen_timedelta': self._snow_last_updated_threashold,
                     'user_last_created_timedelta': self._snow_user_last_created_threashold,
                     'contract_parent_numbers': self._prepare_contract_parent_numbers(),
@@ -1279,6 +1288,7 @@ class ServiceNowAdapterBase(AdapterBase):
         self._fetch_cmdb_model = config.get('fetch_cmdb_model') or False
         self._fetch_business_unit_dict = config.get('fetch_business_unit_dict') or False
         self._fetch_installed_software = config.get('fetch_installed_software') or False
+        self._fetch_nics_table = config['fetch_nics_table'] if 'fetch_nics_table' in config else True
         self._contract_parent_numbers: Optional[str] = config.get('contract_parent_numbers')
         self._diversiture_contract_parent_numbers: Optional[str] = config.get('diversiture_contract_parent_numbers')
         self._use_dotwalking = bool(config.get('use_dotwalking'))

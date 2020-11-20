@@ -249,6 +249,7 @@ class ServiceNowConnectionMixin(ABC):
                              fetch_software_product_model=False,
                              fetch_cmdb_model=False,
                              fetch_business_unit_dict=False,
+                             fetch_nics_table=True,
                              parallel_requests=consts.DEFAULT_ASYNC_CHUNK_SIZE,
                              contract_parent_numbers: Optional[str]=None,
                              use_dotwalking: bool=False,
@@ -293,6 +294,10 @@ class ServiceNowConnectionMixin(ABC):
             additional_params_by_table_key[consts.RELATIONS_TABLE] = {
                 'sysparm_fields': self._prepare_relations_fields()
             }
+
+        if fetch_nics_table:
+            sub_tables_to_request_by_key[consts.NIC_TABLE_KEY] = consts.NIC_TABLE_KEY
+            sub_tables_to_request_by_key[consts.CI_IPS_TABLE] = consts.CI_IPS_TABLE
 
         # dotwalked tables
         if not use_dotwalking:
