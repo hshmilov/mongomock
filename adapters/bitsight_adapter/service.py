@@ -67,7 +67,8 @@ class BitsightAdapter(ScannerAdapterBase):
                                         https_proxy=client_config.get('https_proxy'),
                                         proxy_username=client_config.get('proxy_username'),
                                         proxy_password=client_config.get('proxy_password'),
-                                        apikey=client_config['apikey'])
+                                        apikey=client_config['apikey'],
+                                        company_name=client_config.get('company_name'))
         with connection:
             pass
         return connection
@@ -127,6 +128,11 @@ class BitsightAdapter(ScannerAdapterBase):
                     'title': 'API Key',
                     'type': 'string',
                     'format': 'password'
+                },
+                {
+                    'name': 'company_name',
+                    'title': 'Company name (blank to get data from parent company)',
+                    'type': 'string'
                 },
                 {
                     'name': 'cidr_csv',

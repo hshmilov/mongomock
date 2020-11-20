@@ -355,7 +355,7 @@ class StaticUserCorrelatorEngine(CorrelatorEngineBase):
                                                   [],
                                                   [],
                                                   [],
-                                                  [compare_mail],
+                                                  [compare_mail, ad_upn_do_not_contradict],
                                                   {'Reason': 'They have the same mail'},
                                                   CorrelationReason.StaticAnalysis)
 
