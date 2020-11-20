@@ -5,6 +5,7 @@ from bson import ObjectId
 from axonius.consts.gui_consts import (ChartMetrics, SortType, SortOrder)
 from axonius.consts.plugin_consts import PLUGIN_NAME
 from axonius.dashboard.chart.base import Chart
+from axonius.dashboard.chart.config import SortableConfig
 from axonius.entities import EntityType
 from axonius.modules.common import AxoniusCommon
 from axonius.plugin_base import PluginBase, return_error
@@ -60,7 +61,7 @@ def generate_dashboard_uncached(dashboard_id: ObjectId, sort_by=None, sort_order
         return {}
     try:
         chart_obj = Chart.from_dict(dashboard)
-        if sort_by or sort_order:
+        if sort_by and sort_order and isinstance(chart_obj.config, SortableConfig):
             chart_obj.config.apply_sort(sort_by, sort_order)
         dashboard['data'] = chart_obj.generate_data(common)
 
@@ -91,7 +92,7 @@ def dashboard_historical_uncached(dashboard_id: ObjectId, for_date: str, sort_by
         if chart_obj.metric == ChartMetrics.timeline:
             dashboard['error'] = 'Historical data generation for timeline chart is not supported'
             return beautify_db_entry(dashboard)
-        if sort_by or sort_order:
+        if sort_by and sort_order and isinstance(chart_obj.config, SortableConfig):
             chart_obj.config.apply_sort(sort_by, sort_order)
         dashboard['data'] = chart_obj.generate_data(common, for_date)
 

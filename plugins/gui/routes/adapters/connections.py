@@ -237,7 +237,7 @@ class Connections:
                                                   client_label.get(CONNECTION_LABEL) if client_label else None,
                                                   connection_from_db.get(CONNECTION_DISCOVERY,
                                                                          connection_discovery_default),
-                                                  connection_from_db[CLIENT_ACTIVE],
+                                                  connection_from_db.get(CLIENT_ACTIVE),
                                                   prev_instance_id or instance_id)
             # object post updated
             updated_client_info = get_client_info(connection_data['connection'],
