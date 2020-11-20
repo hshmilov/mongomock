@@ -153,6 +153,7 @@ class TenableSecurityScannerConnection(RESTConnection):
 
                 if fetch_asset_groups:
                     logger.info(f'Start fetching asset groups')
+                    device_list = list(device_list)
                     asset_groups_mapping = self._get_asset_groups_mapping(repository_id=repository_id,
                                                                           device_list=device_list,
                                                                           async_chunks=async_chunks)
