@@ -549,6 +549,10 @@ class TaniumAssetAdapter(AdapterBase, Configurable):
             except Exception:
                 logger.exception(f'Problem with parsing device {device_raw}')
             if device:
+                try:
+                    device.id = device.id + '#_@' + device.hostname
+                except Exception:
+                    device.id = device.id + '#_@'
                 yield device
 
     @staticmethod

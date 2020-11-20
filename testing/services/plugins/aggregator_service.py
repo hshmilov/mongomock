@@ -2168,6 +2168,32 @@ class AggregatorService(PluginService, SystemService, UpdatablePluginMixin):
             },
             new_id_func)
 
+    @db_migration(raise_on_failure=False)
+    def _update_schema_version_68(self):
+        print('Update to schema 68 - Convert Tanium Asset id to a new format')
+
+        def new_id_func(current_id: str, entity: dict) -> Union[bool, str]:
+            data = entity.get('data')
+            if not data:
+                return False
+
+            device_hostname = data.get('hostname') or ''
+
+            # Check if not migrated already
+            if current_id.endswith(f'#_@{device_hostname}'):
+                return False
+
+            # return new id
+            return f'{current_id}#_@{device_hostname}'
+
+        self._migrate_entity_id_generic(
+            EntityType.Devices,
+            'tanium_asset_adapter',
+            {
+                'adapters.data.hostname': 1,
+            },
+            new_id_func)
+
     def _migrate_entity_id_generic(self, *args, **kwargs):
         number_of_retries = 0
         while True:
