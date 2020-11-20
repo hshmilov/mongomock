@@ -531,6 +531,8 @@ class TenableIoAdapter(ScannerAdapterBase, Configurable):
             device.id = str(device_id) + hostname or ''
             device.hostname = hostname
             ip = agent_raw.get('ip')
+            if ip == hostname and self.__drop_only_ip_devices:
+                return None
             if ip:
                 device.add_nic(None, [ip])
             device.last_seen = parse_date(agent_raw.get('last_connect'))
