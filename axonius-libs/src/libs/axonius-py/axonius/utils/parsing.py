@@ -1360,7 +1360,7 @@ def is_start_with_valid_ip(value):
 
 BAD_ASSETS = ['dev', 'localhost', 'delete', 'deleted', 'na', 'macbook-air', 'macbook-pro',
               'macbook air', 'macbook pro', 'mac mini', 'mac-mini', 'ge', '10', '3', 'n/a',
-              'unknown', 'test1', 'test2', 'stage', 'ipad', 'iphone', 'qa', 'blackberry classic']
+              'unknown', 'test', 'test1', 'test2', 'stage', 'ipad', 'iphone', 'qa', 'blackberry classic']
 
 
 def is_asset_before_host_device(adapter_device):
@@ -1566,8 +1566,8 @@ def dangerous_asset_names_do_not_contradict(adapter_device1, adapter_device2):
             asset1 = get_asset_name(adapter_device1)
             asset2 = get_hostname(adapter_device2)
             if asset1 and asset2:
-                asset1_lower = asset1.split('.')[0].lower().strip('e').strip('g').split('_')[0]
-                asset2_lower = asset2.split('.')[0].lower().strip('e').strip('g').split('_')[0]
+                asset1_lower = asset1.split('.')[0].lower().strip('e').strip('g').strip('sf').split('_')[0]
+                asset2_lower = asset2.split('.')[0].lower().strip('e').strip('g').strip('sf').split('_')[0]
                 if asset1_lower in asset2_lower or asset2_lower in asset1_lower:
                     return True
                 return False
@@ -1577,8 +1577,8 @@ def dangerous_asset_names_do_not_contradict(adapter_device1, adapter_device2):
             asset1 = get_hostname(adapter_device1)
             asset2 = get_asset_name(adapter_device2)
             if asset1 and asset2:
-                asset1_lower = asset1.split('.')[0].lower().strip('e').strip('g').split('_')[0]
-                asset2_lower = asset2.split('.')[0].lower().strip('e').strip('g').split('_')[0]
+                asset1_lower = asset1.split('.')[0].lower().strip('e').strip('g').strip('sf').split('_')[0]
+                asset2_lower = asset2.split('.')[0].lower().strip('e').strip('g').strip('sf').split('_')[0]
                 if asset1_lower in asset2_lower or asset2_lower in asset1_lower:
                     return True
                 return False

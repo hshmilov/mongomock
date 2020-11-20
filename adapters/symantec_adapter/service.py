@@ -23,6 +23,8 @@ class SymantecAdapter(AdapterBase):
         online_status = Field(str, 'Online Status')
         cids_defset_version = Field(str, 'Definition Set Version')
         cids_defset_date = Field(datetime.datetime, 'Definition Set Date')
+        av_defset_version = Field(str, 'AV Definition Set Version')
+        av_defset_date = Field(datetime.datetime, 'AV Definition Set Date')
         last_scan_date = Field(datetime.datetime, 'Last Scan Date')
         is_npvdi_client = Field(bool, 'Is Npvdi Client')
         install_type = Field(str, 'Install Type')
@@ -189,6 +191,19 @@ class SymantecAdapter(AdapterBase):
                                 if device_raw.get('logonUserName') != 'None' else None
                 except Exception:
                     logger.exception(f'Problem adding user to {device_raw}')
+                av_defset_version = device_raw.get('avDefsetVersion')
+                device.av_defset_version = av_defset_version
+                try:
+                    if av_defset_version:
+                        device.av_defset_version = av_defset_version[6:9]
+                        try:
+                            device.av_defset_date = datetime.datetime(year=int('20' + av_defset_version[0:2]),
+                                                                      month=int(av_defset_version[2:4]),
+                                                                      day=int(av_defset_version[4:6]))
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
                 cids_defset_version = device_raw.get('cidsDefsetVersion')
                 device.cids_defset_version = cids_defset_version
                 try:
