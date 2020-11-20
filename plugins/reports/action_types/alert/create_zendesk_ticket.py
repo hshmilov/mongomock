@@ -113,7 +113,8 @@ class ZendeskTicketAction(ActionTypeAlert):
                                        password=self._config['password'],
                                        verify_ssl=self._config['verify_ssl'],
                                        https_proxy=self._config.get('https_proxy'))
-        message = connection.create_ticket(ticket_subject=self._config['ticket_subject'],
-                                           priority=self._config.get('priority'),
-                                           ticket_body=ticket_body)
+        with connection:
+            message = connection.create_ticket(ticket_subject=self._config['ticket_subject'],
+                                               priority=self._config.get('priority'),
+                                               ticket_body=ticket_body)
         return AlertActionResult(not message, message or 'Success')
