@@ -23,7 +23,7 @@ from utils import (AXONIUS_DEPLOYMENT_PATH,
                    current_file_system_path,
                    print_state,
                    run_cmd,
-                   chown_folder, verify_storage_requirements)
+                   chown_folder, verify_storage_requirements, ORIGINAL_PWD)
 
 TIMESTAMP = datetime.datetime.now().strftime('%y%m%d-%H%M')
 
@@ -254,7 +254,7 @@ def copy_installer_to_httpd():
             continue
         if Path(part).exists():
             break
-    installer_path = (Path(os.getenv('ORIGINAL_PWD')) / part).absolute()
+    installer_path = (Path(ORIGINAL_PWD) / part).absolute()
     print(f'installer_path: {installer_path}')
     if installer_path:
         try:

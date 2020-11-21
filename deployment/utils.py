@@ -97,7 +97,8 @@ def verify_storage_requirements():
 
 
 CORTEX_PATH, current_file_system_path = get_resources()
-CWD = os.path.abspath(os.getenv('ORIGINAL_PWD', os.getcwd()))
+ORIGINAL_PWD = os.getenv('ORIGINAL_PWD', os.getenv('USER_PWD', os.getcwd()))
+CWD = os.path.abspath(ORIGINAL_PWD)
 # Check if inside docker or not
 if Path('/.dockerenv').exists():
     AXONIUS_DEPLOYMENT_PATH = CWD
