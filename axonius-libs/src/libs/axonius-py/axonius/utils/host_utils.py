@@ -5,6 +5,8 @@ from datetime import timezone
 
 import dateutil.parser
 
+from axonius.consts.system_consts import CORTEX_PATH
+
 PYTHON_LOCKS_DIR = Path('/tmp/ax-locks/')
 PYTHON_INSTALLER_LOCK_FILE = PYTHON_LOCKS_DIR / 'python_installer.lock'
 PYTHON_UPGRADE_LOCK_FILE = PYTHON_LOCKS_DIR / 'upgrade.lock'
@@ -13,6 +15,9 @@ MONGOALIVE_WATCHDOG_IN_PROGRESS = PYTHON_LOCKS_DIR / 'mongoalive_watchdog_in_pro
 WEAVE_WATCHDOG_IN_PROGRESS = PYTHON_LOCKS_DIR / 'weave_watchdog_in_progress.lock'
 WATCHDOGS_ARE_DISABLED_FILE = PYTHON_LOCKS_DIR / 'watchdogs_are_disabled.lock'
 LOCK_TOO_OLD_THRESH = 5 * 60 * 60
+# need to be outside of tmp folder for wd running outside host container
+PYTHON_RESTORE_LOCK_FILE = Path(CORTEX_PATH) / 'restore/restore.lock'
+RESTORE_LOCK_TOO_OLD_THRESH = 12 * 60 * 60
 
 
 def get_free_disk_space():
@@ -33,8 +38,9 @@ def get_free_disk_space():
 
 
 def check_installer_locks(unlink: bool = True):
-    return check_lock_file(PYTHON_INSTALLER_LOCK_FILE, unlink=unlink) or\
-        check_lock_file(PYTHON_UPGRADE_LOCK_FILE, unlink=unlink)
+    return (check_lock_file(PYTHON_INSTALLER_LOCK_FILE, unlink=unlink) or
+            check_lock_file(PYTHON_UPGRADE_LOCK_FILE, unlink=unlink) or
+            check_lock_file(PYTHON_RESTORE_LOCK_FILE, unlink=unlink, lock_threshold=RESTORE_LOCK_TOO_OLD_THRESH))
 
 
 def check_watchdog_action_in_progress():
@@ -68,14 +74,14 @@ def create_lock_file(lock_filename: Path):
         return False
 
 
-def check_lock_file(path: Path, unlink: bool = True):
+def check_lock_file(path: Path, unlink: bool = True, lock_threshold=LOCK_TOO_OLD_THRESH):
     """
     checks if lock file exists and not older than LOCK_TOO_OLD_THRESH. If it is, it deletes it.
     :return:
     """
     if not path.is_file():
         return False
-    if time.time() - path.stat().st_ctime > LOCK_TOO_OLD_THRESH:
+    if time.time() - path.stat().st_ctime > lock_threshold:
         if unlink:
             try:
                 path.unlink()

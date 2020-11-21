@@ -56,7 +56,7 @@ class GuiAliveTask(WatchdogTask):
                 continue
 
             if check_installer_locks():
-                self.report_info('upgrade is in progress...')
+                self.report_info('system upgrade/restore is in progress...')
                 continue
 
             if check_watchdog_action_in_progress():

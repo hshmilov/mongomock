@@ -9,19 +9,17 @@ from json import loads
 from pathlib import Path
 from zipfile import ZipFile
 
-from pymongo import MongoClient
-
 from axonius.consts.plugin_consts import BYTES_TO_MB
 from axonius.consts.system_consts import (AXONIUS_SETTINGS_PATH, CORTEX_PATH,
-                                          METADATA_PATH, NODE_ID_ABSOLUTE_PATH,
-                                          PYRUN_PATH_HOST)
+                                          METADATA_PATH, NODE_ID_ABSOLUTE_PATH)
 from axonius.db.db_client import DB_HOST, DB_PASSWORD, DB_USER
 from axonius.logging.audit_helper import AuditType
 from axonius.modules.common import AxoniusCommon
 from axonius.utils.debug import greenprint, redprint, yellowprint
+from axonius.utils.host_utils import create_lock_file, PYTHON_RESTORE_LOCK_FILE
 from devops.axonius_system import main as axonius
 from scripts.instances.delete_instances_user import LOGGED_IN_MARKER_PATH
-from scripts.watchdog.watchdog_main import WATCHDOG_MAIN_SCRIPT_PATH
+
 
 RESTORE_FOLDER = Path(CORTEX_PATH) / 'restore'
 RESTORE_WORKING_PATH = Path(CORTEX_PATH) / 'infrastructures/database/scripts/restore'
@@ -161,10 +159,8 @@ class AxoniusRestore:
             raise RuntimeError('backup version does not match installed version')
 
     @staticmethod
-    def _watchdog_tasks(action=''):
-        # until permission issues fix explicit call to stop watchdog as root
-        # https://axonius.atlassian.net/browse/AX-8746
-        subprocess.check_call(shlex.split(f' {PYRUN_PATH_HOST} {WATCHDOG_MAIN_SCRIPT_PATH} {action}'))
+    def _disable_watchdogs():
+        create_lock_file(PYTHON_RESTORE_LOCK_FILE)
 
     @staticmethod
     def reset_weave():
@@ -223,12 +219,11 @@ class AxoniusRestore:
         self._decrypt('aggregator.gz.gpg')
         greenprint('*** Axonius System is shutting down  ***')
         axonius(shlex.split('system down --all'))
-        self._watchdog_tasks(action='stop')
+        self._disable_watchdogs()
         self.copy_axon_settings()
         if self._is_backup_on_different_node:
             self.reset_weave()
         axonius(shlex.split('service mongo up --prod'))
-
         # aggregator archive file
         self.mongorestore(is_aggregator=True)
         # all other dbs
@@ -247,11 +242,10 @@ class AxoniusRestore:
 
         print(f'*** Starting Axonius after restore : {axon_system_start_cmd} ***')
         axonius(shlex.split(axon_system_start_cmd))
-        self._watchdog_tasks(action='start')
+        remove_watchdogs_lockfile()
         self.audit_restore_done()
         if self._delete_backup_file:
             (RESTORE_FOLDER / self.file_name).unlink()
-        self._watchdog_tasks(action='start')
 
     def audit_restore_done(self):
         try:
@@ -261,6 +255,11 @@ class AxoniusRestore:
 
         except Exception as e:
             redprint(f'failed to update response completed audit message {e}')
+
+
+def remove_watchdogs_lockfile():
+    if PYTHON_RESTORE_LOCK_FILE.exists():
+        PYTHON_RESTORE_LOCK_FILE.unlink()
 
 
 def clean_restore_folder():
@@ -313,6 +312,7 @@ def main(args=None):
         redprint(f'restore exit with error {e}')
         return 1
     finally:
+        remove_watchdogs_lockfile()
         if RESTORE_FOLDER.exists():
             clean_restore_folder()
 

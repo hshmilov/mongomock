@@ -28,7 +28,7 @@ class ChefClientTask(WatchdogTask):
 
         while True:
             if check_installer_locks():
-                self.report_info('upgrade lock existed. skipping restart')
+                self.report_info('system upgrade/restore lock existed. skipping restart')
                 time.sleep(60 * 60)  # wait until upgrade is complete
                 continue
             else:

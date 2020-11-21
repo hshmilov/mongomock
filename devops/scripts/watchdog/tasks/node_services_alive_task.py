@@ -79,7 +79,7 @@ class NodeServicesAliveTask(WatchdogTask):
 
                 if NODE_MARKER_PATH.is_file():
                     if check_installer_locks():
-                        self.report_info('upgrade is in progress...')
+                        self.report_info('system upgrade / restore is in progress...')
                         continue
 
                     self.report_info(f'node flow')
