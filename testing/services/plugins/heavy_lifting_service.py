@@ -1,4 +1,3 @@
-from multiprocessing import cpu_count
 import pytest
 from services.plugin_service import PluginService
 from services.simple_fixture import initialize_fixture
@@ -14,16 +13,12 @@ class HeavyLiftingService(PluginService):
         return 3
 
     @property
-    def get_uwsgi_max_listen_conns(self) -> int:
-        return 10000
-
-    @property
     def get_max_uwsgi_processes(self) -> int:
-        return (cpu_count() - 1) or 1
+        return 8  # return (cpu_count() - 1) or 1
 
     @property
     def get_min_uwsgi_processes(self) -> int:
-        return 0
+        return 2
 
 
 @pytest.fixture(scope='module')
