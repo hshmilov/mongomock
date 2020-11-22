@@ -122,6 +122,8 @@ def main():
             else:
                 print(f'Upgrader completed - {status} {metadata}')
                 delete_tmp_dir()
+                if success:
+                    shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 
             if PYTHON_INSTALLER_LOCK_FILE.is_file():
                 PYTHON_INSTALLER_LOCK_FILE.unlink()

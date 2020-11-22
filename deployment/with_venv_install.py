@@ -1,7 +1,6 @@
 import json
 import os
 import pwd
-import shutil
 import subprocess
 
 from retrying import retry
@@ -10,8 +9,7 @@ from retrying import retry
 from axonius.consts.plugin_consts import PLUGIN_UNIQUE_NAME, MONGO_UNIQUE_NAME
 from axonius.consts.system_consts import NODE_MARKER_PATH
 from conf_tools import get_customer_conf_json
-from install import (TEMPORAL_PATH,
-                     AXONIUS_SETTINGS_PATH,
+from install import (AXONIUS_SETTINGS_PATH,
                      DELETE_INSTANCES_USER_CRON_SCRIPT_PATH,
                      SYSTEM_BOOT_CRON_SCRIPT_PATH,
                      BOOTED_FOR_PRODUCTION_MARKER_PATH,
@@ -86,8 +84,6 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
 
         # Chown again after the run, to make log file which are created afterwards be also part of it
         set_special_permissions()
-
-        shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 
     if not first_time and not NODE_MARKER_PATH.is_file() and not master_only and node_instances:
         print_state('Downloading upgrader on nodes')
