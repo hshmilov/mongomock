@@ -1660,7 +1660,7 @@ class GuiService(PluginService, SystemService, UpdatablePluginMixin):
 
     @property
     def run_timeout(self):
-        return 60 * 6
+        return 60 * 10
 
     # I don't want to change all dockerfiles
     # pylint: disable=W0221
