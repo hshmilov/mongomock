@@ -5,6 +5,7 @@ IMAGE_NAME='nexus.pub.axonius.com/axonius/axonius-manager'
 DOCKER_SOCK='/var/run/docker.sock'
 WEAVE_SOCK='/var/run/weave/weave.sock'
 WEAVE_PATH='/var/run/weave'
+PYTHON_LOCK_DIR='/tmp/ax-locks'
 WEAVE_BIN_PATH=$(command -v weave) || WEAVE_BIN_PATH='/usr/local/bin/weave'
 AXONIUS_SH='/home/ubuntu/cortex/axonius.sh'
 CORTEX_PATH='/home/ubuntu/cortex'
@@ -99,10 +100,11 @@ function create_axonius_manager {
     [ -f "${WEAVE_BIN_PATH}" ] && [ ! -d "${WEAVE_PATH}" ] && sudo mkdir "${WEAVE_PATH}"
     [ -d "${WEAVE_PATH}" ] && weave_mount="-v ${WEAVE_PATH}:${WEAVE_PATH}"
     [ "$(pwd)" != "$CORTEX_PATH" ] && pwd_mount="-v $(pwd):$(pwd)"
+    [ -d "$PYTHON_LOCK_DIR" ] && locks_dir="-v ${PYTHON_LOCK_DIR}:${PYTHON_LOCK_DIR}"
     if [ -f $TMP_ENV_FILE ]; then
-      echo docker run -d -v "$DOCKER_SOCK":"$DOCKER_SOCK" -v "$DEFAULT_ROOT_DOCKER_DIR":"$DEFAULT_ROOT_DOCKER_DIR" "$weave_mount" "$pwd_mount" --env-file=$TMP_ENV_FILE -e SERVICE_DIR="$(pwd)" -v "$(pwd)":/home/ubuntu/cortex -v "$(pwd)"/"$INSTANCE_CONTROL_SSH_KEYS":/root/.ssh --name="$DOCKER_NAME" --net="$DOCKER_NETWORK_NAME" --network-alias="$DOCKER_NAME" "$IMAGE_NAME" | /bin/sh
+      echo docker run -d -v "$DOCKER_SOCK":"$DOCKER_SOCK" -v "$DEFAULT_ROOT_DOCKER_DIR":"$DEFAULT_ROOT_DOCKER_DIR" "$locks_dir" "$weave_mount" "$pwd_mount" --env-file=$TMP_ENV_FILE -e SERVICE_DIR="$(pwd)" -v "$(pwd)":/home/ubuntu/cortex -v "$(pwd)"/"$INSTANCE_CONTROL_SSH_KEYS":/root/.ssh --name="$DOCKER_NAME" --net="$DOCKER_NETWORK_NAME" --network-alias="$DOCKER_NAME" "$IMAGE_NAME" | /bin/sh
     else
-      echo docker run -d -v "$DOCKER_SOCK":"$DOCKER_SOCK" -v "$DEFAULT_ROOT_DOCKER_DIR":"$DEFAULT_ROOT_DOCKER_DIR" "$weave_mount" "$pwd_mount" -e SERVICE_DIR="$(pwd)" -v "$(pwd)":/home/ubuntu/cortex -v "$(pwd)"/"$INSTANCE_CONTROL_SSH_KEYS":/root/.ssh --name="$DOCKER_NAME" --net="$DOCKER_NETWORK_NAME" --network-alias="$DOCKER_NAME" "$IMAGE_NAME" | /bin/sh
+      echo docker run -d -v "$DOCKER_SOCK":"$DOCKER_SOCK" -v "$DEFAULT_ROOT_DOCKER_DIR":"$DEFAULT_ROOT_DOCKER_DIR" "$locks_dir" "$weave_mount" "$pwd_mount" -e SERVICE_DIR="$(pwd)" -v "$(pwd)":/home/ubuntu/cortex -v "$(pwd)"/"$INSTANCE_CONTROL_SSH_KEYS":/root/.ssh --name="$DOCKER_NAME" --net="$DOCKER_NETWORK_NAME" --network-alias="$DOCKER_NAME" "$IMAGE_NAME" | /bin/sh
     fi
   fi
 }
