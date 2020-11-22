@@ -124,6 +124,7 @@ with AutoOutputFlush():
 
         add_source_folder(os.path.basename(output_path), exclude)
         shutil.copy(images_tar, f'{INSTALLER_TEMP_DIR}/images.tar')
+        shutil.rmtree((Path(INSTALLER_TEMP_DIR) / 'sources' / INSTALLER_TEMP_DIR).as_posix(), ignore_errors=True)
         print_state('Finished copying')
         print_state('Creating installer')
         subprocess.check_output(['/usr/bin/makeself', '--notemp', '--gzip', INSTALLER_TEMP_DIR,
