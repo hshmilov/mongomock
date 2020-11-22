@@ -15,6 +15,8 @@ EVENTS = (HOSTNAME_CHANGE_FILENAME, UPGRADE_EVENT_FILENAME)
 class InotifyTask(WatchdogTask):
     def __init__(self):
         super().__init__(name=self.__class__.__name__.lower())
+        if not Path(DIR_PATH).exists():
+            Path(DIR_PATH).mkdir()
 
     def run(self):
         inotify = INotify()
