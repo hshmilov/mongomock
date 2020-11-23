@@ -46,6 +46,13 @@ def is_filter_in_value(value, term, include):
 
 
 def filter_value(value, filters):
+
+    # temporary solution to old filters saved only as string
+    if isinstance(filters, str):
+        if is_filter_in_value(value=value, term=filters, include=True):
+            return value
+        return ''
+
     for column_filter in filters:
         term = column_filter.get('term', '')
         include = column_filter.get('include', True)
