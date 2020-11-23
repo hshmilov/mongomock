@@ -389,10 +389,10 @@ export const downloadFile = (fileType, response, objName, objSource) => {
 };
 
 export const FETCH_DATA_CONTENT_CSV = 'FETCH_DATA_CONTENT_CSV';
-export const fetchDataContentCSV = ({ state, dispatch }, payload) => dispatch(REQUEST_API, {
+export const fetchDataContentCSV = ({ state, dispatch, getters }, payload) => dispatch(REQUEST_API, {
   rule: `${payload.endpoint || payload.module}/csv`,
   method: 'POST',
-  data: createPostContentRequest(state, payload),
+  data: createPostContentRequest(state, payload, getters.getAllowedDates(payload.module)),
 }).then((response) => {
   downloadFile('csv', response, null, payload.source);
 });
