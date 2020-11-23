@@ -134,21 +134,24 @@ class CiscoUcsmAdapter(AdapterBase):
             gateway=gateway if gateway != BAD_IP else None
         )
 
-    # pylint: disable=W1303
+    # pylint: disable=W1303, too-many-branches
     def _create_device(self, device_raw):
         try:
-            device_raw = device_raw
             device = self._new_device_adapter()
-            device_id = device_raw.get('uuid')
+            device_id = device_raw.get('uuid') or device_raw.get('oob_if_mac')
             if not device_id:
                 logger.warning(f'Bad device with no ID {device_raw}')
                 return None
-            device.id = device_id + '_' + (device_raw.get('original_uuid') or 'unnamed')
+            if 'original_uuid' in device_raw:
+                secondary_id = device_raw.get('original_uuid')
+            else:
+                secondary_id = device_raw.get('serial')
+            device.id = str(device_id) + '_' + str(secondary_id or 'unnamed')
             device.device_serial = device_raw.get('serial')
             device.device_model = device_raw.get('model')
             device.classid = device_raw.get('class_id')
             device.distinguished_name = device_raw.get('dn')
-            if device_raw.get('class_id') != CLSIDS['switch']:
+            if device_raw.get('class_id') == CLSIDS['switch']:
                 try:
                     self.__add_switch_iface(device, device_raw)
                 except Exception as e:
