@@ -55,7 +55,7 @@ from axonius.consts.plugin_consts import (NODE_ID,
                                           NODE_HOSTNAME,
                                           NODE_USE_AS_ENV_NAME,
                                           NODE_IP_LIST, AXONIUS_SETTINGS_DIR_NAME,
-                                          CUSTOMER_CONF_NAME, INSTANCE_CONTROL_PLUGIN_NAME, NODE_METRICS)
+                                          CUSTOMER_CONF_NAME, MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME, NODE_METRICS)
 from axonius.mixins.configurable import Configurable
 from axonius.plugin_base import (VOLATILE_CONFIG_PATH, PluginBase, add_rule,
                                  return_error, is_db_restore_on_new_node)
@@ -374,12 +374,12 @@ class CoreService(Triggerable, PluginBase, Configurable):
             return jsonify(self._is_adapter_via_tunnel(adapter_name))
         if request.method == 'PUT' and not self._is_adapter_via_tunnel(adapter_name):
             if self._set_adapter_via_tunnel(adapter_name):
-                self._trigger_remote_plugin(INSTANCE_CONTROL_PLUGIN_NAME, f'start:{adapter_name}', reschedulable=False,
+                self._trigger_remote_plugin(MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME, f'start:{adapter_name}', reschedulable=False,
                                             blocking=True, error_as_warning=True, priority=True)
                 self.log_activity(AuditCategory.Adapters, AuditAction.Connected, {'adapter': adapter_name})
         if request.method == 'DELETE' and self._is_adapter_via_tunnel(adapter_name):
             if self._delete_adapter_from_tunnel(adapter_name):
-                self._trigger_remote_plugin(INSTANCE_CONTROL_PLUGIN_NAME, f'start:{adapter_name}', reschedulable=False,
+                self._trigger_remote_plugin(MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME, f'start:{adapter_name}', reschedulable=False,
                                             blocking=True, error_as_warning=True, priority=True)
                 self.log_activity(AuditCategory.Adapters, AuditAction.Disconnected, {'adapter': adapter_name})
         return ''

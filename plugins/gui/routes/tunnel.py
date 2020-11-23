@@ -11,7 +11,7 @@ from flask import Response, request
 from axonius.consts.core_consts import CORE_CONFIG_NAME
 from axonius.consts.gui_consts import FeatureFlagsNames
 from axonius.consts.metric_consts import TunnelMetrics
-from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME, \
+from axonius.consts.plugin_consts import MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME, \
     TUNNEL_SETTINGS, TUNNEL_EMAILS_RECIPIENTS, TUNNEL_PROXY_SETTINGS, \
     TUNNEL_PROXY_ADDR, TUNNEL_PROXY_PORT, TUNNEL_PROXY_USER, TUNNEL_PROXY_PASSW, \
     TUNNEL_DISCONNECT_SYSTEM_NOTIFICATION_CONTENT
@@ -52,7 +52,7 @@ class Tunnel:
             return Response('Tunnel is not enabled on system')
 
         res = self._trigger_remote_plugin(
-            INSTANCE_CONTROL_PLUGIN_NAME,
+            MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME,
             job_name='execute_shell',
             data={'cmd': DOCKER_PING_CMD.format(ip=DEFAULT_TUNNEL_CLIENT_IP)},
             timeout=30,

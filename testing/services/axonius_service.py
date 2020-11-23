@@ -31,7 +31,7 @@ from axonius.consts.system_consts import (AXONIUS_DNS_SUFFIX, AXONIUS_NETWORK,
                                           CUSTOMER_CONF_PATH, CORTEX_PATH)
 from axonius.devices.device_adapter import NETWORK_INTERFACES_FIELD
 from axonius.plugin_base import EntityType
-from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME
+from axonius.consts.plugin_consts import MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME
 from services import adapters, plugins, standalone_services
 from services.axon_service import TimeoutException
 from services.plugin_service import AdapterService, PluginService
@@ -330,7 +330,7 @@ class AxoniusService:
         if self.instance_mode == InstancesModes.mongo_only.value and NODE_MARKER_PATH.is_file():
             # when running a mongo only instance, we want to wait for the master instance to be up
             # and then start up the rest of the services (for now, instance control)
-            print(f'Waiting for {INSTANCE_CONTROL_PLUGIN_NAME} to be registered on core')
+            print(f'Waiting for {MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME} to be registered on core')
             self.wait_for_master_instance_control()
 
         for service in services_to_start:
@@ -497,10 +497,10 @@ class AxoniusService:
                 output, err, _ = tunnel.run_command_in_container(
                     f'wget -O- --no-check-certificate {CORE_ADDRESS}/api/register',
                     shell='sh')
-                if INSTANCE_CONTROL_PLUGIN_NAME in output.decode('ascii'):
+                if MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME in output.decode('ascii'):
                     break
             except Exception as e:
-                print(f'{INSTANCE_CONTROL_PLUGIN_NAME} is not registered')
+                print(f'{MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME} is not registered')
             time.sleep(5)
         return True
 

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from axonius.consts.gui_consts import (FeatureFlagsNames, RootMasterNames, CloudComplianceNames, ParallelSearch,
                                        DashboardControlNames, AdvancedGUINames, LOGGED_IN_MARKER_PATH, USERS_COLLECTION,
                                        BackupSettingsNames)
-from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME, AXONIUS_USER_NAME
+from axonius.consts.plugin_consts import MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME, AXONIUS_USER_NAME
 from axonius.mixins.configurable import Configurable
 from axonius.modules.common import AxoniusCommon
 from axonius.utils.build_modes import get_build_mode, BuildModes, is_fed_build_mode
@@ -51,10 +51,10 @@ class FeatureFlags(Configurable):
     def start_bandicoot(self):
         logger.info('Starting bandicoot')
         try:
-            self._trigger_remote_plugin(INSTANCE_CONTROL_PLUGIN_NAME, f'start:postgres', reschedulable=False,
-                                        blocking=True, error_as_warning=True)
-            self._trigger_remote_plugin(INSTANCE_CONTROL_PLUGIN_NAME, f'start:bandicoot', reschedulable=False,
-                                        blocking=False, error_as_warning=True)
+            self._trigger_remote_plugin(MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME, f'start:postgres',
+                                        reschedulable=False, blocking=True, error_as_warning=True)
+            self._trigger_remote_plugin(MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME, f'start:bandicoot',
+                                        reschedulable=False, blocking=False, error_as_warning=True)
         # catch any exception, otherwise gui will crash, any error that is raised it already documented in the
         # trigger functions
         except BaseException:
@@ -63,10 +63,10 @@ class FeatureFlags(Configurable):
     def stop_bandicoot(self):
         logger.info('Stopping bandicoot')
         try:
-            self._trigger_remote_plugin(INSTANCE_CONTROL_PLUGIN_NAME, f'stop:bandicoot', reschedulable=False,
-                                        blocking=False, error_as_warning=True)
-            self._trigger_remote_plugin(INSTANCE_CONTROL_PLUGIN_NAME, f'stop:postgres', reschedulable=False,
-                                        blocking=False, error_as_warning=True)
+            self._trigger_remote_plugin(MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME, f'stop:bandicoot',
+                                        reschedulable=False, blocking=False, error_as_warning=True)
+            self._trigger_remote_plugin(MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME, f'stop:postgres',
+                                        reschedulable=False, blocking=False, error_as_warning=True)
         # see start bandicoot function
         except BaseException:
             pass

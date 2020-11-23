@@ -5,7 +5,7 @@ import secrets
 import magic
 
 from axonius.consts.gui_consts import IMAGE_MIME_TYPES
-from axonius.consts.plugin_consts import INSTANCE_CONTROL_PLUGIN_NAME
+from axonius.consts.plugin_consts import MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME
 from axonius.plugin_base import PluginBase
 from axonius.plugin_exceptions import InvalidRequestException
 from axonius.utils.files import UPLOADED_FILES_DIR, UPLOADED_HOST_FILES_DIR
@@ -42,7 +42,7 @@ def upload_image_file(field_name, file):
         file.save(temporary_file_path)
         # pylint: disable=protected-access
         PluginBase.Instance._trigger_remote_plugin(
-            INSTANCE_CONTROL_PLUGIN_NAME,
+            MASTER_INSTANCE_CONTROL_PLUGIN_UNIQUE_NAME,
             job_name='run:imagemagick',
             data={'image_folder': UPLOADED_HOST_FILES_DIR,
                   'source': file_to_convert, 'target': converted_file_name},
