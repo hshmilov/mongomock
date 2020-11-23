@@ -76,7 +76,7 @@ DUPLICATES_NAMES = ['SYSOPS-MACBOOK-PRO.LOCAL']
 BAD_SERIALS = ['INVALID', 'NON-UNIQUES/N', '0', '1', 'SYSTEMSERIALNUMBER', 'TOBEFILLEDBYO.E.M.', 'VIRTUAL', 'DELETE',
                'DELETED', 'NO INFORMATION', '00001', 'VMWARE VIRTUAL PLATFORM',
                'DEFAULTSTRING', 'NA', 'N/A', '123456789', 'UNKNOWN', '-', '0123456789', 'NA-VIRTUAL', 'TBD', 'X',
-               '0123456789ABCDEF', 'NONE', 'VMWARE', '(VM)', 'SUN', 'NO INFORMATION', 'VIRTUAL SERVER']
+               '0123456789ABCDEF', 'NONE', 'VMWARE', '(VM)', 'SUN', 'NOINFORMATION', 'VIRTUAL SERVER']
 
 
 # This number stands for the default number of days needed for us to say a device is old,
