@@ -47,6 +47,7 @@ BOOTED_FOR_PRODUCTION_MARKER_PATH = os.path.join(AXONIUS_SETTINGS_PATH, '.booted
 INSTANCE_CONNECT_USER_PASSWORD = 'M@ke1tRain'
 PYTHON_INSTALLER_LOCK_DIR = Path('/tmp/ax-locks/')
 PYTHON_INSTALLER_LOCK_FILE = PYTHON_INSTALLER_LOCK_DIR / 'python_installer.lock'
+PYTHON_INSTALLER_INTERNAL_LOCK_FILE = PYTHON_INSTALLER_LOCK_DIR / 'python_internal_installer.lock'
 PYTHON_INSTALLED_HTTPD_PATH = Path(AXONIUS_DEPLOYMENT_PATH) / 'testing/services/plugins/httpd_service/httpd/upgrade.py'
 INTERNAL_INSTALLER_FAILURE_MARKER_FILE_PATH = Path('/home/ubuntu/cortex/internal_upgrade_failed')
 
@@ -94,12 +95,16 @@ def main():
     with AutoOutputFlush():
         success = False
         try:
-            if check_lock_file(PYTHON_INSTALLER_LOCK_FILE):
+            if (not is_inside_container() and check_lock_file(PYTHON_INSTALLER_LOCK_FILE)) or \
+                    (is_inside_container() and check_lock_file(PYTHON_INSTALLER_INTERNAL_LOCK_FILE)):
                 print(f'Install is already in progress')
             else:
                 if not PYTHON_INSTALLER_LOCK_DIR.is_dir():
                     PYTHON_INSTALLER_LOCK_DIR.mkdir(exist_ok=True)
-                PYTHON_INSTALLER_LOCK_FILE.touch()
+                if is_inside_container():
+                    PYTHON_INSTALLER_INTERNAL_LOCK_FILE.touch()
+                else:
+                    PYTHON_INSTALLER_LOCK_FILE.touch()
                 success = start_install_flow()
 
             try:
@@ -114,6 +119,8 @@ def main():
                 print(f'Upgrader completed inside container - {status} {metadata}')
                 if not success:
                     INTERNAL_INSTALLER_FAILURE_MARKER_FILE_PATH.touch()
+                if PYTHON_INSTALLER_INTERNAL_LOCK_FILE.is_file():
+                    PYTHON_INSTALLER_INTERNAL_LOCK_FILE.unlink()
             elif INTERNAL_INSTALLER_FAILURE_MARKER_FILE_PATH.exists():
                 print(f'Upgrader completed - failure in internal installer {metadata}')
                 INTERNAL_INSTALLER_FAILURE_MARKER_FILE_PATH.unlink()
