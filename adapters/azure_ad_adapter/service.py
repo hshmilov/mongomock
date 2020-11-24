@@ -89,8 +89,8 @@ class AzureAdAdapter(AdapterBase, Configurable):
                                         threshold_settings=(f'azure-ad-intune-token-{tenant_id}', 60 * 24)
                                     )
                             except Exception:
-                                logger.exception(f'Problem checking generation time of azure refresh token to warn user'
-                                                 f' from upcoming expired tokens.')
+                                logger.exception('Problem checking generation time of azure refresh token to warn user'
+                                                 ' from upcoming expired tokens.')
                     else:
                         refresh_token = connection.get_refresh_token_from_authorization_code(auth_code)
                         # client_config[AZURE_AUTHORIZATION_CODE] = 'refresh-' + refresh_token  # override refresh token
@@ -111,7 +111,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                                 notification_content = f'Intune token for tenant {tenant_id!r} has expired, ' \
                                                        f'Azure AD adapter is not fetching Intune data'
                                 self.create_notification(
-                                    f'Azure AD Adapter: Intune token expired',
+                                    'Azure AD Adapter: Intune token expired',
                                     content=notification_content,
                                     severity_type='error',
                                     threshold_settings=(f'azure-ad-intune-token-{tenant_id}', 60 * 24)
@@ -129,7 +129,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                 else:
                     connection.test_connection()
             except Exception:
-                logger.exception(f'Failed connecting to Azure AD')
+                logger.exception('Failed connecting to Azure AD')
                 raise
             metadata_dict = dict()
             if client_config.get(AZURE_ACCOUNT_TAG):
@@ -232,6 +232,9 @@ class AzureAdAdapter(AdapterBase, Configurable):
 
     def _create_azure_ad_device(self, raw_device_data):
         try:
+            if self.__exclude_trust_type and raw_device_data.get('trustType') == 'AzureAd':
+                return None
+
             # Schema: https://developer.microsoft.com/en-us/graph/docs/api-reference/v1.0/resources/user
             device = self._new_device_adapter()
             device.azure_ad_device_type = AZURE_AD_DEVICE_TYPE
@@ -245,7 +248,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                 device.last_sign_in = parse_date(raw_device_data.get('approximateLastSignInDateTime'))
                 device.last_seen = parse_date(raw_device_data.get('approximateLastSignInDateTime'))
             except Exception:
-                logger.exception(f'Can not parse last seen')
+                logger.exception('Can not parse last seen')
 
             device.azure_device_id = raw_device_data.get('deviceId')
             device.name = raw_device_data.get('displayName')
@@ -267,7 +270,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                 device.ad_on_premise_last_sync_date_time = parse_date(
                     raw_device_data.get('onPremisesLastSyncDateTime'))
             except Exception:
-                logger.exception(f'Can not parse last sync date time')
+                logger.exception('Can not parse last sync date time')
 
             device.ad_on_premise_trust_type = raw_device_data.get('trustType')
             device.figure_os((raw_device_data.get('operatingSystem') or '') + ' '
@@ -314,7 +317,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                 device.add_hd(total_size=total_storage_space_in_gb,
                               free_size=free_storage_space_in_gb)
             except Exception:
-                logger.exception(f'Problem getting storage')
+                logger.exception('Problem getting storage')
             device.managed_device_name = device_raw.get('managedDeviceName')
             try:
                 device.figure_os((device_raw.get('osVersion') or '') + ' ' +
@@ -467,7 +470,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     user.ad_on_premise_last_sync_date_time = parse_date(raw_user_data.get('onPremisesLastSyncDateTime'))
                 except Exception:
                     # warning(exception), but continue running
-                    logger.exception(f'Can not parse onPremisesLastSyncDateTime')
+                    logger.exception('Can not parse onPremisesLastSyncDateTime')
 
                 # groups
                 user_groups = raw_user_data.get('memberOf')
@@ -604,6 +607,11 @@ class AzureAdAdapter(AdapterBase, Configurable):
                     'description': 'The adapter will fetch email activity from Office 365 from the'
                                    ' last amount of days specified here.'
                 },
+                {
+                    'name': 'exclude_trust_type',
+                    'title': 'Exclude Azure AD joined devices',
+                    'type': 'bool'
+                }
 
             ],
             'required': [
@@ -611,6 +619,7 @@ class AzureAdAdapter(AdapterBase, Configurable):
                 'allow_fetch_mfa',
                 'do_not_fail_on_intune',
                 'email_activity_period',
+                'exclude_trust_type',
             ],
             'pretty_name': 'Azure AD Configuration',
             'type': 'array'
@@ -626,7 +635,8 @@ class AzureAdAdapter(AdapterBase, Configurable):
             'retry_max': 3,
             'async_error_sleep_time': 3,
             'do_not_fail_on_intune': False,
-            'email_activity_period': 0
+            'email_activity_period': 0,
+            'exclude_trust_type': False
         }
 
     def _on_config_update(self, config):
@@ -635,10 +645,11 @@ class AzureAdAdapter(AdapterBase, Configurable):
         self.__allow_beta_api = config['allow_beta_api']
         self.__allow_fetch_mfa = config['allow_fetch_mfa']
         if self.__allow_fetch_mfa and not self.__allow_beta_api:
-            logger.warning(f'NOTICE: allow_fetch_mfa is on but allow_beta_api is off,'
-                           f' even though fetching mfa requires beta api!')
+            logger.warning('NOTICE: allow_fetch_mfa is on but allow_beta_api is off,'
+                           ' even though fetching mfa requires beta api!')
         self.__async_retries_max = config['retry_max']
         self.__parallel_count = config['parallel_count']
         self.__async_retry_time = config['async_error_sleep_time']
         self.__do_not_fail_on_intune = config.get('do_not_fail_on_intune') or False
         self.__email_activity_period = config.get('email_activity_period', 0)
+        self.__exclude_trust_type = config.get('exclude_trust_type') or False
