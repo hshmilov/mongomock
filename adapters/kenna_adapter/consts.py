@@ -7,8 +7,9 @@ DEFAULT_DOMAIN = 'https://api.kennasecurity.com'
 DOMAIN_RE = re.compile(r'https://(?P<company_name>[^.]+)\.(?P<rest_url>(?:[^.]+\.)*?kennasecurity\.com)/?')
 DOMAIN_TO_API_RE_REPLACE = r'https://api.\g<rest_url>'
 
-# 1 hour
-MAX_EXPORT_EXECUTION_TIME = 60 * 60
+# 12 hours
+MAX_EXPORT_EXECUTION_TIME = 12 * 60 * 60
+EXPORT_SAMPLE_SLEEP_TIME = 60
 
 # The export is currently processing. Try again later.
 EXPORT_STATUS_RETRY = 'The export is currently processing'

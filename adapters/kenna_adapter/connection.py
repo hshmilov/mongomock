@@ -207,8 +207,8 @@ class KennaConnection(RESTConnection):
 
             if (isinstance(response.get('message'), str) and
                     consts.EXPORT_STATUS_RETRY.lower() in response.get('message').lower()):
-                logger.info(f'Export still running, sleeping for 5 seconds.')
-                time.sleep(5)
+                logger.info(f'Export still running, sleeping for {consts.EXPORT_SAMPLE_SLEEP_TIME} seconds.')
+                time.sleep(consts.EXPORT_SAMPLE_SLEEP_TIME)
                 continue
 
             logger.info(f'Export completed.')
@@ -289,7 +289,10 @@ class KennaConnection(RESTConnection):
         # start async export of the various model types, they will have 30 days lifespan
         # ASSETS
         assets_export = self._generate_data_export('asset',
-                                                   export_additional_params={'status': ['active']})
+                                                   export_additional_params={
+                                                       'status': ['active'],
+                                                       'exclude_child_filter': ['Include all assets'],
+                                                   })
         if not assets_export:
             logger.info(f'No assets received')
             return
