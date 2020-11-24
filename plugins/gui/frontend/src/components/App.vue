@@ -191,18 +191,16 @@ export default {
       },
     );
     this.handleExpiration();
-    if (!localStorage.getItem(ACCESS_TOKEN)) {
-      const queryString = window.location.search;
-      const urlParams = new URLSearchParams(queryString);
-      if (urlParams.has(SAML_TOKEN)) {
-        const targetPath = localStorage.getItem(CURRENT_PATH);
-        const samlToken = urlParams.get(SAML_TOKEN);
-        await this.login({ saml_token: samlToken });
-        const query = { ...this.$route.query };
-        delete query.saml_token;
-        localStorage.removeItem(CURRENT_PATH);
-        this.$router.replace({ path: targetPath });
-      }
+    const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
+    if (urlParams.has(SAML_TOKEN)) {
+      const targetPath = localStorage.getItem(CURRENT_PATH);
+      const samlToken = urlParams.get(SAML_TOKEN);
+      await this.login({ saml_token: samlToken });
+      const query = { ...this.$route.query };
+      delete query.saml_token;
+      localStorage.removeItem(CURRENT_PATH);
+      this.$router.replace({ path: targetPath });
     }
     this.getUser();
   },
