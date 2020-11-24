@@ -162,7 +162,8 @@ def provision():
 
         chef_dir = Path('/etc/chef')
         chef_dir.mkdir(mode=0o750, exist_ok=True)
-        licenses_dir = chef_dir.joinpath('accepted_licenses').mkdir(exist_ok=True)
+        licenses_dir = chef_dir.joinpath('accepted_licenses')
+        licenses_dir.mkdir(exist_ok=True)
         licenses_dir.joinpath('chef_infra_client').touch()
         licenses_dir.joinpath('inspec').touch()
     else:
