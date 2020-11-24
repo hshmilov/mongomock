@@ -21,10 +21,6 @@ def wait_until_machine_is_ready():
             time.sleep(10)
 
 
-def chown_cortex():
-    subprocess.check_call(['sudo', 'chown', '-R', 'ubuntu:ubuntu', CORTEX_PATH])
-
-
 def chmod_cortex_dirs():
     subprocess.check_call('sudo find . -type d -exec chmod 755 {} \\;'.split(' '), cwd=str(CORTEX_PATH))
 

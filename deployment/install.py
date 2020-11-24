@@ -23,7 +23,7 @@ from utils import (AXONIUS_DEPLOYMENT_PATH,
                    current_file_system_path,
                    print_state,
                    run_cmd,
-                   chown_folder, verify_storage_requirements, ORIGINAL_PWD)
+                   chown_folder, verify_storage_requirements, ORIGINAL_PWD, INSTALLER_TEMP_DIR)
 
 TIMESTAMP = datetime.datetime.now().strftime('%y%m%d-%H%M')
 
@@ -80,7 +80,9 @@ def is_inside_container():
 def delete_tmp_dir():
     try:
         # Protect against unknown unknown situations where the calculation will lead to a dangerous path
-        if Path(__file__).absolute().parents[2].as_posix() not in ('/home/ubuntu', '/home/ubuntu/cortex'):
+        to_delete_path = Path(__file__).absolute().parents[2].as_posix()
+        if to_delete_path not in ('/home/ubuntu', '/home/ubuntu/cortex') and \
+                to_delete_path.endswith(INSTALLER_TEMP_DIR):
             shutil.rmtree(Path(__file__).absolute().parents[2].as_posix())
     except Exception as e:
         print(f'Couldn\'t delete tmp install directory - {str(e)}')
@@ -129,6 +131,7 @@ def main():
             else:
                 print(f'Upgrader completed - {status} {metadata}')
                 delete_tmp_dir()
+                chown_folder(AXONIUS_DEPLOYMENT_PATH, sudo=True)
                 if success:
                     shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 

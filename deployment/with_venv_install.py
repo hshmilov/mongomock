@@ -79,7 +79,7 @@ def after_venv_activation(first_time, no_research, master_only, installer_path):
     # This parts tends to have problems. Minimize the code after it as much as possible.
     if not first_time:
         start_axonius()
-        if no_research is False:
+        if not no_research and not node_instances:
             run_discovery()
 
         # Chown again after the run, to make log file which are created afterwards be also part of it
