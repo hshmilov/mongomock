@@ -355,7 +355,7 @@ class NexposeV3Client(NexposeClient):
 
     def get_vuln_details(self, vuln_id):
         if vuln_id in self.vuln_ids_dict:
-            return self.vuln_ids_dict[vuln_id]
+            return self.vuln_ids_dict[vuln_id].copy()
         try:
             headers = None
             if self._token:
