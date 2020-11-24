@@ -13,6 +13,7 @@ from urllib3 import ProxyManager
 
 PIDFILE = Path('/tmp/sched_prov.pid')
 PROVISION_MARKER = Path('/home/ubuntu/CHEF_PROVISION.marker')
+IMAGE_CREATION_PROCESS_MARKER = Path('/tmp/IMAGE_CREATION_IN_PROGRESS.marker')
 NODE_MARKER_PATH_HOST = '/home/ubuntu/cortex/.axonius_settings/connected_to_master.marker'
 CREDS = 'creds'
 VERIFY = 'verify'
@@ -234,6 +235,10 @@ def main():
 
     if not PROVISION_MARKER.is_file():
         print(f'{PROVISION_MARKER} does not exist, already provisioned')
+        sys.exit(-1)
+
+    if IMAGE_CREATION_PROCESS_MARKER.is_file():
+        print(f'{IMAGE_CREATION_PROCESS_MARKER} does exist, we are still in the image creation process.')
         sys.exit(-1)
 
     try:
