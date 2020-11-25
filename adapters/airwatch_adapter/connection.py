@@ -92,13 +92,14 @@ class AirwatchConnection(RESTConnection):
 
             yield from (response.get('Devices') or [])
 
-    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, arguments-differ
+    # pylint: disable=too-many-branches, too-many-statements, too-many-locals, arguments-differ, too-many-arguments
     def get_device_list(
             self,
             async_chunks: Optional[int] = None,
             page_size: Optional[int] = None,
             socket_recv_session_timeout: Optional[int] = None,
             fetch_not_enrolled_devices: bool=True,
+            fetch_extended_details: bool=True,
             fetch_device_apps: bool=True,
             fetch_device_networks: bool=True,
             fetch_device_notes: bool=True,
@@ -129,8 +130,12 @@ class AirwatchConnection(RESTConnection):
                 continue
             device_raw_by_device_id.setdefault(str(device_id), device_raw)
 
+            curr_device_requests = []
             # request extended device information
-            curr_device_requests = [{'name': f'{DEVICES_ENDPOINT}/{str(device_id)}'}]
+            if fetch_extended_details:
+                curr_device_requests.append({
+                    'name': f'{DEVICES_ENDPOINT}/{str(device_id)}'
+                })
 
             if fetch_device_apps:
                 curr_device_requests.append({

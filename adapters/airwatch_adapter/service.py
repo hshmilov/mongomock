@@ -94,6 +94,7 @@ class AirwatchAdapter(AdapterBase, Configurable):
                 page_size=self.__page_size,
                 socket_recv_session_timeout=self.__recv_session_timeout,
                 fetch_not_enrolled_devices=self._fetch_not_enrolled_devices,
+                fetch_extended_details=self._fetch_extended_details,
                 fetch_device_apps=self._fetch_device_apps,
                 fetch_device_networks=self._fetch_device_networks,
                 fetch_device_notes=self._fetch_device_notes,
@@ -371,6 +372,11 @@ class AirwatchAdapter(AdapterBase, Configurable):
                     'title': 'Fetch devices not enrolled'
                 },
                 {
+                    'name': 'fetch_extended_details',
+                    'type': 'bool',
+                    'title': 'Fetch extended information'
+                },
+                {
                     'name': 'fetch_device_apps',
                     'type': 'bool',
                     'title': 'Fetch device apps'
@@ -401,6 +407,7 @@ class AirwatchAdapter(AdapterBase, Configurable):
                          'recv_session_timeout',
                          'page_size',
                          'fetch_not_enrolled_devices',
+                         'fetch_extended_details',
                          'fetch_device_apps',
                          'fetch_device_networks',
                          'fetch_device_notes',
@@ -417,6 +424,7 @@ class AirwatchAdapter(AdapterBase, Configurable):
             'page_size': 500,
             'recv_session_timeout': 300,
             'fetch_not_enrolled_devices': True,
+            'fetch_extended_details': True,
             'fetch_device_apps': False,
             'fetch_device_networks': False,
             'fetch_device_notes': False,
@@ -429,6 +437,7 @@ class AirwatchAdapter(AdapterBase, Configurable):
         self.__page_size = config.get('page_size') or 500
         self.__recv_session_timeout = config.get('recv_session_timeout') or 300
         self._fetch_not_enrolled_devices = config.get('fetch_not_enrolled_devices')
+        self._fetch_extended_details = config['fetch_extended_details'] if 'fetch_extended_details' in config else True
         self._fetch_device_apps = config.get('fetch_device_apps')
         self._fetch_device_networks = config.get('fetch_device_networks')
         self._fetch_device_notes = config.get('fetch_device_notes')
