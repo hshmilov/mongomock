@@ -35,7 +35,6 @@ from axonius.mixins.triggerable import RunIdentifier, Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error, is_db_restore_on_new_node
 from axonius.utils.files import get_local_config_file
 from axonius.utils.threading import LazyMultiLocker
-from install import PYTHON_INSTALLER_LOCK_FILE
 from instance_control.snapshots_stats import calculate_snapshot
 
 logger = logging.getLogger(f'axonius.{__name__}')
