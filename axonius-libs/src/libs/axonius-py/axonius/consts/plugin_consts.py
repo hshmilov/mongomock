@@ -21,6 +21,8 @@ AXONIUS_BACKUP_PATH = Path(AXONIUS_HOME_DIR_NAME) / 'backup'
 JWT_CONF_NAME = 'jwt_conf.json'
 UPLOADED_FILES_DIR_NAME = 'uploaded_files'
 BOOT_CONFIGURATION_SCRIPT_FILENAME = 'boot_configuration_script.tar'
+REDIS_CONF_PATH = Path('/etc/redis')
+PYTHON_LOCKS_DIR = Path('/tmp/ax-locks/')
 
 # SERVICES #
 MONGO_UNIQUE_NAME = 'mongo'

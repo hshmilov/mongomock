@@ -28,13 +28,14 @@ from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME,
                                           PLUGIN_NAME,
                                           NODE_ID, GUI_PLUGIN_NAME, CORE_UNIQUE_NAME,
                                           BOOT_CONFIGURATION_SCRIPT_FILENAME, AXONIUS_MANAGER_PLUGIN_NAME,
-                                          NODE_HOSTNAME)
+                                          NODE_HOSTNAME, PYTHON_LOCKS_DIR)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.mixins.triggerable import RunIdentifier, Triggerable
 from axonius.plugin_base import PluginBase, add_rule, return_error, is_db_restore_on_new_node
 from axonius.utils.files import get_local_config_file
 from axonius.utils.threading import LazyMultiLocker
+from install import PYTHON_INSTALLER_LOCK_FILE
 from instance_control.snapshots_stats import calculate_snapshot
 
 logger = logging.getLogger(f'axonius.{__name__}')
@@ -122,7 +123,6 @@ class InstanceControlService(Triggerable, PluginBase):
         self.__host_ssh = get_ssh_connection()
         self.__cortex_path = os.environ['CORTEX_PATH']
         self.__adapters = get_adapter_names_mappings(self.__exec_system_command('ls'))
-        self.upgrade_started = False
         assert len(self.__adapters) > 100, f'Can not get all adapters mappings, got just {self.__adapters}'
 
         logger.info('Got SSH and adapter names mapping')
@@ -230,12 +230,11 @@ class InstanceControlService(Triggerable, PluginBase):
 
     @add_rule(InstanceControlConsts.TriggerUpgrade, methods=['GET'], should_authenticate=False)
     def trigger_upgrade(self):
-        if self.upgrade_started:
+        if PYTHON_LOCKS_DIR.exists():
             logger.info(f'Upgrade already running')
             return 'Upgrade in progress'
 
         logger.info(f'Running the upgrade')
-        self.upgrade_started = True
         return log_file_and_return(
             self.__upgrade_host()
         )

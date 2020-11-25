@@ -2,6 +2,10 @@ import os
 import subprocess
 
 import pytest
+
+from axonius.utils.host_utils import PYTHON_LOCKS_DIR
+# Re importing in case we change the location either on the host or on our containers
+from axonius.consts.plugin_consts import PYTHON_LOCKS_DIR as CONTAINER_SIDE_PYTHON_LOCKS_DIR
 from services.plugin_service import PluginService
 from services.simple_fixture import initialize_fixture
 from axonius.consts.system_consts import CORTEX_PATH
@@ -54,7 +58,9 @@ class InstanceControlService(PluginService):
     @property
     def volumes_override(self):
         volumes = [f'{self.rsa_keys}:/home/axonius/app/rsa_keys',
-                   f'/etc/hostname:{HOSTNAME_FILE_PATH}', f'{self.service_dir}/metrics:/home/axonius/app/metrics']
+                   f'/etc/hostname:{HOSTNAME_FILE_PATH}',
+                   f'{self.service_dir}/metrics:/home/axonius/app/metrics',
+                   f'{PYTHON_LOCKS_DIR.as_posix()}:{CONTAINER_SIDE_PYTHON_LOCKS_DIR.as_posix()}']
         volumes.extend(super().volumes_override)
         return volumes
 
