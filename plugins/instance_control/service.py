@@ -6,6 +6,7 @@ import socket
 import struct
 import time
 from pathlib import Path
+from threading import Timer
 from typing import Dict, Iterable
 import json
 
@@ -28,7 +29,7 @@ from axonius.consts.plugin_consts import (PLUGIN_UNIQUE_NAME,
                                           PLUGIN_NAME,
                                           NODE_ID, GUI_PLUGIN_NAME, CORE_UNIQUE_NAME,
                                           BOOT_CONFIGURATION_SCRIPT_FILENAME, AXONIUS_MANAGER_PLUGIN_NAME,
-                                          NODE_HOSTNAME, PYTHON_LOCKS_DIR)
+                                          NODE_HOSTNAME, PYTHON_INSTALLER_LOCK_FILE)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.scheduler_consts import SCHEDULER_CONFIG_NAME
 from axonius.mixins.triggerable import RunIdentifier, Triggerable
@@ -171,7 +172,7 @@ class InstanceControlService(Triggerable, PluginBase):
         post_json is ignored
         Starts or stops the given plugin. Only works on adapters.
         """
-        if self.upgrading_cluster_in_prog:
+        if self.upgrading_cluster_in_prog or PYTHON_INSTALLER_LOCK_FILE.exists():
             raise RuntimeError('Upgrade in progress')
 
         if job_name == 'execute_shell':
@@ -227,13 +228,21 @@ class InstanceControlService(Triggerable, PluginBase):
 
         return 'Download completed'
 
+    def set_upgrading_cluster_in_prog_false(self):
+        self.upgrading_cluster_in_prog = False
+
     @add_rule(InstanceControlConsts.TriggerUpgrade, methods=['GET'], should_authenticate=False)
     def trigger_upgrade(self):
-        if PYTHON_LOCKS_DIR.exists():
+
+        if PYTHON_INSTALLER_LOCK_FILE.exists():
             logger.info(f'Upgrade already running')
             return 'Upgrade in progress'
 
         logger.info(f'Running the upgrade')
+
+        # Will set upgrading_cluster_in_prog to False in 5 minutes if this service is not restarted
+        Timer(60 * 5, self.set_upgrading_cluster_in_prog_false).start()
+
         return log_file_and_return(
             self.__upgrade_host()
         )

@@ -23,6 +23,7 @@ UPLOADED_FILES_DIR_NAME = 'uploaded_files'
 BOOT_CONFIGURATION_SCRIPT_FILENAME = 'boot_configuration_script.tar'
 REDIS_CONF_PATH = Path('/etc/redis')
 PYTHON_LOCKS_DIR = Path('/tmp/ax-locks/')
+PYTHON_INSTALLER_LOCK_FILE = PYTHON_LOCKS_DIR / 'python_installer.lock'
 
 # SERVICES #
 MONGO_UNIQUE_NAME = 'mongo'
