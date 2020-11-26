@@ -464,6 +464,24 @@ class AzureCloudConnection(RESTConnection):
                                f'{subscription.get("subscriptionId")} : state is {state}')
                 skipped += 1
                 continue
+
+            # Skip subscriptions that are not really active:
+            # "The current subscription type is not permitted to perform operations on
+            # any provider namespace. Please use a different subscription"
+            try:
+                # Try to pull network security groups to identify an inactive subscription
+                list(self.rm_subscription_paginated_get(
+                    'providers/Microsoft.Network/networkSecurityGroups',
+                    subscription['subscriptionId'],
+                    api_version='2020-05-01'
+                ))
+            except Exception as e:
+                if 'the current subscription type is not permitted to perform operations on' in str(e).lower():
+                    logger.warning(f'Skipping subscription {subscription.get("displayName") or "unknown"} with ID '
+                                   f'{subscription.get("subscriptionId")} : Not permitted to perform '
+                                   f'operations on any provider namespace')
+                    skipped += 1
+                    continue
             self.__all_subscriptions[subscription['subscriptionId']] = subscription
 
         logger.info(f'Connected with access to {len(self.__all_subscriptions)} subscriptions plus {skipped} skipped')
