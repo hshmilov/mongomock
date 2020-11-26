@@ -35,7 +35,8 @@ class InotifyTask(WatchdogTask):
                             destination_command_file.unlink()
                         elif event.name == UPGRADE_EVENT_FILENAME:
                             destination_command_file = self.dir_path / UPGRADE_EVENT_FILENAME
-                            os.system(f'{self.dir_path.as_posix()}/devops/scripts/instances/run_upgrade_on_instance.sh')
+                            os.system(f'{self.dir_path.as_posix()}/../'
+                                      f'devops/scripts/instances/run_upgrade_on_instance.sh')
                             destination_command_file.unlink()
             except Exception as e:
                 self.report_error(f'Couldn\'t execute task on host due to {str(e)}')
