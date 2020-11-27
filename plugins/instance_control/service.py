@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 import shlex
+import shutil
 import socket
 import struct
 import time
@@ -117,6 +118,9 @@ class InstanceControlService(Triggerable, PluginBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(get_local_config_file(__file__), *args, **kwargs)
+        rsa_keys_path = Path('/home/axonius/app/rsa_keys')
+        if rsa_keys_path.owner() != 'root':
+            shutil.chown(rsa_keys_path.as_posix(), user='root', group='root')
         # pylint: disable=W0511
         # TODO: Figure out if this connection has be refreshed from time to time
         self.__host_ssh = get_ssh_connection()

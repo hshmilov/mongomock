@@ -88,7 +88,7 @@ def delete_tmp_dir():
         print(f'Couldn\'t delete tmp install directory - {str(e)}')
 
 
-# pylint: disable=too-many-branches
+# pylint: disable=too-many-branches,too-many-statements
 def main():
     metadata = ''
     if os.geteuid() != 0:
@@ -132,6 +132,15 @@ def main():
                 print(f'Upgrader completed - {status} {metadata}')
                 delete_tmp_dir()
                 chown_folder(AXONIUS_DEPLOYMENT_PATH, sudo=True)
+                # Chown rsa_keys to root folder so SSHD wont cry on permissions problem
+                try:
+                    chown_folder(
+                        (Path(AXONIUS_DEPLOYMENT_PATH) / 'plugins' / 'instance_control' / 'rsa_keys').as_posix(),
+                        user='root',
+                        sudo=True
+                    )
+                except Exception:
+                    print_state('Couldn\'t change ownership to rsa_keys directory')
                 if success:
                     shutil.rmtree(TEMPORAL_PATH, ignore_errors=True)
 

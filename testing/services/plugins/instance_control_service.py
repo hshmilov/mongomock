@@ -1,4 +1,5 @@
 import os
+import shlex
 import subprocess
 
 import pytest
@@ -13,6 +14,10 @@ class InstanceControlService(PluginService):
         super().__init__('instance-control')
         self.rsa_keys = f'{self.service_dir}/rsa_keys'
         self.ssh_key_filename = os.path.join(self.rsa_keys, 'id_rsa')
+        try:
+            subprocess.check_call(shlex.split(f'chown -R root:root {self.rsa_keys}'))
+        except subprocess.CalledProcessError:
+            pass
 
     def __create_rsa_keys(self):
         '''
