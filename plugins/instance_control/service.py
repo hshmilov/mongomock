@@ -126,7 +126,10 @@ class InstanceControlService(Triggerable, PluginBase):
         self.__host_ssh = get_ssh_connection()
         self.__cortex_path = os.environ['CORTEX_PATH']
         self.__adapters = get_adapter_names_mappings(self.__exec_system_command('ls'))
+        logger.info('Setting upgrading_cluster_in_prog and upgrade_started to False')
+        self.upgrading_cluster_in_prog = False
         self.upgrade_started = False
+        logger.info('upgrading_cluster_in_prog and upgrade_started falsifying was done')
         assert len(self.__adapters) > 100, f'Can not get all adapters mappings, got just {self.__adapters}'
 
         logger.info('Got SSH and adapter names mapping')
@@ -211,6 +214,7 @@ class InstanceControlService(Triggerable, PluginBase):
     @add_rule(InstanceControlConsts.EnterUpgradeModeEndpoint, methods=['GET'], should_authenticate=False)
     def enter_upgrade_mode(self):
         logger.info(f'Entering pre-upgrade mode ...')
+        logger.info('Setting upgrading_cluster_in_prog to True')
         self.upgrading_cluster_in_prog = True
         return log_file_and_return(self.__exec_system_command(f'adapter all down'))
 
@@ -240,6 +244,7 @@ class InstanceControlService(Triggerable, PluginBase):
 
         logger.info(f'Running the upgrade')
         self.upgrade_started = True
+        logger.info('upgrade_started was set to True')
         return log_file_and_return(
             self.__upgrade_host()
         )

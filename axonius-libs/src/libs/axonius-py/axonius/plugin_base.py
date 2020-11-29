@@ -113,7 +113,7 @@ from axonius.consts.plugin_consts import (
     DEVICE_ADAPTERS_HISTORICAL_RAW_DB, DEVICES_FIELDS, USERS_FIELDS, USER_ADAPTERS_RAW_DB,
     DEVICE_ADAPTERS_RAW_DB, REMOVE_DOMAIN_FROM_PREFERRED_HOSTNAME, PASSWORD_EXPIRATION_DAYS, CLIENTS_COLLECTION,
     PASSWORD_MANGER_AWS_SM_VAULT, AWS_SM_ACCESS_KEY_ID, AWS_SM_SECRET_ACCESS_KEY, AWS_SM_REGION, CLIENT_ACTIVE,
-    CALCULATE_PREFERRED_FIELDS_INTERVAL, POST_DB_RESTORE_ENV_VAR_NAME, INSTANCE_CONTROL_PLUGIN_NAME)
+    CALCULATE_PREFERRED_FIELDS_INTERVAL, POST_DB_RESTORE_ENV_VAR_NAME)
 from axonius.consts.plugin_subtype import PluginSubtype
 from axonius.consts.system_consts import GENERIC_ERROR_MESSAGE, DEFAULT_SSL_CIPHERS, NO_RSA_SSL_CIPHERS, \
     SSL_CIPHERS_HIGHER_SECURITY
@@ -781,9 +781,6 @@ class PluginBase(Configurable, Feature, ABC):
         logger.info(f'Plugin {self.plugin_unique_name}:{self.version} '
                     f'with axonius-libs:{self.lib_version} started successfully')
 
-        # This is specifically to prevent instance-control from restarting while core is offline during upgrade
-        self.upgrading_cluster_in_prog = False
-
     def run_all_migrations(self):
         migrator = DBMigration(migrations_prefix=MIGRATION_PREFIX,
                                migration_class=self,
@@ -1040,9 +1037,7 @@ class PluginBase(Configurable, Feature, ABC):
         except Exception as e:
             self.comm_failure_counter += 1
             # Checking if two minutes passed, also checking we're not during upgrade
-            if self.comm_failure_counter > retries and \
-                    not (self.plugin_name == INSTANCE_CONTROL_PLUGIN_NAME
-                         and self.upgrading_cluster_in_prog):
+            if self.comm_failure_counter > retries:
                 logger.exception(f'Error communicating with Core for more '
                                  f'than 2 minutes, exiting. Reason: {e}')
                 # pylint: disable=protected-access
