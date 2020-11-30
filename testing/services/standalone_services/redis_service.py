@@ -18,7 +18,7 @@ class RedisService(WeaveService):
     def get_dockerfile(self, *args, **kwargs):
         redis_conf_path = f'{AXONIUS_SETTINGS_PATH}/redis/redis.conf'
         return f'''
-            FROM redis:6.0.8
+            FROM redis:6.0.9-alpine
             CMD ["redis-server", "{redis_conf_path}"]
         '''[1:] if not kwargs or kwargs.get('image_tag', '') != 'fed' else f'''
             FROM axonius/redis_fed:latest
