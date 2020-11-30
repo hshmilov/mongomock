@@ -592,8 +592,11 @@ class AdapterBase(Triggerable, PluginBase, Configurable, Feature, ABC):
                                     res = self.insert_data_to_db(client, check_fetch_time=check_fetch_time,
                                                                  log_fetch=log_fetch)
                                 except adapter_exceptions.AdapterException:
-                                    logger.warning(f'Failed inserting data for client '
-                                                   f'{str(client_name)}', exc_info=True)
+                                    logger.warning(f'Failed inserting data for client {str(client_name)}',
+                                                   exc_info=True)
+                                except Exception as e:
+                                    logger.error(f'Failed inserting data for client {str(client_name)} error:{str(e)}',
+                                                 exc_info=True)
                 except adapter_exceptions.AdapterException:
                     logger.warning(f'Failed inserting data for client '
                                    f'{str(client_name)}', exc_info=True)
