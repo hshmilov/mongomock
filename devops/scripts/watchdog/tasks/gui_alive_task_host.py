@@ -85,7 +85,7 @@ class GuiAliveTask(WatchdogTask):
 
             self.report_info(f'{self.name} is running')
             try:
-                response = requests.get(f'https://127.0.0.1/api/signup',
+                response = requests.get(f'https://127.0.0.1:{INTERNAL_PORT}/api/signup',
                                         verify=False,
                                         timeout=(10, 20))
                 if response.status_code != 200:
@@ -136,7 +136,7 @@ class GuiAliveTask(WatchdogTask):
                                                   timeout=30 * 60,
                                                   stderr=helper,
                                                   stdout=helper)
-                            response = requests.get(f'https://127.0.0.1/api/signup',
+                            response = requests.get(f'https://127.0.0.1:{INTERNAL_PORT}/api/signup',
                                                     verify=False,
                                                     timeout=(10, 20))
                             if response.status_code != 200:
