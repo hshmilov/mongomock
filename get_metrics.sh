@@ -21,12 +21,6 @@ else
   if [[ "$OSTYPE" == "darwin"* ]]; then
     # OSX
     METRICS_SCRIPT_PATH='./plugins/instance_control/get_instance_metrics_osx'
-  else
-    # Linux
-    if [ "$(uname -i)" != "x86_64" ];then
-      # Linux 32Bit
-      METRICS_SCRIPT_PATH='./plugins/instance_control/get_instance_metrics_linux32'
-    fi
   fi
 fi
 
