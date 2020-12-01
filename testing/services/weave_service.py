@@ -222,17 +222,20 @@ class WeaveService(DockerService):
         # * https://github.com/weaveworks/weave/issues/3432
         # * https://axonius.atlassian.net/browse/AX-4731
         dns_check_command = shlex.split(f'{WEAVE_PATH} dns-lookup {self.fqdn}')
-        response = subprocess.check_output(dns_check_command).strip().decode('utf-8')
+        try:
+            response = subprocess.check_output(dns_check_command).strip().decode('utf-8')
 
-        if response:
-            # We should not have any other ip associated with this hostname. Lets remove it.
-            for ip in response.splitlines():
-                print(f'Found stale weave-dns record: {self.fqdn} -> {ip}. Removing')
-                for _ in range(3):
-                    # Try 3 times, because weave is not always working
-                    requests.delete(f'{WEAVE_API_URL}/name/*/{ip.strip()}?fqdn={self.fqdn}')
-                    # We do not raise for status or fail, as this is too risky.
-
+            if response:
+                # We should not have any other ip associated with this hostname. Lets remove it.
+                for ip in response.splitlines():
+                    print(f'Found stale weave-dns record: {self.fqdn} -> {ip}. Removing')
+                    for _ in range(3):
+                        # Try 3 times, because weave is not always working
+                        requests.delete(f'{WEAVE_API_URL}/name/*/{ip.strip()}?fqdn={self.fqdn}')
+                        # We do not raise for status or fail, as this is too risky.
+        except subprocess.CalledProcessError:
+            # weave dns lookup exists with exit code 4 when the record doesnt exists, that's the expected behavior
+            pass
         # Add new unique dns entry to weave
         dns_add_command = shlex.split(
             f'{WEAVE_PATH} dns-add {self.id} -h {self.fqdn}')
