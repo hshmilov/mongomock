@@ -629,7 +629,7 @@ class AggregatorService(Triggerable, PluginBase):
 
     def update_preferred_fields_values(self, device_ids):
         if not device_ids:
-            device_ids = self.devices_db.find({}, projection=[AXONIUS_INTERNAL_ID])
+            device_ids = list(self.devices_db.find({}, projection=[AXONIUS_INTERNAL_ID]))
         for device_id in device_ids:
             if isinstance(device_id, dict):
                 device_id = device_id.get(AXONIUS_INTERNAL_ID)
