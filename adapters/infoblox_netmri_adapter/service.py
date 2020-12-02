@@ -203,7 +203,7 @@ class InfobloxNetmriAdapter(ScannerAdapterBase, Configurable):
             device_mac = device_raw.get('DeviceMAC') or None  # Can be output as empty string
             device_name = device_raw.get('DeviceName')
 
-            new_device_id = device_id + '_'
+            new_device_id = str(device_id) + '_'
             if device_name:
                 new_device_id = new_device_id + device_name
             if not new_device_id.endswith('_'):
